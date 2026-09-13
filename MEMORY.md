@@ -82,3 +82,13 @@ interactables, journal), then write an art style guide and architecture rules to
 
 **Next:** owner reviews the three docs + ADR 0004 and answers the open questions in GAME_PLAN.md.
 Then Phase 1 (foundation) from GAME_PLAN.md.
+
+## 2026-09-13 — Correction: GitHub push works
+
+Corrects the previous entry, which said the owner must run the first push. The very next
+checkpoint pushed successfully (credentials became available between the two attempts), and
+`origin/main` now matches local. Checkpoints push normally from now on.
+
+**Decisions:** none · **Failures:** none
+
+**Next:** unchanged. Owner review of the `docs/` proposals.

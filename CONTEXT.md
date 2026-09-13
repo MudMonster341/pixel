@@ -25,8 +25,6 @@ for changes.
   chests, a locked/secret door, walking behind tall objects, sound.
 - **Next:** the owner reviews the proposals in `docs/` + [ADR 0004](decisions/0004-es-modules-and-data-driven-content.md).
   Then Phase 1 (foundation) of [docs/GAME_PLAN.md](docs/GAME_PLAN.md).
-- **Not on GitHub yet:** the first push needs the owner to sign in (`git push -u origin main`).
-
 ## How to run it
 ```
 npm start            # http://localhost:8080 (no npm install needed)

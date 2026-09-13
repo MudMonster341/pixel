@@ -1,0 +1,166 @@
+{
+  "tileSize": 16,
+  "columns": 8,
+  "tiles": [
+    {
+      "name": "grass",
+      "solid": false,
+      "color": "#59b351"
+    },
+    {
+      "name": "grass2",
+      "solid": false,
+      "color": "#59b351"
+    },
+    {
+      "name": "flowers",
+      "solid": false,
+      "color": "#63b558"
+    },
+    {
+      "name": "tallgrass",
+      "solid": false,
+      "color": "#499a46"
+    },
+    {
+      "name": "path",
+      "solid": false,
+      "color": "#c7a16b"
+    },
+    {
+      "name": "water",
+      "solid": true,
+      "color": "#3e7fd8"
+    },
+    {
+      "name": "tree",
+      "solid": true,
+      "color": "#3e7f40"
+    },
+    {
+      "name": "rock",
+      "solid": true,
+      "color": "#5f9d5b"
+    },
+    {
+      "name": "roofTL",
+      "solid": true,
+      "color": "#974734"
+    },
+    {
+      "name": "roofT",
+      "solid": true,
+      "color": "#9f4a35"
+    },
+    {
+      "name": "roofTR",
+      "solid": true,
+      "color": "#964734"
+    },
+    {
+      "name": "eaveL",
+      "solid": true,
+      "color": "#964c38"
+    },
+    {
+      "name": "eave",
+      "solid": true,
+      "color": "#9e4e38"
+    },
+    {
+      "name": "eaveR",
+      "solid": true,
+      "color": "#954b38"
+    },
+    {
+      "name": "wallL",
+      "solid": true,
+      "color": "#d5c5a2"
+    },
+    {
+      "name": "wall",
+      "solid": true,
+      "color": "#e2d0aa"
+    },
+    {
+      "name": "wallR",
+      "solid": true,
+      "color": "#d5c5a2"
+    },
+    {
+      "name": "houseWindow",
+      "solid": true,
+      "color": "#a8a293"
+    },
+    {
+      "name": "door",
+      "solid": false,
+      "color": "#957c60"
+    },
+    {
+      "name": "floor",
+      "solid": false,
+      "color": "#ae7847"
+    },
+    {
+      "name": "wallUpper",
+      "solid": true,
+      "color": "#667888"
+    },
+    {
+      "name": "wallLower",
+      "solid": true,
+      "color": "#757d84"
+    },
+    {
+      "name": "wallWindow",
+      "solid": true,
+      "color": "#68696e"
+    },
+    {
+      "name": "edge",
+      "solid": true,
+      "color": "#3c2a1e"
+    },
+    {
+      "name": "doorway",
+      "solid": false,
+      "color": "#312016"
+    },
+    {
+      "name": "doormat",
+      "solid": false,
+      "color": "#916f40"
+    },
+    {
+      "name": "rug",
+      "solid": false,
+      "color": "#b0564b"
+    },
+    {
+      "name": "table",
+      "solid": true,
+      "color": "#7c5537"
+    },
+    {
+      "name": "bedHead",
+      "solid": true,
+      "color": "#67667e"
+    },
+    {
+      "name": "bedFoot",
+      "solid": true,
+      "color": "#525881"
+    },
+    {
+      "name": "bookshelf",
+      "solid": true,
+      "color": "#755f65"
+    },
+    {
+      "name": "plant",
+      "solid": true,
+      "color": "#66663c"
+    }
+  ]
+}

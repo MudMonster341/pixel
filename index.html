@@ -3,18 +3,22 @@
 <head>
   <meta charset="utf-8">
   <title>Pixel Quest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    html, body { margin: 0; height: 100%; background: #12131a; color: #ccc; font-family: monospace; }
+    html, body { margin: 0; height: 100%; background: #12131a; overflow: hidden; }
     #game { position: fixed; inset: 0; }
-    #hint { position: fixed; left: 8px; bottom: 6px; font-size: 12px; opacity: 0.7; pointer-events: none; }
   </style>
 </head>
 <body>
   <div id="game"></div>
-  <div id="hint">WASD / Arrow keys to move</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
-  <script src="src/map.js"></script>
+  <!-- Order matters: data first, then state, then scenes, then main.js starts the game -->
+  <script src="src/items.js"></script>
+  <script src="src/maps.js"></script>
+  <script src="src/state.js"></script>
+  <script src="src/scenes/world.js"></script>
+  <script src="src/scenes/ui.js"></script>
   <script src="src/main.js"></script>
 </body>
 </html>

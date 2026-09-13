@@ -11,7 +11,16 @@ You need [Node.js](https://nodejs.org) (free). There's nothing to install.
 npm start
 ```
 
-Then open **http://localhost:8080**. Move with **WASD** or the **arrow keys**.
+Then open **http://localhost:8080**.
+
+| Key | Action |
+|---|---|
+| WASD / arrow keys | Move |
+| E / Space | Talk, next line of dialog |
+| 1-5 / mouse wheel / click | Select inventory slot |
+| M | Show/hide minimap |
+| H | Show controls |
+| Esc | Skip tutorial |
 
 ## The stack (all free)
 
@@ -32,22 +41,26 @@ Free tools for later:
 
 ```
 index.html            loads Phaser + the game scripts
-src/map.js            the world map as text: 1 character = 1 tile (edit this to change the world)
-src/main.js           the game: loads the art, builds the map, moves the player
+src/items.js          item definitions
+src/maps.js           every map as text (1 character = 1 tile), plus doors, items and NPCs
+src/state.js          inventory + game state that survives moving between maps
+src/scenes/world.js   the map, player, NPCs, pickups, doors
+src/scenes/ui.js      minimap, inventory bar, dialog box, tutorial
+src/main.js           loads the art and starts the game
 tools/make-assets.js  the pixel art (run `npm run assets` after changing it)
-assets/               the generated PNGs (tiles.png, player.png)
+assets/               the generated PNGs + tiles.json
 server.js             tiny local web server
 ```
 
-**Change the world:** edit `src/map.js` and refresh the browser.
+**Change the world:** edit `src/maps.js` and refresh the browser.
 **Change the art:** edit the text sprites in `tools/make-assets.js`, run `npm run assets`, and refresh.
 
 ## Roadmap (small steps, each one playable)
 
 1. ✅ **Move one character** on a tile map with collisions and a camera that follows
-2. Trees and rocks drawn in front of or behind the player (depth sorting), plus animated water
-3. An NPC you can walk up to and talk to (a dialog box)
-4. A second area you walk into through a door or cave (scene change)
+2. ✅ **Tutorial, minimap, 5-slot inventory bar**
+3. ✅ **A house you can enter** with an NPC you can talk to (dialog box, gives an item)
+4. Trees and rocks drawn in front of or behind the player (depth sorting), plus animated water
 5. A simple enemy that wanders and chases you. Health bar, taking damage
 6. **ROTMG-style combat:** aim with the mouse, click to shoot projectiles
 7. Loot drops, a small inventory, and XP/levels

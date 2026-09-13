@@ -1,0 +1,255 @@
+// The world scene: the current map, the player, NPCs and items on the ground.
+// Moving to another map restarts this scene with new data; GameState keeps what persists.
+
+const SPEED = 80; // pixels per second
+const INTERACT_RANGE = 24;
+const PICKUP_RANGE = 10;
+const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
+const PLAYER_IDLE = { down: 0, up: 3, left: 6, right: 6 };
+const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
+
+class WorldScene extends Phaser.Scene {
+  constructor() {
+    super('world');
+  }
+
+  init(data) {
+    this.mapKey = data.map || START_MAP;
+    this.def = MAPS[this.mapKey];
+    this.spawn = data.spawn || this.def.spawn;
+    this.transitioning = false;
+  }
+
+  create() {
+    this.buildMap();
+    this.createAnimations();
+    this.createPlayer();
+    this.createNpcs();
+    this.createPickups();
+
+    const { widthInPixels: width, heightInPixels: height } = this.map;
+    this.physics.world.setBounds(0, 0, width, height);
+    this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height).startFollow(this.player, true).fadeIn(250, 0, 0, 0);
+
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E,SPACE');
+    this.game.events.emit('map-entered', this);
+  }
+
+  buildMap() {
+    this.tileInfo = this.cache.json.get('tileinfo');
+    const indexOf = Object.fromEntries(this.tileInfo.tiles.map((tile, i) => [tile.name, i]));
+    const lookup = (name) => {
+      if (!(name in indexOf)) throw new Error(`Unknown tile "${name}" in map "${this.mapKey}"`);
+      return indexOf[name];
+    };
+
+    const data = this.def.rows.map((row) => [...row].map((ch) => lookup(this.def.legend[ch])));
+    for (const { type, x, y } of this.def.structures || []) {
+      STRUCTURES[type].forEach((names, dy) => names.forEach((name, dx) => (data[y + dy][x + dx] = lookup(name))));
+    }
+    this.tileData = data;
+
+    this.map = this.make.tilemap({ data, tileWidth: TILE, tileHeight: TILE });
+    this.ground = this.map.createLayer(0, this.map.addTilesetImage('tiles'), 0, 0);
+    this.ground.setCollision(this.tileInfo.tiles.flatMap((tile, i) => (tile.solid ? [i] : [])));
+  }
+
+  createAnimations() {
+    const walks = { down: [1, 0, 2, 0], up: [4, 3, 5, 3], side: [7, 6, 8, 6] };
+    for (const [dir, frames] of Object.entries(walks)) {
+      if (this.anims.exists(`walk-${dir}`)) continue;
+      this.anims.create({ key: `walk-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 8, repeat: -1 });
+    }
+  }
+
+  createPlayer() {
+    this.facing = this.spawn.facing || 'down';
+    this.player = this.physics.add.sprite(toPixel(this.spawn.x), toPixel(this.spawn.y), 'player', PLAYER_IDLE[this.facing]);
+    // Only the feet collide, so the head can overlap things a little (feels nicer).
+    this.player.body.setSize(10, 6).setOffset(3, 10);
+    this.player.setCollideWorldBounds(true).setFlipX(this.facing === 'right');
+    this.physics.add.collider(this.player, this.ground);
+    this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
+  }
+
+  createNpcs() {
+    this.npcs = (this.def.npcs || []).map((def) => {
+      const npc = this.physics.add.sprite(toPixel(def.x), toPixel(def.y), 'npc', NPC_FRAME[def.facing || 'down']);
+      npc.body.setSize(12, 8).setOffset(2, 8).setImmovable(true);
+      npc.setDepth(npc.y);
+      npc.def = def;
+      this.physics.add.collider(this.player, npc);
+      return npc;
+    });
+    this.prompt = this.add.image(0, 0, 'prompt').setVisible(false).setDepth(100000);
+  }
+
+  createPickups() {
+    this.pickups = (this.def.pickups || [])
+      .filter((def) => !GameState.collected.has(def.id))
+      .map((def) => {
+        const x = toPixel(def.x);
+        const y = toPixel(def.y);
+        const shadow = this.add.ellipse(x, y + 7, 10, 3, 0x000000, 0.25).setDepth(y - 1);
+        const sprite = this.add.image(x, y - 1, 'items', ITEMS[def.item].frame).setDepth(y);
+        this.tweens.add({ targets: sprite, y: y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        return { def, x, y, sprite, shadow, taken: false, warned: false };
+      });
+  }
+
+  update(time) {
+    if (this.transitioning) return;
+
+    const ui = this.scene.get('ui');
+    const blocked = !ui.tutorial || ui.isBlocking();
+
+    // Read both keys every frame so a press can't linger and fire later.
+    const pressedE = Phaser.Input.Keyboard.JustDown(this.keys.E);
+    const pressedSpace = Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+    if (pressedE || pressedSpace) {
+      if (ui.dialog && ui.dialog.isOpen) ui.dialog.advance();
+      else if (!blocked) this.interact();
+    }
+
+    this.movePlayer(blocked);
+    this.updatePickups();
+    this.updatePrompt(blocked, time);
+    this.checkWarps();
+  }
+
+  movePlayer(blocked) {
+    const k = this.keys;
+    const p = this.player;
+    let dx = 0;
+    let dy = 0;
+    if (!blocked) {
+      dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
+      dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
+    }
+
+    // Normalize so diagonal movement isn't faster than straight movement.
+    const velocity = new Phaser.Math.Vector2(dx, dy).normalize().scale(SPEED);
+    if (dx === 0 && dy !== 0) {
+      const steer = this.doorAssist(dy);
+      if (steer !== null) velocity.x = steer;
+    }
+    p.setVelocity(velocity.x, velocity.y);
+    p.setDepth(p.y);
+
+    const moved = Phaser.Math.Distance.Between(this.lastPosition.x, this.lastPosition.y, p.x, p.y);
+    this.lastPosition.set(p.x, p.y);
+    if (moved > 0) this.game.events.emit('player-moved', moved);
+
+    if (dx === 0 && dy === 0) {
+      p.anims.stop();
+      p.setFrame(PLAYER_IDLE[this.facing]);
+      return;
+    }
+
+    if (dx !== 0) {
+      this.facing = dx < 0 ? 'left' : 'right';
+      p.setFlipX(dx > 0); // side art faces left; mirror it for right
+      p.anims.play('walk-side', true);
+    } else {
+      this.facing = dy < 0 ? 'up' : 'down';
+      p.setFlipX(false);
+      p.anims.play(`walk-${this.facing}`, true);
+    }
+  }
+
+  // Doors are one tile wide, so walking at one slightly off-center would snag on the wall.
+  // If a warp tile is just ahead, return a sideways speed that slides the player into line.
+  doorAssist(dy) {
+    const body = this.player.body;
+    const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
+    const warp = (this.def.warps || []).find(
+      (w) => w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE,
+    );
+    if (!warp) return null;
+    return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -SPEED, SPEED);
+  }
+
+  nearestNpc() {
+    let nearest = null;
+    let nearestDistance = INTERACT_RANGE;
+    for (const npc of this.npcs) {
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+      if (distance < nearestDistance) {
+        nearest = npc;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  }
+
+  interact() {
+    const npc = this.nearestNpc();
+    if (!npc) return;
+
+    // Turn the NPC to face the player.
+    const dx = this.player.x - npc.x;
+    const dy = this.player.y - npc.y;
+    if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(NPC_FRAME.left).setFlipX(dx > 0);
+    else npc.setFrame(dy < 0 ? NPC_FRAME.up : NPC_FRAME.down).setFlipX(false);
+
+    const { lines, onEnd } = npc.def.talk(GameState);
+    this.scene.get('ui').dialog.open(npc.def.name, lines, () => {
+      const message = onEnd && onEnd();
+      if (message) this.game.events.emit('toast', message);
+    });
+    this.game.events.emit('npc-talked', npc.def.id);
+  }
+
+  updatePickups() {
+    const p = this.player;
+    for (const pickup of this.pickups) {
+      if (pickup.taken) continue;
+      const distance = Phaser.Math.Distance.Between(p.x, p.y + 4, pickup.x, pickup.y);
+      if (distance > PICKUP_RANGE) {
+        if (distance > PICKUP_RANGE * 2) pickup.warned = false;
+        continue;
+      }
+
+      if (GameState.inventory.add(pickup.def.item)) {
+        pickup.taken = true;
+        GameState.collected.add(pickup.def.id);
+        pickup.shadow.destroy();
+        this.tweens.killTweensOf(pickup.sprite);
+        this.tweens.add({
+          targets: pickup.sprite, y: pickup.sprite.y - 10, alpha: 0, duration: 250,
+          onComplete: () => pickup.sprite.destroy(),
+        });
+        this.game.events.emit('toast', `+1 ${ITEMS[pickup.def.item].name}`);
+      } else if (!pickup.warned) {
+        pickup.warned = true;
+        this.game.events.emit('toast', 'Your bag is full!');
+      }
+    }
+  }
+
+  updatePrompt(blocked, time) {
+    const npc = blocked ? null : this.nearestNpc();
+    this.prompt.setVisible(Boolean(npc));
+    if (npc) this.prompt.setPosition(npc.x, npc.y - 18 + Math.round(Math.sin(time / 200)));
+  }
+
+  checkWarps() {
+    const body = this.player.body;
+    const tileX = Math.floor(body.center.x / TILE);
+    const tileY = Math.floor((body.bottom - 1) / TILE);
+    const warp = (this.def.warps || []).find((w) => w.x === tileX && w.y === tileY);
+    if (!warp) return;
+
+    this.transitioning = true;
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.prompt.setVisible(false);
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn }));
+  }
+}
+
+// Tile coordinate -> pixel at the center of that tile
+function toPixel(tile) {
+  return tile * TILE + TILE / 2;
+}

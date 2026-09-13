@@ -29,3 +29,33 @@ Append-only log, one entry per work chunk, newest at the bottom. Read recent his
 
 **Next:** get the owner's feedback on look and feel, then roadmap step 2 (depth sorting so the
 player goes behind tree canopies, and animated water). Blocker for pushing: no GitHub remote yet.
+
+## 2026-09-13 — Tutorial, minimap, inventory bar, enterable house with NPC
+
+**Did:**
+- Split into a world scene (restarted on every map change) and a UI scene that stays running
+  (minimap, 5-slot hotbar, dialog box, toasts, tutorial card + objectives checklist).
+- Added a second map (Tomas's house interior), doors between maps (warps), pickups, and an NPC
+  whose conversation gives the player a sword.
+- Asset script now writes `tiles.json` (name, solid, minimap color per tile). Maps refer to
+  tiles by name, so tile order in the tileset can change freely.
+- Tested the whole flow in the browser with synthetic keys: tutorial card → pickup → slot select →
+  door (entered 6px off-center thanks to door assist) → talk → sword → tutorial complete → exit.
+- Connected GitHub remote `MudMonster341/pixel`.
+
+**Why:**
+- The canvas is now 960x540 with the world camera at zoom 3, so the world still shows 320x180 art
+  pixels but UI text renders at full resolution instead of blurry 3x-scaled text.
+- The UI lives in its own scene so the tutorial progress and HUD aren't rebuilt on every map change.
+  Anything that has to survive a map change goes in `GameState`.
+- Door assist exists because a 10px-wide feet hitbox needs pixel-perfect alignment to fit a
+  16px door between solid walls, which felt broken when tested.
+
+**Decisions:** none new. This chunk has 6 source files, which is right at the ADR 0003 tripwire
+(globals + manual script order). Next chunk moves to native ES modules.
+
+**Failures:** none
+
+**Next:** the owner wants a treasure-hunt game (NPCs give clues → find 3 items → open a secret
+door). Build data-driven base systems (flags/conditions/actions, dialog scripts, speech bubbles,
+interactables, journal), then write an art style guide and architecture rules to follow from now on.

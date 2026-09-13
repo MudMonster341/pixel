@@ -1,44 +1,52 @@
 # Pixel Quest — context
 
-**Last updated:** 2026-09-13 · **Repo:** not pushed yet (local git only) · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-13 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
-A small top-down pixel-art RPG exploration game that runs in the browser. It looks like the
-Game Boy Pokémon games and aims to play like Realm of the Mad God (real-time movement, later
-mouse-aimed shooting). It is built only with free software and original art.
+A small top-down pixel-art exploration game that runs in the browser and looks like the
+Game Boy/DS Pokémon games. The planned game is a treasure hunt: talk to villagers, get clues, find
+3 items, open a secret door. It is built only with free software and original art.
 
 ## Why it exists
-The owner wants to learn how games like ROTMG are built by making a small one, one playable step
-at a time. The scope is deliberately small. The agent makes the design and technical choices, and
-the owner plays each version, rates it, and asks for changes.
+The owner wants to learn how games like this are built by making a small one, one playable step
+at a time, on a stable architecture that new maps and story can be added to without rework. The
+agent makes the design and technical choices, and the owner plays each version, rates it, and asks
+for changes.
 
 ## Current state
-- **Works:** a 40x30-tile world (grass, flowers, tall grass, paths, water, trees, rocks). One
-  player character with 4-direction walk animations, WASD/arrow movement at 80 px/s (diagonals
-  normalized), collision against water, trees and rocks (feet-only hitbox), and a camera that
-  follows the player inside the map bounds. Checked in the browser on 2026-09-13.
-- **Not yet:** depth sorting (the player's head doesn't go behind trees), NPCs, enemies, combat,
-  items, sound, save games.
-- **Next:** roadmap step 2 in [README.md](README.md#roadmap-small-steps-each-one-playable).
+- **Works (browser-tested 2026-09-13):**
+  - Two maps: Meadow, and Tomas's House. You walk through the door to switch maps, with a fade.
+  - Player movement, collisions and a camera that follows.
+  - Items on the ground go into a 5-slot hotbar and stack. Select a slot with 1-5, the mouse wheel
+    or a click.
+  - NPC with a typewriter dialog that gives an item, and an "E" prompt when you're in range.
+  - Minimap (M), tutorial controls card (H) plus an objectives checklist (ESC skips it), toasts.
+- **Not yet:** saving, a clue journal, conditional dialog beyond hand-written functions, signs and
+  chests, a locked/secret door, walking behind tall objects, sound.
+- **Next:** base systems for the treasure hunt (see MEMORY.md, last entry).
 
 ## How to run it
 ```
-npm start            # serves the game at http://localhost:8080 (no npm install needed)
-npm run assets       # regenerate assets/*.png after editing tools/make-assets.js
+npm start            # http://localhost:8080 (no npm install needed)
+npm run assets       # regenerate assets/ after editing tools/make-assets.js
 ```
-Needs Node.js and internet on first load (Phaser comes from cdnjs).
+Needs Node.js and internet on first load (Phaser from cdnjs, font from Google Fonts).
+Debugging: `game.scene.getScene('world')` in the browser console.
 
 ## Where things live
-- `src/map.js`: the world as text rows. The legend and solid tiles are defined in the same file.
-- `src/main.js`: the Phaser scene: loading, tilemap, player, input, camera.
-- `tools/make-assets.js`: all pixel art as text sprites plus the palette, which writes the PNGs.
-- `assets/`: generated PNGs. Don't hand-edit them.
-- `server.js`: static file server using Node built-ins only.
+- `src/items.js`: item definitions (name, icon frame, stack size).
+- `src/maps.js`: every map (text rows + legend), buildings, warps, pickups, NPCs and their talk.
+- `src/state.js`: shared constants, the `Inventory` class, and `GameState` (what survives map changes).
+- `src/scenes/world.js`: map building, player, NPCs, pickups, warps. Restarted on each map change.
+- `src/scenes/ui.js`: minimap, hotbar, dialog box, toast, tutorial. Never restarted.
+- `src/main.js`: boot/preload and the Phaser config.
+- `tools/make-assets.js`: all pixel art and the palette. Writes `assets/*.png` + `assets/tiles.json`.
 
 ## Constraints
 - $0: free software and free/original assets only.
-- No build step and no npm dependencies until [ADR 0003](decisions/0003-no-build-step.md) is superseded.
-- Tiles and character frames are 16x16 px. The virtual screen is 320x180, scaled to fit the window.
+- No build step and no npm dependencies ([ADR 0003](decisions/0003-no-build-step.md)).
+- Art is 16x16 per tile/frame. The canvas is 960x540, the world camera zoom is 3 (320x180 of world
+  visible), and the UI draws unzoomed.
 
 ## Memory
 - [MEMORY.md](MEMORY.md): dated log of what happened and why

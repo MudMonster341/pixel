@@ -1,0 +1,61 @@
+# Pixel Quest
+
+A small top-down pixel RPG exploration game. It looks like the old Pokémon games and plays like
+Realm of the Mad God (ROTMG). Everything here is free: free engine, free tools, and original art.
+
+## Play it
+
+You need [Node.js](https://nodejs.org) (free). There's nothing to install.
+
+```bash
+npm start
+```
+
+Then open **http://localhost:8080**. Move with **WASD** or the **arrow keys**.
+
+## The stack (all free)
+
+| Part | Tool | Why |
+|---|---|---|
+| Game engine | [Phaser 3](https://phaser.io) (JavaScript) | Runs in the browser like ROTMG. Handles tilemaps, physics, cameras and animation |
+| Art | `tools/make-assets.js` | Pixel art written as text and turned into PNGs. Original, so no license worries |
+| Local server | `server.js` | Browsers won't load game images straight off the disk |
+| Code editor | [VS Code](https://code.visualstudio.com) | Free |
+
+Free tools for later:
+- **[Tiled](https://www.mapeditor.org)**: draw maps visually instead of editing text.
+- **[Piskel](https://www.piskelapp.com)** (in the browser) or **[LibreSprite](https://libresprite.github.io)**: draw pixel art by hand.
+- **Free art packs** (check each license; CC0 means do anything): [Kenney.nl](https://kenney.nl/assets), [OpenGameArt](https://opengameart.org), free packs on [itch.io](https://itch.io/game-assets/free).
+- **Free hosting**: GitHub Pages or itch.io.
+
+## How it's put together
+
+```
+index.html            loads Phaser + the game scripts
+src/map.js            the world map as text: 1 character = 1 tile (edit this to change the world)
+src/main.js           the game: loads the art, builds the map, moves the player
+tools/make-assets.js  the pixel art (run `npm run assets` after changing it)
+assets/               the generated PNGs (tiles.png, player.png)
+server.js             tiny local web server
+```
+
+**Change the world:** edit `src/map.js` and refresh the browser.
+**Change the art:** edit the text sprites in `tools/make-assets.js`, run `npm run assets`, and refresh.
+
+## Roadmap (small steps, each one playable)
+
+1. ✅ **Move one character** on a tile map with collisions and a camera that follows
+2. Trees and rocks drawn in front of or behind the player (depth sorting), plus animated water
+3. An NPC you can walk up to and talk to (a dialog box)
+4. A second area you walk into through a door or cave (scene change)
+5. A simple enemy that wanders and chases you. Health bar, taking damage
+6. **ROTMG-style combat:** aim with the mouse, click to shoot projectiles
+7. Loot drops, a small inventory, and XP/levels
+8. Save the game in the browser (localStorage)
+9. Maps built in Tiled instead of text
+10. *(Big step)* Multiplayer: a Node.js WebSocket server so friends share the same world
+
+## Project memory
+
+Development notes live in [CONTEXT.md](CONTEXT.md), [MEMORY.md](MEMORY.md),
+[ERRORS.md](ERRORS.md) and [decisions/](decisions/).

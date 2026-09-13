@@ -158,3 +158,21 @@ GitHub Actions run hadn't been observed when this entry was written.
 
 **Next:** owner answers the 7 questions in CAMPUS_MAP_PLAN.md. Meanwhile Phase 1 foundation work
 (ES modules, events/flags, save) is still the prerequisite.
+
+## 2026-09-13 — First real feedback items triaged (FB-0001, FB-0002)
+
+**Did:**
+- Found the owner's first two overlay items, which the previous checkpoint committed.
+- **FB-0001** (high): in the house the player can be hidden under the hotbar, because the room is 12 tiles
+  tall and the camera can't scroll the player above the bottom UI.
+- **FB-0002:** show the equipped item on the character, add use animations (sword swing, eat apple),
+  and keep only the sword and apple.
+- Asked clarifying questions on both (status `needs-info`). Nothing built yet.
+
+**Why:** both overlap earlier owner decisions (backpack replaces the hotbar; no combat) and the new
+campus direction, so the design is the owner's call. Proposed for FB-0001: hide the bar in favour of
+an equipped-item icon plus backpack, and keep camera headroom so UI never covers the player.
+
+**Decisions:** none · **Failures:** none
+
+**Next:** owner answers in the overlay inbox (FB-0001, FB-0002) and the campus plan questions.

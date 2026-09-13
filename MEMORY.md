@@ -59,3 +59,26 @@ player goes behind tree canopies, and animated water). Blocker for pushing: no G
 **Next:** the owner wants a treasure-hunt game (NPCs give clues → find 3 items → open a secret
 door). Build data-driven base systems (flags/conditions/actions, dialog scripts, speech bubbles,
 interactables, journal), then write an art style guide and architecture rules to follow from now on.
+
+## 2026-09-13 — Style guide, architecture rules and game plan (proposals)
+
+**Did:**
+- Wrote [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+  and [docs/GAME_PLAN.md](docs/GAME_PLAN.md) as v1 proposals for the owner to review.
+- Proposed [ADR 0004](decisions/0004-es-modules-and-data-driven-content.md): native ES modules,
+  and story logic as conditions + actions data.
+
+**Why:**
+- The owner asked for rules and a uniform method *before* more building, and wants to decide on
+  them. So these are proposals and no engine refactor has happened yet.
+- The treasure hunt (clues → 3 items → secret door) needs flags, conditional dialog, hidden
+  entities and a locked door. Those are generic systems, so they come before any story content.
+- Push to GitHub failed: the agent's shell can't show the credential prompt. The owner has to run
+  the first `git push -u origin main` themselves. After that, pushes should work.
+
+**Decisions:** [ADR 0004](decisions/0004-es-modules-and-data-driven-content.md) (proposed, not accepted)
+
+**Failures:** none
+
+**Next:** owner reviews the three docs + ADR 0004 and answers the open questions in GAME_PLAN.md.
+Then Phase 1 (foundation) from GAME_PLAN.md.

@@ -23,7 +23,9 @@ for changes.
   - Minimap (M), tutorial controls card (H) plus an objectives checklist (ESC skips it), toasts.
 - **Not yet:** saving, a clue journal, conditional dialog beyond hand-written functions, signs and
   chests, a locked/secret door, walking behind tall objects, sound.
-- **Next:** base systems for the treasure hunt (see MEMORY.md, last entry).
+- **Next:** the owner reviews the proposals in `docs/` + [ADR 0004](decisions/0004-es-modules-and-data-driven-content.md).
+  Then Phase 1 (foundation) of [docs/GAME_PLAN.md](docs/GAME_PLAN.md).
+- **Not on GitHub yet:** the first push needs the owner to sign in (`git push -u origin main`).
 
 ## How to run it
 ```
@@ -47,6 +49,11 @@ Debugging: `game.scene.getScene('world')` in the browser console.
 - No build step and no npm dependencies ([ADR 0003](decisions/0003-no-build-step.md)).
 - Art is 16x16 per tile/frame. The canvas is 960x540, the world camera zoom is 3 (320x180 of world
   visible), and the UI draws unzoomed.
+
+## Rules and plans (v1 proposals, pending owner review)
+- [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md): art and UI style (bright DS-era Pokémon look with depth)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): content-as-data rules, folder layout, scripts, entities
+- [docs/GAME_PLAN.md](docs/GAME_PLAN.md): treasure-hunt design, component backlog, build phases
 
 ## Memory
 - [MEMORY.md](MEMORY.md): dated log of what happened and why

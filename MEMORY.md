@@ -250,3 +250,30 @@ Gameplay doesn't touch the campus files, so it can run alongside in a separate w
 
 **Next:** the gameplay agent (worktree) and the art agent (main tree) run in parallel; then the layout
 agent. Review, test, `feedback fix` and checkpoint after each.
+
+## 2026-09-13 — Campus art kit landed (Sonnet agent), reviewed
+
+**Did:**
+- The art agent (Sonnet) added 64 campus tiles, 108 in total:
+  - kerbed road edges and corners, lane lines, zebra crossings, a bordered walkway
+  - lawn variants, hedge, bush, flowerbed
+  - tree and date-palm trunks with 2×2 **overhead** canopies (new `overhead` flag in tiles.json)
+  - tennis court lines and net
+  - slimmer BITS and other building walls, parapet roof edges, entrance, pillar
+  - a straight fence and gate kit
+- It also redrew paving with a 4-tone bevel, added `tests/unit/campus-tiles.test.js` (15 FB-XXXX tests),
+  the `docs/research/campus-tile-kit.png` catalog, and a "Campus kit" section in STYLE_GUIDE.md.
+- Both agents were cut off once by the account usage limit and resumed with SendMessage; no work was lost.
+- Review: scope respected (only `make-assets.js`, generated assets, STYLE_GUIDE, a new unit test,
+  regenerated campus map and preview). My own run: 51 unit + 32 browser tests pass.
+
+**Why:** these items stay `in-progress`, not `fixed`: the tiles aren't placed on the campus yet, so the
+owner couldn't verify anything in-game. They get marked fixed when the layout agent uses them.
+Small art nits for the layout agent to fix: the tennis net is drawn as two strips, and in the
+mock-up the tree trunk sits apart from its canopy.
+
+**Decisions:** none · **Failures:** the harness couldn't create an agent worktree (the session started
+before `git init`), so the gameplay worktree was made by hand with `git worktree add`.
+
+**Next:** commit the art, start the layout agent (ADR 0008 plan, Gate 2, overhead canopy layer), then
+merge the gameplay branch when that agent reports.

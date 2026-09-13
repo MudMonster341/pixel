@@ -5,232 +5,650 @@
     {
       "name": "grass",
       "solid": false,
+      "overhead": false,
       "color": "#59b351"
     },
     {
       "name": "grass2",
       "solid": false,
+      "overhead": false,
       "color": "#59b351"
     },
     {
       "name": "flowers",
       "solid": false,
+      "overhead": false,
       "color": "#63b558"
     },
     {
       "name": "tallgrass",
       "solid": false,
+      "overhead": false,
       "color": "#499a46"
     },
     {
       "name": "path",
       "solid": false,
+      "overhead": false,
       "color": "#c7a16b"
     },
     {
       "name": "water",
       "solid": true,
+      "overhead": false,
       "color": "#3e7fd8"
     },
     {
       "name": "tree",
       "solid": true,
+      "overhead": false,
       "color": "#3e7f40"
     },
     {
       "name": "rock",
       "solid": true,
+      "overhead": false,
       "color": "#5f9d5b"
     },
     {
       "name": "roofTL",
       "solid": true,
+      "overhead": false,
       "color": "#974734"
     },
     {
       "name": "roofT",
       "solid": true,
+      "overhead": false,
       "color": "#9f4a35"
     },
     {
       "name": "roofTR",
       "solid": true,
+      "overhead": false,
       "color": "#964734"
     },
     {
       "name": "eaveL",
       "solid": true,
+      "overhead": false,
       "color": "#964c38"
     },
     {
       "name": "eave",
       "solid": true,
+      "overhead": false,
       "color": "#9e4e38"
     },
     {
       "name": "eaveR",
       "solid": true,
+      "overhead": false,
       "color": "#954b38"
     },
     {
       "name": "wallL",
       "solid": true,
+      "overhead": false,
       "color": "#d5c5a2"
     },
     {
       "name": "wall",
       "solid": true,
+      "overhead": false,
       "color": "#e2d0aa"
     },
     {
       "name": "wallR",
       "solid": true,
+      "overhead": false,
       "color": "#d5c5a2"
     },
     {
       "name": "houseWindow",
       "solid": true,
+      "overhead": false,
       "color": "#a8a293"
     },
     {
       "name": "door",
       "solid": false,
+      "overhead": false,
       "color": "#957c60"
     },
     {
       "name": "floor",
       "solid": false,
+      "overhead": false,
       "color": "#ae7847"
     },
     {
       "name": "wallUpper",
       "solid": true,
+      "overhead": false,
       "color": "#667888"
     },
     {
       "name": "wallLower",
       "solid": true,
+      "overhead": false,
       "color": "#757d84"
     },
     {
       "name": "wallWindow",
       "solid": true,
+      "overhead": false,
       "color": "#68696e"
     },
     {
       "name": "edge",
       "solid": true,
+      "overhead": false,
       "color": "#3c2a1e"
     },
     {
       "name": "doorway",
       "solid": false,
+      "overhead": false,
       "color": "#312016"
     },
     {
       "name": "doormat",
       "solid": false,
+      "overhead": false,
       "color": "#916f40"
     },
     {
       "name": "rug",
       "solid": false,
+      "overhead": false,
       "color": "#b0564b"
     },
     {
       "name": "table",
       "solid": true,
+      "overhead": false,
       "color": "#7c5537"
     },
     {
       "name": "bedHead",
       "solid": true,
+      "overhead": false,
       "color": "#67667e"
     },
     {
       "name": "bedFoot",
       "solid": true,
+      "overhead": false,
       "color": "#525881"
     },
     {
       "name": "bookshelf",
       "solid": true,
+      "overhead": false,
       "color": "#755f65"
     },
     {
       "name": "plant",
       "solid": true,
+      "overhead": false,
       "color": "#66663c"
     },
     {
       "name": "sand",
       "solid": false,
+      "overhead": false,
       "color": "#e2cea2"
     },
     {
       "name": "campusGround",
       "solid": false,
+      "overhead": false,
       "color": "#d8c69f"
     },
     {
       "name": "asphalt",
       "solid": false,
+      "overhead": false,
       "color": "#5c5e67"
     },
     {
       "name": "paving",
       "solid": false,
-      "color": "#b46a56"
+      "overhead": false,
+      "color": "#a96654"
     },
     {
       "name": "parking",
       "solid": false,
+      "overhead": false,
       "color": "#64666f"
     },
     {
       "name": "track",
       "solid": false,
+      "overhead": false,
       "color": "#cc6544"
     },
     {
       "name": "turf",
       "solid": false,
+      "overhead": false,
       "color": "#59a94e"
     },
     {
       "name": "court",
       "solid": false,
+      "overhead": false,
       "color": "#3f8a8c"
     },
     {
       "name": "fence",
       "solid": true,
+      "overhead": false,
       "color": "#beb297"
     },
     {
       "name": "bitsRoof",
       "solid": true,
+      "overhead": false,
       "color": "#d5a486"
     },
     {
       "name": "bitsWall",
       "solid": true,
-      "color": "#b6987e"
+      "overhead": false,
+      "color": "#cca988"
     },
     {
       "name": "bitsDoor",
       "solid": false,
+      "overhead": false,
       "color": "#9f8a77"
     },
     {
       "name": "otherRoof",
       "solid": true,
+      "overhead": false,
       "color": "#9fa4ae"
     },
     {
       "name": "otherWall",
       "solid": true,
-      "color": "#a8acb4"
+      "overhead": false,
+      "color": "#aaafb8"
+    },
+    {
+      "name": "kerbT",
+      "solid": false,
+      "overhead": false,
+      "color": "#7c6969"
+    },
+    {
+      "name": "kerbB",
+      "solid": false,
+      "overhead": false,
+      "color": "#7c6969"
+    },
+    {
+      "name": "kerbL",
+      "solid": false,
+      "overhead": false,
+      "color": "#7b6768"
+    },
+    {
+      "name": "kerbR",
+      "solid": false,
+      "overhead": false,
+      "color": "#7b6767"
+    },
+    {
+      "name": "kerbTL",
+      "solid": false,
+      "overhead": false,
+      "color": "#8c6c68"
+    },
+    {
+      "name": "kerbTR",
+      "solid": false,
+      "overhead": false,
+      "color": "#8f6f6a"
+    },
+    {
+      "name": "kerbBL",
+      "solid": false,
+      "overhead": false,
+      "color": "#8c6c68"
+    },
+    {
+      "name": "kerbBR",
+      "solid": false,
+      "overhead": false,
+      "color": "#8f6f6a"
+    },
+    {
+      "name": "roadLineH",
+      "solid": false,
+      "overhead": false,
+      "color": "#61636c"
+    },
+    {
+      "name": "roadLineV",
+      "solid": false,
+      "overhead": false,
+      "color": "#61636c"
+    },
+    {
+      "name": "crossingH",
+      "solid": false,
+      "overhead": false,
+      "color": "#adaeb3"
+    },
+    {
+      "name": "crossingV",
+      "solid": false,
+      "overhead": false,
+      "color": "#adaeb3"
+    },
+    {
+      "name": "walkway",
+      "solid": false,
+      "overhead": false,
+      "color": "#ba7c6a"
+    },
+    {
+      "name": "lawn",
+      "solid": false,
+      "overhead": false,
+      "color": "#59b351"
+    },
+    {
+      "name": "lawn2",
+      "solid": false,
+      "overhead": false,
+      "color": "#5ab452"
+    },
+    {
+      "name": "hedge",
+      "solid": true,
+      "overhead": false,
+      "color": "#347b39"
+    },
+    {
+      "name": "bush",
+      "solid": true,
+      "overhead": false,
+      "color": "#3d7e3f"
+    },
+    {
+      "name": "flowerbed",
+      "solid": true,
+      "overhead": false,
+      "color": "#7e6856"
+    },
+    {
+      "name": "treeTrunk",
+      "solid": true,
+      "overhead": false,
+      "color": "#538541"
+    },
+    {
+      "name": "treeCanopyTL",
+      "solid": false,
+      "overhead": true,
+      "color": "#3f8642"
+    },
+    {
+      "name": "treeCanopyTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#2c6c37"
+    },
+    {
+      "name": "treeCanopyBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#2d6d38"
+    },
+    {
+      "name": "treeCanopyBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#23572e"
+    },
+    {
+      "name": "palmTrunk",
+      "solid": true,
+      "overhead": false,
+      "color": "#559346"
+    },
+    {
+      "name": "palmCanopyTL",
+      "solid": false,
+      "overhead": true,
+      "color": "#506b3e"
+    },
+    {
+      "name": "palmCanopyTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#315735"
+    },
+    {
+      "name": "palmCanopyBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#315735"
+    },
+    {
+      "name": "palmCanopyBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#36532f"
+    },
+    {
+      "name": "courtLineH",
+      "solid": false,
+      "overhead": false,
+      "color": "#599a9b"
+    },
+    {
+      "name": "courtLineV",
+      "solid": false,
+      "overhead": false,
+      "color": "#5a9a9c"
+    },
+    {
+      "name": "courtCornerTL",
+      "solid": false,
+      "overhead": false,
+      "color": "#599a9b"
+    },
+    {
+      "name": "courtCornerTR",
+      "solid": false,
+      "overhead": false,
+      "color": "#599a9b"
+    },
+    {
+      "name": "courtCornerBL",
+      "solid": false,
+      "overhead": false,
+      "color": "#58999b"
+    },
+    {
+      "name": "courtCornerBR",
+      "solid": false,
+      "overhead": false,
+      "color": "#58999b"
+    },
+    {
+      "name": "courtCenterMark",
+      "solid": false,
+      "overhead": false,
+      "color": "#629fa1"
+    },
+    {
+      "name": "courtNet",
+      "solid": false,
+      "overhead": false,
+      "color": "#3f6e74"
+    },
+    {
+      "name": "bitsWallPlain",
+      "solid": true,
+      "overhead": false,
+      "color": "#dfbe98"
+    },
+    {
+      "name": "bitsWallEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#dbba94"
+    },
+    {
+      "name": "bitsWallEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#dbba94"
+    },
+    {
+      "name": "bitsRoofT",
+      "solid": true,
+      "overhead": false,
+      "color": "#c99b80"
+    },
+    {
+      "name": "bitsRoofL",
+      "solid": true,
+      "overhead": false,
+      "color": "#c99b80"
+    },
+    {
+      "name": "bitsRoofR",
+      "solid": true,
+      "overhead": false,
+      "color": "#c99b80"
+    },
+    {
+      "name": "bitsRoofTL",
+      "solid": true,
+      "overhead": false,
+      "color": "#bb9078"
+    },
+    {
+      "name": "bitsRoofTR",
+      "solid": true,
+      "overhead": false,
+      "color": "#bb9078"
+    },
+    {
+      "name": "bitsEntranceL",
+      "solid": false,
+      "overhead": false,
+      "color": "#796b61"
+    },
+    {
+      "name": "bitsEntranceR",
+      "solid": false,
+      "overhead": false,
+      "color": "#796b61"
+    },
+    {
+      "name": "bitsPillar",
+      "solid": true,
+      "overhead": false,
+      "color": "#c19d81"
+    },
+    {
+      "name": "otherWallPlain",
+      "solid": true,
+      "overhead": false,
+      "color": "#bec2ca"
+    },
+    {
+      "name": "otherWallEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#b9bdc5"
+    },
+    {
+      "name": "otherWallEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#b9bdc5"
+    },
+    {
+      "name": "otherRoofT",
+      "solid": true,
+      "overhead": false,
+      "color": "#969ba5"
+    },
+    {
+      "name": "otherRoofL",
+      "solid": true,
+      "overhead": false,
+      "color": "#969ba5"
+    },
+    {
+      "name": "otherRoofR",
+      "solid": true,
+      "overhead": false,
+      "color": "#969ba5"
+    },
+    {
+      "name": "otherRoofTL",
+      "solid": true,
+      "overhead": false,
+      "color": "#8b8f99"
+    },
+    {
+      "name": "otherRoofTR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8b8f99"
+    },
+    {
+      "name": "fenceH",
+      "solid": true,
+      "overhead": false,
+      "color": "#beb297"
+    },
+    {
+      "name": "fenceV",
+      "solid": true,
+      "overhead": false,
+      "color": "#beb297"
+    },
+    {
+      "name": "fenceCornerTL",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdbe9d"
+    },
+    {
+      "name": "fenceCornerTR",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdbe9d"
+    },
+    {
+      "name": "fenceCornerBL",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdbe9d"
+    },
+    {
+      "name": "fenceCornerBR",
+      "solid": true,
+      "overhead": false,
+      "color": "#cebe9d"
+    },
+    {
+      "name": "fenceGate",
+      "solid": false,
+      "overhead": false,
+      "color": "#c7b99b"
     }
   ]
 }

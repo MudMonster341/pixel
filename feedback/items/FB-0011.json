@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "in-progress",
   "createdAt": "2026-09-13T11:37:11.246Z",
-  "updatedAt": "2026-09-13T11:45:17.004Z",
+  "updatedAt": "2026-09-13T13:37:16.095Z",
   "details": "Oin real life these are sperate bui,ldigns, i should be able to see them as such and pass throguh in between them as well, The 3d buidlginsa take up a lot of space, the windows for exa ple rtable up one block whihc i think can be changed so Ui is done properly, search up art and style for this aass well and fix it",
   "context": {
     "map": "campus",
@@ -67,6 +67,11 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:17.004Z"
+    },
+    {
+      "author": "agent",
+      "text": "Art is ready: new campus tiles are in (see docs/research/campus-tile-kit.png). They appear in the game once the campus layout rebuild places them, which is being done next. This stays in progress until you can see it on the map.",
+      "at": "2026-09-13T13:37:16.095Z"
     }
   ],
   "resolution": null,
@@ -80,6 +85,11 @@
       "at": "2026-09-13T11:45:17.004Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-13T13:37:16.095Z",
+      "by": "agent",
+      "status": "in-progress"
     }
   ]
 }

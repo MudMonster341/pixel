@@ -58,6 +58,9 @@ const PALETTE = {
   '+': '#d9a88a', '=': '#b9876c',         // BITS roof (light terracotta) + roof edge
   '^': '#c9ccd3', '~': '#a4a9b3',         // other buildings: wall + roof
   '<': '#7c8088',                          // fence
+  // campus kit additions (FB-0006/0011/0014/0015/0016): appended, existing keys unchanged
+  '-': '#d9927a', _: '#6f362c',           // paving bevel: highlight + deep shadow
+  ':': '#8fbf52', ';': '#4f7a2f',         // date palm fronds: light + dark
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -514,6 +517,90 @@ const TILES = [
   { name: 'bitsDoor', draw: bitsDoor },
   { name: 'otherRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<') },
   { name: 'otherWall', solid: true, draw: otherWall },
+
+  // ---- campus kit additions, appended after the original 44 tiles (indices are stable) ----
+
+  // FB-0014: road kerbs + pavement, lane markings, a crossing, and bordered walkways.
+  // kerbT/B/L/R = a straight border where a paved sidewalk band meets the road on that side of the
+  // tile; kerbTL/TR/BL/BR = the corner where two of those borders meet, for a rectangular road area.
+  { name: 'kerbT', draw: (img, x, y) => kerbEdge(img, x, y, 'T') },
+  { name: 'kerbB', draw: (img, x, y) => kerbEdge(img, x, y, 'B') },
+  { name: 'kerbL', draw: (img, x, y) => kerbEdge(img, x, y, 'L') },
+  { name: 'kerbR', draw: (img, x, y) => kerbEdge(img, x, y, 'R') },
+  { name: 'kerbTL', draw: (img, x, y) => kerbEdge(img, x, y, 'TL') },
+  { name: 'kerbTR', draw: (img, x, y) => kerbEdge(img, x, y, 'TR') },
+  { name: 'kerbBL', draw: (img, x, y) => kerbEdge(img, x, y, 'BL') },
+  { name: 'kerbBR', draw: (img, x, y) => kerbEdge(img, x, y, 'BR') },
+  { name: 'roadLineH', draw: roadLineH },
+  { name: 'roadLineV', draw: roadLineV },
+  { name: 'crossingH', draw: crossingH },
+  { name: 'crossingV', draw: crossingV },
+  { name: 'walkway', draw: walkway },
+
+  // FB-0015: lush lawn variants, clipped hedge, round bush, a flower bed, and two kinds of tree.
+  // Trees are split into a solid trunk (ground level) and a 2x2 overhead canopy (see STYLE_GUIDE).
+  { name: 'lawn', draw: (img, x, y) => grass(img, x, y, 71) },
+  {
+    name: 'lawn2',
+    draw: (img, x, y) => {
+      grass(img, x, y, 73);
+      const r = rng(75);
+      for (let i = 0; i < 3; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'l');
+    },
+  },
+  { name: 'hedge', solid: true, draw: hedge },
+  { name: 'bush', solid: true, draw: bush },
+  { name: 'flowerbed', solid: true, draw: flowerbed },
+  { name: 'treeTrunk', solid: true, draw: treeTrunk },
+  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 0, roundCanopyShape, roundCanopyTone) },
+  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 0, roundCanopyShape, roundCanopyTone) },
+  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 1, roundCanopyShape, roundCanopyTone) },
+  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 1, roundCanopyShape, roundCanopyTone) },
+  { name: 'palmTrunk', solid: true, draw: palmTrunk },
+  { name: 'palmCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 0, palmCanopyShape, palmCanopyTone) },
+  { name: 'palmCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 0, palmCanopyShape, palmCanopyTone) },
+  { name: 'palmCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 1, palmCanopyShape, palmCanopyTone) },
+  { name: 'palmCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 1, palmCanopyShape, palmCanopyTone) },
+
+  // FB-0016: a tennis court kit. See the arrangement comment above courtSurface() below for how
+  // these combine into a standard 18x9-tile court (36x18 m including run-off).
+  { name: 'courtLineH', draw: courtLineH },
+  { name: 'courtLineV', draw: courtLineV },
+  { name: 'courtCornerTL', draw: (img, x, y) => courtCorner(img, x, y, 'B', 'R') },
+  { name: 'courtCornerTR', draw: (img, x, y) => courtCorner(img, x, y, 'B', 'L') },
+  { name: 'courtCornerBL', draw: (img, x, y) => courtCorner(img, x, y, 'T', 'R') },
+  { name: 'courtCornerBR', draw: (img, x, y) => courtCorner(img, x, y, 'T', 'L') },
+  { name: 'courtCenterMark', draw: courtCenterMark },
+  { name: 'courtNet', draw: courtNet },
+
+  // FB-0011: cleaner BITS + other-building fronts (small windows, corners, roof parapet, entrance,
+  // pillar) and a straight fence kit (horizontal/vertical runs, corners, and a walkable gate).
+  { name: 'bitsWallPlain', solid: true, draw: bitsWallPlain },
+  { name: 'bitsWallEndL', solid: true, draw: (img, x, y) => bitsWallEnd(img, x, y, 'L') },
+  { name: 'bitsWallEndR', solid: true, draw: (img, x, y) => bitsWallEnd(img, x, y, 'R') },
+  { name: 'bitsRoofT', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true }) },
+  { name: 'bitsRoofL', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { left: true }) },
+  { name: 'bitsRoofR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { right: true }) },
+  { name: 'bitsRoofTL', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, left: true }) },
+  { name: 'bitsRoofTR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, right: true }) },
+  { name: 'bitsEntranceL', draw: (img, x, y) => bitsEntrance(img, x, y, true) },
+  { name: 'bitsEntranceR', draw: (img, x, y) => bitsEntrance(img, x, y, false) },
+  { name: 'bitsPillar', solid: true, draw: bitsPillar },
+  { name: 'otherWallPlain', solid: true, draw: otherWallPlain },
+  { name: 'otherWallEndL', solid: true, draw: (img, x, y) => otherWallEnd(img, x, y, 'L') },
+  { name: 'otherWallEndR', solid: true, draw: (img, x, y) => otherWallEnd(img, x, y, 'R') },
+  { name: 'otherRoofT', solid: true, draw: (img, x, y) => otherRoofEdge(img, x, y, { top: true }) },
+  { name: 'otherRoofL', solid: true, draw: (img, x, y) => otherRoofEdge(img, x, y, { left: true }) },
+  { name: 'otherRoofR', solid: true, draw: (img, x, y) => otherRoofEdge(img, x, y, { right: true }) },
+  { name: 'otherRoofTL', solid: true, draw: (img, x, y) => otherRoofEdge(img, x, y, { top: true, left: true }) },
+  { name: 'otherRoofTR', solid: true, draw: (img, x, y) => otherRoofEdge(img, x, y, { top: true, right: true }) },
+  { name: 'fenceH', solid: true, draw: fenceH },
+  { name: 'fenceV', solid: true, draw: fenceV },
+  { name: 'fenceCornerTL', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'B', 'R') },
+  { name: 'fenceCornerTR', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'B', 'L') },
+  { name: 'fenceCornerBL', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'R') },
+  { name: 'fenceCornerBR', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'L') },
+  { name: 'fenceGate', draw: fenceGate },
 ];
 
 // ---------- campus tiles ----------
@@ -524,12 +611,22 @@ function speckle(img, x, y, base, speck, seed, count) {
   for (let i = 0; i < count; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), speck);
 }
 
-// Red-brown brick pavers in a running bond
+// Red-brown brick pavers in a running bond (FB-0006): each brick is bevelled, with a highlight on
+// its top/left edge and a shadow on its bottom/right edge (light from the top-left), plus a
+// slightly varying base tone so a large paved area doesn't read as one flat repeating grid.
+function brickBevel(xx, yy, offset, period, base) {
+  const withinRow = yy % 4;
+  const brickX = (xx + offset) % period;
+  if (withinRow === 3 || brickX === period - 1) return '8'; // mortar joint
+  if (withinRow === 0 || brickX === 0) return '-';           // highlight (top-left of brick)
+  if (withinRow === 2 || brickX === period - 2) return '_';  // shadow (bottom-right of brick)
+  return base;
+}
+
 function paving(img, x, y) {
   forEachPixel((xx, yy) => {
     const offset = (yy >> 2) % 2 ? 4 : 0;
-    const mortar = yy % 4 === 3 || (xx + offset) % 8 === 7;
-    img.set(x + xx, y + yy, mortar ? '8' : '7');
+    img.set(x + xx, y + yy, brickBevel(xx, yy, offset, 8, '7'));
   });
 }
 
@@ -563,14 +660,31 @@ function flatRoof(img, x, y, base, edge) {
   img.fill(x, y, 1, TILE, edge);
 }
 
-// Sand-beige render, salmon trim band, one framed window per tile
-function bitsWall(img, x, y) {
+// Sand-beige render with a salmon cornice, a panel line, a dark base course and two small
+// windows (FB-0011: one big window per tile made every row read as a band of glass).
+function bitsWallPlain(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 2, '&');
-  img.fill(x + 3, y + 4, 10, 9, '&');
-  img.fill(x + 4, y + 5, 8, 7, '*');
-  img.set(x + 5, y + 6, 'W');
-  img.fill(x, y + 14, TILE, 2, '%');
+  img.fill(x, y, TILE, 2, '&'); // cornice / trim line
+  img.fill(x + 7, y + 2, 1, 12, '%'); // panel line
+  img.fill(x, y + 14, TILE, 2, '%'); // dark base course
+}
+
+function bitsWall(img, x, y) {
+  bitsWallPlain(img, x, y);
+  for (const wx of [2, 9]) {
+    img.fill(x + wx, y + 5, 5, 6, '&'); // frame
+    img.fill(x + wx + 1, y + 6, 3, 4, '*'); // glass
+    img.set(x + wx + 1, y + 7, 'W'); // glint
+  }
+}
+
+// The wall turning a corner: a darker side face in shadow, per the 3/4-view rule.
+function bitsWallEnd(img, x, y, side) {
+  bitsWallPlain(img, x, y);
+  const w = 3;
+  const x0 = side === 'L' ? 0 : TILE - w;
+  img.fill(x + x0, y, w, TILE, '%');
+  img.fill(x + x0, y, w, 2, '=');
 }
 
 // Glass entrance under a salmon arch
@@ -583,11 +697,301 @@ function bitsDoor(img, x, y) {
   img.set(x + 10, y + 6, 'W');
 }
 
-function otherWall(img, x, y) {
+function otherWallPlain(img, x, y) {
   img.fill(x, y, TILE, TILE, '^');
-  img.fill(x, y + 5, TILE, 4, '*');
-  for (let xx = 3; xx < TILE; xx += 4) img.fill(x + xx, y + 5, 1, 4, '^');
+  img.fill(x, y, TILE, 2, '~');
+  img.fill(x + 7, y + 2, 1, 12, '~');
   img.fill(x, y + 14, TILE, 2, '~');
+}
+
+function otherWall(img, x, y) {
+  otherWallPlain(img, x, y);
+  for (const wx of [2, 9]) {
+    img.fill(x + wx, y + 5, 5, 6, '~');
+    img.fill(x + wx + 1, y + 6, 3, 4, '*');
+  }
+}
+
+function otherWallEnd(img, x, y, side) {
+  otherWallPlain(img, x, y);
+  const w = 3;
+  const x0 = side === 'L' ? 0 : TILE - w;
+  img.fill(x + x0, y, w, TILE, '~');
+}
+
+// ---------- campus kit additions (FB-0006, FB-0011, FB-0014, FB-0015, FB-0016) ----------
+// Appended after the original campus tiles; see docs/STYLE_GUIDE.md "Campus kit" for the full list.
+
+// -- FB-0014: roads with kerb edges + a raised pavement, lane markings, a crossing, walkways --
+
+// A road/path rectangle's border: a paved (sidewalk) band along the named edge(s), a black-and-white
+// kerb line between it and the road surface, and asphalt filling the rest. `sides` is a string built
+// from 'T'/'B'/'L'/'R'; combining two perpendicular sides makes a corner piece.
+function kerbEdge(img, x, y, sides) {
+  speckle(img, x, y, '3', '4', 61, 10); // asphalt base
+  const band = 5;
+  const kerbW = 2;
+  const kerbAt = (i) => (Math.floor(i / 4) % 2 === 0 ? 'W' : 'K');
+  const sidewalkAt = (gx, gy) => brickBevel(gx, gy, (gy >> 2) % 2 ? 4 : 0, 8, '7');
+  if (sides.includes('T')) {
+    for (let yy = 0; yy < band; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, sidewalkAt(xx, yy));
+    for (let yy = band; yy < band + kerbW; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, kerbAt(xx));
+  }
+  if (sides.includes('B')) {
+    for (let yy = TILE - band; yy < TILE; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, sidewalkAt(xx, yy - (TILE - band)));
+    for (let yy = TILE - band - kerbW; yy < TILE - band; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, kerbAt(xx));
+  }
+  if (sides.includes('L')) {
+    for (let xx = 0; xx < band; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, sidewalkAt(xx, yy));
+    for (let xx = band; xx < band + kerbW; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, kerbAt(yy));
+  }
+  if (sides.includes('R')) {
+    for (let xx = TILE - band; xx < TILE; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, sidewalkAt(xx - (TILE - band), yy));
+    for (let xx = TILE - band - kerbW; xx < TILE - band; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, kerbAt(yy));
+  }
+}
+
+function roadLineH(img, x, y) {
+  speckle(img, x, y, '3', '4', 63, 10);
+  img.fill(x + 6, y + 7, 4, 2, 'W');
+}
+function roadLineV(img, x, y) {
+  speckle(img, x, y, '3', '4', 65, 10);
+  img.fill(x + 7, y + 6, 2, 4, 'W');
+}
+function crossingH(img, x, y) {
+  speckle(img, x, y, '3', '4', 67, 6);
+  for (let xx = 1; xx < TILE; xx += 4) img.fill(x + xx, y, 2, TILE, 'W');
+}
+function crossingV(img, x, y) {
+  speckle(img, x, y, '3', '4', 69, 6);
+  for (let yy = 1; yy < TILE; yy += 4) img.fill(x, y + yy, TILE, 2, 'W');
+}
+
+// A brick walkway with a light stone edging along its long (north/south) sides, so a run of these
+// tiles reads as one continuous bordered path across lawn or sand, not a grid of framed squares:
+// the border only shows where the path meets the ground, not at the seam between two path tiles.
+function walkway(img, x, y) {
+  forEachPixel((xx, yy) => {
+    if (yy === 0 || yy === 15) {
+      img.set(x + xx, y + yy, xx % 2 === 0 ? 'Q' : 'O');
+      return;
+    }
+    const inRow = yy - 1;
+    const offset = (Math.floor(inRow / 3) % 2) ? 3 : 0;
+    const withinRow = inRow % 3;
+    const brickX = (xx + offset) % 6;
+    let key = '7';
+    if (withinRow === 2 || brickX === 5) key = '8';
+    else if (withinRow === 0 || brickX === 0) key = '-';
+    img.set(x + xx, y + yy, key);
+  });
+}
+
+// -- FB-0015: lush lawn, hedges, bushes, a flower bed, and trees with overhead canopies --
+
+function hedge(img, x, y) {
+  forEachPixel((xx, yy) => {
+    const key = (xx + yy * 3) % 7 === 0 ? 't' : (xx * 2 + yy) % 11 === 0 ? 'e' : 'T';
+    img.set(x + xx, y + yy, key);
+  });
+  img.fill(x, y, TILE, 2, 't');
+  img.fill(x, y, 2, TILE, 't');
+  img.fill(x, y + TILE - 2, TILE, 2, 'e');
+  img.fill(x + TILE - 2, y, 2, TILE, 'e');
+}
+
+function bush(img, x, y) {
+  grass(img, x, y, 77);
+  const inside = (xx, yy) => ((xx - 7.5) / 6.5) ** 2 + ((yy - 8) / 6) ** 2 < 1;
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) {
+      if (inside(xx, yy)) {
+        img.set(x + xx, y + yy, xx < 8 && yy < 9 ? 't' : xx > 9 || yy > 10 ? 'e' : 'T');
+      } else if (inside(xx - 1, yy) || inside(xx + 1, yy) || inside(xx, yy - 1) || inside(xx, yy + 1)) {
+        img.set(x + xx, y + yy, 'K');
+      }
+    }
+  }
+}
+
+// A small brick-edged planter (a garden bed border, not a fill color close to the soil, so the
+// edge actually reads against the dirt) with a few flowers.
+function flowerbed(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'n');
+  img.fill(x, y, TILE, 2, 'Q');
+  img.fill(x, y, 2, TILE, 'Q');
+  img.fill(x, y + TILE - 2, TILE, 2, 'o');
+  img.fill(x + TILE - 2, y, 2, TILE, 'o');
+  flower(img, x + 4, y + 5, 'W');
+  flower(img, x + 10, y + 6, 'P');
+  flower(img, x + 7, y + 10, 'Y');
+}
+
+// Tall trees are split into a solid trunk (drawn under the player, like any other object) and a
+// 2x2 canopy above it, drawn on an overhead layer so walking behind it reads as depth (STYLE_GUIDE).
+function treeTrunk(img, x, y) {
+  grass(img, x, y, 79);
+  img.box(x + 5, y + 1, 6, 15, 'n');
+  img.fill(x + 6, y + 2, 2, 13, 'N');
+}
+
+function palmTrunk(img, x, y) {
+  grass(img, x, y, 81);
+  img.box(x + 6, y, 4, 16, 'n');
+  for (let ring = 2; ring < 16; ring += 3) img.fill(x + 6, y + ring, 4, 1, 'N');
+}
+
+// Draws one 16x16 quadrant (qx, qy in {0,1}) of a 32x32 canopy described by a shape test and a
+// tone function, both working in the canopy's own 32x32 virtual space. Pixels outside the shape
+// stay transparent, so the ground/trunk show through around the canopy's silhouette.
+function canopyQuadrant(img, x, y, qx, qy, shapeFn, toneFn) {
+  forEachPixel((xx, yy) => {
+    const gx = qx * TILE + xx;
+    const gy = qy * TILE + yy;
+    if (!shapeFn(gx, gy)) return;
+    const edge = !shapeFn(gx - 1, gy) || !shapeFn(gx + 1, gy) || !shapeFn(gx, gy - 1) || !shapeFn(gx, gy + 1);
+    img.set(x + xx, y + yy, edge ? 'K' : toneFn(gx, gy));
+  });
+}
+
+const roundCanopyShape = (gx, gy) => ((gx - 16) / 15.5) ** 2 + ((gy - 13) / 12) ** 2 <= 1;
+const roundCanopyTone = (gx, gy) => {
+  const d = (gx - 16) + (gy - 13); // diagonal position: light from the top-left
+  return d < -8 ? 't' : d > 10 ? 'e' : 'T';
+};
+
+function palmCanopyShape(gx, gy) {
+  const dx = gx - 16;
+  const dy = gy - 16;
+  const dist = Math.hypot(dx, dy);
+  if (dist > 15) return false;
+  if (dist <= 3) return true; // crown
+  const angle = Math.atan2(dy, dx);
+  const fronds = 8;
+  for (let i = 0; i < fronds; i++) {
+    const a = (i / fronds) * Math.PI * 2;
+    const diff = Math.atan2(Math.sin(angle - a), Math.cos(angle - a));
+    if (Math.abs(diff) < 0.28) return true;
+  }
+  return false;
+}
+const palmCanopyTone = (gx, gy) => {
+  const d = (gx - 16) + (gy - 16); // diagonal position: light from the top-left
+  return d < -8 ? ':' : d > 6 ? ';' : 'T';
+};
+
+// -- FB-0016: a tennis court kit --
+//
+// A standard court is 18x9 tiles (36x18 m at 2 m/tile, including run-off). Arrangement, columns
+// 0-17 and rows 0-8 (also documented in docs/STYLE_GUIDE.md "Campus kit"):
+//
+//   row 1, cols 3-14    top sideline               courtLineH
+//   row 7, cols 3-14    bottom sideline             courtLineH
+//   col 2, rows 2-6     left baseline               courtLineV
+//   col 15, rows 2-6    right baseline              courtLineV
+//   col 5 / col 12, rows 2-6   service lines        courtLineV
+//   cols 8-9, rows 2-6  the net                     courtNet
+//   row 4, cols 6-7 and 10-11  centre service line (either side of the net)   courtLineH
+//   (row1,col2) (row1,col15) (row7,col2) (row7,col15)   the four corners     courtCornerTL/TR/BL/BR
+//   (row4,col2) (row4,col15)   centre marks                                  courtCenterMark
+//   everywhere else inside cols 2-15, rows 1-7   plain surface               court
+//   outside that rectangle: run-off, whatever ground the court sits on (e.g. sand)
+//
+// tools/../docs/research/campus-tile-kit.png has a rendered example of this exact arrangement.
+
+function courtSurface(img, x, y, seed) {
+  speckle(img, x, y, '@', '#', seed, 4);
+}
+function courtLineH(img, x, y) {
+  courtSurface(img, x, y, 87);
+  img.fill(x, y + 7, TILE, 2, 'W');
+}
+function courtLineV(img, x, y) {
+  courtSurface(img, x, y, 89);
+  img.fill(x + 7, y, 2, TILE, 'W');
+}
+// vSide: which half ('T' or 'B') carries the vertical line continuing to that edge.
+// hSide: which half ('L' or 'R') carries the horizontal line continuing to that edge.
+function courtCorner(img, x, y, vSide, hSide) {
+  courtSurface(img, x, y, 91);
+  img.fill(x + 7, y + (vSide === 'T' ? 0 : 8), 2, 8, 'W');
+  img.fill(x + (hSide === 'L' ? 0 : 8), y + 7, 8, 2, 'W');
+}
+function courtCenterMark(img, x, y) {
+  courtSurface(img, x, y, 93);
+  img.fill(x + 7, y, 2, TILE, 'W');
+  img.fill(x + 4, y + 6, 8, 2, 'W');
+}
+// The net runs across the court (a vertical band in the arrangement below): mesh with a taped top
+// edge and end posts. Visual only (not solid), so it doesn't block the whole court width.
+function courtNet(img, x, y) {
+  courtSurface(img, x, y, 95);
+  img.fill(x + 6, y, 4, TILE, 'K');
+  for (let yy = 1; yy < TILE; yy += 3) img.fill(x + 6, y + yy, 4, 1, '4');
+  img.fill(x + 6, y, 4, 2, 'W');
+  img.fill(x + 5, y, 1, TILE, 'K');
+  img.fill(x + 10, y, 1, TILE, 'K');
+}
+
+// -- FB-0011: BITS + other-building fronts (roof edges, entrance, pillar) and a fence kit --
+
+function bitsRoofEdge(img, x, y, edges) {
+  img.fill(x, y, TILE, TILE, '+');
+  if (edges.top) img.fill(x, y, TILE, 3, '=');
+  if (edges.left) img.fill(x, y, 3, TILE, '=');
+  if (edges.right) img.fill(x + TILE - 3, y, 3, TILE, '=');
+  outline(img, x, y, edges);
+}
+
+function otherRoofEdge(img, x, y, edges) {
+  img.fill(x, y, TILE, TILE, '~');
+  if (edges.top) img.fill(x, y, TILE, 3, '<');
+  if (edges.left) img.fill(x, y, 3, TILE, '<');
+  if (edges.right) img.fill(x + TILE - 3, y, 3, TILE, '<');
+  outline(img, x, y, edges);
+}
+
+// Glass entrance under a salmon arch, 2 tiles wide.
+function bitsEntrance(img, x, y, isLeft) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 3, '&');
+  img.fill(x + (isLeft ? 3 : 0), y + 3, 13, 11, '*');
+  img.set(x + (isLeft ? 5 : 10), y + 6, 'W');
+  img.fill(x, y + 14, TILE, 2, '%');
+}
+
+function bitsPillar(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 2, '&');
+  img.box(x + 5, y + 1, 6, 15, '%');
+  img.fill(x + 6, y + 2, 4, 13, '&');
+}
+
+function fenceH(img, x, y) {
+  fence(img, x, y);
+}
+function fenceV(img, x, y) {
+  speckle(img, x, y, '5', '6', 44, 6);
+  img.fill(x + 1, y + 1, 12, 2, '<');
+  img.fill(x + 1, y + 9, 12, 2, '<');
+  img.fill(x + 3, y, 1, TILE, '<');
+  img.fill(x + 9, y, 1, TILE, '<');
+  img.fill(x + 13, y, 1, TILE, '2');
+}
+function fenceCorner(img, x, y, vSide, hSide) {
+  speckle(img, x, y, '5', '6', 46, 6);
+  const vy0 = vSide === 'T' ? 0 : 8;
+  img.fill(x + 3, y + vy0, 1, 8, '<');
+  img.fill(x + 9, y + vy0, 1, 8, '<');
+  const hx0 = hSide === 'L' ? 0 : 8;
+  img.fill(x + hx0, y + 3, 8, 1, '<');
+  img.fill(x + hx0, y + 9, 8, 1, '<');
+}
+function fenceGate(img, x, y) {
+  speckle(img, x, y, '5', '6', 48, 6);
+  img.fill(x, y + 1, 2, 12, '<');
+  img.fill(x + 14, y + 1, 2, 12, '<');
 }
 
 // ---------- player (facing down / up / left; right = mirrored left) ----------
@@ -781,11 +1185,11 @@ const write = (name, img) => fs.writeFileSync(path.join(outDir, name), img.toPNG
 
 const tileRows = Math.ceil(TILES.length / TILESET_COLUMNS);
 const tiles = new Img(TILESET_COLUMNS * TILE, tileRows * TILE);
-const tileInfo = TILES.map(({ name, solid, draw }, i) => {
+const tileInfo = TILES.map(({ name, solid, overhead, draw }, i) => {
   const x = (i % TILESET_COLUMNS) * TILE;
   const y = Math.floor(i / TILESET_COLUMNS) * TILE;
   draw(tiles, x, y);
-  return { name, solid: Boolean(solid), color: tiles.averageColor(x, y, TILE, TILE) };
+  return { name, solid: Boolean(solid), overhead: Boolean(overhead), color: tiles.averageColor(x, y, TILE, TILE) };
 });
 write('tiles.png', tiles);
 fs.writeFileSync(

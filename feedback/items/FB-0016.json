@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "in-progress",
   "createdAt": "2026-09-13T11:39:38.751Z",
-  "updatedAt": "2026-09-13T11:45:17.355Z",
+  "updatedAt": "2026-09-13T13:37:16.250Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -67,6 +67,11 @@
       "author": "agent",
       "text": "Queued for the campus art pass (3D pavement, road kerbs, trees and bushes, tennis court, building proportions). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:17.355Z"
+    },
+    {
+      "author": "agent",
+      "text": "Art is ready: new campus tiles are in (see docs/research/campus-tile-kit.png). They appear in the game once the campus layout rebuild places them, which is being done next. This stays in progress until you can see it on the map.",
+      "at": "2026-09-13T13:37:16.250Z"
     }
   ],
   "resolution": null,
@@ -80,6 +85,11 @@
       "at": "2026-09-13T11:45:17.355Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-13T13:37:16.250Z",
+      "by": "agent",
+      "status": "in-progress"
     }
   ]
 }

@@ -43,17 +43,39 @@ Free tools for later:
 index.html            loads Phaser + the game scripts
 src/items.js          item definitions
 src/maps.js           every map as text (1 character = 1 tile), plus doors, items and NPCs
+src/maplogic.js       map helpers shared by the game and the tests
 src/state.js          inventory + game state that survives moving between maps
 src/scenes/world.js   the map, player, NPCs, pickups, doors
 src/scenes/ui.js      minimap, inventory bar, dialog box, tutorial
 src/main.js           loads the art and starts the game
+src/dev/              dev-only tools (feedback overlay)
 tools/make-assets.js  the pixel art (run `npm run assets` after changing it)
+tools/feedback*.js    feedback storage + command line
 assets/               the generated PNGs + tiles.json
-server.js             tiny local web server
+server.js             local web server + feedback API
+tests/                unit tests and browser tests
+feedback/             feedback items from play-testing
 ```
 
 **Change the world:** edit `src/maps.js` and refresh the browser.
 **Change the art:** edit the text sprites in `tools/make-assets.js`, run `npm run assets`, and refresh.
+
+## Tests
+
+```bash
+npm install && npx playwright install chromium
+npm test
+```
+
+The first command is only needed once. `npm test` runs unit tests plus browser tests that play the game in Chromium. The same suite runs
+automatically before every `git push` and on GitHub Actions. Details: [docs/TESTING.md](docs/TESTING.md).
+
+## Giving feedback while playing (dev mode)
+
+With `npm start` running, press **`` ` ``** (backtick) or click **Feedback** in the corner. The game
+pauses, takes a screenshot (click it to point at something), and saves your note with where you
+are. Answers to questions and fixes to check show up in the **Inbox** tab. Details:
+[docs/FEEDBACK.md](docs/FEEDBACK.md). Add `?dev=0` to the address to play without dev tools.
 
 ## Roadmap (small steps, each one playable)
 

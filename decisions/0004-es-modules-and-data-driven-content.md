@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-13
 authored_by: agent
 derived_from: ["owner request 2026-09-13: stable architecture, base components first, uniform method for adding new content", "ADR 0003 tripwire: more than ~6 source files"]
@@ -32,7 +32,7 @@ Content format, considered alongside:
   Tiled.
 
 ## Decision
-*Proposed:* move to native ES modules (option 3), and express all story logic as conditions and
+Move to native ES modules (option 3), and express all story logic as conditions and
 actions (option b). Option 3 removes the global/order problem without giving up the zero-install
 setup that has worked so far. Option b is what makes "new content = data only" enforceable.
 

@@ -1,32 +1,32 @@
 # Architecture rules
 
-**Status:** v1 proposal (2026-09-13). Waiting for the owner's review. It describes the target
-structure. The "Today" notes say where the code still differs. Once approved, every change follows
-these rules. Changing a rule needs an ADR in `decisions/`.
+**Status:** v1, approved by the owner on 2026-09-13. This describes the target structure; the
+"Today" notes say where the code still differs. Every change follows these rules, and changing a
+rule needs an ADR in `decisions/`.
 
 ## The one big rule
 
 **Content is data. The engine is code. They never mix.**
 
 Adding a map, NPC, item, clue, chest or secret door should mean *editing data files only*. If new
-content needs new engine code, the engine is missing a general feature: add that feature once, in
+content needs new engine code, the engine is missing a general feature. Add that feature once, in
 a reusable way, then use it from data.
 
 ## Folder layout (target)
 
 ```
 src/
-  main.js              boot, Phaser config
+  main.js              boot, Phaser config, dev-mode switch
   config.js            constants: tile size, zoom, speeds, colors, font
   core/
-    events.js          the event bus + list of every event name
+    events.js          the event bus + the list of every event name
     registry.js        loads + validates all content data at boot (fails loudly)
   systems/             game rules, no drawing
-    state.js           GameState: the single source of truth, serialisable to JSON
-    inventory.js
+    state.js           GameState: the single source of truth, plain data
+    inventory.js       items the player carries (shown in the backpack)
     flags.js           story flags (true/false/number)
     script.js          runs conditions and actions from data (see below)
-    save.js            save/load GameState to localStorage
+    save.js            versioned saves through a storage adapter (see below)
   scenes/
     boot.js  world.js  ui.js
   world/               things that live in the map
@@ -34,24 +34,30 @@ src/
     player.js
     bubbles.js         speech bubbles and emotes above heads
   ui/                  things drawn on the screen
-    minimap.js  hotbar.js  dialog.js  toast.js  tutorial.js  journal.js  questTracker.js
+    minimap.js  backpack.js  hotbar.js (kept, hidden)  dialog.js  choices.js
+    toast.js  tutorial.js  journal.js  questTracker.js
   data/                CONTENT, no engine logic
     items.js
     tiles.json         (generated)
     maps/meadow.js     maps/house.js  ...one file per map
     npcs/tomas.js      ...dialog scripts per NPC
     quests/main.js     the treasure hunt steps
+  dev/                 dev-mode-only tools (feedback overlay). Never loaded for players
+tests/
+  unit/                node:test, no browser
+  e2e/                 Playwright, plays the real game
+tools/                 asset generator, feedback store + CLI
 ```
 
-*Today:* plain `<script>` tags with shared globals in 6 files. The move to native ES modules is
-proposed in [ADR 0004](../decisions/0004-es-modules-and-data-driven-content.md).
+*Today:* plain `<script>` tags with shared globals. [ADR 0004](../decisions/0004-es-modules-and-data-driven-content.md)
+(accepted) moves this to native ES modules, which is the first step of phase 1.
 
 ## Who talks to whom
 
 ```
  data/ ──read by──▶ systems/ ◀──calls── scenes/world ──emits events──▶ scenes/ui
                        ▲                                                   │
-                       └───────────────calls (e.g. select slot)────────────┘
+                       └───────────────calls (e.g. use item)───────────────┘
 ```
 
 - **World** owns the map, player and entities. It never draws UI.
@@ -59,8 +65,21 @@ proposed in [ADR 0004](../decisions/0004-es-modules-and-data-driven-content.md).
 - **Systems** own the rules and state. They never draw anything.
 - Scenes communicate through **events** on `game.events`. Every event name is declared in
   `core/events.js` and nowhere else.
-- Anything that must survive a map change or a save goes in **GameState**. Nothing else keeps
+- Anything that must survive a map change or a save goes in **GameState**. Nothing else stores
   progress.
+
+## State, saving and (future) profiles
+
+- **GameState is plain data**, with no Phaser objects or functions, so it turns into JSON as-is:
+  `{ version, profileId, map, position, facing, inventory, flags, collected, journal, playTimeMs }`.
+- **`save.js` goes through a storage adapter.** Today that's a `localStorage` adapter using the key
+  `pixelquest:v1:profile:<profileId>:slot:<n>`. Later a server adapter adds login. Game code never
+  touches `localStorage` directly.
+- **Every save carries a `version`.** Loading an older version runs migration steps; it never
+  crashes and never silently drops progress.
+- **`profileId` is `"local"`** until profiles exist. Everything that reads or writes a save takes
+  the profile id, so adding profiles later means adding a picker, not rewriting saves.
+- Autosave runs on map change and after story events.
 
 ## Scripts: conditions and actions
 
@@ -78,7 +97,15 @@ All story logic is data made of **conditions** ("is this true?") and **actions**
 
 **Actions**
 ```js
-{ say: ['line one', 'line two'] }     // open dialog with the current speaker
+{ say: ['line one', 'line two'] }     // dialog with the current speaker
+{ choice: {                           // player picks an answer; each option runs its own actions
+    prompt: 'Will you help me?',
+    options: [
+      { text: 'Of course!', do: [{ setFlag: 'mira.helping' }, { say: ['Thank you!'] }] },
+      { text: 'Not now.',   do: [{ say: ['Oh... come back later.'] }] },
+    ],
+} }
+{ goto: 'mira-riddle' }               // jump to another dialog entry (for longer branching flows)
 { giveItem: 'sword' }
 { takeItem: 'starShard', count: 3 }
 { setFlag: 'tomas.gaveClue' }
@@ -90,7 +117,8 @@ All story logic is data made of **conditions** ("is this true?") and **actions**
 { cameraShake: 300 }
 ```
 
-**NPC dialog** is a list of entries. The *first* entry whose `when` matches is used:
+**NPC dialog** is a list of entries. The *first* entry whose `when` matches is used; `id` lets
+`goto` jump to an entry:
 ```js
 export default {
   id: 'tomas',
@@ -111,7 +139,7 @@ export default {
 ## Entities (things placed on a map)
 
 Every map object has the same basic shape: `{ id, type, x, y, when?, ... }`. `x` and `y` are in
-**tiles**. `when` is a condition: the entity only exists while it's true.
+**tiles**. `when` is a condition, and the entity only exists while it's true.
 
 | type | What it does | Extra fields |
 |---|---|---|
@@ -124,8 +152,8 @@ Every map object has the same basic shape: `{ id, type, x, y, when?, ... }`. `x`
 | `trigger` | Invisible zone that runs actions when entered | `w`, `h`, `once`, `do` |
 | `hidden` | Nothing visible until `when` becomes true (e.g. after a clue) | `item` or `do` |
 
-Opened chests, taken pickups and triggered one-offs are recorded in GameState by `id`, so they
-stay done after a map change or a reload.
+Opened chests, taken pickups and one-off triggers are recorded in GameState by `id`, so they stay
+done after a map change or a reload.
 
 ## Naming
 
@@ -133,22 +161,27 @@ stay done after a map change or a reload.
 - **flags:** dot namespaces, `who.what`: `tomas.metPlayer`, `secretDoor.opened`.
 - **tile names:** camelCase: `roofTL`, `wallWindow`.
 - **events:** `noun:verb`: `map:entered`, `item:added`, `dialog:closed`.
+- **feedback tests:** `FB-0007: what it guarantees`.
 - **Coordinates:** tiles in data, pixels only inside the engine (`toPixel()`).
 
 ## Rules that keep it stable
 
 1. **Validate at boot.** The content registry checks every map and script: unknown tile names,
-   duplicate ids, missing items/NPCs, doors to missing maps. Fail with a clear message on screen,
-   not with a mysterious crash later.
+   duplicate ids, missing items or NPCs, doors to missing maps. Show a clear message on screen,
+   not a mysterious crash later.
 2. **One source of truth.** A fact is stored once, in GameState or in data, never copied.
 3. **Scenes are rebuildable.** The world scene can be restarted at any time from GameState + data.
    If restarting changes anything, that's a bug.
 4. **No magic numbers in scenes.** Sizes, speeds and colors come from `config.js` (art colors come
    from the style guide).
-5. **Small steps.** One feature per work chunk, playable at the end of each chunk, browser-tested,
+5. **Small steps.** One feature per work chunk, playable at the end of each chunk, tested,
    checkpointed.
-6. **Debug hooks stay.** `window.game` exists. A `?debug` URL flag (planned) adds map select,
-   teleport, a flag editor and hitbox view.
+6. **Input:** one-shot actions (talk, toggle, open a menu) listen for **keydown events** and ignore
+   `event.repeat`. Only held actions (movement) read `isDown`. Never poll `JustDown`: it loses taps
+   shorter than one frame ([ERR-0001](../ERRORS.md)).
+7. **Dev-only code lives in `src/dev/`** and is loaded only when `DEV_MODE` is on.
+8. **Done means tested.** A change isn't done until `npm test` passes ([TESTING.md](TESTING.md)).
+   Debug hooks stay: `window.game` exists in every build.
 
 ## How to add things (checklists)
 
@@ -156,10 +189,11 @@ stay done after a map change or a reload.
 `npm run assets` → place it as a `pickup`/`chest` entity or give it with `giveItem`.
 
 **A new map:** create `data/maps/<name>.js` with the standard shape (`name`, `legend`, `rows`,
-`spawn`, `entities`) → register it → add a `door` entity on another map that leads to it.
+`spawn`, `entities`) → register it → add a `door` entity on another map that leads to it →
+`npm test` (maps are checked automatically) → add a browser test that walks in.
 
 **A new NPC:** draw the sprite (style guide: distinct colors) → create `data/npcs/<name>.js` with
-dialog entries → place an `npc` entity on a map.
+dialog entries → place an `npc` entity on a map → browser test for the conversation's outcome.
 
-**A new story step:** add flags and clues via NPC dialog actions → place the `hidden`/`chest`
+**A new story step:** add flags and clues through NPC dialog actions → place the `hidden`/`chest`
 entity with a `when` that uses those flags → test the step from a fresh save and from `?debug`.

@@ -32,7 +32,7 @@ What creates the 3D feel (every asset must respect these):
 | Thing | Size | Notes |
 |---|---|---|
 | Map tile | 16×16 | Everything aligns to it |
-| Character | **16×24 (proposed)** | Currently 16×16. Taller characters read better and allow expressions |
+| Character | 16×16 | Owner decision 2026-09-13: keep for now. 16×24 is an option later for more expressive faces |
 | Item icon | 16×16 | Shown at 3× in the UI |
 | Building | multiples of 16 | Roof overhangs the walls by one tile-row |
 | World camera | zoom 3 | 320×180 world pixels visible |

@@ -92,3 +92,38 @@ checkpoint pushed successfully (credentials became available between the two att
 **Decisions:** none · **Failures:** none
 
 **Next:** unchanged. Owner review of the `docs/` proposals.
+
+## 2026-09-13 — Automated tests on every push + dev feedback overlay
+
+**Did:**
+- Test pipeline: 31 unit tests (`node:test`: maps valid and reachable, inventory, Tomas dialog,
+  assets up to date, feedback store) and 26 browser tests (Playwright: boot, movement/collisions,
+  pickups/slots, doors, NPC talk, tutorial, minimap, feedback overlay). They run in the pre-push hook
+  (`.githooks`) and in GitHub Actions (`.github/workflows/test.yml`). All green locally.
+- Dev feedback loop: overlay (`` ` `` in dev mode) with a screenshot you can click to mark a spot,
+  captured game context, and an inbox for answering questions and confirming fixes.
+  `server.js` API → `tools/feedback-store.js` → `feedback/items/*.json`, plus the agent CLI
+  `npm run feedback`.
+- Moved map building into `src/maplogic.js` so the game and the tests share it.
+- Dev server now binds to 127.0.0.1 and refuses dotfiles and `node_modules`.
+- Recorded owner decisions in GAME_PLAN.md. Accepted ADR 0004.
+
+**Why:**
+- The first browser-test run failed 3 tests that manual play had never caught: quick taps were
+  dropped ([ERR-0001](ERRORS.md)). Fixing it (keydown events) is now an architecture rule.
+- Feedback is stored as files, not in the browser or GitHub Issues, so the agent can read it
+  directly and git keeps the history. The owner asked for "ask before building", hence the
+  needs-info → answered loop.
+- Browser tests use port 4173 and a temporary feedback folder, so they never touch real feedback or
+  the dev server on 8080.
+- Owner decisions: backpack instead of an on-screen hotbar (keep the hotbar code), no combat,
+  characters stay 16×16, dialog choices with branching, saves designed for multiple profiles later.
+
+**Decisions:** [ADR 0004](decisions/0004-es-modules-and-data-driven-content.md) accepted,
+[ADR 0005](decisions/0005-automated-tests-on-every-push.md), [ADR 0006](decisions/0006-dev-feedback-loop.md)
+
+**Failures:** [ERR-0001](ERRORS.md) (quick key taps ignored)
+
+**Next:** Phase 1 of GAME_PLAN.md, starting with the ES modules move (the browser tests are the
+safety net), then events, flags/scripts, content registry, and profile-ready save/load. The first
+GitHub Actions run hadn't been observed when this entry was written.

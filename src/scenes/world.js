@@ -31,25 +31,18 @@ class WorldScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, width, height);
     this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height).startFollow(this.player, true).fadeIn(250, 0, 0, 0);
 
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E,SPACE');
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
+    // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
+    this.input.keyboard.addCapture('SPACE');
+    for (const key of ['E', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
     this.game.events.emit('map-entered', this);
   }
 
   buildMap() {
     this.tileInfo = this.cache.json.get('tileinfo');
-    const indexOf = Object.fromEntries(this.tileInfo.tiles.map((tile, i) => [tile.name, i]));
-    const lookup = (name) => {
-      if (!(name in indexOf)) throw new Error(`Unknown tile "${name}" in map "${this.mapKey}"`);
-      return indexOf[name];
-    };
+    this.tileData = buildTileGrid(this.def, this.tileInfo);
 
-    const data = this.def.rows.map((row) => [...row].map((ch) => lookup(this.def.legend[ch])));
-    for (const { type, x, y } of this.def.structures || []) {
-      STRUCTURES[type].forEach((names, dy) => names.forEach((name, dx) => (data[y + dy][x + dx] = lookup(name))));
-    }
-    this.tileData = data;
-
-    this.map = this.make.tilemap({ data, tileWidth: TILE, tileHeight: TILE });
+    this.map = this.make.tilemap({ data: this.tileData, tileWidth: TILE, tileHeight: TILE });
     this.ground = this.map.createLayer(0, this.map.addTilesetImage('tiles'), 0, 0);
     this.ground.setCollision(this.tileInfo.tiles.flatMap((tile, i) => (tile.solid ? [i] : [])));
   }
@@ -102,19 +95,19 @@ class WorldScene extends Phaser.Scene {
 
     const ui = this.scene.get('ui');
     const blocked = !ui.tutorial || ui.isBlocking();
-
-    // Read both keys every frame so a press can't linger and fire later.
-    const pressedE = Phaser.Input.Keyboard.JustDown(this.keys.E);
-    const pressedSpace = Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
-    if (pressedE || pressedSpace) {
-      if (ui.dialog && ui.dialog.isOpen) ui.dialog.advance();
-      else if (!blocked) this.interact();
-    }
-
     this.movePlayer(blocked);
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
+  }
+
+  // E / Space: next line of dialog, or talk to whoever is nearby.
+  onInteractKey(event) {
+    if (event.repeat || this.transitioning) return;
+    const ui = this.scene.get('ui');
+    if (!ui.tutorial) return;
+    if (ui.dialog.isOpen) ui.dialog.advance();
+    else if (!ui.isBlocking()) this.interact();
   }
 
   movePlayer(blocked) {

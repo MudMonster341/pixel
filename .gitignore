@@ -2,3 +2,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# test output
+test-results/
+playwright-report/
+blob-report/
+
+# half-written feedback files
+feedback/items/*.tmp

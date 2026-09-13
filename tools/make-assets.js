@@ -668,7 +668,9 @@ const PROMPT = sprite('prompt', [
 
 // ---------- write files ----------
 
-const outDir = path.join(__dirname, '..', 'assets');
+// `--out <dir>` writes somewhere else (the tests use this to check assets/ is up to date).
+const outFlag = process.argv.indexOf('--out');
+const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : path.join(__dirname, '..', 'assets');
 fs.mkdirSync(outDir, { recursive: true });
 const write = (name, img) => fs.writeFileSync(path.join(outDir, name), img.toPNG());
 

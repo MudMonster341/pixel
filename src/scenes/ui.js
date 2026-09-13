@@ -44,7 +44,13 @@ class UIScene extends Phaser.Scene {
     const world = this.scene.get('world');
     if (world.tileData) this.minimap.setMap(world);
 
-    this.keys = this.input.keyboard.addKeys('M,H');
+    // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
+    this.input.keyboard.on('keydown-M', (event) => {
+      if (!event.repeat) this.minimap.toggle();
+    });
+    this.input.keyboard.on('keydown-H', (event) => {
+      if (!event.repeat && !this.dialog.isOpen) this.tutorial.toggleCard();
+    });
   }
 
   // True while the player shouldn't be able to walk around.
@@ -53,9 +59,6 @@ class UIScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (Phaser.Input.Keyboard.JustDown(this.keys.M)) this.minimap.toggle();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.H) && !this.dialog.isOpen) this.tutorial.toggleCard();
-
     this.dialog.update(time, delta);
     this.tutorial.update(time);
     this.hotbar.setVisible(!this.dialog.isOpen);
@@ -323,7 +326,11 @@ class Tutorial {
     this.walked = 0;
     this.buildCard();
     this.buildChecklist();
-    this.keys = scene.input.keyboard.addKeys('ENTER,SPACE,ESC');
+    for (const key of ['ENTER', 'SPACE', 'ESC']) {
+      scene.input.keyboard.on(`keydown-${key}`, (event) => {
+        if (!event.repeat) this.onKey(key);
+      });
+    }
 
     const events = scene.game.events;
     events.on('player-moved', (distance) => {
@@ -437,17 +444,13 @@ class Tutorial {
     announce();
   }
 
-  update(time) {
-    const { JustDown } = Phaser.Input.Keyboard;
-    const enter = JustDown(this.keys.ENTER);
-    const space = JustDown(this.keys.SPACE);
-    const escape = JustDown(this.keys.ESC);
+  // Enter / Space / Esc close the controls card. Esc during the checklist skips the tutorial.
+  onKey(key) {
+    if (this.cardOpen) this.closeCard();
+    else if (key === 'ESC' && this.stage === 'steps') this.finish('Tutorial skipped');
+  }
 
-    if (this.cardOpen) {
-      if (enter || space || escape) this.closeCard();
-      this.cardPrompt.setAlpha(Math.floor(time / 500) % 2 ? 0.4 : 1);
-    } else if (escape && this.stage === 'steps') {
-      this.finish('Tutorial skipped');
-    }
+  update(time) {
+    if (this.cardOpen) this.cardPrompt.setAlpha(Math.floor(time / 500) % 2 ? 0.4 : 1);
   }
 }

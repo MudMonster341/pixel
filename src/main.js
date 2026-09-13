@@ -38,7 +38,23 @@ function startGame() {
   });
 }
 
+// Dev mode loads developer tools (the feedback overlay). It's on by default when running locally.
+// Add ?dev=0 to the URL to play exactly as players will, or ?dev=1 to force it on.
+const DEV_MODE = (() => {
+  const params = new URLSearchParams(location.search);
+  if (params.has('dev')) return params.get('dev') !== '0';
+  return ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+})();
+
+function loadDevTools() {
+  document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'src/dev/feedback.css' }));
+  document.head.append(Object.assign(document.createElement('script'), { src: 'src/dev/feedback.js' }));
+}
+
 // Wait (briefly) for the pixel font, otherwise the first text renders in the fallback font.
 Promise.race([document.fonts.load(`16px ${FONT}`), new Promise((resolve) => setTimeout(resolve, 1500))])
   .catch(() => {})
-  .finally(startGame);
+  .finally(() => {
+    startGame();
+    if (DEV_MODE) loadDevTools();
+  });

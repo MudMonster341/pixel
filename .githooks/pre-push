@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs the whole test suite before every push, so a broken game never reaches GitHub.
+# Enabled automatically by `npm install` (the "prepare" script sets core.hooksPath to .githooks).
+echo "pre-push: running tests (npm test)..."
+npm test

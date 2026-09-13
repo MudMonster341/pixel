@@ -5,6 +5,14 @@
   "description": "Small top-down pixel RPG exploration game (Phaser 3)",
   "scripts": {
     "start": "node server.js",
-    "assets": "node tools/make-assets.js"
+    "assets": "node tools/make-assets.js",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:e2e": "playwright test",
+    "feedback": "node tools/feedback.js",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }

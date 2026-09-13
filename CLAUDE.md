@@ -8,8 +8,12 @@ work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`
   playable result and ask for changes, so ship something playable, then ask for feedback.
 - Art lives in `tools/make-assets.js` as text sprites. Edit it there and re-run `npm run assets`.
   Never hand-edit the PNGs in `assets/`.
-- Before calling a change done, run the game (`npm start`, http://localhost:8080) and check that it
-  works.
+- At the start of every session, and when the owner says "check feedback", run `npm run feedback`
+  and follow [docs/FEEDBACK.md](docs/FEEDBACK.md). Ask through the feedback thread when an item is
+  unclear; don't build on a guess.
+- A change is done when `npm test` passes ([docs/TESTING.md](docs/TESTING.md)) and it has been tried
+  in the running game (`npm start`, http://localhost:8080). Every feedback fix gets a regression test
+  named `FB-XXXX: ...`.
 - Follow [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (content is data, the engine is code) and
   [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) for every new asset. Build in the phase order of
   [docs/GAME_PLAN.md](docs/GAME_PLAN.md). Don't invent the story: the owner writes it.

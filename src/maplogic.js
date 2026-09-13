@@ -39,8 +39,11 @@ function isWalkableTile(grid, tileInfo, x, y) {
 // ---------- Tiled maps (e.g. the campus, ADR 0007) ----------
 
 // Rows of tile indices for a Tiled map: the topmost non-empty tile of each cell (gid = index + 1).
+// A layer named "overhead" (drawn above the player, e.g. tree canopies, ADR 0008) is skipped: it's
+// decoration over whatever is on the ground/structures layers, not the tile a cell's walkability
+// or minimap colour should come from.
 function gridFromTiled(json) {
-  const layers = json.layers.filter((layer) => layer.type === 'tilelayer');
+  const layers = json.layers.filter((layer) => layer.type === 'tilelayer' && layer.name !== 'overhead');
   const grid = [];
   for (let y = 0; y < json.height; y++) {
     const row = new Array(json.width).fill(-1);

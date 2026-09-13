@@ -830,16 +830,21 @@ function flowerbed(img, x, y) {
 
 // Tall trees are split into a solid trunk (drawn under the player, like any other object) and a
 // 2x2 canopy above it, drawn on an overhead layer so walking behind it reads as depth (STYLE_GUIDE).
+// Small art fix: the canopy's true centre is the seam between its TL/TR (or BL/BR) tiles, one
+// tile to the right of where the trunk is placed (build-campus.js puts the trunk directly below
+// the canopy's LEFT column, per STYLE_GUIDE "the trunk tile sits directly below the canopy quad").
+// Drawing the trunk near the tile's right edge, instead of dead centre, puts it visibly under that
+// seam instead of apart from it.
 function treeTrunk(img, x, y) {
   grass(img, x, y, 79);
-  img.box(x + 5, y + 1, 6, 15, 'n');
-  img.fill(x + 6, y + 2, 2, 13, 'N');
+  img.box(x + 8, y + 1, 6, 15, 'n');
+  img.fill(x + 9, y + 2, 2, 13, 'N');
 }
 
 function palmTrunk(img, x, y) {
   grass(img, x, y, 81);
-  img.box(x + 6, y, 4, 16, 'n');
-  for (let ring = 2; ring < 16; ring += 3) img.fill(x + 6, y + ring, 4, 1, 'N');
+  img.box(x + 9, y, 4, 16, 'n');
+  for (let ring = 2; ring < 16; ring += 3) img.fill(x + 9, y + ring, 4, 1, 'N');
 }
 
 // Draws one 16x16 quadrant (qx, qy in {0,1}) of a 32x32 canopy described by a shape test and a
@@ -855,7 +860,10 @@ function canopyQuadrant(img, x, y, qx, qy, shapeFn, toneFn) {
   });
 }
 
-const roundCanopyShape = (gx, gy) => ((gx - 16) / 15.5) ** 2 + ((gy - 13) / 12) ** 2 <= 1;
+// Small art fix: centred lower and taller than before so the round canopy's silhouette reaches
+// close to the bottom of its BL/BR quadrant, instead of leaving a wide gap above the trunk tile
+// placed directly below it (build-campus.js plants the trunk immediately south of the canopy).
+const roundCanopyShape = (gx, gy) => ((gx - 16) / 15.5) ** 2 + ((gy - 16) / 15) ** 2 <= 1;
 const roundCanopyTone = (gx, gy) => {
   const d = (gx - 16) + (gy - 13); // diagonal position: light from the top-left
   return d < -8 ? 't' : d > 10 ? 'e' : 'T';
@@ -923,15 +931,16 @@ function courtCenterMark(img, x, y) {
   img.fill(x + 7, y, 2, TILE, 'W');
   img.fill(x + 4, y + 6, 8, 2, 'W');
 }
-// The net runs across the court (a vertical band in the arrangement below): mesh with a taped top
-// edge and end posts. Visual only (not solid), so it doesn't block the whole court width.
+// The net runs across the court (two adjacent columns in the arrangement below, cols 8-9). Small
+// art fix: this used to draw a full boxed net (posts on both edges) in each tile, so two of them
+// side by side read as two separate strips. Now the mesh fills the whole tile with a taped top
+// edge and no internal post lines, so two adjacent courtNet tiles read as one continuous net line
+// spanning both columns. Visual only (not solid), so it doesn't block the run-off either side.
 function courtNet(img, x, y) {
   courtSurface(img, x, y, 95);
-  img.fill(x + 6, y, 4, TILE, 'K');
-  for (let yy = 1; yy < TILE; yy += 3) img.fill(x + 6, y + yy, 4, 1, '4');
-  img.fill(x + 6, y, 4, 2, 'W');
-  img.fill(x + 5, y, 1, TILE, 'K');
-  img.fill(x + 10, y, 1, TILE, 'K');
+  img.fill(x, y, TILE, TILE, 'K');
+  for (let yy = 2; yy < TILE; yy += 3) img.fill(x, y + yy, TILE, 1, '4');
+  img.fill(x, y, TILE, 2, 'W');
 }
 
 // -- FB-0011: BITS + other-building fronts (roof edges, entrance, pillar) and a fence kit --

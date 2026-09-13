@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openGame, state, startGame, holdKey } = require('./helpers');
+const { openGame, state, startGame, holdKey, teleport } = require('./helpers');
 
 const spawnTile = (page) =>
   page.evaluate(() => {
@@ -30,6 +30,29 @@ test('the campus has no test-map tutorial checklist', async ({ page }) => {
   const s = await state(page);
   expect(s.tutorial.stage).toBe('done');
   expect(await page.evaluate(() => game.scene.getScene('ui').tutorial.checklist.visible)).toBe(false);
+});
+
+// FB-0008/FB-0010: Gate 2's straight approach avenue actually leads a walking player to the Main
+// Block. Walks the first stretch for real from the spawn, then (to keep the test fast) teleports
+// the rest of the way up the same straight avenue and walks the final approach into the door.
+test('the player can walk from the Gate 2 spawn up to the Main Block entrance', async ({ page }) => {
+  await openGame(page, { map: null });
+  await startGame(page);
+  const door = await page.evaluate(() => {
+    const world = game.scene.getScene('world');
+    const d = world.mapObjects.find((o) => o.type === 'door' && o.props.building === 'Main Block');
+    return { x: Math.floor(d.x), y: Math.floor(d.y) };
+  });
+
+  const before = await state(page);
+  await holdKey(page, 'w', 1500);
+  expect((await state(page)).y).toBeLessThan(before.y - 30);
+
+  await teleport(page, door.x, door.y + 8);
+  await holdKey(page, 'w', 3000);
+  const after = await state(page);
+  expect(after.tile.y).toBeLessThanOrEqual(door.y + 2);
+  expect(Math.abs(after.tile.x - door.x)).toBeLessThanOrEqual(3);
 });
 
 test('the minimap shows the campus and follows the player', async ({ page }) => {

@@ -26,6 +26,30 @@ measurements only: no images from the sources below are stored in this repo.
   University Dubai (south-west), student apartments, an ENOC fuel station.
 - The campus is rotated about 35–40° from north (the D54 runs south-west to north-east).
 
+## Entrances: Gate 2 and the second gate (2026-09-13, for ADR 0008)
+
+The owner asked for the real **Gate 2** main entrance. Checked:
+- Web search for `BITS Pilani Dubai "Gate 2"` and `"Gate 1" OR "Gate 2"` across the official site,
+  admissions pages, 2GIS, Edarabia, Shiksha/Careers360 reviews, Facebook.
+- The OpenStreetMap extract (`tools/campus/diac.osm`): several `barrier=gate` / `barrier=lift_gate`
+  nodes exist (vehicle gates, mostly on the drop-off loop and parking), but none is named or numbered.
+
+**Finding:** multiple independent sources (official site wording, a Shiksha/student review) confirm
+BITS Pilani Dubai has **two gates with security**, matching the owner's expectation, but no source
+found names either one "Gate 1" or "Gate 2", or gives its exact position.
+
+**Assumption made (per the owner's fallback instruction):** Gate 2 is the main entrance off the DIAC
+road on the campus's south/entrance side, next to the Main Block drop-off — i.e. where the C1 test
+map already put its one gate (a gate booth way in the OpenStreetMap extract, `nearWay: 1090992244`
+in the old `layout.js`). The rebuilt plan ([ADR 0008](../../decisions/0008-campus-as-straight-schematic-plan.md))
+keeps the entrance in that same relative position: south fence, straight avenue up to the Main
+Block. **This is an assumption, not a confirmed fact — flagged for the owner to correct if they
+know otherwise.**
+
+The second entrance (FB-0012) is placed on the **west fence**, near the Library/hostel side. Nothing
+found supports calling it "Gate 1", so it's named **"Side Gate"** instead, per the owner's fallback
+instruction.
+
 ## Measurements (OpenStreetMap bounding boxes, in metres)
 
 | Feature | Size | OpenStreetMap way |

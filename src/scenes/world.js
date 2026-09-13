@@ -2,6 +2,9 @@
 // Moving to another map restarts this scene with new data; GameState keeps what persists.
 
 const SPEED = 80; // pixels per second
+// Depth for the "overhead" Tiled layer (tree canopies, ADR 0008): always above every character,
+// whose depth is set to their own y each frame (a few thousand px at most on the biggest map).
+const OVERHEAD_DEPTH = 1_000_000;
 const INTERACT_RANGE = 24;
 const PICKUP_RANGE = 10;
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
@@ -49,9 +52,16 @@ class WorldScene extends Phaser.Scene {
       this.map = this.make.tilemap({ key });
       const tileset = this.map.addTilesetImage('tiles', 'tiles');
       const solidGids = solid.map((index) => index + 1);
-      this.solidLayers = json.layers
-        .filter((layer) => layer.type === 'tilelayer')
+      const tileLayers = json.layers.filter((layer) => layer.type === 'tilelayer');
+      // The "overhead" layer (tree canopies, ADR 0008) draws above every character and never
+      // collides: it's decoration over whatever is on the ground/structures layers below it.
+      this.solidLayers = tileLayers
+        .filter((layer) => layer.name !== 'overhead')
         .map((layer) => this.map.createLayer(layer.name, tileset, 0, 0).setCollision(solidGids));
+      const overheadDef = tileLayers.find((layer) => layer.name === 'overhead');
+      if (overheadDef) {
+        this.overheadLayer = this.map.createLayer(overheadDef.name, tileset, 0, 0).setDepth(OVERHEAD_DEPTH);
+      }
       this.tileData = gridFromTiled(json);
       this.mapObjects = tiledObjects(json);
       if (!this.spawn) {

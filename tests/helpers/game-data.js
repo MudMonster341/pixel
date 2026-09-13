@@ -38,6 +38,8 @@ function loadGameData() {
     GameState: get('GameState'),
     buildTileGrid: get('buildTileGrid'),
     isWalkableTile: get('isWalkableTile'),
+    gridFromTiled: get('gridFromTiled'),
+    tiledObjects: get('tiledObjects'),
     tileInfo: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8')),
   };
 }

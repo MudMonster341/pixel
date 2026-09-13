@@ -46,7 +46,8 @@ test('pickup ids are unique across all maps', () => {
   assert.deepEqual(duplicates, []);
 });
 
-for (const [key, def] of Object.entries(MAPS)) {
+// Text maps only; Tiled maps (the campus) are checked in campus.test.js
+for (const [key, def] of Object.entries(MAPS).filter(([, def]) => def.rows)) {
   test(`${key}: rows form a rectangle`, () => {
     const width = def.rows[0].length;
     def.rows.forEach((row, y) => assert.equal(row.length, width, `row ${y} is ${row.length} wide, expected ${width}`));

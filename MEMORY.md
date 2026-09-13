@@ -176,3 +176,37 @@ an equipped-item icon plus backpack, and keep camera headroom so UI never covers
 **Decisions:** none · **Failures:** none
 
 **Next:** owner answers in the overlay inbox (FB-0001, FB-0002) and the campus plan questions.
+
+## 2026-09-13 — Campus test version (step C1): OpenStreetMap → Tiled map, female lead
+
+**Did:**
+- Owner answered the campus questions: 2 m outdoors / 1 m indoors, entrance-straight orientation,
+  DIAC Park and the road to it, other buildings not enterable, empty rooms first, hostels outside only,
+  female lead (pink, black hair, fair), private project so BITS name is fine.
+- Built `tools/campus/build-campus.js` + `layout.js` + a committed OSM extract. It writes
+  `assets/maps/campus.json` (Tiled, **422×338 tiles = 844×676 m**) and a preview image.
+- The game loads Tiled maps: multiple layers, collision from tiles.json, spawn and objects from the map.
+  The campus is now the start map; test maps open with `?map=meadow`. The minimap became a texture that
+  scrolls with the player on big maps. The tutorial checklist only appears on maps with `tutorial: true`.
+- Added 14 campus tiles, a shared PNG encoder (`tools/lib/png.js`), and redrew the player as the female lead.
+- Tests: `tests/unit/campus.test.js` (map up to date, spawn walkable, Main Block door reachable,
+  buildings present) and `tests/e2e/campus.spec.js`. 36 unit + 30 browser tests pass.
+
+**Why:**
+- OSM wall angles show two grids ~45° apart: the academic buildings run ~5° off north, while the fence,
+  hostels, track and D54 run ~39°. The map follows the fence/road grid and rotates the academic
+  complex as one group. The gate is at the bottom so door-side walls face the viewer; `flip` would put it
+  at the top.
+- Fitting a circle to the DIAC ring's OSM ways failed (radius 397 m instead of ~222 m, because connector
+  roads pulled the fit), so the ring is measured and set in `layout.js`.
+- Track, courts and parking aren't in OSM. They were measured from the Wikimedia annotated campus map
+  (~3.8 px/m, checked against the OSM drop-off loop to within ~7 m).
+
+**Decisions:** [ADR 0007](decisions/0007-campus-map-from-osm-into-tiled.md)
+
+**Failures:** none worth an ERRORS entry. The ring-fit problem was caught and fixed before commit
+(see Why).
+
+**Next:** the owner walks the test version and sends feedback. Then C2: campus art (entrance, Main
+Block front, trees and palms), tidy the diagonal fence and paths near the academic complex, and
+start the Main Block ground-floor interior.

@@ -33,5 +33,48 @@ function buildTileGrid(def, tileInfo) {
 
 function isWalkableTile(grid, tileInfo, x, y) {
   const index = grid[y]?.[x];
-  return index !== undefined && !tileInfo.tiles[index].solid;
+  return index !== undefined && index >= 0 && !tileInfo.tiles[index].solid;
+}
+
+// ---------- Tiled maps (e.g. the campus, ADR 0007) ----------
+
+// Rows of tile indices for a Tiled map: the topmost non-empty tile of each cell (gid = index + 1).
+function gridFromTiled(json) {
+  const layers = json.layers.filter((layer) => layer.type === 'tilelayer');
+  const grid = [];
+  for (let y = 0; y < json.height; y++) {
+    const row = new Array(json.width).fill(-1);
+    for (const layer of layers) {
+      for (let x = 0; x < json.width; x++) {
+        const gid = layer.data[y * json.width + x];
+        if (gid) row[x] = gid - 1;
+      }
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+// Objects from a Tiled map, with positions and sizes in tiles and properties as a plain object.
+function tiledObjects(json) {
+  const size = json.tilewidth;
+  return json.layers
+    .filter((layer) => layer.type === 'objectgroup')
+    .flatMap((layer) => layer.objects)
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      type: o.type || o.class,
+      x: o.x / size,
+      y: o.y / size,
+      width: o.width / size,
+      height: o.height / size,
+      props: Object.fromEntries((o.properties || []).map((p) => [p.name, p.value])),
+    }));
+}
+
+// The map to start on: `?map=<key>` (dev and tests), otherwise START_MAP.
+function initialMapKey() {
+  const key = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('map');
+  return key && MAPS[key] ? key : START_MAP;
 }

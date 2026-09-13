@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "assets": "node tools/make-assets.js",
+    "campus": "node tools/campus/build-campus.js",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:e2e": "playwright test",

@@ -76,57 +76,95 @@ class Minimap {
     this.height = 168;
     this.area = { x: x + 12, y: y + 12, w: 160, h: 120 };
 
+    this.scene = scene;
     const panel = scene.add.graphics();
     drawPanel(panel, x, y, this.width, this.height);
-    this.tiles = scene.add.graphics();
+    const backdrop = scene.add.rectangle(this.area.x, this.area.y, this.area.w, this.area.h, 0x0b0c12).setOrigin(0, 0);
+    this.image = scene.add.image(this.area.x, this.area.y, '__DEFAULT').setOrigin(0, 0).setVisible(false);
     this.markers = scene.add.graphics();
     this.label = uiText(scene, x + 14, y + this.height - 26, '');
     const hint = uiText(scene, x + this.width - 14, y + this.height - 26, 'M', 8, COLORS.dim).setOrigin(1, 0);
-    this.parts = [panel, this.tiles, this.markers, this.label, hint];
+    this.parts = [panel, backdrop, this.image, this.markers, this.label, hint];
     this.visible = true;
   }
 
+  // The map is drawn once into a texture, 1 pixel per tile. Small maps are shown whole and scaled up;
+  // big maps (the campus) show a window around the player at 1 pixel per tile.
   setMap(world) {
     const rows = world.tileData.length;
     const cols = world.tileData[0].length;
-    const { area } = this;
-    this.cell = Math.max(1, Math.floor(Math.min(area.w / cols, area.h / rows)));
-    this.originX = area.x + Math.floor((area.w - cols * this.cell) / 2);
-    this.originY = area.y + Math.floor((area.h - rows * this.cell) / 2);
-
-    const colors = world.tileInfo.tiles.map((tile) => parseInt(tile.color.slice(1), 16));
-    const g = this.tiles.clear();
-    g.fillStyle(0x0b0c12, 1).fillRect(area.x, area.y, area.w, area.h);
-    world.tileData.forEach((row, ty) => {
-      row.forEach((index, tx) => {
-        g.fillStyle(colors[index], 1).fillRect(this.originX + tx * this.cell, this.originY + ty * this.cell, this.cell, this.cell);
+    const key = `minimap-${world.mapKey}`;
+    if (!this.scene.textures.exists(key)) {
+      const texture = this.scene.textures.createCanvas(key, cols, rows);
+      const ctx = texture.getContext();
+      const pixels = ctx.createImageData(cols, rows);
+      const colors = world.tileInfo.tiles.map((tile) => [1, 3, 5].map((i) => parseInt(tile.color.slice(i, i + 2), 16)));
+      world.tileData.forEach((row, ty) => {
+        row.forEach((index, tx) => {
+          const [r, g, b] = colors[index] || [0, 0, 0];
+          const p = (ty * cols + tx) * 4;
+          pixels.data[p] = r;
+          pixels.data[p + 1] = g;
+          pixels.data[p + 2] = b;
+          pixels.data[p + 3] = 255;
+        });
       });
-    });
+      ctx.putImageData(pixels, 0, 0);
+      texture.refresh();
+    }
+
+    const { area } = this;
+    this.cols = cols;
+    this.rows = rows;
+    this.cell = Math.max(1, Math.floor(Math.min(area.w / cols, area.h / rows)));
+    this.windowCols = Math.min(cols, Math.floor(area.w / this.cell));
+    this.windowRows = Math.min(rows, Math.floor(area.h / this.cell));
+    this.offsetX = area.x + Math.floor((area.w - this.windowCols * this.cell) / 2);
+    this.offsetY = area.y + Math.floor((area.h - this.windowRows * this.cell) / 2);
+    this.scrollX = 0;
+    this.scrollY = 0;
+    this.image.setTexture(key).setScale(this.cell).setVisible(this.visible);
+    this.applyWindow();
     this.label.setText(world.def.name.toUpperCase());
+  }
+
+  applyWindow() {
+    this.image.setCrop(this.scrollX, this.scrollY, this.windowCols, this.windowRows);
+    this.image.setPosition(this.offsetX - this.scrollX * this.cell, this.offsetY - this.scrollY * this.cell);
   }
 
   update(world, time) {
     const g = this.markers.clear();
-    if (!this.visible) return;
-    const scale = this.cell / TILE;
-    const mx = (worldX) => this.originX + worldX * scale;
-    const my = (worldY) => this.originY + worldY * scale;
+    if (!this.visible || !this.cols) return;
 
-    const view = world.cameras.main.worldView;
-    g.lineStyle(1, 0xffffff, 0.6).strokeRect(mx(view.x), my(view.y), view.width * scale, view.height * scale);
-
-    g.fillStyle(COLORS.gold, 1);
-    for (const pickup of world.pickups) {
-      if (!pickup.taken) g.fillRect(Math.round(mx(pickup.x)) - 1, Math.round(my(pickup.y)) - 1, 3, 3);
+    const scrollX = Phaser.Math.Clamp(Math.round(world.player.x / TILE - this.windowCols / 2), 0, this.cols - this.windowCols);
+    const scrollY = Phaser.Math.Clamp(Math.round(world.player.y / TILE - this.windowRows / 2), 0, this.rows - this.windowRows);
+    if (scrollX !== this.scrollX || scrollY !== this.scrollY) {
+      this.scrollX = scrollX;
+      this.scrollY = scrollY;
+      this.applyWindow();
     }
 
-    g.fillStyle(0x7fe0ff, 1);
-    for (const npc of world.npcs) g.fillRect(Math.round(mx(npc.x)) - 2, Math.round(my(npc.y)) - 2, 4, 4);
+    const mx = (worldX) => this.offsetX + (worldX / TILE - this.scrollX) * this.cell;
+    const my = (worldY) => this.offsetY + (worldY / TILE - this.scrollY) * this.cell;
+    const right = this.offsetX + this.windowCols * this.cell;
+    const bottom = this.offsetY + this.windowRows * this.cell;
+    const dot = (x, y, size) => {
+      if (x >= this.offsetX && y >= this.offsetY && x < right && y < bottom) g.fillRect(Math.round(x) - size / 2, Math.round(y) - size / 2, size, size);
+    };
 
-    const px = Math.round(mx(world.player.x));
-    const py = Math.round(my(world.player.y));
-    g.fillStyle(0x000000, 1).fillRect(px - 3, py - 3, 6, 6);
-    g.fillStyle(Math.floor(time / 300) % 2 ? 0xffffff : 0xff5a5a, 1).fillRect(px - 2, py - 2, 4, 4);
+    const view = world.cameras.main.worldView;
+    g.lineStyle(1, 0xffffff, 0.6).strokeRect(mx(view.x), my(view.y), (view.width / TILE) * this.cell, (view.height / TILE) * this.cell);
+
+    g.fillStyle(COLORS.gold, 1);
+    for (const pickup of world.pickups) if (!pickup.taken) dot(mx(pickup.x), my(pickup.y), 3);
+    g.fillStyle(0x7fe0ff, 1);
+    for (const npc of world.npcs) dot(mx(npc.x), my(npc.y), 4);
+
+    g.fillStyle(0x000000, 1);
+    dot(mx(world.player.x), my(world.player.y), 6);
+    g.fillStyle(Math.floor(time / 300) % 2 ? 0xffffff : 0xff5a5a, 1);
+    dot(mx(world.player.x), my(world.player.y), 4);
   }
 
   toggle() {
@@ -357,7 +395,7 @@ class Tutorial {
       dim,
       panel,
       uiText(scene, GAME_WIDTH / 2, y + 44, 'PIXEL QUEST', 24, COLORS.highlight).setOrigin(0.5),
-      uiText(scene, GAME_WIDTH / 2, y + 86, 'Explore the meadow, collect items\nand meet the locals.', 8, COLORS.dim)
+      uiText(scene, GAME_WIDTH / 2, y + 86, 'Explore the BITS Dubai campus\nand meet the people there.', 8, COLORS.dim)
         .setOrigin(0.5).setAlign('center'),
       uiText(scene, x + 48, y + 124, 'CONTROLS', 12, COLORS.text),
     ];
@@ -405,9 +443,13 @@ class Tutorial {
 
   closeCard() {
     this.setCardOpen(false);
-    if (this.stage === 'intro') {
+    if (this.stage !== 'intro') return;
+    // The objectives checklist belongs to maps that define a tutorial (the meadow test map).
+    if (MAPS[initialMapKey()].tutorial) {
       this.stage = 'steps';
       this.checklist.setVisible(true);
+    } else {
+      this.stage = 'done';
     }
   }
 

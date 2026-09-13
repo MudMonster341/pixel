@@ -42,7 +42,9 @@ Free tools for later:
 ```
 index.html            loads Phaser + the game scripts
 src/items.js          item definitions
-src/maps.js           every map as text (1 character = 1 tile), plus doors, items and NPCs
+src/maps.js           the map list: the campus (generated) + text test maps with doors, items and NPCs
+tools/campus/         campus map generator: OpenStreetMap extract + layout.js → assets/maps/campus.json
+                      (run `npm run campus`; open the old test map with ?map=meadow)
 src/maplogic.js       map helpers shared by the game and the tests
 src/state.js          inventory + game state that survives moving between maps
 src/scenes/world.js   the map, player, NPCs, pickups, doors

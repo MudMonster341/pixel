@@ -161,6 +161,76 @@
       "name": "plant",
       "solid": true,
       "color": "#66663c"
+    },
+    {
+      "name": "sand",
+      "solid": false,
+      "color": "#e2cea2"
+    },
+    {
+      "name": "campusGround",
+      "solid": false,
+      "color": "#d8c69f"
+    },
+    {
+      "name": "asphalt",
+      "solid": false,
+      "color": "#5c5e67"
+    },
+    {
+      "name": "paving",
+      "solid": false,
+      "color": "#b46a56"
+    },
+    {
+      "name": "parking",
+      "solid": false,
+      "color": "#64666f"
+    },
+    {
+      "name": "track",
+      "solid": false,
+      "color": "#cc6544"
+    },
+    {
+      "name": "turf",
+      "solid": false,
+      "color": "#59a94e"
+    },
+    {
+      "name": "court",
+      "solid": false,
+      "color": "#3f8a8c"
+    },
+    {
+      "name": "fence",
+      "solid": true,
+      "color": "#beb297"
+    },
+    {
+      "name": "bitsRoof",
+      "solid": true,
+      "color": "#d5a486"
+    },
+    {
+      "name": "bitsWall",
+      "solid": true,
+      "color": "#b6987e"
+    },
+    {
+      "name": "bitsDoor",
+      "solid": false,
+      "color": "#9f8a77"
+    },
+    {
+      "name": "otherRoof",
+      "solid": true,
+      "color": "#9fa4ae"
+    },
+    {
+      "name": "otherWall",
+      "solid": true,
+      "color": "#a8acb4"
     }
   ]
 }

@@ -14,6 +14,9 @@ class BootScene extends Phaser.Scene {
     this.load.spritesheet('npc', 'assets/npc.png', sheet);
     this.load.spritesheet('items', 'assets/items.png', sheet);
     this.load.image('prompt', 'assets/prompt.png');
+    for (const def of Object.values(MAPS)) {
+      if (def.tiled) this.load.tilemapTiledJSON(`map-${def.tiled}`, `assets/maps/${def.tiled}.json`);
+    }
   }
 
   create() {

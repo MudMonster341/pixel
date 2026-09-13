@@ -74,6 +74,9 @@ per sprite. If a new color is really needed, add it to the palette and to this t
 - Walk cycle: 4 frames at 8 fps (currently 3 poses).
 - Big readable head (about 40% of height), 2px-wide eyes, a distinct hair/clothing color per NPC
   so each is recognisable on the minimap and in a crowd.
+- **The player is the female lead** (owner decision 2026-09-13): black shoulder-length hair, fair
+  skin, a hot pink top and a lighter pink skirt. Built in `tools/make-assets.js` (`LEAD_COLORS`,
+  `LEAD_HAIR`). No other character wears the same pink.
 - NPCs get an idle animation (blink or bob) so they don't look frozen.
 
 ## Speech bubbles and interaction

@@ -14,7 +14,7 @@ class WorldScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.mapKey = data.map || START_MAP;
+    this.mapKey = data.map || initialMapKey();
     this.def = MAPS[this.mapKey];
     this.spawn = data.spawn || this.def.spawn;
     this.transitioning = false;
@@ -40,11 +40,31 @@ class WorldScene extends Phaser.Scene {
 
   buildMap() {
     this.tileInfo = this.cache.json.get('tileinfo');
-    this.tileData = buildTileGrid(this.def, this.tileInfo);
+    const solid = this.tileInfo.tiles.flatMap((tile, i) => (tile.solid ? [i] : []));
 
+    if (this.def.tiled) {
+      // Tiled map (the campus): several layers, tile gid = tile index + 1
+      const key = `map-${this.def.tiled}`;
+      const json = this.cache.tilemap.get(key).data;
+      this.map = this.make.tilemap({ key });
+      const tileset = this.map.addTilesetImage('tiles', 'tiles');
+      const solidGids = solid.map((index) => index + 1);
+      this.solidLayers = json.layers
+        .filter((layer) => layer.type === 'tilelayer')
+        .map((layer) => this.map.createLayer(layer.name, tileset, 0, 0).setCollision(solidGids));
+      this.tileData = gridFromTiled(json);
+      this.mapObjects = tiledObjects(json);
+      if (!this.spawn) {
+        const spawn = this.mapObjects.find((o) => o.type === 'spawn');
+        this.spawn = { x: Math.floor(spawn.x), y: Math.floor(spawn.y), facing: spawn.props.facing };
+      }
+      return;
+    }
+
+    this.tileData = buildTileGrid(this.def, this.tileInfo);
     this.map = this.make.tilemap({ data: this.tileData, tileWidth: TILE, tileHeight: TILE });
-    this.ground = this.map.createLayer(0, this.map.addTilesetImage('tiles'), 0, 0);
-    this.ground.setCollision(this.tileInfo.tiles.flatMap((tile, i) => (tile.solid ? [i] : [])));
+    this.solidLayers = [this.map.createLayer(0, this.map.addTilesetImage('tiles'), 0, 0).setCollision(solid)];
+    this.mapObjects = [];
   }
 
   createAnimations() {
@@ -61,7 +81,7 @@ class WorldScene extends Phaser.Scene {
     // Only the feet collide, so the head can overlap things a little (feels nicer).
     this.player.body.setSize(10, 6).setOffset(3, 10);
     this.player.setCollideWorldBounds(true).setFlipX(this.facing === 'right');
-    this.physics.add.collider(this.player, this.ground);
+    this.physics.add.collider(this.player, this.solidLayers);
     this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
   }
 

@@ -5,13 +5,14 @@ const { execFileSync } = require('child_process');
 const { expect } = require('@playwright/test');
 const { FEEDBACK_DIR } = require('./paths');
 
-async function openGame(page, { dev = false } = {}) {
+// `map` defaults to the meadow test map; pass `map: null` for the real start map (the campus).
+async function openGame(page, { dev = false, map = 'meadow' } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.goto(`/?dev=${dev ? 1 : 0}`);
+  await page.goto(`/?dev=${dev ? 1 : 0}${map ? `&map=${map}` : ''}`);
   await page.waitForFunction(() => {
     const world = window.game?.scene.getScene('world');
     const ui = window.game?.scene.getScene('ui');

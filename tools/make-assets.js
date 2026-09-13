@@ -43,6 +43,21 @@ const PALETTE = {
   // house inside: floor, wallpaper, dark wood, rug, mat, blanket, pot
   F: '#b98150', f: '#93602f', i: '#cf9a66', Z: '#7d9bb3', z: '#5f7d96', E: '#3d2a1e', q: '#2a1c14',
   C: '#a33b4a', y: '#e0b84f', L: '#8e7a3a', I: '#4a6fd0', m: '#3552a3', b: '#c0703a',
+  // player (female lead): pink top + shade, light pink skirt
+  M: '#ff6fb1', c: '#d94b8f',
+  // campus (colours sampled from BITS Dubai photos, brightened per docs/STYLE_GUIDE.md)
+  1: '#e3cfa3', 2: '#cdb487',             // desert sand
+  3: '#5b5d66', 4: '#6d707a',             // asphalt
+  5: '#d9c7a0', 6: '#c9b58c',             // campus ground (packed sand)
+  7: '#c0735c', 8: '#9c5a4a',             // brick paving
+  9: '#c9603f', 0: '#e08a6a',             // running track + lane line
+  '!': '#4f9e45', '?': '#63b457',         // turf stripes
+  '@': '#3f8a8c', '#': '#e8e8e8',         // court + line
+  $: '#e6cba4', '%': '#cfae86',           // BITS wall + shade
+  '&': '#cf8a6c', '*': '#2f3a44',         // BITS trim + glass
+  '+': '#d9a88a', '=': '#b9876c',         // BITS roof (light terracotta) + roof edge
+  '^': '#c9ccd3', '~': '#a4a9b3',         // other buildings: wall + roof
+  '<': '#7c8088',                          // fence
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -483,7 +498,97 @@ const TILES = [
   { name: 'bedFoot', solid: true, draw: bedFoot },
   { name: 'bookshelf', solid: true, draw: bookshelf },
   { name: 'plant', solid: true, draw: plant },
+
+  // campus (tools/campus/build-campus.js). 1 tile = 2 m outdoors.
+  { name: 'sand', draw: (img, x, y) => speckle(img, x, y, '1', '2', 45, 12) },
+  { name: 'campusGround', draw: (img, x, y) => speckle(img, x, y, '5', '6', 49, 10) },
+  { name: 'asphalt', draw: (img, x, y) => speckle(img, x, y, '3', '4', 47, 14) },
+  { name: 'paving', draw: paving },
+  { name: 'parking', draw: parkingBay },
+  { name: 'track', draw: runningTrack },
+  { name: 'turf', draw: turf },
+  { name: 'court', draw: (img, x, y) => img.fill(x, y, TILE, TILE, '@') },
+  { name: 'fence', solid: true, draw: fence },
+  { name: 'bitsRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '+', '=') },
+  { name: 'bitsWall', solid: true, draw: bitsWall },
+  { name: 'bitsDoor', draw: bitsDoor },
+  { name: 'otherRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<') },
+  { name: 'otherWall', solid: true, draw: otherWall },
 ];
+
+// ---------- campus tiles ----------
+
+function speckle(img, x, y, base, speck, seed, count) {
+  img.fill(x, y, TILE, TILE, base);
+  const r = rng(seed);
+  for (let i = 0; i < count; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), speck);
+}
+
+// Red-brown brick pavers in a running bond
+function paving(img, x, y) {
+  forEachPixel((xx, yy) => {
+    const offset = (yy >> 2) % 2 ? 4 : 0;
+    const mortar = yy % 4 === 3 || (xx + offset) % 8 === 7;
+    img.set(x + xx, y + yy, mortar ? '8' : '7');
+  });
+}
+
+function parkingBay(img, x, y) {
+  speckle(img, x, y, '3', '4', 41, 10);
+  img.fill(x, y, 1, TILE, '#');
+}
+
+function runningTrack(img, x, y) {
+  img.fill(x, y, TILE, TILE, '9');
+  img.fill(x, y + 7, TILE, 1, '0');
+  img.fill(x, y + 15, TILE, 1, '0');
+}
+
+function turf(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, xx < 8 ? '!' : '?'));
+}
+
+function fence(img, x, y) {
+  speckle(img, x, y, '5', '6', 43, 6);
+  img.fill(x + 1, y + 1, 2, 12, '<');
+  img.fill(x + 9, y + 1, 2, 12, '<');
+  img.fill(x, y + 3, TILE, 1, '<');
+  img.fill(x, y + 9, TILE, 1, '<');
+  img.fill(x, y + 13, TILE, 1, '2');
+}
+
+function flatRoof(img, x, y, base, edge) {
+  img.fill(x, y, TILE, TILE, base);
+  img.fill(x, y, TILE, 1, edge);
+  img.fill(x, y, 1, TILE, edge);
+}
+
+// Sand-beige render, salmon trim band, one framed window per tile
+function bitsWall(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 2, '&');
+  img.fill(x + 3, y + 4, 10, 9, '&');
+  img.fill(x + 4, y + 5, 8, 7, '*');
+  img.set(x + 5, y + 6, 'W');
+  img.fill(x, y + 14, TILE, 2, '%');
+}
+
+// Glass entrance under a salmon arch
+function bitsDoor(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x + 2, y + 2, 12, 14, '&');
+  img.fill(x + 3, y + 4, 10, 12, '*');
+  img.fill(x + 7, y + 4, 2, 12, '$');
+  img.set(x + 4, y + 6, 'W');
+  img.set(x + 10, y + 6, 'W');
+}
+
+function otherWall(img, x, y) {
+  img.fill(x, y, TILE, TILE, '^');
+  img.fill(x, y + 5, TILE, 4, '*');
+  for (let xx = 3; xx < TILE; xx += 4) img.fill(x + xx, y + 5, 1, 4, '^');
+  img.fill(x, y + 14, TILE, 2, '~');
+}
 
 // ---------- player (facing down / up / left; right = mirrored left) ----------
 
@@ -688,10 +793,18 @@ fs.writeFileSync(
   JSON.stringify({ tileSize: TILE, columns: TILESET_COLUMNS, tiles: tileInfo }, null, 2) + '\n',
 );
 
+// The player is the female lead: black shoulder-length hair, pink top, lighter pink skirt.
+const LEAD_COLORS = { H: 'q', R: 'M', r: 'c', B: 'P' };
+const LEAD_HAIR = [
+  { 7: '...KHSSSSSSHK...', 8: '...KHKSSSSKHK...' }, // down: hair falls beside the face
+  { 8: '...KHHHHHHHHK...', 9: '...KHRRRRRRHK...' }, // up: hair down the back
+  { 8: '...KSSSSHHHK....', 9: '....KRRRRHHK....' }, // left: hair behind the shoulder
+];
 const player = new Img(3 * TILE, 3 * TILE);
 PLAYER_ROWS.forEach(([top, legs], row) => {
+  const leadTop = recolor(replaceRows(top, LEAD_HAIR[row]), LEAD_COLORS);
   ['idle', 'step1', 'step2'].forEach((pose, col) => {
-    const frame = sprite(`player row ${row} ${pose}`, [...top, ...legs[pose]]);
+    const frame = sprite(`player row ${row} ${pose}`, [...leadTop, ...recolor(legs[pose], LEAD_COLORS)]);
     player.draw(frame, col * TILE, row * TILE);
   });
 });

@@ -210,3 +210,18 @@ an equipped-item icon plus backpack, and keep camera headroom so UI never covers
 **Next:** the owner walks the test version and sends feedback. Then C2: campus art (entrance, Main
 Block front, trees and palms), tidy the diagonal fence and paths near the academic complex, and
 start the Main Block ground-floor interior.
+
+## 2026-09-13 — Feedback overlay opens with O
+
+**Did:** the owner couldn't open feedback with the backtick. **O** now opens and closes the overlay
+(the backtick still works, and typing "o" in a field doesn't close it). The launcher became a large
+yellow "Feedback O" button. The controls card lists "O: Give feedback" in dev mode. Tests were added
+for the O key and the button.
+
+**Why:** backtick isn't in the same place on every keyboard layout (the owner reported it as the
+apostrophe key). Also, the old launcher was small, navy, and sat in the letterbox outside the game
+picture, which made it easy to miss.
+
+**Decisions:** none · **Failures:** none
+
+**Next:** unchanged. The owner walks the campus test version and sends feedback.

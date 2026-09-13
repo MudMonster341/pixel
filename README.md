@@ -74,7 +74,7 @@ automatically before every `git push` and on GitHub Actions. Details: [docs/TEST
 
 ## Giving feedback while playing (dev mode)
 
-With `npm start` running, press **`` ` ``** (backtick) or click **Feedback** in the corner. The game
+With `npm start` running, press **O** or click the yellow **Feedback** button in the corner. The game
 pauses, takes a screenshot (click it to point at something), and saves your note with where you
 are. Answers to questions and fixes to check show up in the **Inbox** tab. Details:
 [docs/FEEDBACK.md](docs/FEEDBACK.md). Add `?dev=0` to the address to play without dev tools.

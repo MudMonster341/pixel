@@ -399,7 +399,8 @@ class Tutorial {
         .setOrigin(0.5).setAlign('center'),
       uiText(scene, x + 48, y + 124, 'CONTROLS', 12, COLORS.text),
     ];
-    CONTROLS.forEach(([key, action], i) => {
+    const controls = typeof DEV_MODE !== 'undefined' && DEV_MODE ? [...CONTROLS, ['O', 'Give feedback (dev)']] : CONTROLS;
+    controls.forEach(([key, action], i) => {
       const rowY = y + 160 + i * 30;
       parts.push(uiText(scene, x + 48, rowY, key, 12, COLORS.highlight));
       parts.push(uiText(scene, x + 290, rowY, action, 12, COLORS.text));

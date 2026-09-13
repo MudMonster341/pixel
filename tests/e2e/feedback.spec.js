@@ -62,6 +62,30 @@ test('"Send & add another" keeps the panel open for the next item', async ({ pag
   await expect(page.getByLabel('Title')).toHaveValue('');
 });
 
+test('O opens and closes the overlay, but typing "o" in a field does not close it', async ({ page }) => {
+  await openGame(page, { dev: true });
+  await startGame(page);
+  const panel = page.locator('#dev-feedback');
+  await page.keyboard.press('o');
+  await expect(panel).toBeVisible();
+
+  await page.getByLabel('Title').click();
+  await page.keyboard.type('door too small');
+  await expect(page.getByLabel('Title')).toHaveValue('door too small');
+  await expect(panel).toBeVisible();
+
+  await page.getByLabel('Title').evaluate((input) => input.blur());
+  await page.keyboard.press('o');
+  await expect(panel).toBeHidden();
+});
+
+test('the Feedback button opens the overlay', async ({ page }) => {
+  await openGame(page, { dev: true });
+  await startGame(page);
+  await page.getByRole('button', { name: /Feedback/ }).click();
+  await expect(page.locator('#dev-feedback')).toBeVisible();
+});
+
 test('a title is required', async ({ page }) => {
   await openGame(page, { dev: true });
   await startGame(page);

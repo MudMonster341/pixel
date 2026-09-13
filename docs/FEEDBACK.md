@@ -8,7 +8,7 @@ see or download any of this.
 
 1. Run `npm start` and open http://localhost:8080. Dev mode is on automatically there. Add `?dev=0`
    to the address to play without dev tools.
-2. Press **`` ` ``** (backtick, left of the 1 key) or click **Feedback** in the bottom-right corner.
+2. Press **O** (the backtick `` ` `` also works) or click the yellow **Feedback** button in the bottom-right corner.
    The game pauses and takes a screenshot.
 3. *Optional:* click the screenshot to point at exactly what you mean.
 4. Choose **Bug / Change / Idea**, an area and a priority, then write a title and details.

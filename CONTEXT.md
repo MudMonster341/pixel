@@ -24,7 +24,7 @@ explain the story once the base map is done.
   - Test maps (`?map=meadow`): meadow + Tomas's house with doors, pickups, a 5-slot hotbar, NPC dialog,
     and the tutorial checklist.
 - **Dev tooling:** `npm test` (36 unit + 30 browser tests) runs before every push and on GitHub Actions.
-  The in-game feedback overlay (`` ` ``) has FB-0001 and FB-0002 waiting on the owner's answers.
+  The in-game feedback overlay (O key or yellow button) has FB-0001 and FB-0002 waiting on the owner's answers.
 - **Not yet:** campus art pass, building interiors (1 m per tile, empty rooms first), ES modules,
   flags/scripts, saving, backpack, dialog choices, the story.
 - **Next:** owner feedback on the campus test version, then step C2 of [docs/CAMPUS_MAP_PLAN.md](docs/CAMPUS_MAP_PLAN.md).

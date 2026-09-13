@@ -40,9 +40,9 @@
   // ---------- build the DOM ----------
 
   const badge = el('span', { class: 'dfb-badge', hidden: true });
-  const launcher = el('button', { id: 'dev-feedback-button', class: 'dfb-launcher', type: 'button', title: 'Give feedback (`)', onclick: () => openPanel() }, [
-    'Feedback ',
-    el('kbd', { text: '`' }),
+  const launcher = el('button', { id: 'dev-feedback-button', class: 'dfb-launcher', type: 'button', title: 'Give feedback (O)', onclick: () => openPanel() }, [
+    'Feedback',
+    el('kbd', { text: 'O' }),
     badge,
   ]);
 
@@ -141,13 +141,17 @@
     if (tab === 'inbox') renderInbox();
   }
 
+  // O (or `, which isn't on every keyboard layout) opens and closes the panel; Esc closes it.
   // Keys go to the panel, never to the game, while it's open.
+  const isToggleKey = (event) =>
+    (event.code === 'KeyO' || event.code === 'Backquote' || event.key === '`') && !event.ctrlKey && !event.metaKey && !event.altKey;
+
   window.addEventListener(
     'keydown',
     (event) => {
       const typing = event.target instanceof Element && event.target.matches('input, textarea, select');
       if (!state.open) {
-        if (event.code === 'Backquote' && !typing) {
+        if (isToggleKey(event) && !typing) {
           event.preventDefault();
           event.stopImmediatePropagation();
           openPanel();
@@ -155,7 +159,7 @@
         return;
       }
       event.stopImmediatePropagation();
-      if (event.key === 'Escape' || (event.code === 'Backquote' && !typing)) {
+      if (event.key === 'Escape' || (isToggleKey(event) && !typing)) {
         event.preventDefault();
         closePanel();
       } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && state.tab === 'new') {

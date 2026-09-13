@@ -3,28 +3,31 @@
 **Last updated:** 2026-09-13 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
-A small top-down pixel-art exploration game that runs in the browser and looks like the DS-era
-Pokémon games. The planned game is a cosy treasure hunt: talk to villagers, get clues, find 3 items,
-open a secret door. No combat. Built only with free software and original art.
+A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It
+recreates the real **BITS Pilani Dubai campus** (in Dubai International Academic City) as closely
+as possible, including multi-floor building interiors and DIAC Park nearby. A new student arrives,
+finds the **LUG (Linux Users Group) treasure hunt** event, and explores campus following its clues.
+No combat. Built with free software and original art.
 
 ## Why it exists
-The owner wants to learn how games like this are built by making a small one, one playable step
-at a time, on a stable architecture that new maps and story can be added to without rework. The
-agent makes the design and technical choices. The owner plays each version, reports feedback in-game,
-and writes the story.
+The owner wants to learn how games like this are built by making one, one playable step at a time,
+on a stable architecture that can grow. The campus map is the most important piece. The agent makes
+the design and technical choices. The owner plays each version, reports feedback in-game, and
+writes the story.
 
 ## Current state
 - **Works (all covered by tests, 2026-09-13):**
-  - Two maps (Meadow, Tomas's House) with doors between them, collisions, and a camera that follows.
+  - Test maps only (Meadow, Tomas's House) with doors, collisions and a follow camera.
   - Pickups into a 5-slot inventory (hotbar UI, to be replaced by a backpack).
-  - NPC with typewriter dialog that gives an item; minimap (M); tutorial card (H) + checklist (ESC skips).
+  - NPC dialog, minimap (M), tutorial card (H) + checklist.
 - **Dev tooling:**
-  - `npm test` (31 unit + 26 browser tests) runs before every push and on GitHub Actions.
-  - In-game feedback overlay (`` ` `` in dev mode) with an inbox. The agent reads it via `npm run feedback`.
-- **Not yet:** ES modules, events/flags/scripts, saving, backpack, dialog choices, journal, signs,
-  chests, the secret door, depth layering, sound.
-- **Next:** Phase 1 (foundation) of [docs/GAME_PLAN.md](docs/GAME_PLAN.md). The owner is preparing
-  the story and new map.
+  - `npm test` (31 unit + 26 browser tests) runs before every push and on GitHub Actions; the first CI
+    run passed.
+  - In-game feedback overlay (`` ` ``) with an inbox.
+- **Planned, not built:** the campus map ([docs/CAMPUS_MAP_PLAN.md](docs/CAMPUS_MAP_PLAN.md), waiting on
+  the owner's answers), ES modules, events/flags/scripts, saving, backpack, dialog choices, Tiled maps.
+- **Next:** the owner answers the campus plan questions (scale, floor plans, which interiors, event
+  details). Phase 1 foundation of [docs/GAME_PLAN.md](docs/GAME_PLAN.md) is still the prerequisite.
 
 ## How to run it
 ```
@@ -38,26 +41,25 @@ needs no install, just Node and internet (Phaser from cdnjs, font from Google Fo
 Debugging: `game.scene.getScene('world')` and `GameState` in the browser console.
 
 ## Where things live
-- `src/items.js`, `src/maps.js`: content (items; maps with buildings, warps, pickups, NPCs).
+- `src/items.js`, `src/maps.js`: content (items; test maps with buildings, warps, pickups, NPCs).
 - `src/maplogic.js`: pure map helpers shared by the game and the tests.
-- `src/state.js`: constants, `Inventory`, `GameState` (what survives map changes).
-- `src/scenes/world.js`: map, player, NPCs, pickups, warps. Restarted on each map change.
-- `src/scenes/ui.js`: minimap, hotbar, dialog, toast, tutorial. Never restarted.
-- `src/main.js`: boot, Phaser config, `DEV_MODE`. `src/dev/`: feedback overlay (dev only).
-- `server.js`: static files + feedback API, bound to 127.0.0.1.
-- `tools/`: `make-assets.js` (all pixel art), `feedback-store.js` + `feedback.js` (feedback CLI).
-- `tests/unit`, `tests/e2e`, `playwright.config.js`, `.githooks/pre-push`, `.github/workflows/test.yml`.
-- `feedback/`: feedback items + screenshots (committed).
+- `src/state.js`: constants, `Inventory`, `GameState`.
+- `src/scenes/world.js` (restarted per map), `src/scenes/ui.js` (persistent HUD), `src/main.js` (boot, `DEV_MODE`).
+- `src/dev/`: feedback overlay (dev only). `server.js`: static files + feedback API on 127.0.0.1.
+- `tools/`: `make-assets.js` (pixel art), `feedback-store.js` + `feedback.js`.
+- `tests/unit`, `tests/e2e`, `.githooks/pre-push`, `.github/workflows/test.yml`. `feedback/`: feedback items.
+- `docs/research/`: campus facts, measurements, tour scene list (no third-party images).
 
 ## Constraints
-- $0: free software and free/original assets only.
-- The game loads no npm packages. npm is for dev tooling only ([ADR 0005](decisions/0005-automated-tests-on-every-push.md)).
+- $0: free software and free/original assets only. The game loads no npm packages; npm is for dev
+  tooling only ([ADR 0005](decisions/0005-automated-tests-on-every-push.md)).
 - Art is 16x16 per tile/frame, characters included. The canvas is 960x540, world zoom 3, UI unzoomed.
+- Real campus: the virtual tour, Google Maps and Wikimedia photos are reference only; OpenStreetMap data
+  is ODbL with attribution. No real logos or real people without permission.
 
-## Rules and plans (approved 2026-09-13)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): content is data; scripts, entities, saves/profiles, input rule
-- [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md): bright DS-era Pokémon look with depth
-- [docs/GAME_PLAN.md](docs/GAME_PLAN.md): treasure hunt, owner decisions, component backlog, phases
+## Rules and plans
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) · [docs/GAME_PLAN.md](docs/GAME_PLAN.md) (approved 2026-09-13)
+- [docs/CAMPUS_MAP_PLAN.md](docs/CAMPUS_MAP_PLAN.md) (proposal, waiting on owner answers) · [docs/research/](docs/research/)
 - [docs/TESTING.md](docs/TESTING.md) · [docs/FEEDBACK.md](docs/FEEDBACK.md)
 
 ## Memory

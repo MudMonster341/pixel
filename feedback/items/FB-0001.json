@@ -1,0 +1,84 @@
+{
+  "id": "FB-0001",
+  "title": "When entering the hosue, the charcter is not seen",
+  "type": "bug",
+  "area": "Inventory",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-13T10:13:03.582Z",
+  "updatedAt": "2026-09-13T10:13:03.582Z",
+  "details": "whemn i neter the houser the character shoudl be seen but he is not seen, we can tyhink about cghanging mayeb teh size an dpositioning of the inventory bar so tha it doesnt nto overlap with the map, wee can make it smaller and try to it does nto take upp too much space of the screen",
+  "context": {
+    "map": "house",
+    "mapName": "Tomas's House",
+    "tile": {
+      "x": 7,
+      "y": 10
+    },
+    "pixel": {
+      "x": 121,
+      "y": 168
+    },
+    "facing": "down",
+    "inventory": [
+      {
+        "item": "apple",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 1,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [
+      "meadow-apple-1"
+    ],
+    "tutorial": {
+      "stage": "steps",
+      "completed": [
+        "move",
+        "pickup",
+        "select",
+        "enter"
+      ]
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 973,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T10:11:36.533Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 444,
+      "y": 479
+    },
+    "world": {
+      "x": 148,
+      "y": 172
+    },
+    "tile": {
+      "x": 9,
+      "y": 10
+    }
+  },
+  "screenshot": "screenshots/FB-0001.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T10:13:03.582Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

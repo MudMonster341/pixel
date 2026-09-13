@@ -127,3 +127,34 @@ checkpoint pushed successfully (credentials became available between the two att
 **Next:** Phase 1 of GAME_PLAN.md, starting with the ES modules move (the browser tests are the
 safety net), then events, flags/scripts, content registry, and profile-ready save/load. The first
 GitHub Actions run hadn't been observed when this entry was written.
+
+## 2026-09-13 — Real campus research and map plan (BITS Pilani Dubai)
+
+**Did:**
+- The owner set the real game: recreate the **BITS Pilani Dubai campus** (multi-floor interiors, DIAC
+  Park nearby) for a story about a new student and the **LUG treasure hunt**. The meadow and house
+  are test maps.
+- Researched the official 3DVista tour, OpenStreetMap, Wikimedia Commons, Google satellite,
+  Wikipedia and the official facilities pages. Wrote [docs/CAMPUS_MAP_PLAN.md](docs/CAMPUS_MAP_PLAN.md)
+  and [docs/research/](docs/research/).
+- Pulled the tour's 143 Dubai scenes and the links between them (walking routes) into
+  `docs/research/bits-dubai-tour-scenes.json`. Took true building sizes from OpenStreetMap.
+- Corrects the previous entry's open point: the first GitHub Actions run (acb9402) passed.
+
+**Why:**
+- The tour has **no floor plans**, and its overview map and "Floor Plan" panel come from another
+  BITS campus's template. Staircase positions can't be taken from public data, so the plan asks the
+  owner for photos of the fire evacuation plans.
+- Proposed 2 m per tile outdoors: at 1 m the 412×343 m campus takes about 80 s to cross and feels empty.
+  Indoors at 1 m for furniture. Both are to be tested as walkable greyboxes before any art.
+- The map is rotated about 35–40° to line up with the campus walls, because pixel buildings need
+  grid-aligned walls.
+- Tour, Google and Wikimedia images are reference only; only facts and measurements are in the repo.
+  No real logos or people without permission.
+
+**Decisions:** none accepted yet. Tiled maps and the scale choice need owner answers, then an ADR.
+
+**Failures:** none
+
+**Next:** owner answers the 7 questions in CAMPUS_MAP_PLAN.md. Meanwhile Phase 1 foundation work
+(ES modules, events/flags, save) is still the prerequisite.

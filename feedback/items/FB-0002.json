@@ -1,0 +1,79 @@
+{
+  "id": "FB-0002",
+  "title": "When equipped an item, i want the character art to also change showing the mini equipped item",
+  "type": "bug",
+  "area": "Art & style",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-13T10:18:07.116Z",
+  "updatedAt": "2026-09-13T10:18:07.116Z",
+  "details": "for the sword, i want to be able to be able to use the item so when adding items i shouod have a usage animation liek a swong or something. for now for all the items you cna keep only the sword and apple and have the annimation ior usage ability for them.",
+  "context": {
+    "map": "meadow",
+    "mapName": "Meadow",
+    "tile": {
+      "x": 11,
+      "y": 13
+    },
+    "pixel": {
+      "x": 184,
+      "y": 216
+    },
+    "facing": "down",
+    "inventory": [
+      {
+        "item": "apple",
+        "count": 1
+      },
+      {
+        "item": "potion",
+        "count": 1
+      },
+      {
+        "item": "sword",
+        "count": 1
+      },
+      null,
+      null
+    ],
+    "selectedSlot": 3,
+    "flags": {
+      "tomasGaveSword": true,
+      "tomasChats": 0
+    },
+    "collected": [
+      "meadow-apple-1",
+      "house-potion"
+    ],
+    "tutorial": {
+      "stage": "done",
+      "completed": [
+        "move",
+        "pickup",
+        "select",
+        "enter",
+        "talk"
+      ]
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 973,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T10:14:11.668Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0002.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T10:18:07.116Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

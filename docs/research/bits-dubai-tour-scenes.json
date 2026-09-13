@@ -1,0 +1,975 @@
+{
+  "source": "https://www.bits-dubai.ac.ae/dubai-campus-virtual-tour/ (scene names and links only; no images)",
+  "collected": "2026-09-13",
+  "note": "linksTo = scenes you can jump to from this scene in the tour. Short hops are usually physical neighbours; many labs link to \"Foyer 2\" as a menu-style jump, so links do not prove floors.",
+  "scenes": [
+    {
+      "scene": "50 Seater Classroom",
+      "linksTo": [
+        "Connecting Lobby"
+      ]
+    },
+    {
+      "scene": "60 Seater Classroom",
+      "linksTo": [
+        "Connecting Lobby"
+      ]
+    },
+    {
+      "scene": "Academic Undergraduate Studies Division",
+      "linksTo": [
+        "Connecting - Audi offices reception"
+      ]
+    },
+    {
+      "scene": "ACM (Association for Computing Machinery)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "ACM-W (Association of Computing Machinery Women)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Activity Room",
+      "linksTo": [
+        "Girls Hostel"
+      ]
+    },
+    {
+      "scene": "Admissions Office",
+      "linksTo": [
+        "Connecting - Audi offices reception"
+      ]
+    },
+    {
+      "scene": "Advanced Characterization Lab (MECH)",
+      "linksTo": [
+        "Library"
+      ]
+    },
+    {
+      "scene": "Advanced Molecular Biology (BIOT)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Analog and Digital Electronics (EEE)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Athletics Track",
+      "linksTo": [
+        "BITS Dubai Entrance",
+        "Boxing",
+        "Boys Hostel",
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Cricket",
+        "Football",
+        "Tennis"
+      ]
+    },
+    {
+      "scene": "Auditorium",
+      "linksTo": [
+        "Oustide Auditorium"
+      ]
+    },
+    {
+      "scene": "Badminton",
+      "linksTo": [
+        "Connecting - Reception Sports Complex Mini Mart",
+        "Table Tennis"
+      ]
+    },
+    {
+      "scene": "Basketball",
+      "linksTo": [
+        "Athletics Track",
+        "Volleyball"
+      ]
+    },
+    {
+      "scene": "Biotechnology-Research Lab (BIOT)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "BITS Dubai",
+      "linksTo": [
+        "Athletics Track",
+        "Basketball",
+        "Box Cricket",
+        "Boxing",
+        "Boys Hostel",
+        "Cricket",
+        "Football",
+        "Foyer",
+        "Girls Hostel",
+        "Main Gate",
+        "Parking",
+        "Tennis"
+      ]
+    },
+    {
+      "scene": "BITS Dubai Entrance",
+      "linksTo": [
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Foyer",
+        "Main Gate",
+        "Parking"
+      ]
+    },
+    {
+      "scene": "Box Cricket",
+      "linksTo": [
+        "Athletics Track"
+      ]
+    },
+    {
+      "scene": "Boxing",
+      "linksTo": [
+        "Athletics Track",
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel"
+      ]
+    },
+    {
+      "scene": "Boys Hostel",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception",
+        "Football"
+      ]
+    },
+    {
+      "scene": "Boys Hostel - ⁠Attached Washroom",
+      "linksTo": [
+        "Boys Hostel Room with attached washroom"
+      ]
+    },
+    {
+      "scene": "Boys Hostel Lobby or Reception",
+      "linksTo": [
+        "Boys Hostel",
+        "Boys Hostel Room",
+        "Boys Hostel Room with attached washroom",
+        "Dining Hall (Boys)",
+        "Gym (Boys)",
+        "Laundry Area (Boys)",
+        "Recreational Area (Boys)"
+      ]
+    },
+    {
+      "scene": "Boys Hostel Room",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception"
+      ]
+    },
+    {
+      "scene": "Boys Hostel Room with attached washroom",
+      "linksTo": [
+        "Boys Hostel - ⁠Attached Washroom",
+        "Boys Hostel Lobby or Reception"
+      ]
+    },
+    {
+      "scene": "Boys Recreational Area 2",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception",
+        "Girls Hostel"
+      ]
+    },
+    {
+      "scene": "Burj Khalifa",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Canteen",
+      "linksTo": []
+    },
+    {
+      "scene": "Canteen",
+      "linksTo": [
+        "Activity Room",
+        "Girls Hostel",
+        "Library",
+        "Workshop"
+      ]
+    },
+    {
+      "scene": "Career Services - Counselling Room 1",
+      "linksTo": [
+        "Career Services - Meeting Room",
+        "Career Services - Waiting Area"
+      ]
+    },
+    {
+      "scene": "Career Services - Counselling Room 2",
+      "linksTo": [
+        "Career Services - Waiting Area"
+      ]
+    },
+    {
+      "scene": "Career Services - Meeting Room",
+      "linksTo": [
+        "Career Services - Counselling Room 1",
+        "Career Services - Student Coordinator Workspaces"
+      ]
+    },
+    {
+      "scene": "Career Services - Student Coordinator Workspaces",
+      "linksTo": [
+        "Career Services - Meeting Room",
+        "Career Services - Waiting Area"
+      ]
+    },
+    {
+      "scene": "Career Services - Waiting Area",
+      "linksTo": [
+        "Career Services (Placement)",
+        "Career Services - Counselling Room 1",
+        "Career Services - Counselling Room 2",
+        "Career Services - Student Coordinator Workspaces"
+      ]
+    },
+    {
+      "scene": "Career Services (Placement)",
+      "linksTo": [
+        "Career Services - Waiting Area",
+        "Connecting - Reception Sports Complex Mini Mart",
+        "Foyer"
+      ]
+    },
+    {
+      "scene": "Centre for Higher Education",
+      "linksTo": [
+        "Library 1st Floor - 2"
+      ]
+    },
+    {
+      "scene": "Chemical Engineering Lab (CHEM)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Chemistry Lab (GS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Chimera (Biotech Association)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Communication Systems Lab (EEE)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Composite Manufacturing Lab (Workshop)",
+      "linksTo": [
+        "Workshop 2"
+      ]
+    },
+    {
+      "scene": "Computer Lab (CS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Connecting - Audi offices reception",
+      "linksTo": [
+        "Academic Undergraduate Studies Division",
+        "Admissions Office",
+        "Deputy Registrar Office",
+        "Director's Office Entrance",
+        "Foyer",
+        "Oustide Auditorium",
+        "Student Welfare Division"
+      ]
+    },
+    {
+      "scene": "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+      "linksTo": [
+        "Basketball",
+        "Box Cricket",
+        "Boxing",
+        "Foyer",
+        "Girls Hostel",
+        "Library",
+        "Main Gate",
+        "Prime Medical Centre",
+        "Throwball",
+        "Volleyball"
+      ]
+    },
+    {
+      "scene": "Connecting - Reception Sports Complex Mini Mart",
+      "linksTo": [
+        "Badminton",
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Foyer",
+        "Mini Mart",
+        "Prime Medical Centre",
+        "Telepresence Classroom"
+      ]
+    },
+    {
+      "scene": "Connecting Lobby",
+      "linksTo": [
+        "50 Seater Classroom",
+        "60 Seater Classroom",
+        "Foyer",
+        "Locker Area"
+      ]
+    },
+    {
+      "scene": "Counselling Center - Group Session Room",
+      "linksTo": [
+        "Counselling Centre",
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Counselling Center - Therapy Room",
+      "linksTo": [
+        "Counselling Centre"
+      ]
+    },
+    {
+      "scene": "Counselling Centre",
+      "linksTo": [
+        "Counselling Center - Group Session Room",
+        "Counselling Center - Therapy Room",
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Cricket",
+      "linksTo": [
+        "Athletics Track",
+        "BITS Dubai Entrance",
+        "Boxing",
+        "Boys Hostel",
+        "Football",
+        "Tennis"
+      ]
+    },
+    {
+      "scene": "Database System & Algorithms Lab (CS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Deputy Registrar Office",
+      "linksTo": [
+        "Connecting - Audi offices reception"
+      ]
+    },
+    {
+      "scene": "Dining Hall (Boys)",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception"
+      ]
+    },
+    {
+      "scene": "Dining Hall (Girls)",
+      "linksTo": [
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Director's Office",
+      "linksTo": [
+        "Director's Office Entrance"
+      ]
+    },
+    {
+      "scene": "Director's Office Entrance",
+      "linksTo": [
+        "Director's Office",
+        "Foyer"
+      ]
+    },
+    {
+      "scene": "Dubai Frame",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Electrical Machines Lab (EEE)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Football",
+      "linksTo": [
+        "Athletics Track",
+        "BITS Dubai Entrance",
+        "Boxing",
+        "Boys Hostel",
+        "Cricket",
+        "Tennis"
+      ]
+    },
+    {
+      "scene": "Foyer",
+      "linksTo": [
+        "BITS Dubai Entrance",
+        "Career Services (Placement)",
+        "Connecting - Audi offices reception",
+        "Connecting - Reception Sports Complex Mini Mart",
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Foyer 2",
+      "linksTo": [
+        "Career Services (Placement)",
+        "Connecting - Audi offices reception",
+        "Connecting - Reception Sports Complex Mini Mart",
+        "Connecting Lobby",
+        "Foyer",
+        "Guest Meeting Room",
+        "Library",
+        "Meeting Room"
+      ]
+    },
+    {
+      "scene": "Girls Hostel",
+      "linksTo": [
+        "Activity Room",
+        "Canteen",
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Girls Hostel Lobby",
+        "Workshop"
+      ]
+    },
+    {
+      "scene": "Girls Hostel - ⁠Attached washroom part",
+      "linksTo": [
+        "Girls Hostel Room with attached washroom"
+      ]
+    },
+    {
+      "scene": "Girls Hostel Lobby",
+      "linksTo": [
+        "Dining Hall (Girls)",
+        "Girls Hostel",
+        "Girls Hostel Room",
+        "Girls Hostel Room with attached washroom",
+        "Gym (Girls)",
+        "Laundry Area (Girls)",
+        "Recreational Area (Girls)"
+      ]
+    },
+    {
+      "scene": "Girls Hostel Recreational Area 2",
+      "linksTo": [
+        "Girls Hostel",
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Girls Hostel Room",
+      "linksTo": [
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Girls Hostel Room with attached washroom",
+      "linksTo": [
+        "Girls Hostel - ⁠Attached washroom part",
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Google Developers Groups",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Groove (Dance Club)",
+      "linksTo": [
+        "Canteen"
+      ]
+    },
+    {
+      "scene": "Guest Meeting Room",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Gym (Boys)",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception"
+      ]
+    },
+    {
+      "scene": "Gym (Girls)",
+      "linksTo": [
+        "Girls Hostel Recreational Area 2"
+      ]
+    },
+    {
+      "scene": "Heat Transfer Lab (MECH)",
+      "linksTo": [
+        "Workshop 2"
+      ]
+    },
+    {
+      "scene": "IEEE (Institution Electrical and Electronic Engineers)",
+      "linksTo": []
+    },
+    {
+      "scene": "IFOR Club (Intelligent Flying Object and Reconnaissance)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Incubation Centre",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Instrumentation Lab (EEE)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Intelligent Computing Lab (CS)",
+      "linksTo": [
+        "Intelligent computing Lab Entrance"
+      ]
+    },
+    {
+      "scene": "Intelligent computing Lab Entrance",
+      "linksTo": [
+        "Foyer",
+        "Incubation Centre",
+        "Intelligent Computing Lab (CS)"
+      ]
+    },
+    {
+      "scene": "International Student Services",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Jumeirah Beach & Burj Al Arab",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Kite Beach",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Laundry Area (Boys)",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception"
+      ]
+    },
+    {
+      "scene": "Laundry Area (Girls)",
+      "linksTo": [
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Library",
+      "linksTo": [
+        "Canteen",
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Foyer 2",
+        "Library - Circulation Reception"
+      ]
+    },
+    {
+      "scene": "Library - Circulation Reception",
+      "linksTo": [
+        "Library"
+      ]
+    },
+    {
+      "scene": "Library - Reading Area",
+      "linksTo": [
+        "Library - Stack Area"
+      ]
+    },
+    {
+      "scene": "Library - Stack Area",
+      "linksTo": [
+        "Library - Reading Area"
+      ]
+    },
+    {
+      "scene": "Library - Textbook Area",
+      "linksTo": [
+        "Library 1st Floor"
+      ]
+    },
+    {
+      "scene": "Library 1st Floor",
+      "linksTo": [
+        "Library - Textbook Area"
+      ]
+    },
+    {
+      "scene": "Library 1st Floor - 2",
+      "linksTo": [
+        "Centre for Higher Education"
+      ]
+    },
+    {
+      "scene": "Locker Area",
+      "linksTo": [
+        "Connecting Lobby"
+      ]
+    },
+    {
+      "scene": "MAD Club (Make a Difference Club)",
+      "linksTo": []
+    },
+    {
+      "scene": "MAHASAT",
+      "linksTo": [
+        "MAHASAT Room"
+      ]
+    },
+    {
+      "scene": "MAHASAT Room",
+      "linksTo": [
+        "MAHASAT"
+      ]
+    },
+    {
+      "scene": "Main Gate",
+      "linksTo": [
+        "BITS Dubai Entrance"
+      ]
+    },
+    {
+      "scene": "Mechatronics Lab (Workshop)",
+      "linksTo": [
+        "Workshop 2"
+      ]
+    },
+    {
+      "scene": "Meeting Room",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Microbiology Lab (BIOT)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Mini Mart",
+      "linksTo": [
+        "Connecting - Reception Sports Complex Mini Mart"
+      ]
+    },
+    {
+      "scene": "MTC (Microsoft Tech Club)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Museum of Future",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Music Club",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Network & Distributed System Lab (CS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Oh Crop! Design club",
+      "linksTo": [
+        "Foyer 2",
+        "Library"
+      ]
+    },
+    {
+      "scene": "Oustide Auditorium",
+      "linksTo": [
+        "Auditorium",
+        "Connecting - Audi offices reception",
+        "Parents-Visitor Lounge"
+      ]
+    },
+    {
+      "scene": "Parents-Visitor Lounge",
+      "linksTo": [
+        "Oustide Auditorium"
+      ]
+    },
+    {
+      "scene": "Parking",
+      "linksTo": [
+        "BITS Dubai Entrance"
+      ]
+    },
+    {
+      "scene": "Petroleum Lab (CHEM)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Physics Lab (GS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Power Electronics Lab (EEE)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Prime Medical Centre",
+      "linksTo": [
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Prime Medical Centre - Doctors Room"
+      ]
+    },
+    {
+      "scene": "Prime Medical Centre - Doctors Room",
+      "linksTo": [
+        "Prime Medical Centre"
+      ]
+    },
+    {
+      "scene": "Prime Movers & Fluid Machinery Lab (Workshop)",
+      "linksTo": [
+        "Workshop 1"
+      ]
+    },
+    {
+      "scene": "Recreational Area (Boys)",
+      "linksTo": [
+        "Boys Hostel Lobby or Reception",
+        "Girls Hostel"
+      ]
+    },
+    {
+      "scene": "Recreational Area (Girls)",
+      "linksTo": [
+        "Girls Hostel",
+        "Girls Hostel Lobby"
+      ]
+    },
+    {
+      "scene": "Reflexions (Photography Club)",
+      "linksTo": [
+        "Connecting - Girls Hostel, Main Gate - Boys Hostel",
+        "Girls Hostel"
+      ]
+    },
+    {
+      "scene": "Shades Art Club",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Signal Processing and Simulation Lab (CS)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Silicon Central",
+      "linksTo": [
+        "BITS Dubai"
+      ]
+    },
+    {
+      "scene": "Soil Mechanics Lab (Civil)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Structures and Construction Material Lab (Workshop)",
+      "linksTo": [
+        "Workshop 1"
+      ]
+    },
+    {
+      "scene": "Student Council",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Student Welfare Division",
+      "linksTo": [
+        "Connecting - Audi offices reception"
+      ]
+    },
+    {
+      "scene": "Supernova (The Astronomy Club)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Surveying Lab (Civil)",
+      "linksTo": [
+        "Canteen",
+        "Girls Hostel"
+      ]
+    },
+    {
+      "scene": "SWE (Society of Women Engineers)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Table Tennis",
+      "linksTo": [
+        "Badminton",
+        "Connecting - Reception Sports Complex Mini Mart"
+      ]
+    },
+    {
+      "scene": "Telepresence Classroom",
+      "linksTo": [
+        "Connecting - Reception Sports Complex Mini Mart"
+      ]
+    },
+    {
+      "scene": "Telepresence Conference Room",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Tennis",
+      "linksTo": [
+        "Football"
+      ]
+    },
+    {
+      "scene": "Thermo-Fluids Lab (Workshop)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Throwball",
+      "linksTo": [
+        "Girls Hostel",
+        "Volleyball"
+      ]
+    },
+    {
+      "scene": "Transport Engineering Lab (Civil)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Transport Facility",
+      "linksTo": [
+        "BITS Dubai Entrance"
+      ]
+    },
+    {
+      "scene": "Vice Chancellor Office",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Volleyball",
+      "linksTo": [
+        "Basketball",
+        "Girls Hostel",
+        "Throwball"
+      ]
+    },
+    {
+      "scene": "WIE (Women in Engineering)",
+      "linksTo": [
+        "Foyer 2"
+      ]
+    },
+    {
+      "scene": "Workshop",
+      "linksTo": [
+        "Canteen",
+        "Girls Hostel",
+        "Workshop 2"
+      ]
+    },
+    {
+      "scene": "Workshop - CNC Room",
+      "linksTo": [
+        "Workshop 1"
+      ]
+    },
+    {
+      "scene": "Workshop 1",
+      "linksTo": [
+        "Prime Movers & Fluid Machinery Lab (Workshop)",
+        "Structures and Construction Material Lab (Workshop)",
+        "Workshop - CNC Room",
+        "Workshop 2"
+      ]
+    },
+    {
+      "scene": "Workshop 2",
+      "linksTo": [
+        "Composite Manufacturing Lab (Workshop)",
+        "Mechatronics Lab (Workshop)",
+        "Workshop",
+        "Workshop 1"
+      ]
+    }
+  ]
+}

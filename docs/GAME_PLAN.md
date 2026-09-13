@@ -9,6 +9,10 @@ the build order for the base components.
 A cosy treasure hunt: talk to villagers, collect clues, explore to find **3 hidden items**, and use
 them to open **the secret door**.
 
+**Setting (decided 2026-09-13):** the real **BITS Pilani Dubai campus**. A new student arrives and
+takes part in the **LUG treasure hunt** event. How the campus map is built is in
+[CAMPUS_MAP_PLAN.md](CAMPUS_MAP_PLAN.md). The meadow and house are test maps.
+
 ## Core loop
 
 ```

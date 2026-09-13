@@ -225,3 +225,28 @@ picture, which made it easy to miss.
 **Decisions:** none · **Failures:** none
 
 **Next:** unchanged. The owner walks the campus test version and sends feedback.
+
+## 2026-09-13 — Feedback batch FB-0001–FB-0017 triaged; Sonnet agents implement
+
+**Did:**
+- The owner answered FB-0001 (option B: compact hotbar, see-through when the player is behind it) and
+  FB-0002 (holding an item shows it on the character; add keycard, phone and other university items).
+- 15 new items came in from walking the C1 campus: angular map, diagonal fences and paths, a random
+  structure near the gate, uneven or too many paths, no clear Gate 2 entrance, merged buildings, roads
+  without kerbs, flat pavement art, too little greenery, the tennis court, running.
+- Grouped into three packages: gameplay (FB-0001, 0002, 0017), campus art (FB-0006, 0014, 0015, 0016),
+  campus layout (FB-0003–0005, 0007–0013). Marked in-progress/planned.
+- Wrote [ADR 0008](decisions/0008-campus-as-straight-schematic-plan.md), which supersedes 0007: the campus
+  becomes a hand-designed straight plan measured from OpenStreetMap instead of rasterised from it.
+- Owner rule: **Sonnet agents implement the fixes; the main agent only monitors** (briefs, review, tests,
+  browser check, statuses, checkpoints). Recorded in FEEDBACK.md and CLAUDE.md.
+
+**Why:** the screenshots show the raw OSM rasterisation creates exactly the problems the owner hates
+(stair-step diagonals, odd leftovers, uneven widths). Heuristic clean-up would keep leaking, so a
+schematic plan is the durable fix. The layout package depends on the new art tiles, so art goes first.
+Gameplay doesn't touch the campus files, so it can run alongside in a separate worktree.
+
+**Decisions:** ADR 0008 (supersedes 0007) · **Failures:** none
+
+**Next:** the gameplay agent (worktree) and the art agent (main tree) run in parallel; then the layout
+agent. Review, test, `feedback fix` and checkpoint after each.

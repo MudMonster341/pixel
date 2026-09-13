@@ -2,6 +2,15 @@
 
 **Status (2026-09-13):** the owner approved the plan. **Step C1 is built:** a walkable test version of
 the outdoor campus generated from OpenStreetMap ([ADR 0007](../decisions/0007-campus-map-from-osm-into-tiled.md)).
+**The owner's feedback on C1 (FB-0003 to FB-0016) changed the approach:** the campus is being rebuilt as a
+hand-designed, fully straight plan ([ADR 0008](../decisions/0008-campus-as-straight-schematic-plan.md)):
+- straight D54 road
+- the real Gate 2 main entrance, plus a second entrance
+- even-width roads with kerbs and pavements, clean internal walkways
+- separate buildings you can walk between
+- trees and bushes, a proper tennis court, better 3D art
+
+Sections below describing the rasterised C1 are historical until the rebuild lands.
 Research details and sources are in [research/bits-dubai-campus.md](research/bits-dubai-campus.md).
 
 ## Goal

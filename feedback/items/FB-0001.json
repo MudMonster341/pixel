@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Inventory",
   "priority": "high",
-  "status": "needs-info",
+  "status": "in-progress",
   "createdAt": "2026-09-13T10:13:03.582Z",
-  "updatedAt": "2026-09-13T10:38:30.860Z",
+  "updatedAt": "2026-09-13T11:45:17.414Z",
   "details": "whemn i neter the houser the character shoudl be seen but he is not seen, we can tyhink about cghanging mayeb teh size an dpositioning of the inventory bar so tha it doesnt nto overlap with the map, wee can make it smaller and try to it does nto take upp too much space of the screen",
   "context": {
     "map": "house",
@@ -77,6 +77,16 @@
       "author": "agent",
       "text": "Confirmed from your screenshot: at the bottom of the house you stand under the inventory bar, and the camera cannot scroll you above it (the room is only 12 tiles tall). The tutorial panel also covers the top-right. Which fix do you want? (A) Follow your backpack decision: hide the bar, show only a small equipped-item icon in a corner, full backpack on B. (B) Keep a compact bar (about half size) that fades out when you walk behind it. (C) Keep the bar and give the camera extra room so the player always stays above the UI. My pick: A, plus C as a safety net so no panel can ever cover the player. OK?",
       "at": "2026-09-13T10:38:30.860Z"
+    },
+    {
+      "author": "owner",
+      "text": "I liek B betyter, if player is behind it, make it translucent and make it a bit smaller",
+      "at": "2026-09-13T11:42:48.090Z"
+    },
+    {
+      "author": "agent",
+      "text": "Starting now with a Sonnet agent: gameplay package. I will review and test.",
+      "at": "2026-09-13T11:45:17.414Z"
     }
   ],
   "resolution": null,
@@ -90,6 +100,16 @@
       "at": "2026-09-13T10:38:30.860Z",
       "by": "agent",
       "status": "needs-info"
+    },
+    {
+      "at": "2026-09-13T11:42:48.090Z",
+      "by": "owner",
+      "status": "answered"
+    },
+    {
+      "at": "2026-09-13T11:45:17.414Z",
+      "by": "agent",
+      "status": "in-progress"
     }
   ]
 }

@@ -23,11 +23,17 @@ explain the story once the base map is done.
   - Female lead player sprite; follow camera; scrolling minimap (M); controls card (H).
   - Test maps (`?map=meadow`): meadow + Tomas's house with doors, pickups, a 5-slot hotbar, NPC dialog,
     and the tutorial checklist.
-- **Dev tooling:** `npm test` (36 unit + 30 browser tests) runs before every push and on GitHub Actions.
-  The in-game feedback overlay (O key or yellow button) has FB-0001 and FB-0002 waiting on the owner's answers.
-- **Not yet:** campus art pass, building interiors (1 m per tile, empty rooms first), ES modules,
-  flags/scripts, saving, backpack, dialog choices, the story.
-- **Next:** owner feedback on the campus test version, then step C2 of [docs/CAMPUS_MAP_PLAN.md](docs/CAMPUS_MAP_PLAN.md).
+- **Dev tooling:** `npm test` (36 unit + 32 browser tests) runs before every push and on GitHub Actions.
+  In-game feedback overlay (O key or yellow button).
+- **In progress (2026-09-13): feedback batch FB-0001–FB-0017.** Sonnet agents implement; the main agent
+  reviews, tests and marks fixed ([docs/FEEDBACK.md](docs/FEEDBACK.md)). Three packages:
+  1. **Gameplay:** compact see-through hotbar, held items shown on the character plus campus items, running.
+  2. **Campus art:** 3D pavement, road kerbs, trees and bushes, tennis court, building proportions.
+  3. **Campus layout:** rebuild as a straight schematic plan with the Gate 2 entrance
+     ([ADR 0008](decisions/0008-campus-as-straight-schematic-plan.md)).
+- **Not yet:** building interiors (1 m per tile, empty rooms first), ES modules, flags/scripts, saving,
+  backpack, dialog choices, the story.
+- **Next:** finish the three feedback packages, owner verifies in the overlay inbox, then the Main Block interior.
 
 ## How to run it
 ```

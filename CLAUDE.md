@@ -11,6 +11,9 @@ work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`
 - At the start of every session, and when the owner says "check feedback", run `npm run feedback`
   and follow [docs/FEEDBACK.md](docs/FEEDBACK.md). Ask through the feedback thread when an item is
   unclear; don't build on a guess.
+- **Feedback fixes are implemented by Sonnet subagents** (Agent tool, `model: "sonnet"`, self-contained
+  briefs). The main agent triages, monitors, reviews diffs, runs tests, checks the game, marks items fixed
+  and checkpoints. It doesn't write the fix code ([docs/FEEDBACK.md](docs/FEEDBACK.md)).
 - A change is done when `npm test` passes ([docs/TESTING.md](docs/TESTING.md)) and it has been tried
   in the running game (`npm start`, http://localhost:8080). Every feedback fix gets a regression test
   named `FB-XXXX: ...`.

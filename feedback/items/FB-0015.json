@@ -1,0 +1,85 @@
+{
+  "id": "FB-0015",
+  "title": "add in trees and other busshes, make it geeeen and less and",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:39:13.706Z",
+  "updatedAt": "2026-09-13T11:45:17.300Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 83,
+      "y": 60
+    },
+    "pixel": {
+      "x": 1332,
+      "y": 973
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:38:58.745Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 252,
+      "y": 264
+    },
+    "world": {
+      "x": 1255,
+      "y": 970
+    },
+    "tile": {
+      "x": 78,
+      "y": 60
+    }
+  },
+  "screenshot": "screenshots/FB-0015.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus art pass (3D pavement, road kerbs, trees and bushes, tennis court, building proportions). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.300Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:39:13.706Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.300Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

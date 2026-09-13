@@ -39,6 +39,20 @@ At the start of every session, and whenever the owner says "check feedback":
    then checkpoint, so the commit includes the status change.
 6. The owner verifies in-game. Reopened items go back to step 2.
 
+## Who does the work (owner decision, 2026-09-13)
+
+- **Sonnet agents implement the fixes.** The main agent doesn't write the fix code itself.
+- **The main agent coordinates and monitors:**
+  - triages items and asks the owner when something is unclear
+  - groups items into packages whose files don't overlap
+  - writes each agent a self-contained brief: feedback ids, screenshots, files in scope, docs to follow,
+    "add `FB-XXXX:` regression tests", "run `npm test`", "don't commit"
+  - reviews the diff, runs `npm test`, checks the game in the browser
+  - runs `npm run feedback -- fix ...`, updates the docs, and checkpoints
+- Packages run in parallel only in separate git worktrees. Otherwise they run one after another.
+- If a result isn't good enough, it goes back to an agent with the specific problem. The main agent
+  doesn't patch it.
+
 ## Statuses
 
 ```

@@ -57,7 +57,9 @@ SECRET DOOR
 | Question | Decision |
 |---|---|
 | Style guide and architecture rules | Approved for now |
-| Where story items live | **Backpack.** No hotbar on screen, because it blocks the view. Keep the hotbar code and art for later. Items can be used from the backpack |
+| Where story items live | **Backpack** for story items. Update (FB-0001): **the hotbar stays**, made smaller and see-through whenever the player is behind it |
+| Held items | (FB-0002) The selected item **shows in the character's hands**. Add basic university items: keycard, phone, ID card, and similar. No use animations required |
+| Running | (FB-0017) A run button makes movement faster outdoors; **no running inside buildings** |
 | Combat | None for now |
 | Character size | Stay 16×16 for now |
 | Conversation choices | **Yes.** Answers can branch the conversation into different flows |

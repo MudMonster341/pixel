@@ -1,0 +1,85 @@
+{
+  "id": "FB-0012",
+  "title": "enetrance needs to be added",
+  "type": "bug",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:37:58.230Z",
+  "updatedAt": "2026-09-13T11:45:17.054Z",
+  "details": "there shoudl eb one mroe enteracne to the campus added here, but will chaneg after map rotation",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 163,
+      "y": 123
+    },
+    "pixel": {
+      "x": 2615,
+      "y": 1977
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:37:33.249Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 454,
+      "y": 179
+    },
+    "world": {
+      "x": 2606,
+      "y": 1946
+    },
+    "tile": {
+      "x": 162,
+      "y": 121
+    }
+  },
+  "screenshot": "screenshots/FB-0012.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.054Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:37:58.230Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.054Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

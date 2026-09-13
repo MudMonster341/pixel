@@ -1,0 +1,85 @@
+{
+  "id": "FB-0016",
+  "title": "this is a tennis court, make it a tennis court",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:39:38.751Z",
+  "updatedAt": "2026-09-13T11:45:17.355Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 40,
+      "y": 83
+    },
+    "pixel": {
+      "x": 648,
+      "y": 1336
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:39:29.043Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 221,
+      "y": 375
+    },
+    "world": {
+      "x": 561,
+      "y": 1371
+    },
+    "tile": {
+      "x": 35,
+      "y": 85
+    }
+  },
+  "screenshot": "screenshots/FB-0016.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus art pass (3D pavement, road kerbs, trees and bushes, tennis court, building proportions). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.355Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:39:38.751Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.355Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

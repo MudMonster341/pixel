@@ -1,0 +1,72 @@
+{
+  "id": "FB-0014",
+  "title": "pathways dont look liek apthways, add some oyutline for roads, and places to walk to make them feel like pathways",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:38:56.790Z",
+  "updatedAt": "2026-09-13T11:45:17.243Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 87,
+      "y": 59
+    },
+    "pixel": {
+      "x": 1396,
+      "y": 955
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:38:36.958Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0014.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus art pass (3D pavement, road kerbs, trees and bushes, tennis court, building proportions). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.243Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:38:56.790Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.243Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

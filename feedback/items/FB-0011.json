@@ -1,0 +1,85 @@
+{
+  "id": "FB-0011",
+  "title": "cant pass between the buikdings",
+  "type": "bug",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:37:11.246Z",
+  "updatedAt": "2026-09-13T11:45:17.004Z",
+  "details": "Oin real life these are sperate bui,ldigns, i should be able to see them as such and pass throguh in between them as well, The 3d buidlginsa take up a lot of space, the windows for exa ple rtable up one block whihc i think can be changed so Ui is done properly, search up art and style for this aass well and fix it",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 209,
+      "y": 68
+    },
+    "pixel": {
+      "x": 3349,
+      "y": 1102
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:36:08.106Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 449,
+      "y": 243
+    },
+    "world": {
+      "x": 3339,
+      "y": 1093
+    },
+    "tile": {
+      "x": 208,
+      "y": 68
+    }
+  },
+  "screenshot": "screenshots/FB-0011.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.004Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:37:11.246Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.004Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

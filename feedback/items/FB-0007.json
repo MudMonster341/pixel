@@ -1,0 +1,72 @@
+{
+  "id": "FB-0007",
+  "title": "reaudit the whole campus internal pathways, we dotn need all the internal pathways as per the map, make them proper and",
+  "type": "bug",
+  "area": "Art & style",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:32:35.101Z",
+  "updatedAt": "2026-09-13T11:45:16.764Z",
+  "details": "The internal path ways insidet he bits campus arent proper even width, please make them so and make sure its not randomly palced all around",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 198,
+      "y": 137
+    },
+    "pixel": {
+      "x": 3175,
+      "y": 2195
+    },
+    "facing": "right",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:30:22.856Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0007.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:16.764Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:32:35.101Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:16.764Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

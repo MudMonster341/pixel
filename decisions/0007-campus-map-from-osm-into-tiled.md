@@ -1,10 +1,10 @@
 ---
-status: accepted
+status: superseded by 0008
 date: 2026-09-13
 authored_by: agent
 derived_from: ["owner answers 2026-09-13 to docs/CAMPUS_MAP_PLAN.md", "OSM wall-angle measurement 2026-09-13"]
 supersedes: null
-superseded_by: null
+superseded_by: "0008"
 ---
 
 # 0007 — Generate the campus map from OpenStreetMap into Tiled JSON, on the fence/road grid, entrance at the bottom

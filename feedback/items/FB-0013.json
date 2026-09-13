@@ -1,0 +1,85 @@
+{
+  "id": "FB-0013",
+  "title": "Random fenc",
+  "type": "bug",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "planned",
+  "createdAt": "2026-09-13T11:38:08.888Z",
+  "updatedAt": "2026-09-13T11:45:17.114Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 156,
+      "y": 124
+    },
+    "pixel": {
+      "x": 2511,
+      "y": 1996
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "6109e29",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1271,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.52386.3 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-13T11:38:00.565Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 316,
+      "y": 302
+    },
+    "world": {
+      "x": 2455,
+      "y": 2006
+    },
+    "tile": {
+      "x": 153,
+      "y": 125
+    }
+  },
+  "screenshot": "screenshots/FB-0013.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
+      "at": "2026-09-13T11:45:17.114Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-13T11:38:08.888Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-13T11:45:17.114Z",
+      "by": "agent",
+      "status": "planned"
+    }
+  ]
+}

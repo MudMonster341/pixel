@@ -385,9 +385,26 @@ pointObject('spawn', 'spawn', sx, sy, [{ name: 'facing', type: 'string', value: 
 pointObject('gate', 'Gate 2 (Main Entrance)', gx((layout.gate2.x0 + layout.gate2.x1) / 2), gy(layout.fence.height - 1), [{ name: 'main', type: 'bool', value: true }]);
 pointObject('gate', 'Side Gate', gx(0), gy((layout.sideGate.y0 + layout.sideGate.y1) / 2), [{ name: 'main', type: 'bool', value: false }]);
 
+// Interior door format (documented in docs/INTERIORS_PLAN.md so the campus rebuild can emit the
+// same shape): a point object, type: 'door', named "<Building> entrance", with properties
+// `to` (interior map key), `toId` (the name of the door/stairs object to land on in that map) and
+// `facing` (the direction the player faces once they arrive AT THIS object, i.e. when exiting the
+// building back onto campus). world.js resolves `to`/`toId` generically for any Tiled door/stairs
+// object; an unknown `to` map logs a warning and shows a toast instead of crashing.
+const INTERIOR_ENTRANCES = {
+  'Main Block': { to: 'main-block-g', toId: 'Main Block Ground Floor entrance' },
+  'Library Block': { to: 'library-block-g', toId: 'Library Block Ground Floor entrance' },
+  'Mechanical Block': { to: 'mechanical-block-g', toId: 'Mechanical Block Ground Floor entrance' },
+};
 for (const b of [layout.mainBlock, layout.libraryBlock, layout.mechanicalBlock]) {
   const doorX0 = Math.round((b.x0 + b.x1) / 2);
-  pointObject('door', `${b.name} entrance`, gx(doorX0), gy(b.y1), [{ name: 'building', type: 'string', value: b.name }]);
+  const link = INTERIOR_ENTRANCES[b.name];
+  pointObject('door', `${b.name} entrance`, gx(doorX0), gy(b.y1), [
+    { name: 'building', type: 'string', value: b.name },
+    { name: 'to', type: 'string', value: link.to },
+    { name: 'toId', type: 'string', value: link.toId },
+    { name: 'facing', type: 'string', value: 'down' }, // arriving here (exiting the building) faces away from it, into the avenue/plaza
+  ]);
 }
 
 for (const b of [...layout.buildings, ...layout.otherBuildings]) {

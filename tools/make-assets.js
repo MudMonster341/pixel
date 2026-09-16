@@ -62,6 +62,15 @@ const PALETTE = {
   // campus kit additions (FB-0006/0011/0014/0015/0016): appended, existing keys unchanged
   '-': '#d9927a', _: '#6f362c',           // paving bevel: highlight + deep shadow
   ':': '#8fbf52', ';': '#4f7a2f',         // date palm fronds: light + dark
+  // interior kit (P3, interiors): floor variants per room type + a couple of furniture fabrics.
+  // Walls reuse the BITS wall/trim/glass keys above ($ % & *) so buildings match inside and out.
+  µ: '#f2ede0', ß: '#ded4bd',             // foyer/lobby floor: light + fleck
+  '[': '#d7c9a8', ']': '#bfae8a',         // classroom floor: light + plank line
+  '{': '#5b6b8a', '}': '#42506b',         // office/club carpet: light + weave
+  '¦': '#cfe0e0', '¬': '#a9c2c2',         // lab vinyl: light + speckle
+  '§': '#7f9c8f', '¶': '#5f7a6e',         // library carpet: light + weave
+  '>': '#4f7ba3', '°': '#3a5a7a',         // sofa fabric: light + shade
+  '¤': '#c9a86b',                          // noticeboard cork
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -602,6 +611,40 @@ const TILES = [
   { name: 'fenceCornerBL', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'R') },
   { name: 'fenceCornerBR', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'L') },
   { name: 'fenceGate', draw: fenceGate },
+
+  // ---------- interior kit (P3: Main/Library/Mechanical Block interiors, 1 m/tile) ----------
+  { name: 'intFloorFoyer', draw: intFloorFoyer },
+  { name: 'intFloorClassroom', draw: intFloorClassroom },
+  { name: 'intFloorCarpet', draw: intFloorCarpet },
+  { name: 'intFloorLabVinyl', draw: intFloorLabVinyl },
+  { name: 'intFloorLibrary', draw: intFloorLibrary },
+  { name: 'intFloorStage', draw: intFloorStage },
+  { name: 'intFloorCourt', draw: intFloorCourt },
+  { name: 'intDoorway', draw: intDoorway },
+  { name: 'intStairsUp', draw: intStairsUp },
+  { name: 'intStairsDown', draw: intStairsDown },
+  { name: 'intLift', solid: true, draw: intLift },
+  { name: 'intAtriumVoid', solid: true, draw: intAtriumVoid },
+  { name: 'intAtriumRailing', solid: true, draw: intAtriumRailing },
+  { name: 'intDesk', solid: true, draw: intDesk },
+  { name: 'intTeacherDesk', solid: true, draw: intTeacherDesk },
+  { name: 'intWhiteboardWall', solid: true, draw: intWhiteboardWall },
+  { name: 'intBench', solid: true, draw: intBench },
+  { name: 'intComputerBench', solid: true, draw: intComputerBench },
+  { name: 'intSink', solid: true, draw: intSink },
+  { name: 'intCabinet', solid: true, draw: intCabinet },
+  { name: 'intSofa', solid: true, draw: intSofa },
+  { name: 'intNoticeboard', solid: true, draw: intNoticeboard },
+  { name: 'intReceptionDesk', solid: true, draw: intReceptionDesk },
+  { name: 'intLocker', solid: true, draw: intLocker },
+  { name: 'intAuditoriumSeat', solid: true, draw: intAuditoriumSeat },
+  { name: 'intBadmintonNet', draw: intBadmintonNet },
+  { name: 'intCourtLineIndoor', draw: intCourtLineIndoor },
+  { name: 'intTTTable', solid: true, draw: intTTTable },
+  { name: 'intBed', solid: true, draw: intBed },
+  { name: 'intCurtain', solid: true, draw: intCurtain },
+  { name: 'intMedicalDesk', solid: true, draw: intMedicalDesk },
+  { name: 'intMachine', solid: true, draw: intMachine },
 ];
 
 // ---------- campus tiles ----------
@@ -1002,6 +1045,184 @@ function fenceGate(img, x, y) {
   speckle(img, x, y, '5', '6', 48, 6);
   img.fill(x, y + 1, 2, 12, '<');
   img.fill(x + 14, y + 1, 2, 12, '<');
+}
+
+// ---------- interior kit (P3: Main/Library/Mechanical Block interiors, 1 m/tile) ----------
+// Indoor walls reuse the outdoor bitsWallPlain/bitsWall/bitsWallEndL/bitsWallEndR tiles above, so a
+// building's inside matches its outside: sand-beige body, salmon cornice (the "top face"), a dark
+// base course where wall meets floor (the "front face"). Below: floor variants per room type, a
+// doorway opening, stairs/lift, the atrium void + railing, and simply-furnished pieces for every
+// room type in docs/INTERIORS_PLAN.md. Furniture leaves its background transparent (only the object
+// itself is painted) so it sits on whatever floor tile is under it on the ground layer, the same way
+// campus trees sit on the lawn layer beneath them.
+
+function intFloorFoyer(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx + yy * 3) % 9 === 0 ? 'ß' : 'µ'));
+}
+function intFloorClassroom(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, yy % 4 === 3 ? ']' : '['));
+}
+function intFloorCarpet(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx + yy) % 5 === 0 ? '}' : '{'));
+}
+function intFloorLabVinyl(img, x, y) {
+  const r = rng((x * 13 + y * 7) | 0);
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, r() < 0.08 ? '¬' : '¦'));
+}
+function intFloorLibrary(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx - yy + 32) % 6 === 0 ? '¶' : '§'));
+}
+function intFloorStage(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, yy % 4 === 0 ? 'F' : 'i'));
+  img.fill(x, y, TILE, 1, 'N');
+}
+// Indoor sport-court floor: the same teal court surface as the outdoor tennis/basketball courts
+// (`courtSurface`, '@'/'#'), not the outdoor lawn greens -- so a badminton hall reads as an indoor
+// court, not a patch of grass that wandered inside.
+function intFloorCourt(img, x, y) {
+  speckle(img, x, y, '@', '#', 77, 4);
+}
+
+// A cleared wall opening: a dark threshold framed in the BITS trim colour, always walkable.
+function intDoorway(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'q');
+  img.fill(x, y, 2, TILE, '&');
+  img.fill(x + TILE - 2, y, 2, TILE, '&');
+  img.fill(x + 2, y, TILE - 4, 1, '&');
+}
+
+function intStairsFlight(img, x, y, up) {
+  img.fill(x, y, TILE, TILE, 'o');
+  for (let i = 0; i < 5; i++) img.fill(x, y + i * 3, TILE, 2, i % 2 ? 'O' : 'Q');
+  const ay = up ? 13 : 1;
+  img.set(x + 7, y + ay, 'Y');
+  img.set(x + 8, y + ay, 'Y');
+  img.set(x + (up ? 6 : 9), y + (up ? 12 : 2), 'Y');
+}
+function intStairsUp(img, x, y) { intStairsFlight(img, x, y, true); }
+function intStairsDown(img, x, y) { intStairsFlight(img, x, y, false); }
+
+function intLift(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'o');
+  img.box(x + 1, y + 1, 6, 14, 'O');
+  img.box(x + 9, y + 1, 6, 14, 'O');
+  img.fill(x + 7, y + 1, 2, 14, 'K');
+  img.set(x + 7, y + 7, 'Y');
+}
+
+// The mezzanine's atrium opening (railing-bordered, non-walkable): a cool, flat grey so it clearly
+// reads as a drop to the foyer below, against the mezzanine's own warm beige floor around it.
+function intAtriumVoid(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (Math.floor(xx / 4) + Math.floor(yy / 4)) % 2 === 0 ? 'o' : 'O'));
+}
+function intAtriumRailing(img, x, y) {
+  intFloorFoyer(img, x, y);
+  img.fill(x, y + 6, TILE, 3, '<');
+  img.fill(x, y + 6, TILE, 1, 'Q');
+  for (let i = 2; i < TILE; i += 4) img.fill(x + i, y + 4, 1, 2, '<');
+}
+
+function intDesk(img, x, y) {
+  img.box(x + 2, y + 3, 12, 7, 'i');
+  img.fill(x + 3, y + 9, 1, 3, 'N');
+  img.fill(x + 12, y + 9, 1, 3, 'N');
+  img.box(x + 5, y + 11, 6, 4, 'o');
+}
+function intTeacherDesk(img, x, y) {
+  img.box(x + 1, y + 4, 14, 8, 'N');
+  img.fill(x + 2, y + 5, 12, 1, 'i');
+  img.box(x + 6, y + 12, 4, 3, 'o');
+}
+// A whiteboard mounted on the front wall: a wall tile (solid), not a floor prop.
+function intWhiteboardWall(img, x, y) {
+  bitsWallPlain(img, x, y);
+  img.box(x + 2, y + 3, 12, 8, 'W');
+  img.fill(x + 3, y + 7, 6, 1, '3');
+  img.fill(x + 3, y + 9, 4, 1, '3');
+}
+function intBench(img, x, y) {
+  img.box(x + 1, y + 5, 14, 7, '¦');
+  img.fill(x + 1, y + 11, 14, 1, '¬');
+  img.fill(x + 2, y + 12, 1, 3, 'o');
+  img.fill(x + 12, y + 12, 1, 3, 'o');
+}
+function intComputerBench(img, x, y) {
+  intBench(img, x, y);
+  img.box(x + 5, y + 1, 6, 5, 'O');
+  img.fill(x + 6, y + 2, 4, 3, 'I');
+}
+function intSink(img, x, y) {
+  img.box(x + 2, y + 6, 12, 7, 'Q');
+  img.fill(x + 4, y + 7, 8, 3, 'w');
+  img.fill(x + 7, y + 4, 2, 3, 'o');
+}
+function intCabinet(img, x, y) {
+  img.box(x + 2, y + 1, 12, 14, 'O');
+  img.fill(x + 2, y + 7, 12, 1, 'o');
+  img.set(x + 7, y + 4, 'K');
+  img.set(x + 7, y + 10, 'K');
+}
+function intSofa(img, x, y) {
+  img.box(x + 1, y + 5, 14, 9, '>');
+  img.fill(x + 1, y + 5, 14, 2, '°');
+  img.fill(x + 1, y + 5, 2, 9, '°');
+  img.fill(x + 12, y + 5, 2, 9, '°');
+}
+function intNoticeboard(img, x, y) {
+  img.box(x + 2, y + 2, 12, 11, '¤');
+  img.set(x + 5, y + 5, 'Y');
+  img.set(x + 10, y + 6, 'P');
+  img.set(x + 6, y + 10, 'W');
+}
+function intReceptionDesk(img, x, y) {
+  img.box(x + 1, y + 6, 14, 8, 'N');
+  img.fill(x + 1, y + 6, 14, 1, '&');
+  img.fill(x + 6, y + 2, 4, 4, 'W');
+}
+function intLocker(img, x, y) {
+  img.box(x + 1, y + 1, 14, 14, 'I');
+  for (const lx of [1, 6, 11]) {
+    img.fill(x + lx + 3, y + 1, 1, 14, 'K');
+    img.set(x + lx + 5, y + 7, 'Q');
+  }
+}
+function intAuditoriumSeat(img, x, y) {
+  for (let sx = 1; sx < TILE - 3; sx += 5) {
+    img.box(x + sx, y + 3, 4, 11, 'R');
+    img.fill(x + sx + 1, y + 4, 2, 2, 'r');
+  }
+}
+function intBadmintonNet(img, x, y) {
+  intFloorCourt(img, x, y);
+  img.fill(x + 7, y, 2, TILE, '#');
+  img.fill(x, y, TILE, 1, 'o');
+}
+function intCourtLineIndoor(img, x, y) {
+  intFloorCourt(img, x, y);
+  img.fill(x, y + 1, TILE, 1, '#');
+}
+function intTTTable(img, x, y) {
+  img.box(x + 1, y + 2, 14, 10, '@');
+  img.fill(x + 1, y + 6, 14, 1, '#');
+  img.fill(x + 7, y + 12, 1, 3, 'o');
+}
+function intBed(img, x, y) {
+  img.box(x + 1, y + 1, 14, 14, 'W');
+  img.fill(x + 1, y + 1, 14, 3, 'Z');
+  img.fill(x + 1, y + 11, 14, 4, 'I');
+}
+function intCurtain(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, xx % 3 === 0 ? 'z' : 'Z'));
+}
+function intMedicalDesk(img, x, y) {
+  intReceptionDesk(img, x, y);
+  img.fill(x + 7, y + 2, 2, 2, 'C');
+  img.fill(x + 6, y + 3, 4, 1, 'C');
+}
+function intMachine(img, x, y) {
+  img.box(x + 2, y + 2, 12, 12, 'O');
+  img.fill(x + 4, y + 4, 8, 2, 'Y');
+  img.box(x + 6, y + 7, 4, 4, 'o');
 }
 
 // ---------- player (facing down / up / left; right = mirrored left) ----------

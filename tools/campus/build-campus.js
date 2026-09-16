@@ -385,6 +385,14 @@ pointObject('spawn', 'spawn', sx, sy, [{ name: 'facing', type: 'string', value: 
 pointObject('gate', 'Gate 2 (Main Entrance)', gx((layout.gate2.x0 + layout.gate2.x1) / 2), gy(layout.fence.height - 1), [{ name: 'main', type: 'bool', value: true }]);
 pointObject('gate', 'Side Gate', gx(0), gy((layout.sideGate.y0 + layout.sideGate.y1) / 2), [{ name: 'main', type: 'bool', value: false }]);
 
+// P4 (Gate 2 welcome cutscene, own worktree): a trigger a few tiles inside Gate 2, spanning the
+// avenue's width, so walking in from the gate plays the cutscene once (src/scenes/world.js reads
+// `type: 'cutscene'` objects and their `cutscene` property; CUTSCENES lives in src/cutscenes.js).
+// Self-contained on purpose — safe to re-add after a layout.js rebuild lands from package P2.
+rectObject('cutscene', 'Gate 2 welcome cutscene', layout.avenue.x0, layout.fence.height - 10, layout.avenue.x1, layout.fence.height - 6, [
+  { name: 'cutscene', type: 'string', value: 'gate2' },
+]);
+
 for (const b of [layout.mainBlock, layout.libraryBlock, layout.mechanicalBlock]) {
   const doorX0 = Math.round((b.x0 + b.x1) / 2);
   pointObject('door', `${b.name} entrance`, gx(doorX0), gy(b.y1), [{ name: 'building', type: 'string', value: b.name }]);

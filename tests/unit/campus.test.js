@@ -76,6 +76,25 @@ test('the Main Block entrance can be reached from the spawn', () => {
   }
 });
 
+// P4: the Gate 2 welcome cutscene trigger sits on walkable ground, inside the fence, between the
+// spawn (outside Gate 2) and the Main Block, so a player walking in from the gate steps through it.
+test('the Gate 2 welcome cutscene trigger is walkable and between the spawn and the Main Block', () => {
+  const trigger = objects.find((o) => o.type === 'cutscene');
+  assert.ok(trigger, 'no cutscene trigger object');
+  assert.equal(trigger.props.cutscene, 'gate2');
+  const cx = Math.floor(trigger.x + trigger.width / 2);
+  const cy = Math.floor(trigger.y + trigger.height / 2);
+  assert.ok(walkable(cx, cy), 'cutscene trigger is not on walkable ground');
+
+  const spawn = objects.find((o) => o.type === 'spawn');
+  const mainBlock = objects.find((o) => o.type === 'building' && o.name === 'Main Block');
+  assert.ok(cy < spawn.y, 'trigger should be north of (inside from) the spawn');
+  assert.ok(cy > mainBlock.y + mainBlock.height, 'trigger should be south of the Main Block');
+
+  const reachable = reachableFrom({ x: Math.floor(spawn.x), y: Math.floor(spawn.y) });
+  assert.ok(reachable(cx, cy), "the cutscene trigger can't be reached from the spawn");
+});
+
 test('all the named BITS buildings are on the map', () => {
   const names = new Set(objects.filter((o) => o.type === 'building').map((o) => o.name));
   for (const name of ['Main Block', 'Library Block', 'Mechanical Block', 'Hostel A', 'Hostel D', 'Hostel G (Girls)', 'Hostel H (Girls)']) {

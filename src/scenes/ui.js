@@ -34,12 +34,19 @@ class UIScene extends Phaser.Scene {
 
   create() {
     this.minimap = new Minimap(this, 16, 16);
+    this.fullMap = new FullMap(this);
+    this.minimap.onClick = () => this.toggleFullMap();
+    this.locationBanner = new LocationBanner(this);
     this.hotbar = new Hotbar(this, GameState.inventory);
     this.dialog = new DialogBox(this);
     this.toast = new Toast(this);
     this.tutorial = new Tutorial(this);
 
-    this.game.events.on('map-entered', (world) => this.minimap.setMap(world));
+    this.game.events.on('map-entered', (world) => {
+      this.minimap.setMap(world);
+      this.locationBanner.show(world.def.name);
+    });
+    this.game.events.on('area-entered', (name) => this.locationBanner.show(name));
     this.game.events.on('toast', (message) => this.toast.show(message));
     const world = this.scene.get('world');
     if (world.tileData) this.minimap.setMap(world);
@@ -48,20 +55,39 @@ class UIScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-M', (event) => {
       if (!event.repeat) this.minimap.toggle();
     });
+    this.input.keyboard.on('keydown-N', (event) => {
+      if (!event.repeat) this.toggleFullMap();
+    });
+    this.input.keyboard.on('keydown-ESC', (event) => {
+      if (!event.repeat && this.fullMap.visible) this.fullMap.close();
+    });
     this.input.keyboard.on('keydown-H', (event) => {
       if (!event.repeat && !this.dialog.isOpen) this.tutorial.toggleCard();
     });
   }
 
+  // FB-0018: click the minimap or press N to see the whole current map, full screen. Blocked while
+  // dialog/tutorial own the screen, or while the world is paused for a cutscene (P4).
+  toggleFullMap() {
+    const world = this.scene.get('world');
+    if (this.fullMap.visible) {
+      this.fullMap.close();
+      return;
+    }
+    if (this.dialog.isOpen || this.tutorial.cardOpen || !world.sys.isActive()) return;
+    this.fullMap.open(world);
+  }
+
   // True while the player shouldn't be able to walk around.
   isBlocking() {
-    return this.tutorial.cardOpen || this.dialog.isOpen;
+    return this.tutorial.cardOpen || this.dialog.isOpen || this.fullMap.visible;
   }
 
   update(time, delta) {
     this.dialog.update(time, delta);
     this.tutorial.update(time);
     this.hotbar.setVisible(!this.dialog.isOpen);
+    if (this.fullMap.visible) this.fullMap.update(time);
 
     const world = this.scene.get('world');
     if (world.player && world.player.active && world.tileData) this.minimap.update(world, time);
@@ -87,6 +113,11 @@ class Minimap {
     const hint = uiText(scene, x + this.width - 14, y + this.height - 26, 'M', 8, COLORS.dim).setOrigin(1, 0);
     this.parts = [panel, backdrop, this.image, this.markers, this.label, hint];
     this.visible = true;
+    this.onClick = null; // FB-0018: set by UIScene to open the full-screen map
+
+    scene.add.zone(this.area.x, this.area.y, this.area.w, this.area.h).setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.visible && this.onClick && this.onClick());
   }
 
   // The map is drawn once into a texture, 1 pixel per tile. Small maps are shown whole and scaled up;
@@ -171,6 +202,118 @@ class Minimap {
   toggle() {
     this.visible = !this.visible;
     this.parts.forEach((part) => part.setVisible(this.visible));
+  }
+}
+
+// ---------- location banner (top-center): Pokemon-style name plate ----------
+// Shown on map start and when the player walks into a differently-named area/zone/building object
+// (world.js emits 'map-entered' and 'area-entered'). Top-center, clear of the minimap's top-left box.
+
+const BANNER_HOLD_MS = 2000;
+const BANNER_SLIDE_MS = 300;
+
+class LocationBanner {
+  constructor(scene) {
+    this.scene = scene;
+    const w = 340;
+    const h = 40;
+    this.hiddenY = -h - 8;
+    this.shownY = 12;
+
+    const panel = scene.add.graphics();
+    drawPanel(panel, 0, 0, w, h);
+    this.text = uiText(scene, w / 2, h / 2, '', 12, COLORS.text).setOrigin(0.5);
+    this.container = scene.add.container((GAME_WIDTH - w) / 2, this.hiddenY, [panel, this.text]).setDepth(80);
+    this.hideTimer = null;
+    this.visible = false; // true from show() until the slide-out finishes (tests read this directly)
+  }
+
+  show(name) {
+    this.text.setText(name.toUpperCase());
+    this.visible = true;
+    this.scene.tweens.killTweensOf(this.container);
+    if (this.hideTimer) this.hideTimer.remove();
+    this.scene.tweens.add({ targets: this.container, y: this.shownY, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeOut' });
+    this.hideTimer = this.scene.time.delayedCall(BANNER_SLIDE_MS + BANNER_HOLD_MS, () => {
+      this.scene.tweens.add({
+        targets: this.container, y: this.hiddenY, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeIn',
+        onComplete: () => { this.visible = false; },
+      });
+    });
+  }
+}
+
+// ---------- full-screen map (FB-0018): click the minimap, or press N ----------
+
+class FullMap {
+  constructor(scene) {
+    this.scene = scene;
+    this.visible = false;
+    this.world = null;
+
+    this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x0b0c12, 0.96).setOrigin(0, 0)
+      .setInteractive().on('pointerdown', () => this.close());
+    this.image = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, '__DEFAULT');
+    this.markers = scene.add.graphics();
+    this.labels = scene.add.container(0, 0);
+    this.title = uiText(scene, GAME_WIDTH / 2, 14, '', 12, COLORS.highlight).setOrigin(0.5, 0);
+    this.hint = uiText(scene, GAME_WIDTH / 2, GAME_HEIGHT - 26, 'ESC / N / CLICK TO CLOSE', 8, COLORS.dim).setOrigin(0.5, 0);
+    this.parts = [this.dim, this.image, this.markers, this.labels, this.title, this.hint];
+    this.parts.forEach((part) => part.setDepth(120).setVisible(false));
+    this.markers.setDepth(121); // the "you are here" marker always shows over the labels below it
+  }
+
+  open(world) {
+    this.visible = true;
+    this.world = world;
+    const cols = world.tileData[0].length;
+    const rows = world.tileData.length;
+    const areaW = GAME_WIDTH - 64;
+    const areaH = GAME_HEIGHT - 96;
+    this.scale = Math.min(areaW / cols, areaH / rows);
+    this.offsetX = (GAME_WIDTH - cols * this.scale) / 2;
+    this.offsetY = 48 + (areaH - rows * this.scale) / 2;
+    this.image.setTexture(`minimap-${world.mapKey}`)
+      .setDisplaySize(cols * this.scale, rows * this.scale)
+      .setPosition(this.offsetX + (cols * this.scale) / 2, this.offsetY + (rows * this.scale) / 2);
+    this.title.setText(world.def.name.toUpperCase());
+
+    // Labels for named buildings/areas, skipping anything covering more than ~30% of the map (the
+    // whole-campus outline, say) since a label for that isn't useful and would swamp the others.
+    // Biggest/most important first, then a simple greedy declutter: skip a label whose position
+    // would land right on top of one already placed (real buildings can sit close together).
+    this.labels.removeAll(true);
+    const totalArea = cols * rows;
+    const named = (world.mapObjects || [])
+      .filter((o) => ['area', 'building'].includes(o.type) && o.name && o.width * o.height < totalArea * 0.3)
+      .sort((a, b) => b.width * b.height - a.width * a.height);
+    const placed = [];
+    const MIN_GAP = 26; // px: bigger than one label's height, so crowded clusters thin out to a few names
+    for (const o of named) {
+      const lx = this.offsetX + (o.x + o.width / 2) * this.scale;
+      const ly = this.offsetY + (o.y + o.height / 2) * this.scale;
+      if (placed.some((p) => Math.abs(p.x - lx) < MIN_GAP && Math.abs(p.y - ly) < MIN_GAP)) continue;
+      placed.push({ x: lx, y: ly });
+      this.labels.add(uiText(this.scene, lx, ly, o.name, 8, COLORS.text).setOrigin(0.5).setStroke('#1a1c2c', 3));
+    }
+
+    this.parts.forEach((part) => part.setVisible(true));
+  }
+
+  close() {
+    this.visible = false;
+    this.world = null;
+    this.parts.forEach((part) => part.setVisible(false));
+  }
+
+  update(time) {
+    if (!this.visible || !this.world) return;
+    const g = this.markers.clear();
+    const px = this.offsetX + (this.world.player.x / TILE) * this.scale;
+    const py = this.offsetY + (this.world.player.y / TILE) * this.scale;
+    g.fillStyle(0x000000, 1).fillCircle(px, py, 6); // dark ring so the blinking dot reads on any background
+    g.fillStyle(Math.floor(time / 300) % 2 ? 0xffffff : 0xff5a5a, 1);
+    g.fillCircle(px, py, 4);
   }
 }
 
@@ -305,6 +448,8 @@ class DialogBox {
     this.parts.forEach((part) => part.setDepth(50).setVisible(false));
   }
 
+  // `speaker` may be null/empty for a narration-style box with no name tag (the cutscene player,
+  // src/scenes/cutscene.js, reuses this exact class for its message box).
   open(speaker, lines, onClose) {
     const { x, y } = this.box;
     this.lines = lines;
@@ -312,10 +457,13 @@ class DialogBox {
     this.onClose = onClose;
     this.isOpen = true;
 
-    this.name.setText(speaker);
     this.nameTag.clear();
-    drawPanel(this.nameTag, x + 16, y - 24, speaker.length * 16 + 36, 40);
+    if (speaker) {
+      this.name.setText(speaker);
+      drawPanel(this.nameTag, x + 16, y - 24, speaker.length * 16 + 36, 40);
+    }
     this.parts.forEach((part) => part.setVisible(true));
+    this.name.setVisible(Boolean(speaker));
     this.startLine();
   }
 
@@ -389,6 +537,7 @@ const CONTROLS = [
   ['E / SPACE', 'Talk, next line'],
   ['1-5 / WHEEL', 'Choose item slot'],
   ['M', 'Show/hide minimap'],
+  ['N / CLICK MAP', 'Full-screen map'],
   ['H', 'Show these controls'],
 ];
 

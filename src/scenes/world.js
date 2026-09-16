@@ -32,6 +32,7 @@ class WorldScene extends Phaser.Scene {
     this.def = MAPS[this.mapKey];
     this.spawn = data.spawn || this.def.spawn;
     this.transitioning = false;
+    this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
   }
 
   preload() {
@@ -57,6 +58,11 @@ class WorldScene extends Phaser.Scene {
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
     this.input.keyboard.addCapture('SPACE');
     for (const key of ['E', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
+
+    // Silently note whichever area/zone/building the spawn point is already inside (P4's location
+    // banner), so arriving there doesn't fire a second, redundant banner right after the map's own
+    // "map-entered" one below announces the map by name.
+    this.currentAreaName = this.areaHere()?.name || null;
     this.game.events.emit('map-entered', this);
   }
 
@@ -150,11 +156,15 @@ class WorldScene extends Phaser.Scene {
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
+    this.checkAreas();
+    this.checkCutscene();
   }
 
   // E / Space: next line of dialog, or talk to whoever is nearby.
   onInteractKey(event) {
-    if (event.repeat || this.transitioning) return;
+    // this.sys.isActive() is false while a cutscene has this scene paused (Phaser still delivers
+    // keyboard events to paused scenes, since they're not tied to the update loop).
+    if (event.repeat || this.transitioning || !this.sys.isActive()) return;
     const ui = this.scene.get('ui');
     if (!ui.tutorial) return;
     if (ui.dialog.isOpen) ui.dialog.advance();
@@ -317,6 +327,45 @@ class WorldScene extends Phaser.Scene {
     this.prompt.setVisible(false);
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn }));
+  }
+
+  // The named area/zone/building object (if any) the player's feet are currently inside, smallest
+  // match wins (objectAt in maplogic.js), e.g. "Athletics Track" over the whole campus outline.
+  areaHere() {
+    return objectAt(this.mapObjects, ['area', 'zone', 'building'], this.player.x / TILE, this.player.y / TILE);
+  }
+
+  // Location banner (Pokemon-style name plate, P4): tells the UI scene when the player enters a
+  // differently-named area, so it doesn't re-show the same name while still inside it.
+  checkAreas() {
+    const name = this.areaHere()?.name || null;
+    if (name === this.currentAreaName) return;
+    this.currentAreaName = name;
+    if (name) this.game.events.emit('area-entered', name);
+  }
+
+  // Gate 2 welcome cutscene (P4): a Tiled rectangle object, `type: 'cutscene'` with a `cutscene`
+  // property naming a key in CUTSCENES (src/cutscenes.js). Plays once per session (GameState.
+  // seenCutscenes) and can be turned off with ?cutscene=0 (tests that would otherwise walk through it).
+  checkCutscene() {
+    if (!cutscenesEnabled()) return;
+    const feetX = this.player.body.center.x / TILE;
+    const feetY = (this.player.body.bottom - 1) / TILE;
+    const trigger = objectAt(this.mapObjects, ['cutscene'], feetX, feetY);
+    const key = trigger && trigger.props.cutscene;
+    if (!notSeenCutscene(key, GameState.seenCutscenes)) return;
+    this.playCutscene(key);
+  }
+
+  // Pauses the world (so the player can't move or re-trigger anything) and hands off to the
+  // cutscene scene, which resumes 'world' itself when it's done (src/scenes/cutscene.js).
+  playCutscene(key) {
+    GameState.seenCutscenes.add(key);
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.prompt.setVisible(false);
+    this.scene.pause();
+    this.scene.launch('cutscene', { key });
   }
 }
 

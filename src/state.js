@@ -41,5 +41,6 @@ class Inventory extends Phaser.Events.EventEmitter {
 const GameState = {
   inventory: new Inventory(5),
   collected: new Set(), // ids of pickups already taken, so they don't respawn
+  seenCutscenes: new Set(), // keys of CUTSCENES already played this session, so they don't replay (P4)
   flags: { tomasGaveSword: false, tomasChats: 0 },
 };

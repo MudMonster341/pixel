@@ -1,6 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame, holdKey, teleport } = require('./helpers');
 
+const areaCenter = (page, name) =>
+  page.evaluate((n) => {
+    const o = game.scene.getScene('world').mapObjects.find((obj) => obj.type === 'area' && obj.name === n);
+    return { x: o.x + o.width / 2, y: o.y + o.height / 2 };
+  }, name);
+
 const spawnTile = (page) =>
   page.evaluate(() => {
     const spawn = game.scene.getScene('world').mapObjects.find((o) => o.type === 'spawn');
@@ -53,6 +59,23 @@ test('the player can walk from the Gate 2 spawn up to the Main Block entrance', 
   const after = await state(page);
   expect(after.tile.y).toBeLessThanOrEqual(door.y + 2);
   expect(Math.abs(after.tile.x - door.x)).toBeLessThanOrEqual(3);
+});
+
+// P4: location banner (Pokemon-style name plate). Shown on map start, and again when the player
+// crosses into a differently-named area object, but not a second time while still inside it.
+test('the location banner announces the campus on start, then a specific area when you enter it', async ({ page }) => {
+  await openGame(page, { map: null });
+  await expect.poll(async () => (await state(page)).locationBanner).toEqual({ visible: true, text: 'BITS DUBAI CAMPUS' });
+
+  await startGame(page);
+  const { x, y } = await areaCenter(page, 'Student Parking');
+  await teleport(page, x, y);
+  await expect.poll(async () => (await state(page)).locationBanner).toEqual({ visible: true, text: 'STUDENT PARKING' });
+
+  // It hides itself after a couple of seconds, and doesn't come back while the player never left.
+  await expect.poll(async () => (await state(page)).locationBanner.visible, { timeout: 5_000 }).toBe(false);
+  await page.waitForTimeout(600);
+  expect((await state(page)).locationBanner).toEqual({ visible: false, text: 'STUDENT PARKING' });
 });
 
 test('the minimap shows the campus and follows the player', async ({ page }) => {

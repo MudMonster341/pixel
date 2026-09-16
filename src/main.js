@@ -37,7 +37,7 @@ function startGame() {
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: [BootScene, WorldScene, UIScene], // later scenes draw on top
+    scene: [BootScene, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
   });
 }
 

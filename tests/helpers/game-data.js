@@ -5,7 +5,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/maplogic.js', 'src/state.js'];
+const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js'];
 
 // Just enough of Phaser's EventEmitter for state.js
 class TinyEmitter {
@@ -23,7 +23,7 @@ class TinyEmitter {
 }
 
 function loadGameData() {
-  const context = vm.createContext({ Phaser: { Events: { EventEmitter: TinyEmitter } }, console });
+  const context = vm.createContext({ Phaser: { Events: { EventEmitter: TinyEmitter } }, console, URLSearchParams });
   for (const file of SCRIPTS) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
   }
@@ -34,12 +34,16 @@ function loadGameData() {
     STRUCTURES: get('STRUCTURES'),
     START_MAP: get('START_MAP'),
     TILE: get('TILE'),
+    CUTSCENES: get('CUTSCENES'),
     Inventory: get('Inventory'),
     GameState: get('GameState'),
     buildTileGrid: get('buildTileGrid'),
     isWalkableTile: get('isWalkableTile'),
     gridFromTiled: get('gridFromTiled'),
     tiledObjects: get('tiledObjects'),
+    cutscenesEnabled: get('cutscenesEnabled'),
+    objectAt: get('objectAt'),
+    notSeenCutscene: get('notSeenCutscene'),
     tileInfo: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8')),
   };
 }

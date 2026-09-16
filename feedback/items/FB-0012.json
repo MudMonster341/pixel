@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:37:58.230Z",
-  "updatedAt": "2026-09-16T18:45:46.852Z",
+  "updatedAt": "2026-09-16T18:55:28.349Z",
   "details": "there shoudl eb one mroe enteracne to the campus added here, but will chaneg after map rotation",
   "context": {
     "map": "campus",
@@ -94,6 +94,11 @@
       "at": "2026-09-16T18:45:46.852Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:55:28.349Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

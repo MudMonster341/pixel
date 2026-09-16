@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:35:47.900Z",
-  "updatedAt": "2026-09-16T18:45:46.633Z",
+  "updatedAt": "2026-09-16T18:53:58.784Z",
   "details": "the main enterance, shoudl be straigh, noit at an angle, and then you should have a proper enternace to the map itself, internal roads, extranal roads, pavements ot be properly done around campus",
   "context": {
     "map": "campus",
@@ -94,6 +94,11 @@
       "at": "2026-09-16T18:45:46.633Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:53:58.784Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

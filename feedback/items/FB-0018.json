@@ -1,0 +1,72 @@
+{
+  "id": "FB-0018",
+  "title": "MAP",
+  "type": "idea",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "in-progress",
+  "createdAt": "2026-09-16T18:49:23.809Z",
+  "updatedAt": "2026-09-16T18:53:56.014Z",
+  "details": "I want it to show the whole map in full screen when i clik onb it, can you add tha t in",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 143,
+      "y": 134
+    },
+    "pixel": {
+      "x": 2297,
+      "y": 2145
+    },
+    "facing": "right",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "509a867",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 824,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.110.0 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-16T18:48:55.507Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0018.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Adding it: click the minimap (or press M twice) to open a full-screen map you can close with Esc/M.",
+      "at": "2026-09-16T18:53:56.014Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-16T18:49:23.809Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-16T18:53:55.914Z",
+      "by": "agent",
+      "status": "in-progress"
+    }
+  ]
+}

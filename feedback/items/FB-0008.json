@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:33:49.543Z",
-  "updatedAt": "2026-09-16T18:45:46.443Z",
+  "updatedAt": "2026-09-16T18:54:02.502Z",
   "details": "a s previuously mentioned, make it such that the road is straigth qnqad we have a definitve proper enterance to the campsu which is not too confusing, mimic how we have it in rela life and look it up and add that GAte 2 enterance here. which is the main enetrerance.",
   "context": {
     "map": "campus",
@@ -81,6 +81,11 @@
       "at": "2026-09-16T18:45:46.443Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:54:02.502Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

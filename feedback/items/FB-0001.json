@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Inventory",
   "priority": "high",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-13T10:13:03.582Z",
-  "updatedAt": "2026-09-16T18:45:47.284Z",
+  "updatedAt": "2026-09-16T18:57:18.912Z",
   "details": "whemn i neter the houser the character shoudl be seen but he is not seen, we can tyhink about cghanging mayeb teh size an dpositioning of the inventory bar so tha it doesnt nto overlap with the map, wee can make it smaller and try to it does nto take upp too much space of the screen",
   "context": {
     "map": "house",
@@ -92,9 +92,18 @@
       "author": "agent",
       "text": "Built and tested on a separate branch; merging into the main game now (a small code conflict held it up). You'll get a 'please check' once it is in.",
       "at": "2026-09-16T18:45:47.284Z"
+    },
+    {
+      "author": "agent",
+      "text": "The hotbar is smaller (48px) and turns see-through whenever the player walks behind it. Try the bottom of Tomas's house (?map=meadow).",
+      "at": "2026-09-16T18:57:18.912Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/hotbar.spec.js › FB-0001: the hotbar becomes translucent when the player is behind it",
+    "commit": null,
+    "at": "2026-09-16T18:57:18.912Z"
+  },
   "history": [
     {
       "at": "2026-09-13T10:13:03.582Z",
@@ -115,6 +124,11 @@
       "at": "2026-09-13T11:45:17.414Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-16T18:57:18.912Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

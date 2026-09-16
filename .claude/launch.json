@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.js"],
       "port": 8080
+    },
+    {
+      "name": "play",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "process.env.FEEDBACK_DIR=require('path').resolve('feedback'); require(require('path').resolve('../2D_pixel_game-play/server.js'))"],
+      "port": 8080
     }
   ]
 }

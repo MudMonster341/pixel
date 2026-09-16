@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:38:56.790Z",
-  "updatedAt": "2026-09-16T18:45:46.956Z",
+  "updatedAt": "2026-09-16T18:53:27.778Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -91,6 +91,11 @@
       "at": "2026-09-16T18:45:46.956Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:53:27.778Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

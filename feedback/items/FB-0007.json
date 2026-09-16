@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Art & style",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:32:35.101Z",
-  "updatedAt": "2026-09-16T18:45:46.214Z",
+  "updatedAt": "2026-09-16T18:55:37.936Z",
   "details": "The internal path ways insidet he bits campus arent proper even width, please make them so and make sure its not randomly palced all around",
   "context": {
     "map": "campus",
@@ -81,6 +81,11 @@
       "at": "2026-09-16T18:45:46.214Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:55:37.936Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

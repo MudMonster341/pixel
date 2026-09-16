@@ -1,0 +1,85 @@
+{
+  "id": "FB-0020",
+  "title": "looks wierd, cna you explain what this is",
+  "type": "bug",
+  "area": "Art & style",
+  "priority": "normal",
+  "status": "in-progress",
+  "createdAt": "2026-09-16T18:50:23.501Z",
+  "updatedAt": "2026-09-16T18:53:56.454Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 174,
+      "y": 204
+    },
+    "pixel": {
+      "x": 2785,
+      "y": 3274
+    },
+    "facing": "right",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "509a867",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 824,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.110.0 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-16T18:50:12.159Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 580,
+      "y": 203
+    },
+    "world": {
+      "x": 2817,
+      "y": 3252
+    },
+    "tile": {
+      "x": 176,
+      "y": 203
+    }
+  },
+  "screenshot": "screenshots/FB-0020.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "That is the tennis court net, but it is drawn as a thick striped block. Redrawing it as a thin net line with two posts.",
+      "at": "2026-09-16T18:53:56.454Z"
+    }
+  ],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-16T18:50:23.501Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-16T18:53:56.344Z",
+      "by": "agent",
+      "status": "in-progress"
+    }
+  ]
+}

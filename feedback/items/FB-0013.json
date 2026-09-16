@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:38:08.888Z",
-  "updatedAt": "2026-09-16T18:45:45.961Z",
+  "updatedAt": "2026-09-16T18:53:49.574Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -94,6 +94,11 @@
       "at": "2026-09-16T18:45:45.961Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:53:49.574Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

@@ -1,10 +1,10 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-13
 authored_by: agent
 derived_from: ["owner feedback FB-0003, FB-0004, FB-0005, FB-0007 to FB-0014 on the C1 campus test version (2026-09-13)"]
 supersedes: "0007"
-superseded_by: null
+superseded_by: "0009"
 ---
 
 # 0008 — The campus is a hand-designed, fully straight plan (measured from OpenStreetMap, not traced from it)

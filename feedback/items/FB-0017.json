@@ -4,9 +4,9 @@
   "type": "idea",
   "area": "Movement",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:40:13.542Z",
-  "updatedAt": "2026-09-16T18:45:47.497Z",
+  "updatedAt": "2026-09-16T18:57:19.100Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -59,9 +59,18 @@
       "author": "agent",
       "text": "Built and tested on a separate branch; merging into the main game now (a small code conflict held it up). You'll get a 'please check' once it is in.",
       "at": "2026-09-16T18:45:47.497Z"
+    },
+    {
+      "author": "agent",
+      "text": "Hold Shift to run outdoors (about 1.75x speed). Indoors it does nothing.",
+      "at": "2026-09-16T18:57:19.100Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/running.spec.js › FB-0017: Shift has no effect indoors",
+    "commit": null,
+    "at": "2026-09-16T18:57:19.100Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:40:13.542Z",
@@ -72,6 +81,11 @@
       "at": "2026-09-13T11:45:17.524Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-16T18:57:19.100Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "fixed",
+  "status": "verified",
   "createdAt": "2026-09-13T11:37:11.246Z",
-  "updatedAt": "2026-09-16T18:45:46.740Z",
+  "updatedAt": "2026-09-16T18:53:54.023Z",
   "details": "Oin real life these are sperate bui,ldigns, i should be able to see them as such and pass throguh in between them as well, The 3d buidlginsa take up a lot of space, the windows for exa ple rtable up one block whihc i think can be changed so Ui is done properly, search up art and style for this aass well and fix it",
   "context": {
     "map": "campus",
@@ -104,6 +104,11 @@
       "at": "2026-09-16T18:45:46.740Z",
       "by": "agent",
       "status": "fixed"
+    },
+    {
+      "at": "2026-09-16T18:53:54.023Z",
+      "by": "owner",
+      "status": "verified"
     }
   ]
 }

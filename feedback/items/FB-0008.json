@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:33:49.543Z",
-  "updatedAt": "2026-09-13T11:45:16.830Z",
+  "updatedAt": "2026-09-16T18:45:46.443Z",
   "details": "a s previuously mentioned, make it such that the road is straigth qnqad we have a definitve proper enterance to the campsu which is not too confusing, mimic how we have it in rela life and look it up and add that GAte 2 enterance here. which is the main enetrerance.",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.830Z"
+    },
+    {
+      "author": "agent",
+      "text": "You start outside Gate 2 at the bottom and walk straight up the palm avenue to the Main Block. Gate 2's exact real position is an assumption: tell me if it's elsewhere.",
+      "at": "2026-09-16T18:45:46.443Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0008/FB-0010: Gate 2 exists, a straight road leads to it, and the Main Block entrance is reachable",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.443Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:33:49.543Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-13T11:45:16.830Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:46.443Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

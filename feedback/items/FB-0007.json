@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Art & style",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:32:35.101Z",
-  "updatedAt": "2026-09-13T11:45:16.764Z",
+  "updatedAt": "2026-09-16T18:45:46.214Z",
   "details": "The internal path ways insidet he bits campus arent proper even width, please make them so and make sure its not randomly palced all around",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.764Z"
+    },
+    {
+      "author": "agent",
+      "text": "Internal paths were redone as a few straight, even-width walkways linking the hostels, academic blocks and plaza. A second pass (connecting the sports areas) is coming in campus v2.",
+      "at": "2026-09-16T18:45:46.214Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0005/FB-0007: every internal walkway run has one constant width",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.214Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:32:35.101Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-13T11:45:16.764Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:46.214Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

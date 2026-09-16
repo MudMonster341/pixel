@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:30:19.451Z",
-  "updatedAt": "2026-09-13T11:45:16.595Z",
+  "updatedAt": "2026-09-16T18:45:45.755Z",
   "details": "You mad ethis based on google maps but lkets add some proper structure to this whole thing okay",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.595Z"
+    },
+    {
+      "author": "agent",
+      "text": "The campus is now a hand-drawn straight plan: the stray structure is gone, and only real BITS buildings are inside the fence. Walk in from Gate 2 to check.",
+      "at": "2026-09-16T18:45:45.755Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0003: no non-BITS (\"other\" style) buildings are inside the campus fence",
+    "commit": null,
+    "at": "2026-09-16T18:45:45.755Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:30:19.451Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-13T11:45:16.595Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:45.755Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

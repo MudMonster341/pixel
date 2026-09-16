@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Art & style",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:31:32.270Z",
-  "updatedAt": "2026-09-13T13:37:16.040Z",
+  "updatedAt": "2026-09-16T18:45:46.334Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -59,9 +59,18 @@
       "author": "agent",
       "text": "Art is ready: new campus tiles are in (see docs/research/campus-tile-kit.png). They appear in the game once the campus layout rebuild places them, which is being done next. This stays in progress until you can see it on the map.",
       "at": "2026-09-13T13:37:16.040Z"
+    },
+    {
+      "author": "agent",
+      "text": "Paving and walkway tiles are redrawn with a 4-tone bevel so they look raised. The plaza and paths use them.",
+      "at": "2026-09-16T18:45:46.334Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-tiles.test.js › FB-0006: paving tiles use at least 3 tones (shaded, not flat)",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.334Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:31:32.270Z",
@@ -77,6 +86,11 @@
       "at": "2026-09-13T13:37:16.040Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-16T18:45:46.334Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

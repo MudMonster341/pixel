@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:39:38.751Z",
-  "updatedAt": "2026-09-13T13:37:16.250Z",
+  "updatedAt": "2026-09-16T18:45:47.174Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -72,9 +72,18 @@
       "author": "agent",
       "text": "Art is ready: new campus tiles are in (see docs/research/campus-tile-kit.png). They appear in the game once the campus layout rebuild places them, which is being done next. This stays in progress until you can see it on the map.",
       "at": "2026-09-13T13:37:16.250Z"
+    },
+    {
+      "author": "agent",
+      "text": "Two proper tennis courts with lines and a net, next to basketball and volleyball courts.",
+      "at": "2026-09-16T18:45:47.174Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0016: the tennis courts use the court line and net tile kit",
+    "commit": null,
+    "at": "2026-09-16T18:45:47.174Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:39:38.751Z",
@@ -90,6 +99,11 @@
       "at": "2026-09-13T13:37:16.250Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-16T18:45:47.174Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

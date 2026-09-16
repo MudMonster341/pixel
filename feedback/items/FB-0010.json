@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:35:47.900Z",
-  "updatedAt": "2026-09-13T11:45:16.944Z",
+  "updatedAt": "2026-09-16T18:45:46.633Z",
   "details": "the main enterance, shoudl be straigh, noit at an angle, and then you should have a proper enternace to the map itself, internal roads, extranal roads, pavements ot be properly done around campus",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.944Z"
+    },
+    {
+      "author": "agent",
+      "text": "Straight main entrance, kerbed roads and pavements. Campus v2 (next) connects D54, the gate road and a ring road around DIAC Park into one network.",
+      "at": "2026-09-16T18:45:46.633Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0008/FB-0010: Gate 2 exists, a straight road leads to it, and the Main Block entrance is reachable",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.633Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:35:47.900Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-13T11:45:16.944Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:46.633Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:34:10.228Z",
-  "updatedAt": "2026-09-13T11:45:16.896Z",
+  "updatedAt": "2026-09-16T18:45:46.534Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.896Z"
+    },
+    {
+      "author": "agent",
+      "text": "The whole map is straight now: no angled roads, fences or buildings.",
+      "at": "2026-09-16T18:45:46.534Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0009: fence and wall tiles never join in a diagonal-only (staircase) line",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.534Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:34:10.228Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-13T11:45:16.896Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:46.534Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

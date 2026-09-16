@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:39:13.706Z",
-  "updatedAt": "2026-09-13T13:37:16.197Z",
+  "updatedAt": "2026-09-16T18:45:47.064Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -72,9 +72,18 @@
       "author": "agent",
       "text": "Art is ready: new campus tiles are in (see docs/research/campus-tile-kit.png). They appear in the game once the campus layout rebuild places them, which is being done next. This stays in progress until you can see it on the map.",
       "at": "2026-09-13T13:37:16.197Z"
+    },
+    {
+      "author": "agent",
+      "text": "Mostly lawn now, with hedges, bushes, flowerbeds, a palm avenue and about 200 trees. You walk under the tree tops.",
+      "at": "2026-09-16T18:45:47.064Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0015: the campus interior is mostly lawn, with plenty of trees and palms",
+    "commit": null,
+    "at": "2026-09-16T18:45:47.064Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:39:13.706Z",
@@ -90,6 +99,11 @@
       "at": "2026-09-13T13:37:16.197Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-16T18:45:47.064Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

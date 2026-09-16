@@ -6,7 +6,7 @@
   "priority": "normal",
   "status": "in-progress",
   "createdAt": "2026-09-13T11:40:13.542Z",
-  "updatedAt": "2026-09-13T11:45:17.524Z",
+  "updatedAt": "2026-09-16T18:45:47.497Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -54,6 +54,11 @@
       "author": "agent",
       "text": "Starting now with a Sonnet agent: gameplay package. I will review and test.",
       "at": "2026-09-13T11:45:17.524Z"
+    },
+    {
+      "author": "agent",
+      "text": "Built and tested on a separate branch; merging into the main game now (a small code conflict held it up). You'll get a 'please check' once it is in.",
+      "at": "2026-09-16T18:45:47.497Z"
     }
   ],
   "resolution": null,

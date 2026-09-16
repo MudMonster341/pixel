@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:30:40.171Z",
-  "updatedAt": "2026-09-13T11:45:16.654Z",
+  "updatedAt": "2026-09-16T18:45:45.840Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:16.654Z"
+    },
+    {
+      "author": "agent",
+      "text": "The fence is one closed straight loop, broken only by Gate 2 and the Side Gate. No loose fence pieces.",
+      "at": "2026-09-16T18:45:45.840Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0004/FB-0013: the campus fence is a closed straight loop broken only by the two gates",
+    "commit": null,
+    "at": "2026-09-16T18:45:45.840Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:30:40.171Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-13T11:45:16.654Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:45.840Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

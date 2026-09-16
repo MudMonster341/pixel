@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "planned",
+  "status": "fixed",
   "createdAt": "2026-09-13T11:37:58.230Z",
-  "updatedAt": "2026-09-13T11:45:17.054Z",
+  "updatedAt": "2026-09-16T18:45:46.852Z",
   "details": "there shoudl eb one mroe enteracne to the campus added here, but will chaneg after map rotation",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Queued for the campus layout rework (straight map, Gate 2 entrance, clean paths and fences). A Sonnet agent will build it; I will review and test.",
       "at": "2026-09-13T11:45:17.054Z"
+    },
+    {
+      "author": "agent",
+      "text": "A Side Gate is on the west fence. Its real name/position is unconfirmed: tell me if you know it.",
+      "at": "2026-09-16T18:45:46.852Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-layout.test.js › FB-0012: a second entrance (Side Gate) exists and connects the inside of campus to the outside",
+    "commit": null,
+    "at": "2026-09-16T18:45:46.852Z"
+  },
   "history": [
     {
       "at": "2026-09-13T11:37:58.230Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-13T11:45:17.054Z",
       "by": "agent",
       "status": "planned"
+    },
+    {
+      "at": "2026-09-16T18:45:46.852Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

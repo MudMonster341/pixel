@@ -6,7 +6,7 @@
   "priority": "normal",
   "status": "in-progress",
   "createdAt": "2026-09-13T10:18:07.116Z",
-  "updatedAt": "2026-09-13T11:45:17.476Z",
+  "updatedAt": "2026-09-16T18:45:47.392Z",
   "details": "for the sword, i want to be able to be able to use the item so when adding items i shouod have a usage animation liek a swong or something. for now for all the items you cna keep only the sword and apple and have the annimation ior usage ability for them.",
   "context": {
     "map": "meadow",
@@ -82,6 +82,11 @@
       "author": "agent",
       "text": "Starting now with a Sonnet agent: gameplay package. I will review and test.",
       "at": "2026-09-13T11:45:17.476Z"
+    },
+    {
+      "author": "agent",
+      "text": "Built and tested on a separate branch; merging into the main game now (a small code conflict held it up). You'll get a 'please check' once it is in.",
+      "at": "2026-09-16T18:45:47.392Z"
     }
   ],
   "resolution": null,

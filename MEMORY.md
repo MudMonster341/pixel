@@ -277,3 +277,28 @@ before `git init`), so the gameplay worktree was made by hand with `git worktree
 
 **Next:** commit the art, start the layout agent (ADR 0008 plan, Gate 2, overhead canopy layer), then
 merge the gameplay branch when that agent reports.
+
+## 2026-09-16 — Full review, docs refresh, work plan (feedback → campus v2 → interiors → cutscene → QA)
+
+**Did:**
+- The owner asked for a review of all feedback plus anything else that stands out, then fixes,
+  interiors, a Pokémon-style Gate 2 cutscene with a message, full QA, updated docs, and a live game
+  to keep testing.
+- Re-read FB-0001–0017. The gameplay three (0001, 0002, 0017) are built on `feedback/gameplay` but not
+  merged. The campus items were rebuilt in C1.5 (509a867) and wait for the owner to check them.
+- My own review of C1.5 found:
+  - the campus is a square, not the real strip
+  - roads aren't connected, with no ring road and the parking lot not joined to any road
+  - too much empty desert, including an oversized park
+  - no signs or location names
+  - trees on a visible grid, and sports areas as islands
+- Wrote [docs/plans/2026-09-16-feedback-interiors-cutscene-qa.md](docs/plans/2026-09-16-feedback-interiors-cutscene-qa.md)
+  (packages P1–P5) and [docs/QA_PLAN.md](docs/QA_PLAN.md) (coverage matrix), and updated CONTEXT.md.
+
+**Why:** the owner wants to keep testing while the work continues, so each package ends playable,
+checkpointed, and with the server restarted. The gate trigger lives in the campus map, so the cutscene
+runs in its own worktree alongside the campus rebuild.
+
+**Decisions:** none new (ADR 0008 still holds) · **Failures:** none
+
+**Next:** P1 merge (Sonnet), then P2 + P4 in parallel.

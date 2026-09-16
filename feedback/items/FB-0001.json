@@ -6,7 +6,7 @@
   "priority": "high",
   "status": "in-progress",
   "createdAt": "2026-09-13T10:13:03.582Z",
-  "updatedAt": "2026-09-13T11:45:17.414Z",
+  "updatedAt": "2026-09-16T18:45:47.284Z",
   "details": "whemn i neter the houser the character shoudl be seen but he is not seen, we can tyhink about cghanging mayeb teh size an dpositioning of the inventory bar so tha it doesnt nto overlap with the map, wee can make it smaller and try to it does nto take upp too much space of the screen",
   "context": {
     "map": "house",
@@ -87,6 +87,11 @@
       "author": "agent",
       "text": "Starting now with a Sonnet agent: gameplay package. I will review and test.",
       "at": "2026-09-13T11:45:17.414Z"
+    },
+    {
+      "author": "agent",
+      "text": "Built and tested on a separate branch; merging into the main game now (a small code conflict held it up). You'll get a 'please check' once it is in.",
+      "at": "2026-09-16T18:45:47.284Z"
     }
   ],
   "resolution": null,

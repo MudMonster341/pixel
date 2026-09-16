@@ -37,7 +37,7 @@ test('number keys, the mouse wheel and clicks select slots', async ({ page }) =>
   await page.mouse.wheel(0, 100);
   await expect.poll(async () => (await state(page)).selected).toBe(3);
 
-  await page.mouse.click(332, 488); // center of slot 1 on the 960x540 canvas
+  await page.mouse.click(368, 496); // center of slot 1 on the 960x540 canvas (48px slots, FB-0001)
   await expect.poll(async () => (await state(page)).selected).toBe(0);
   expect((await state(page)).tutorial.completed).toContain('select');
 });

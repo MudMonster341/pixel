@@ -65,6 +65,7 @@ class UIScene extends Phaser.Scene {
 
     const world = this.scene.get('world');
     if (world.player && world.player.active && world.tileData) this.minimap.update(world, time);
+    if (world.player && world.player.active) this.hotbar.updateOverlap(world);
   }
 }
 
@@ -175,24 +176,32 @@ class Minimap {
 
 // ---------- inventory bar (bottom) ----------
 
+// Slots are small (48px, was 64px) and the bar turns translucent when the player is behind it
+// (FB-0001): the owner's choice B, over hiding it (A) or growing the camera to avoid it (C).
+const HOTBAR_TRANSLUCENT_ALPHA = 0.35;
+
 class Hotbar {
   constructor(scene, inventory) {
     this.scene = scene;
     this.inventory = inventory;
-    const size = 64;
-    const gap = 10;
+    const size = 48;
+    const gap = 8;
     const count = inventory.slots.length;
     const total = count * size + (count - 1) * gap;
     const x0 = Math.round((GAME_WIDTH - total) / 2);
     const y0 = GAME_HEIGHT - size - 20;
+    const pad = 10;
+    // On-screen box the bar occupies, used to test overlap with the player (see updateOverlap).
+    this.bounds = { x: x0 - pad, y: y0 - pad, w: total + pad * 2, h: size + pad * 2 };
+    this.alpha = 1;
 
     this.panel = scene.add.graphics();
-    drawPanel(this.panel, x0 - 12, y0 - 12, total + 24, size + 24);
+    drawPanel(this.panel, this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h);
     this.frames = scene.add.graphics();
 
     this.slots = inventory.slots.map((_, i) => {
       const x = x0 + i * (size + gap);
-      const icon = scene.add.image(x + size / 2, y0 + size / 2, 'items', 0).setScale(3).setVisible(false);
+      const icon = scene.add.image(x + size / 2, y0 + size / 2, 'items', 0).setScale(2.5).setVisible(false);
       const number = uiText(scene, x + 6, y0 + 6, String(i + 1), 8, COLORS.dim);
       const amount = uiText(scene, x + size - 4, y0 + size - 4, '', 8).setOrigin(1, 1).setStroke('#000000', 4);
       scene.add.zone(x + size / 2, y0 + size / 2, size, size).setInteractive({ useHandCursor: true })
@@ -246,6 +255,32 @@ class Hotbar {
     [this.panel, this.frames, this.itemName].forEach((part) => part.setVisible(visible));
     this.slots.forEach((slot) => [slot.number, slot.amount].forEach((part) => part.setVisible(visible)));
     this.refresh();
+  }
+
+  // FB-0001: fade the bar out when the player's on-screen position is behind or under it, so it
+  // doesn't hide the character (owner's choice B: shrink + turn translucent, not hide it or grow
+  // the camera). The player's world position is converted to screen space using the world camera
+  // (zoom 3, see docs/STYLE_GUIDE.md), then tested against the bar's own screen-space box.
+  updateOverlap(world) {
+    // worldView is the camera's visible region in world space, already accounting for zoom and
+    // bounds clamping (the same property the minimap uses to draw the view rectangle).
+    const view = world.cameras.main.worldView;
+    const p = world.player;
+    const screenX = (p.x - view.x) * ZOOM;
+    const screenY = (p.y - view.y) * ZOOM;
+    // Half the player's on-screen footprint (a 16px sprite at zoom 3).
+    const half = (TILE * ZOOM) / 2;
+    const { x, y, w, h } = this.bounds;
+    const overlaps = screenX + half > x && screenX - half < x + w && screenY + half > y && screenY - half < y + h;
+    this.setTranslucent(overlaps);
+  }
+
+  setTranslucent(translucent) {
+    const alpha = translucent ? HOTBAR_TRANSLUCENT_ALPHA : 1;
+    if (alpha === this.alpha) return;
+    this.alpha = alpha;
+    [this.panel, this.frames, this.itemName].forEach((part) => part.setAlpha(alpha));
+    this.slots.forEach((slot) => [slot.icon, slot.number, slot.amount].forEach((part) => part.setAlpha(alpha)));
   }
 }
 
@@ -350,6 +385,7 @@ const TUTORIAL_STEPS = [
 
 const CONTROLS = [
   ['WASD / ARROWS', 'Move'],
+  ['SHIFT', 'Run'],
   ['E / SPACE', 'Talk, next line'],
   ['1-5 / WHEEL', 'Choose item slot'],
   ['M', 'Show/hide minimap'],

@@ -26,7 +26,7 @@ test('Tomas keeps the sword if the bag is full, and offers it again later', () =
   const data = loadGameData();
   const { GameState } = data;
   const { slots } = GameState.inventory;
-  for (let i = 0; i < slots.length; i++) slots[i] = { item: 'potion', count: 3 }; // every slot full
+  for (let i = 0; i < slots.length; i++) slots[i] = { item: 'notebook', count: 3 }; // every slot full
 
   assert.equal(tomas(data).talk(GameState).onEnd(), 'Your bag is full!');
   assert.equal(GameState.flags.tomasGaveSword, false);

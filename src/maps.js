@@ -69,14 +69,15 @@ const MAPS = {
     pickups: [
       { id: 'meadow-apple-1', item: 'apple', x: 20, y: 12 },
       { id: 'meadow-apple-2', item: 'apple', x: 6, y: 17 },
-      { id: 'meadow-potion', item: 'potion', x: 24, y: 8 },
-      { id: 'meadow-gem', item: 'gem', x: 34, y: 21 },
+      { id: 'meadow-phone', item: 'phone', x: 24, y: 8 },
+      { id: 'meadow-notebook', item: 'notebook', x: 34, y: 21 },
     ],
     npcs: [],
   },
 
   house: {
     name: "Tomas's House",
+    indoors: true, // no running indoors (FB-0017)
     legend: {
       '^': 'wallUpper', '|': 'wallLower', W: 'wallWindow', B: 'bookshelf', E: 'edge',
       '.': 'floor', r: 'rug', t: 'table', h: 'bedHead', f: 'bedFoot', p: 'plant',
@@ -101,7 +102,12 @@ const MAPS = {
       { x: 9, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' } },
       { x: 10, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' } },
     ],
-    pickups: [{ id: 'house-potion', item: 'potion', x: 3, y: 5 }],
+    pickups: [
+      { id: 'house-keycard', item: 'keycard', x: 3, y: 5 },
+      { id: 'house-idcard', item: 'idCard', x: 16, y: 2 },
+      { id: 'house-laptop', item: 'laptop', x: 14, y: 6 },
+      { id: 'house-coffee', item: 'coffee', x: 17, y: 9 },
+    ],
     npcs: [{ id: 'tomas', name: 'Tomas', x: 8, y: 4, facing: 'down', talk: talkToTomas }],
   },
 };

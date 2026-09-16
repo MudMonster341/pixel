@@ -14,9 +14,9 @@ test('different items go into different slots', () => {
   const { Inventory } = loadGameData();
   const inventory = new Inventory(5);
   inventory.add('apple');
-  inventory.add('gem');
+  inventory.add('keycard');
   inventory.add('apple');
-  assert.deepEqual(plain(inventory.slots), [{ item: 'apple', count: 2 }, { item: 'gem', count: 1 }, null, null, null]);
+  assert.deepEqual(plain(inventory.slots), [{ item: 'apple', count: 2 }, { item: 'keycard', count: 1 }, null, null, null]);
 });
 
 test('returns false and changes nothing when the bag is full', () => {
@@ -36,9 +36,9 @@ test('emits added, changed and selected events', () => {
   inventory.on('added', (item, slot) => events.push(['added', item, slot]));
   inventory.on('changed', () => events.push(['changed']));
   inventory.on('selected', (slot) => events.push(['selected', slot]));
-  inventory.add('gem');
+  inventory.add('keycard');
   inventory.select(2);
-  assert.deepEqual(events, [['added', 'gem', 0], ['changed'], ['selected', 2]]);
+  assert.deepEqual(events, [['added', 'keycard', 0], ['changed'], ['selected', 2]]);
 });
 
 test('select ignores slots that do not exist', () => {

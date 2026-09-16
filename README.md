@@ -16,6 +16,7 @@ Then open **http://localhost:8080**.
 | Key | Action |
 |---|---|
 | WASD / arrow keys | Move |
+| Shift | Run (outdoors only) |
 | E / Space | Talk, next line of dialog |
 | 1-5 / mouse wheel / click | Select inventory slot |
 | M | Show/hide minimap |

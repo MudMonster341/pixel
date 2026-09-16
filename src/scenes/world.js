@@ -1,7 +1,9 @@
 // The world scene: the current map, the player, NPCs and items on the ground.
 // Moving to another map restarts this scene with new data; GameState keeps what persists.
 
-const SPEED = 80; // pixels per second
+const WALK_SPEED = 80; // pixels per second
+const RUN_SPEED = 140; // pixels per second, holding Shift outdoors (FB-0017)
+const RUN_ANIM_SCALE = RUN_SPEED / WALK_SPEED; // walk animation plays faster while running
 // Depth for the "overhead" Tiled layer (tree canopies, ADR 0008): always above every character,
 // whose depth is set to their own y each frame (a few thousand px at most on the biggest map).
 const OVERHEAD_DEPTH = 1_000_000;
@@ -10,6 +12,15 @@ const PICKUP_RANGE = 10;
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
 const PLAYER_IDLE = { down: 0, up: 3, left: 6, right: 6 };
 const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
+
+// Where the held item sits relative to the player's center, per facing (FB-0002).
+// `front: true` draws it over the player; `front: false` draws it behind (partly hidden).
+const HELD_OFFSET = {
+  down: { x: 5, y: 3, front: true },
+  up: { x: 6, y: -2, front: false },
+  left: { x: -5, y: 2, front: true },
+  right: { x: 5, y: 2, front: true },
+};
 
 class WorldScene extends Phaser.Scene {
   constructor() {
@@ -23,6 +34,14 @@ class WorldScene extends Phaser.Scene {
     this.transitioning = false;
   }
 
+  preload() {
+    // Held-item sprites (FB-0002): loaded here (not in the boot scene) so this file alone owns
+    // them. Already-cached textures are skipped, which matters since the scene restarts per map.
+    if (!this.textures.exists('held-items')) {
+      this.load.spritesheet('held-items', 'assets/held-items.png', { frameWidth: 8, frameHeight: 8 });
+    }
+  }
+
   create() {
     this.buildMap();
     this.createAnimations();
@@ -34,7 +53,7 @@ class WorldScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, width, height);
     this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height).startFollow(this.player, true).fadeIn(250, 0, 0, 0);
 
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT');
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
     this.input.keyboard.addCapture('SPACE');
     for (const key of ['E', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
@@ -93,6 +112,8 @@ class WorldScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true).setFlipX(this.facing === 'right');
     this.physics.add.collider(this.player, this.solidLayers);
     this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
+    // The currently-selected hotbar item, shown in the character's hand (FB-0002).
+    this.heldItem = this.add.image(this.player.x, this.player.y, 'held-items', 0).setVisible(false);
   }
 
   createNpcs() {
@@ -125,7 +146,7 @@ class WorldScene extends Phaser.Scene {
 
     const ui = this.scene.get('ui');
     const blocked = !ui.tutorial || ui.isBlocking();
-    this.movePlayer(blocked);
+    this.movePlayer(blocked, time);
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
@@ -140,7 +161,7 @@ class WorldScene extends Phaser.Scene {
     else if (!ui.isBlocking()) this.interact();
   }
 
-  movePlayer(blocked) {
+  movePlayer(blocked, time) {
     const k = this.keys;
     const p = this.player;
     let dx = 0;
@@ -150,26 +171,29 @@ class WorldScene extends Phaser.Scene {
       dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     }
 
+    // Hold Shift to run, but not indoors (FB-0017). Held key -> isDown, never JustDown (ERR-0001).
+    const running = !blocked && !this.def.indoors && k.SHIFT.isDown;
+    const speed = running ? RUN_SPEED : WALK_SPEED;
+
     // Normalize so diagonal movement isn't faster than straight movement.
-    const velocity = new Phaser.Math.Vector2(dx, dy).normalize().scale(SPEED);
+    const velocity = new Phaser.Math.Vector2(dx, dy).normalize().scale(speed);
     if (dx === 0 && dy !== 0) {
-      const steer = this.doorAssist(dy);
+      const steer = this.doorAssist(dy, speed);
       if (steer !== null) velocity.x = steer;
     }
     p.setVelocity(velocity.x, velocity.y);
     p.setDepth(p.y);
+    p.anims.timeScale = running ? RUN_ANIM_SCALE : 1;
 
     const moved = Phaser.Math.Distance.Between(this.lastPosition.x, this.lastPosition.y, p.x, p.y);
     this.lastPosition.set(p.x, p.y);
     if (moved > 0) this.game.events.emit('player-moved', moved);
 
-    if (dx === 0 && dy === 0) {
+    const moving = dx !== 0 || dy !== 0;
+    if (!moving) {
       p.anims.stop();
       p.setFrame(PLAYER_IDLE[this.facing]);
-      return;
-    }
-
-    if (dx !== 0) {
+    } else if (dx !== 0) {
       this.facing = dx < 0 ? 'left' : 'right';
       p.setFlipX(dx > 0); // side art faces left; mirror it for right
       p.anims.play('walk-side', true);
@@ -178,18 +202,42 @@ class WorldScene extends Phaser.Scene {
       p.setFlipX(false);
       p.anims.play(`walk-${this.facing}`, true);
     }
+
+    this.updateHeldItem(time, moving);
   }
 
   // Doors are one tile wide, so walking at one slightly off-center would snag on the wall.
   // If a warp tile is just ahead, return a sideways speed that slides the player into line.
-  doorAssist(dy) {
+  doorAssist(dy, speed) {
     const body = this.player.body;
     const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
     const warp = (this.def.warps || []).find(
       (w) => w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE,
     );
     if (!warp) return null;
-    return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -SPEED, SPEED);
+    return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -speed, speed);
+  }
+
+  // Shows the selected hotbar item in the character's hand, in front of or behind the body
+  // depending on facing, with a small bob while walking (FB-0002).
+  updateHeldItem(time, moving) {
+    const slot = GameState.inventory.selectedSlot;
+    if (!slot) {
+      this.heldItem.setVisible(false);
+      return;
+    }
+
+    const p = this.player;
+    // HELD_OFFSET already has a separate left/right entry, in screen space, so the offset itself
+    // (not player.flipX, which only mirrors the body's own art) decides which side it sits on.
+    const offset = HELD_OFFSET[this.facing];
+    const bob = moving ? Math.round(Math.sin(time / 100)) : 0;
+    this.heldItem
+      .setFrame(ITEMS[slot.item].frame)
+      .setFlipX(p.flipX)
+      .setPosition(p.x + offset.x, p.y + offset.y + bob)
+      .setDepth(p.depth + (offset.front ? 1 : -1))
+      .setVisible(true);
   }
 
   nearestNpc() {

@@ -5,6 +5,7 @@
 //   player.png              3x3 frames: down / up / left, each [idle, step1, step2]
 //   npc.png                 3 frames: down / up / left
 //   items.png               item icons, in the order of src/items.js
+//   held-items.png          tiny 8x8 versions shown in the character's hand, same order/frames
 //   prompt.png              the "E" bubble shown above someone you can talk to
 //
 // Hand-drawn sprites are text: one character = one pixel, "." = transparent.
@@ -1109,42 +1110,6 @@ const ITEM_ICONS = [
     '.....KKKKKKK....',
     '................',
   ]),
-  sprite('potion', [
-    '................',
-    '......KKKK......',
-    '......KNNK......',
-    '......KNnK......',
-    '.....KKKKKK.....',
-    '......KwwK......',
-    '......KwwK......',
-    '....KKwwwwKK....',
-    '...KwWwwwwwwK...',
-    '..KwWRRRRRRRwK..',
-    '..KwRRRRRRRRwK..',
-    '..KwRRRRRRRrwK..',
-    '..KwrRRRRRrrwK..',
-    '...KwrrrrrrwK...',
-    '....KKKKKKKK....',
-    '................',
-  ]),
-  sprite('gem', [
-    '................',
-    '................',
-    '.....KKKKKK.....',
-    '....KwWwUUuK....',
-    '...KwWwUUUUuK...',
-    '..KKKKKKKKKKKK..',
-    '..KwwUUUUUUuuK..',
-    '...KwUUUUUUuK...',
-    '....KwUUUUuK....',
-    '.....KwUUuK.....',
-    '......KwuK......',
-    '.......KK.......',
-    '................',
-    '................',
-    '................',
-    '................',
-  ]),
   sprite('sword', [
     '............KKK.',
     '...........KWQK.',
@@ -1163,6 +1128,206 @@ const ITEM_ICONS = [
     '................',
     '................',
   ]),
+  // Student keycard: plastic card, gold photo swatch, dark magnetic stripe.
+  sprite('keycard', [
+    '................',
+    '................',
+    '.KKKKKKKKKKKKK..',
+    '.KVVVVVVVVVVVK..',
+    '.KVYYYVVVVVVVK..',
+    '.KVYYYVVVVVVVK..',
+    '.KVYYYVVVVVVVK..',
+    '.KVVVVVVVVVVVK..',
+    '.KqqqqqqqqqqqK..',
+    '.KqqqqqqqqqqqK..',
+    '.KVVVVVVVVVVVK..',
+    '.KKKKKKKKKKKKK..',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  // Phone: dark case, glowing screen, home button.
+  sprite('phone', [
+    '................',
+    '....KKKKKKK.....',
+    '...KAAAAAAAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAwwwwwAK....',
+    '...KAAAAAAAK....',
+    '...KAAAKAAAK....',
+    '....KKKKKKK.....',
+    '................',
+    '................',
+    '................',
+  ]),
+  // Student ID: card with a small photo, a name band and text lines.
+  sprite('idCard', [
+    '................',
+    '................',
+    '.KKKKKKKKKKKKK..',
+    '.KVVVVVVVVVVVK..',
+    '.KVSSSVVVVVVVK..',
+    '.KVSsSVVVVVVVK..',
+    '.KVSSSVRRRRRVK..',
+    '.KVVVVVRRRRRVK..',
+    '.KVVVVVVVVVVVK..',
+    '.KVVVVVLLLLLVK..',
+    '.KVVVVVLLLLLVK..',
+    '.KKKKKKKKKKKKK..',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  // Notebook: brown cover, wire-spiral binding, a sliver of pages peeking out.
+  sprite('notebook', [
+    '................',
+    '...KKKKKKKKKK...',
+    '..oKNNNNNNNNKo..',
+    '..oKNNNNNNNNKo..',
+    '..oKNnnnnnnNKo..',
+    '..oKNNNNNNNNKo..',
+    '..oKNNNNNNNNKo..',
+    '..oKNnnnnnnNKo..',
+    '..oKNNNNNNNNKo..',
+    '..oKNNNNNNNNKo..',
+    '..oKKKKKKKKKKo..',
+    '...WWWWWWWWWW...',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  // Laptop: silver lid with a dark screen, open over a keyboard deck.
+  sprite('laptop', [
+    '................',
+    '................',
+    '..KKKKKKKKKKK...',
+    '..KAAAAAAAAAK...',
+    '..KAqqqqqqqAK...',
+    '..KAqWWWWWqAK...',
+    '..KAqqqqqqqAK...',
+    '..KAqqqqqqqAK...',
+    '..KAAAAAAAAAK...',
+    '.KKKKKKKKKKKKK..',
+    '.KoooooooooooK..',
+    '.KKKKKKKKKKKKK..',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  // Coffee cup: to-go cup with a lid and a wisp of steam.
+  sprite('coffee', [
+    '.......WW.......',
+    '......W..W......',
+    '.......WW.......',
+    '................',
+    '.....KKKKKK.....',
+    '....KFFFFFFK....',
+    '....KNNNNNNK....',
+    '....KFffffFK....',
+    '....KFffffFK....',
+    '....KFffffFK....',
+    '....KFffffFK....',
+    '....KFffffFK....',
+    '.....KFFFFK.....',
+    '.....KKKKKK.....',
+    '................',
+    '................',
+  ]),
+];
+
+// ---------- held items: tiny 8x8 versions shown in the character's hand (FB-0002) ----------
+// Same order as ITEM_ICONS, so an item's `frame` indexes both sheets.
+
+const HELD_ITEM_ICONS = [
+  sprite('apple-held', [
+    '...KK...',
+    '..KnKK..',
+    '.KRRRRK.',
+    'KRRRRRRK',
+    'KRRRRRRK',
+    '.KRRRRK.',
+    '..KKKK..',
+    '........',
+  ], 8, 8),
+  sprite('sword-held', [
+    '.....KK.',
+    '....KWK.',
+    '...KWQK.',
+    '..KWQK..',
+    '.KYQK...',
+    'KYYK....',
+    'KNK.....',
+    'KK......',
+  ], 8, 8),
+  sprite('keycard-held', [
+    '........',
+    '.KKKKK..',
+    '.KVVVK..',
+    '.KVYVK..',
+    '.KqqVK..',
+    '.KKKKK..',
+    '........',
+    '........',
+  ], 8, 8),
+  sprite('phone-held', [
+    '........',
+    '..KKK...',
+    '.KAwAK..',
+    '.KAwAK..',
+    '.KAwAK..',
+    '..KAK...',
+    '........',
+    '........',
+  ], 8, 8),
+  sprite('idCard-held', [
+    '........',
+    '.KKKKK..',
+    '.KSSVK..',
+    '.KVRVK..',
+    '.KVLVK..',
+    '.KKKKK..',
+    '........',
+    '........',
+  ], 8, 8),
+  sprite('notebook-held', [
+    '........',
+    '.KKKKK..',
+    '.KNNNK..',
+    '.KNnNK..',
+    '.KNNNK..',
+    '.KKKKK..',
+    '........',
+    '........',
+  ], 8, 8),
+  sprite('laptop-held', [
+    '........',
+    '.KKKKK..',
+    '.KAqAK..',
+    '.KAqAK..',
+    'KooooK..',
+    '.KKKKK..',
+    '........',
+    '........',
+  ], 8, 8),
+  sprite('coffee-held', [
+    '..WW....',
+    '.KKKK...',
+    'KFFFFK..',
+    'KFffFK..',
+    'KFffFK..',
+    '.KKKK...',
+    '........',
+    '........',
+  ], 8, 8),
 ];
 
 const PROMPT = sprite('prompt', [
@@ -1230,6 +1395,12 @@ write('npc.png', npc);
 const items = new Img(ITEM_ICONS.length * TILE, TILE);
 ITEM_ICONS.forEach((icon, i) => items.draw(icon, i * TILE, 0));
 write('items.png', items);
+
+// Small in-hand sprites (FB-0002): 8x8 frames, same order/frame numbers as items.png.
+const HELD_ITEM_SIZE = 8;
+const heldItems = new Img(HELD_ITEM_ICONS.length * HELD_ITEM_SIZE, HELD_ITEM_SIZE);
+HELD_ITEM_ICONS.forEach((icon, i) => heldItems.draw(icon, i * HELD_ITEM_SIZE, 0));
+write('held-items.png', heldItems);
 
 const prompt = new Img(TILE, TILE);
 prompt.draw(PROMPT, 0, 0);

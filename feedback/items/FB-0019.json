@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Art & style",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-16T18:49:55.055Z",
-  "updatedAt": "2026-09-16T18:53:56.227Z",
+  "updatedAt": "2026-09-17T04:05:37.195Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Confirmed: the palm's trunk is drawn apart from its leaves (and tree trunks sit a gap below the canopy). Fixing the tree/palm art so trunk and canopy join.",
       "at": "2026-09-16T18:53:56.227Z"
+    },
+    {
+      "author": "agent",
+      "text": "Tree and palm tops now join their trunks.",
+      "at": "2026-09-17T04:05:37.195Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-osm.test.js › FB-0019: the palm canopy silhouette reaches down to touch the trunk tile below it",
+    "commit": null,
+    "at": "2026-09-17T04:05:37.195Z"
+  },
   "history": [
     {
       "at": "2026-09-16T18:49:55.055Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-16T18:53:56.131Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-17T04:05:37.195Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

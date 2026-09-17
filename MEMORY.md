@@ -326,3 +326,29 @@ runs in its own worktree alongside the campus rebuild.
 
 **Next:** review and merge in order: P2 (main) → P4 → P3, with Sonnet resolving any merge conflicts;
 then QA (P5); then a morning update for the owner.
+
+## 2026-09-17 — Overnight results: C2 campus, interiors, cutscene, QA pass merged
+
+**Did:**
+- **P2 (C2 campus):** first review sent back staircase academic buildings, a missing D54, fence/park
+  overlap and a leftover cross through the park; the fix pass solved them (rectangle decomposition of
+  footprints, a ring shift). Committed cc6bbdf.
+- **P4 (cutscene):** first review sent back an overlapping sign text and an empty background; fixed, then merged 19c0a08.
+- **P3 (interiors):** 8 floors, straight corridors, tour room names, furniture per room type,
+  Tiled door/stairs warps. Merged 9625f78.
+- **P5 (QA):**
+  - `qa:shots` screenshot sweep and performance/robustness tests (38df4ee).
+  - Flaky e2e root causes fixed (ERR-0002/0003).
+  - Full-map label clutter fixed.
+- **Follow-up fixes (3646d49):**
+  - minimap caption fit, building area names, D54 kerbs/lanes, atrium void art
+  - FB-0022 (owner, 04:04): walkways drawn over building roofs, roofs looking like pavement, trees
+    crowding paths. The QA agent had missed this (it checked wall tiles, not roofs).
+- Feedback: FB-0018–0022 marked fixed. Asked the owner where the real main entrance is (FB-0022).
+- Sonnet agents hit the account usage limit 4 times overnight and were resumed each time.
+
+**Why:** QA screenshots plus my own review before merging caught most layout problems, but the owner still found one first, so review rules now include "check roofs too".
+
+**Decisions:** none new · **Failures:** usage limits; one QA miss (roof check)
+
+**Next:** owner verification; the Gate 2 position; interior polish from feedback.

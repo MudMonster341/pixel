@@ -1,0 +1,91 @@
+{
+  "id": "FB-0022",
+  "title": "the roads go through the actual campus buildings, not god, trees stll out of place and enterance doesnt match",
+  "type": "bug",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "fixed",
+  "createdAt": "2026-09-17T04:04:40.090Z",
+  "updatedAt": "2026-09-17T07:18:27.091Z",
+  "details": "enterance doesntmatch the actual enterance",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 253,
+      "y": 92
+    },
+    "pixel": {
+      "x": 4063,
+      "y": 1486
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "9625f78",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 824,
+      "height": 910
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.110.0 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-17T04:03:59.526Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0022.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Walkways crossing building roofs: confirmed bug, being fixed now (roofs will also look different from pavement, and trees get clearance). On the entrance: public sources don't say where Gate 2 is, so I put it at the bottom, straight in front of the Main Block. Where is the real main entrance, relative to the Main Block, hostels and D54 road? E.g. 'on the D54 side next to the hostels' or 'south-east corner by the parking'. A rough description is enough.",
+      "at": "2026-09-17T04:05:28.487Z"
+    },
+    {
+      "author": "agent",
+      "text": "Walkways now go around buildings, never over them. Roofs are grey with AC units so they don't look like pavement, and trees keep a 1-tile gap from paths, roads and walls. Still open: where the real main entrance is (see my question above).",
+      "at": "2026-09-17T07:18:27.091Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/campus-osm.test.js › FB-0022: no walkway or road tile lies inside any building footprint",
+    "commit": null,
+    "at": "2026-09-17T07:18:27.091Z"
+  },
+  "history": [
+    {
+      "at": "2026-09-17T04:04:40.090Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-09-17T04:05:28.424Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-09-17T04:05:28.487Z",
+      "by": "agent",
+      "status": "needs-info"
+    },
+    {
+      "at": "2026-09-17T07:18:27.091Z",
+      "by": "agent",
+      "status": "fixed"
+    }
+  ]
+}

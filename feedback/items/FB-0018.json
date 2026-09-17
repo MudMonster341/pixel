@@ -4,9 +4,9 @@
   "type": "idea",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-16T18:49:23.809Z",
-  "updatedAt": "2026-09-16T18:53:56.014Z",
+  "updatedAt": "2026-09-17T04:05:37.116Z",
   "details": "I want it to show the whole map in full screen when i clik onb it, can you add tha t in",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Adding it: click the minimap (or press M twice) to open a full-screen map you can close with Esc/M.",
       "at": "2026-09-16T18:53:56.014Z"
+    },
+    {
+      "author": "agent",
+      "text": "Click the minimap or press N for a full-screen map with building/area names and a blinking marker for you. Esc, N or a click closes it.",
+      "at": "2026-09-17T04:05:37.116Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/fullmap.spec.js › FB-0018: clicking the minimap opens the full-screen map, N/Esc closes it",
+    "commit": null,
+    "at": "2026-09-17T04:05:37.116Z"
+  },
   "history": [
     {
       "at": "2026-09-16T18:49:23.809Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-16T18:53:55.914Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-17T04:05:37.116Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Pixel Quest — context
 
-**Last updated:** 2026-09-16 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-17 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -16,25 +16,27 @@ the design and technical choices. The owner plays each version, reports feedback
 explain the story once the base map is done.
 
 ## Current state
-- **Works (all covered by tests, 2026-09-16):**
-  - **Campus C1.5:** a hand-designed, fully straight outdoor campus ([ADR 0008](decisions/0008-campus-as-straight-schematic-plan.md)),
-    573×326 tiles at 2 m per tile, and the start map.
-    - Gate 2 main entrance at the bottom with a straight avenue up to the Main Block, plus a Side Gate.
-    - Kerbed roads, 3-tile brick walkways, lawns, hedges, about 200 trees/palms (canopies draw over the player).
-    - Tennis courts, the athletics track, hostels and DIAC Park.
-    - Buildings can't be entered yet.
-  - Female lead player sprite, follow camera, scrolling minimap (M), controls card (H).
-  - Test maps (`?map=meadow`): meadow + Tomas's house with doors, pickups, the hotbar, NPC dialog and the tutorial checklist.
-- **Built but not merged:** branch `feedback/gameplay` (worktree `../2D_pixel_game-gameplay`) holds
-  FB-0001 (compact see-through hotbar), FB-0002 (held items + university items) and FB-0017 (running).
-- **Dev tooling:** `npm test` (unit + browser tests) runs before every push and on GitHub Actions.
-  In-game feedback overlay (O key or yellow button).
-- **In progress (2026-09-16):** [docs/plans/2026-09-16-feedback-interiors-cutscene-qa.md](docs/plans/2026-09-16-feedback-interiors-cutscene-qa.md):
-  P1 merge gameplay → P2 campus v2 (real strip shape, connected roads, signs, less desert) → P3 interiors
-  (Main/Library/Mechanical blocks, 1 m per tile, empty rooms, stairs) → P4 Gate 2 cutscene + location banner
-  (in parallel with P2) → P5 QA pass ([docs/QA_PLAN.md](docs/QA_PLAN.md)). Sonnet agents implement; the main agent reviews.
+- **Works (all covered by tests, 2026-09-17; 136 unit + 59 browser tests):**
+  - **Campus C2** ([ADR 0009](decisions/0009-campus-from-osm-straightened-and-cleaned.md)): generated from OpenStreetMap again.
+    - Layout: the campus strip along D54, the hostel row, real building shapes simplified into straight rectangles.
+    - Around the campus: the real DIAC Park and roundabout.
+    - Paths and roads: kerbed roads and D54, 3-tile walkways that go around buildings.
+    - Gate 2 + Side Gate, trees/palms with canopies, tennis courts with a thin net, name signboards.
+  - **Interiors** ([docs/INTERIORS_PLAN.md](docs/INTERIORS_PLAN.md)): 1 m per tile, with furniture by room type and doors/stairs linking both ways.
+    - Main Block ground to 3rd floor; Library Block and Mechanical Block ground + 1st floor.
+    - Rooms named after the virtual tour.
+    - No running indoors.
+  - **Gate 2 welcome cutscene** (plays once, Esc skips, `?cutscene=0` disables it), location banner, full-screen map (click the minimap or press N).
+  - Gameplay: compact see-through hotbar, held items (keycard, phone, ID card, notebook, laptop, coffee, apple, sword), Shift to run.
+  - Test maps (`?map=meadow`): meadow + Tomas's house, pickups, NPC dialog, tutorial checklist.
+- **Dev tooling:**
+  - `npm test` runs before every push and on GitHub Actions.
+  - `npm run qa:shots` saves screenshots of every area/room to `qa-shots/` ([docs/QA_PLAN.md](docs/QA_PLAN.md)).
+  - In-game feedback overlay (O key or yellow button).
+  - The owner plays a stable copy: worktree `../2D_pixel_game-play`, launch config "play", feedback still saved to this repo.
+- **Open questions for the owner:** where the real main entrance (Gate 2) is (asked in FB-0022); the second gate's name.
 - **Not yet:** ES modules, flags/scripts, saving, backpack, dialog choices, the story (the owner explains it after the base map).
-- **Open questions for the owner:** Gate 2's real position (assumed: south entrance by the Main Block drop-off); the second gate's name.
+- **Next:** the owner verifies FB-0018 to FB-0022, then entrance position, interior polish from feedback, then the Foundation phase of GAME_PLAN.md.
 
 ## How to run it
 ```

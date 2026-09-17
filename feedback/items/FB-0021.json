@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "high",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-16T18:52:53.475Z",
-  "updatedAt": "2026-09-16T18:55:34.437Z",
+  "updatedAt": "2026-09-17T04:05:37.351Z",
   "details": "Can you check why this whole map is difffernt comapred toi how BITS looks, and if you cna then can you go ahead and fix it to make it exactly liek how we hae it, the previous mao structure was better and more intutive, this one is completley ddifferne tnad NOTHING LIKE THE NORMAL ONE, PLEASE FIX IT BACK TOTHE OLDER MAO SICNE I LIKED THAT ONE BETTER,, JUST THE PAVEMTN SN AD PATHS CAN BE FIXED AND THAT WOULD BE AMAZIBNG",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Agreed (you picked 'Real layout, straightened' in chat). Bringing back the real OpenStreetMap layout: campus strip along D54, real building shapes, hostel row, real DIAC Park and roundabout. Everything inside the fence stays straight, and pavements, paths, fences and kerbs get cleaned up. Tree and tennis net fixes (FB-0019/0020) come in the same rebuild.",
       "at": "2026-09-16T18:55:34.437Z"
+    },
+    {
+      "author": "agent",
+      "text": "The real OpenStreetMap layout is back: the campus strip along D54, the hostel row, the real building shapes (straightened into clean rectangles) and the real DIAC Park design with its roundabout. The walkways-over-buildings problem you found is FB-0022 and is being fixed.",
+      "at": "2026-09-17T04:05:37.351Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-osm.test.js › FB-0021: the campus follows the OpenStreetMap layout (the strip along D54, the hostel row)",
+    "commit": null,
+    "at": "2026-09-17T04:05:37.351Z"
+  },
   "history": [
     {
       "at": "2026-09-16T18:52:53.475Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-16T18:55:34.350Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-17T04:05:37.351Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

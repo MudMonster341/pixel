@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "Art & style",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-16T18:50:23.501Z",
-  "updatedAt": "2026-09-16T18:53:56.454Z",
+  "updatedAt": "2026-09-17T04:05:37.259Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "That is the tennis court net, but it is drawn as a thick striped block. Redrawing it as a thin net line with two posts.",
       "at": "2026-09-16T18:53:56.454Z"
+    },
+    {
+      "author": "agent",
+      "text": "That was the tennis net. It's now a thin net line with a post at each end, and the courts have a hedge surround.",
+      "at": "2026-09-17T04:05:37.259Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/campus-osm.test.js › FB-0020: the tennis net is a thin line (not a thick striped block), with posts at each end",
+    "commit": null,
+    "at": "2026-09-17T04:05:37.259Z"
+  },
   "history": [
     {
       "at": "2026-09-16T18:50:23.501Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-16T18:53:56.344Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-17T04:05:37.259Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

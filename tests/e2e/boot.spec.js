@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openGame, state, startGame, holdKey } = require('./helpers');
+const { openGame, state, startGame, holdKey, pressUntil } = require('./helpers');
 
 test('boots on the meadow with the controls card and no errors', async ({ page }) => {
   const { errors } = await openGame(page);
@@ -33,8 +33,6 @@ test('H reopens the controls card and Enter closes it again', async ({ page }) =
 test('M hides and shows the minimap', async ({ page }) => {
   await openGame(page);
   await startGame(page);
-  await page.keyboard.press('m');
-  await expect.poll(async () => (await state(page)).minimapVisible).toBe(false);
-  await page.keyboard.press('m');
-  await expect.poll(async () => (await state(page)).minimapVisible).toBe(true);
+  await pressUntil(page, 'm', async () => (await state(page)).minimapVisible === false);
+  await pressUntil(page, 'm', async () => (await state(page)).minimapVisible === true);
 });

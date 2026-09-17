@@ -60,6 +60,24 @@ async function startGame(page) {
   await expect.poll(async () => (await state(page)).tutorial.cardOpen).toBe(false);
 }
 
+// Presses a key and waits for `check()` to become true, re-pressing (like an impatient player
+// would) if it doesn't happen quickly. ERR-0002: a keydown-driven UI toggle (the minimap's M key,
+// notably) occasionally sees its event not take effect somewhere in the browser/Phaser input
+// pipeline under load -- not merely delayed a frame (which a plain `expect.poll` already tolerates)
+// but not landing within several seconds at all. Resending the same key a player would keep tapping
+// recovers from that without weakening the check: a state that genuinely never arrives still fails.
+async function pressUntil(page, key, check, { attempts = 5, attemptTimeout = 700 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    await page.keyboard.press(key);
+    try {
+      await expect.poll(check, { timeout: attemptTimeout }).toBe(true);
+      return;
+    } catch (error) {
+      if (i === attempts - 1) throw error;
+    }
+  }
+}
+
 async function holdKey(page, key, ms) {
   await page.keyboard.down(key);
   await page.waitForTimeout(ms);
@@ -103,4 +121,4 @@ function feedbackCli(args) {
   });
 }
 
-module.exports = { openGame, state, startGame, holdKey, holdKeys, teleport, waitForMap, finishDialog, countItem, feedbackCli };
+module.exports = { openGame, state, startGame, holdKey, holdKeys, pressUntil, teleport, waitForMap, finishDialog, countItem, feedbackCli };

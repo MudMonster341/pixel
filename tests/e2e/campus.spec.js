@@ -79,6 +79,27 @@ test('the location banner announces the campus on start, then a specific area wh
   expect((await state(page)).locationBanner).toEqual({ visible: false, text: 'STUDENT PARKING' });
 });
 
+// P5 QA: the "overhead" Tiled layer (tree/palm canopies, ADR 0008) must always draw above the
+// player, wherever the player is (its depth is a constant far above any character's own y-based
+// depth, world.js OVERHEAD_DEPTH) -- checked both at spawn and after walking, so a future change to
+// how depths are assigned per frame can't quietly break it only once movement starts.
+test('tree canopies draw above the player (the overhead layer is always the topmost depth)', async ({ page }) => {
+  await openGame(page, { map: null });
+  await startGame(page);
+  const depthsAtSpawn = await page.evaluate(() => {
+    const world = game.scene.getScene('world');
+    return { overhead: world.overheadLayer.depth, player: world.player.depth };
+  });
+  expect(depthsAtSpawn.overhead).toBeGreaterThan(depthsAtSpawn.player);
+
+  await holdKey(page, 'w', 1000);
+  const depthsWhileWalking = await page.evaluate(() => {
+    const world = game.scene.getScene('world');
+    return { overhead: world.overheadLayer.depth, player: world.player.depth };
+  });
+  expect(depthsWhileWalking.overhead).toBeGreaterThan(depthsWhileWalking.player);
+});
+
 test('the minimap shows the campus and follows the player', async ({ page }) => {
   await openGame(page, { map: null });
   await startGame(page);

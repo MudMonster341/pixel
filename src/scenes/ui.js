@@ -280,12 +280,17 @@ class FullMap {
 
     // Labels for named buildings/areas, skipping anything covering more than ~30% of the map (the
     // whole-campus outline, say) since a label for that isn't useful and would swamp the others.
+    // Also skips the generator's own "no real name for this OSM building" placeholder
+    // (`Building <osm id>`, tools/campus/build-campus.js): dozens of small neighbouring structures
+    // get one of these each, and unlike a real name it's not useful to a player -- labelling them
+    // anyway used to bury Main Block/Gate 2/etc. under a wall of "Building 519043987"-style text.
     // Biggest/most important first, then a simple greedy declutter: skip a label whose position
     // would land right on top of one already placed (real buildings can sit close together).
     this.labels.removeAll(true);
     const totalArea = cols * rows;
+    const isPlaceholderName = (name) => /^Building \d+$/.test(name);
     const named = (world.mapObjects || [])
-      .filter((o) => ['area', 'building'].includes(o.type) && o.name && o.width * o.height < totalArea * 0.3)
+      .filter((o) => ['area', 'building'].includes(o.type) && o.name && !isPlaceholderName(o.name) && o.width * o.height < totalArea * 0.3)
       .sort((a, b) => b.width * b.height - a.width * a.height);
     const placed = [];
     const MIN_GAP = 26; // px: bigger than one label's height, so crowded clusters thin out to a few names

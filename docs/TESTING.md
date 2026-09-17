@@ -12,6 +12,7 @@ npm run test:e2e                                 # ~1.5 minutes: plays the real 
 npx playwright test tests/e2e/house.spec.js       # one file
 npx playwright test --headed                     # watch the tests play
 npx playwright show-trace test-results/<test>/trace.zip   # step through a failure frame by frame
+npm run qa:shots                                 # visual walkthrough screenshots, not part of npm test (see below)
 ```
 
 First time on a new machine: `npm install` then `npx playwright install chromium`.
@@ -20,12 +21,22 @@ First time on a new machine: `npm install` then `npx playwright install chromium
 
 | Layer | Files | What it checks | Tool |
 |---|---|---|---|
-| **Unit** | `tests/unit/*.test.js` | Rules and content without a browser. Every map is valid and everything on it is reachable; inventory stacking; NPC dialog outcomes; generated art is up to date; feedback store workflow | `node:test` (built into Node) |
-| **Browser (e2e)** | `tests/e2e/*.spec.js` | Real gameplay with real key presses. Boots without errors; movement and collisions; pickups and slots; doors; talking to NPCs; tutorial; minimap; dev feedback overlay | Playwright + Chromium |
+| **Unit** | `tests/unit/*.test.js` | Rules and content without a browser. Every map is valid and everything on it is reachable; inventory stacking; NPC dialog outcomes; generated art is up to date; feedback store workflow; road/walkway network connectivity and no isolated islands (`campus-osm.test.js`) | `node:test` (built into Node) |
+| **Browser (e2e)** | `tests/e2e/*.spec.js` | Real gameplay with real key presses. Boots without errors; movement and collisions; pickups and slots; doors; talking to NPCs; tutorial; minimap and full-screen map; the cutscene and location banner; performance (load time, FPS); robustness (window resize, key-mashing during a fade/cutscene, walking into map edges) | Playwright + Chromium |
 
 - Unit tests load the `src/` scripts into a sandbox (`tests/helpers/game-data.js`), fresh for each test.
 - Browser tests start their own server on port 4173 with a throwaway feedback folder, and read game
   state through `window.game` and `GameState` (`tests/e2e/helpers.js`).
+
+## Visual walkthrough (`npm run qa:shots`)
+
+`npm test` only checks behaviour and data (rule 4 below) -- it can't tell you a tree is floating or a
+label overlaps another. `npm run qa:shots` (`tools/qa-shots.js`) starts its own server on a scratch
+port with a throwaway feedback folder, teleports around every outdoor point of interest, every
+interior floor and room, and the Gate 2 cutscene, and saves a PNG of each to `qa-shots/` (gitignored,
+not part of `npm test`). Positions come from the generated maps' own objects, not hand-picked tile
+numbers. Look at the screenshots (docs/QA_PLAN.md section 3 has the checklist) before calling a
+version ready to play, the same way `npm test` needs to be green first.
 
 ## Where tests run
 

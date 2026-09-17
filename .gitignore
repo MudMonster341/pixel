@@ -10,3 +10,6 @@ blob-report/
 
 # half-written feedback files
 feedback/items/*.tmp
+
+# P5 QA visual walkthrough screenshots (npm run qa:shots) -- regenerate, don't commit
+qa-shots/

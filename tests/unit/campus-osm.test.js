@@ -48,6 +48,7 @@ function floodFill(startX, startY, isPassable) {
 }
 
 const spawn = objects.find((o) => o.type === 'spawn');
+const campusZone = objects.find((o) => o.type === 'area' && o.props.kind === 'campus');
 
 // ---------- FB-0021: the campus follows the real OpenStreetMap layout ----------
 
@@ -253,4 +254,54 @@ test('a "gate2" cutscene trigger sits just inside Gate 2, spanning the avenue wi
   assert.ok(Math.abs(cutscene.x + cutscene.width / 2 - gate2.x) <= 2, 'the gate2 cutscene is not centred on the avenue');
   assert.ok(cutscene.y < gate2.y, 'the gate2 cutscene should sit north of (inside) the gate');
   assert.ok(gate2.y - (cutscene.y + cutscene.height) < 6, 'the gate2 cutscene is not close to Gate 2');
+});
+
+// ---------- P5 QA: no isolated walkway/road islands (a paved tile cut off from the network) ----------
+
+// "Hardscape" is every tile family a pedestrian or vehicle actually travels on: walkways, paving,
+// asphalt, kerb, lane markings, crossings and parking.
+const HARDSCAPE_TILE_NAMES = new Set([
+  'walkway', 'paving', 'asphalt', 'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+  'roadLineH', 'roadLineV', 'crossingH', 'crossingV', 'parking',
+]);
+
+// An "island" is a walkway/road tile a player actually can't get to on foot -- fully hemmed in by
+// solid tiles, not just a paved path that opens onto open turf/lawn/sand instead of onto more
+// paving (the hostel walkway spurs open onto the athletics track's turf on their way further into
+// campus, and the whole exterior is walkable desert sand, both by design, not a generator bug). This
+// reuses the same general walkability a player experiences, rather than requiring the paved surface
+// itself to stay one unbroken shape, which would flag deliberate track/turf crossings as "islands".
+test('no isolated walkway/road island (every walkway/road tile is reachable on foot from spawn)', () => {
+  const reachable = floodFill(Math.floor(spawn.x), Math.floor(spawn.y), walkable);
+  let hardscapeTileCount = 0;
+  const unreachable = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (!HARDSCAPE_TILE_NAMES.has(groundNameAt(x, y))) continue;
+      hardscapeTileCount++;
+      if (!reachable[y * W + x]) unreachable.push([x, y]);
+    }
+  }
+  assert.ok(hardscapeTileCount > 1000, `expected a substantial walkway/road network, found ${hardscapeTileCount} tiles`);
+  assert.equal(unreachable.length, 0, `found ${unreachable.length} walkway/road tile(s) not reachable on foot from spawn (e.g. ${unreachable[0]})`);
+});
+
+// ---------- P5 QA: sports areas are reachable by walkway from spawn ----------
+
+test('the Athletics Track and Tennis Courts are reachable on foot from spawn', () => {
+  const reachable = floodFill(Math.floor(spawn.x), Math.floor(spawn.y), walkable);
+  for (const name of ['Athletics Track', 'Tennis Courts']) {
+    const area = objects.find((o) => o.type === 'area' && o.name === name);
+    assert.ok(area, `no "${name}" area object`);
+    const cx = Math.floor(area.x + area.width / 2);
+    const cy = Math.floor(area.y + area.height / 2);
+    // The area's own centre might land on a solid net/line tile; scan the area for any reachable cell.
+    let found = false;
+    for (let y = Math.floor(area.y); y < area.y + area.height && !found; y++) {
+      for (let x = Math.floor(area.x); x < area.x + area.width && !found; x++) {
+        if (reachable[y * W + x]) found = true;
+      }
+    }
+    assert.ok(found, `${name} (centre ${cx},${cy}) is not reachable on foot from spawn`);
+  }
 });

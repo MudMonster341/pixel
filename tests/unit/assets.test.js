@@ -28,6 +28,32 @@ test('assets/ is up to date with tools/make-assets.js (run `npm run assets` if t
   }
 });
 
+test('assets/cutscenes/ is up to date with tools/make-cutscenes.js (run `npm run cutscenes` if this fails)', () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-cutscenes-'));
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'make-cutscenes.js'), '--out', out], { stdio: 'pipe' });
+    const committedDir = path.join(ASSETS, 'cutscenes');
+    for (const name of fs.readdirSync(out)) {
+      const committed = path.join(committedDir, name);
+      assert.ok(fs.existsSync(committed), `assets/cutscenes/${name} is missing`);
+      assert.ok(fs.readFileSync(path.join(out, name)).equals(fs.readFileSync(committed)), `assets/cutscenes/${name} is out of date`);
+    }
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test('every CUTSCENES image has a matching PNG sized to fill 960 wide and pan (taller than 540/3)', () => {
+  const { CUTSCENES } = loadGameData();
+  for (const def of Object.values(CUTSCENES)) {
+    const file = def.image.replace(/^cutscene-/, '');
+    const png = path.join(ASSETS, 'cutscenes', `${file}.png`);
+    assert.ok(fs.existsSync(png), `${png} is missing for CUTSCENES image "${def.image}"`);
+    const { width, height } = pngSize(png);
+    assert.ok(width > 0 && height >= 540 / 3, `${png} is too short to pan (${width}x${height})`);
+  }
+});
+
 test('tile names are unique', () => {
   const { tileInfo } = loadGameData();
   const names = tileInfo.tiles.map((tile) => tile.name);

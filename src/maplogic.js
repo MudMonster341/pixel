@@ -81,3 +81,31 @@ function initialMapKey() {
   const key = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('map');
   return key && MAPS[key] ? key : START_MAP;
 }
+
+// ---------- cutscenes (P4: Gate 2 welcome, etc.) ----------
+
+// `?cutscene=0` turns cutscenes off (used by tests that would otherwise walk through a trigger).
+// `search` is injectable so this stays pure/testable; in the browser it defaults to the page's own
+// query string, the same pattern as initialMapKey() above.
+function cutscenesEnabled(search) {
+  const qs = new URLSearchParams(search ?? (typeof location === 'undefined' ? '' : location.search));
+  return qs.get('cutscene') !== '0';
+}
+
+// The smallest object (by tile area) among a Tiled map's objects whose type is one of `types` and
+// whose rectangle contains the point (x, y) — all in tile units, as tiledObjects() returns them.
+// Smallest-first so a specific area (e.g. "Athletics Track") wins over a bigger one it sits inside
+// (e.g. the whole campus), and so a small cutscene trigger strip isn't shadowed by anything larger.
+function objectAt(mapObjects, types, x, y) {
+  const hits = mapObjects.filter(
+    (o) => types.includes(o.type) && x >= o.x && x < o.x + o.width && y >= o.y && y < o.y + o.height,
+  );
+  if (!hits.length) return null;
+  return hits.reduce((a, b) => (a.width * a.height <= b.width * b.height ? a : b));
+}
+
+// Play-once check: a cutscene should start only if it has a key and that key hasn't been seen yet
+// (GameState.seenCutscenes, a Set of keys, the same style as GameState.collected).
+function notSeenCutscene(key, seen) {
+  return Boolean(key) && !seen.has(key);
+}

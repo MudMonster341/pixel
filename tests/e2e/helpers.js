@@ -6,13 +6,15 @@ const { expect } = require('@playwright/test');
 const { FEEDBACK_DIR } = require('./paths');
 
 // `map` defaults to the meadow test map; pass `map: null` for the real start map (the campus).
-async function openGame(page, { dev = false, map = 'meadow' } = {}) {
+// Cutscenes are off by default (`?cutscene=0`) so a test walking through Gate 2 for some other
+// reason isn't interrupted; tests/e2e/cutscene.spec.js passes `cutscene: true` to turn them back on.
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.goto(`/?dev=${dev ? 1 : 0}${map ? `&map=${map}` : ''}`);
+  await page.goto(`/?dev=${dev ? 1 : 0}${map ? `&map=${map}` : ''}${cutscene ? '' : '&cutscene=0'}`);
   await page.waitForFunction(() => {
     const world = window.game?.scene.getScene('world');
     const ui = window.game?.scene.getScene('ui');
@@ -39,6 +41,15 @@ function state(page) {
       promptVisible: world.prompt.visible,
       minimapVisible: ui.minimap.visible,
       toast: ui.toast.text.text,
+      worldActive: world.sys.isActive(),
+      cutsceneActive: game.scene.isActive('cutscene'),
+      cutsceneDialogOpen: (() => {
+        const cs = game.scene.getScene('cutscene');
+        return Boolean(cs && cs.dialog && cs.dialog.isOpen);
+      })(),
+      seenCutscenes: [...GameState.seenCutscenes],
+      locationBanner: { visible: ui.locationBanner.visible, text: ui.locationBanner.text.text },
+      fullMapVisible: ui.fullMap.visible,
     };
   });
 }

@@ -125,6 +125,37 @@ from a template for another campus. Don't use them for Dubai.
 
 The full list of scenes and their links is in [bits-dubai-tour-scenes.json](bits-dubai-tour-scenes.json).
 
+## Main gate appearance (for the cutscene)
+
+Researched 2026-09-16 for the Gate 2 welcome cutscene (package P4). Checked: web search for
+`BITS Pilani Dubai Campus main gate entrance photo`, `... entrance gate booth boom barrier
+signage`, `... gate security guard entrance pillars photo review`; the Wikimedia Commons category
+(`Category:BITS_Pilani,_Dubai`, file list only, no captions describing the gate itself); the
+official picture gallery (`bits-pilani.ac.in/dubai/picture-gallery/`, interiors and events, no
+entrance photos in the fetched text).
+
+- No photo specifically of the vehicle/pedestrian gate structure (as opposed to the Main Block
+  entrance) turned up in any of these sources — same gap already noted above under "Entrances".
+- What *is* confirmed, and used for the illustration:
+  - Two staffed gates exist (official wording + student reviews, see "Entrances" above).
+  - The building palette across every confirmed photo/description is **sand-beige walls with
+    salmon/terracotta trim** (panel lines, cornices), consistent with the Main Block's "glass front
+    under a red arch" and the `bits*` tile kit already built in `tools/make-assets.js`.
+  - Grounds use **red-brown brick pavers and black-and-white kerbs** (also already in the tile kit),
+    lawns, and palms "especially along the entrance" (FB-0015 note).
+  - DIAC gates generally (per the OSM extract, `tools/campus/diac.osm`) are vehicle gates with a
+    boom barrier and a small guard booth, not an ornamental arch.
+- **Conclusion: no reliable photo of the gate structure itself was found, so the cutscene gate is a
+  tasteful, plausible design, not a reproduction of a real photo** (no image was copied or saved —
+  everything below is drawn in code from these notes):
+  - two sand-beige pillars/short wall sections with a terracotta/salmon cornice line, matching the
+    `bitsWall`/`bitsRoofT` tiles' palette
+  - a sign band across the top reading "BITS PILANI" / "DUBAI CAMPUS" in a small pixel font
+  - a small guard booth beside one pillar and a red/white boom barrier across the road
+  - date palms either side, a paved road leading in, kerb lines, bright blue sky
+  - This matches the "assumption, not a confirmed fact" framing already used for Gate 2's location
+    above, and should be corrected if the owner has a real photo.
+
 ## Look (from photos)
 
 - Mediterranean / Arabian style: **sand-beige** walls with panel lines, **salmon/terracotta trim**

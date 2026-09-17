@@ -396,7 +396,7 @@
       "name": "treeCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#3e8541"
+      "color": "#3e8641"
     },
     {
       "name": "treeCanopyTR",
@@ -408,13 +408,13 @@
       "name": "treeCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#2c6d37"
+      "color": "#2c6a37"
     },
     {
       "name": "treeCanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#21532b"
+      "color": "#21512b"
     },
     {
       "name": "palmTrunk",
@@ -426,7 +426,7 @@
       "name": "palmCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#506b3e"
+      "color": "#50703f"
     },
     {
       "name": "palmCanopyTR",
@@ -438,7 +438,7 @@
       "name": "palmCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#315735"
+      "color": "#377038"
     },
     {
       "name": "palmCanopyBR",
@@ -492,7 +492,7 @@
       "name": "courtNet",
       "solid": false,
       "overhead": false,
-      "color": "#51535f"
+      "color": "#3e7f83"
     },
     {
       "name": "bitsWallPlain",
@@ -649,6 +649,24 @@
       "solid": false,
       "overhead": false,
       "color": "#c7b99b"
+    },
+    {
+      "name": "courtNetPostT",
+      "solid": false,
+      "overhead": false,
+      "color": "#3e7a7e"
+    },
+    {
+      "name": "courtNetPostB",
+      "solid": false,
+      "overhead": false,
+      "color": "#3e7a7e"
+    },
+    {
+      "name": "signboard",
+      "solid": true,
+      "overhead": false,
+      "color": "#7c9f5d"
     }
   ]
 }

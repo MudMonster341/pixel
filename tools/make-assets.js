@@ -602,6 +602,11 @@ const TILES = [
   { name: 'fenceCornerBL', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'R') },
   { name: 'fenceCornerBR', solid: true, draw: (img, x, y) => fenceCorner(img, x, y, 'T', 'L') },
   { name: 'fenceGate', draw: fenceGate },
+
+  // ADR 0009: a thin-line tennis net with end posts (FB-0020) and a building-name signboard.
+  { name: 'courtNetPostT', draw: (img, x, y) => courtNetPost(img, x, y, 'T') },
+  { name: 'courtNetPostB', draw: (img, x, y) => courtNetPost(img, x, y, 'B') },
+  { name: 'signboard', solid: true, draw: signboard },
 ];
 
 // ---------- campus tiles ----------
@@ -861,16 +866,25 @@ function canopyQuadrant(img, x, y, qx, qy, shapeFn, toneFn) {
   });
 }
 
-// Small art fix: centred lower and taller than before so the round canopy's silhouette reaches
-// close to the bottom of its BL/BR quadrant, instead of leaving a wide gap above the trunk tile
-// placed directly below it (build-campus.js plants the trunk immediately south of the canopy).
-const roundCanopyShape = (gx, gy) => ((gx - 16) / 15.5) ** 2 + ((gy - 16) / 15) ** 2 <= 1;
+// FB-0019: the round canopy's silhouette (an ellipse) narrows away from its own centre, so at the
+// column where build-campus.js plants the trunk (the canopy's left-quadrant tile, off to one side
+// of the ellipse's centre) the silhouette fell well short of the tile's bottom edge, leaving a
+// visible gap above the trunk. A flat "skirt" band near the bottom, wide enough to cover the
+// trunk's columns regardless of the ellipse's curve, guarantees the two always touch.
+const roundCanopyShape = (gx, gy) => {
+  if (((gx - 16) / 15.5) ** 2 + ((gy - 15) / 14) ** 2 <= 1) return true;
+  return gy >= 27 && gy <= 30 && Math.abs(gx - 16) <= 12;
+};
 const roundCanopyTone = (gx, gy) => {
   const d = (gx - 16) + (gy - 13); // diagonal position: light from the top-left
   return d < -8 ? 't' : d > 10 ? 'e' : 'T';
 };
 
 function palmCanopyShape(gx, gy) {
+  // FB-0019: a short solid "neck" from the crown straight down to the tile edge, over the columns
+  // where the trunk is planted directly below (build-campus.js puts it under the canopy's left
+  // column), so the frond cluster and the trunk join instead of floating apart with a gap.
+  if (gy >= 14 && gy <= 31 && gx >= 6 && gx <= 15) return true;
   const dx = gx - 16;
   const dy = gy - 16;
   const dist = Math.hypot(dx, dy);
@@ -900,7 +914,8 @@ const palmCanopyTone = (gx, gy) => {
 //   col 2, rows 2-6     left baseline               courtLineV
 //   col 15, rows 2-6    right baseline              courtLineV
 //   col 5 / col 12, rows 2-6   service lines        courtLineV
-//   cols 8-9, rows 2-6  the net                     courtNet
+//   col 8, row 2 / row 6   the net where it meets the sideline (a small post)   courtNetPostT/B
+//   col 8, rows 3-5   the net (a thin line)         courtNet
 //   row 4, cols 6-7 and 10-11  centre service line (either side of the net)   courtLineH
 //   (row1,col2) (row1,col15) (row7,col2) (row7,col15)   the four corners     courtCornerTL/TR/BL/BR
 //   (row4,col2) (row4,col15)   centre marks                                  courtCenterMark
@@ -932,16 +947,20 @@ function courtCenterMark(img, x, y) {
   img.fill(x + 7, y, 2, TILE, 'W');
   img.fill(x + 4, y + 6, 8, 2, 'W');
 }
-// The net runs across the court (two adjacent columns in the arrangement below, cols 8-9). Small
-// art fix: this used to draw a full boxed net (posts on both edges) in each tile, so two of them
-// side by side read as two separate strips. Now the mesh fills the whole tile with a taped top
-// edge and no internal post lines, so two adjacent courtNet tiles read as one continuous net line
-// spanning both columns. Visual only (not solid), so it doesn't block the run-off either side.
+// FB-0020: the net used to fill two whole tiles edge to edge with dark stripes -- a thick striped
+// block the owner couldn't read as a net. Redrawn as a thin (2 px) line down a single column, with
+// small posts where it meets the sidelines (courtNetPostT/B), so it reads as a real tennis net
+// instead of an unexplained block. Visual only (not solid), so it doesn't block the run-off either side.
 function courtNet(img, x, y) {
   courtSurface(img, x, y, 95);
-  img.fill(x, y, TILE, TILE, 'K');
-  for (let yy = 2; yy < TILE; yy += 3) img.fill(x, y + yy, TILE, 1, '4');
-  img.fill(x, y, TILE, 2, 'W');
+  img.fill(x + 7, y, 2, TILE, 'K');
+  for (let yy = 1; yy < TILE; yy += 3) img.set(x + 7, y + yy, '4');
+}
+function courtNetPost(img, x, y, side) {
+  courtNet(img, x, y);
+  const postY = side === 'T' ? 0 : TILE - 4;
+  img.fill(x + 5, y + postY, 6, 4, 'K');
+  img.fill(x + 6, y + postY + 1, 4, 2, 'o');
 }
 
 // -- FB-0011: BITS + other-building fronts (roof edges, entrance, pillar) and a fence kit --
@@ -1002,6 +1021,15 @@ function fenceGate(img, x, y) {
   speckle(img, x, y, '5', '6', 48, 6);
   img.fill(x, y + 1, 2, 12, '<');
   img.fill(x + 14, y + 1, 2, 12, '<');
+}
+
+// A small building-name signboard (ADR 0009): a post on lawn with a salmon-trimmed BITS-coloured
+// board, placed in front of each named BITS building's entrance.
+function signboard(img, x, y) {
+  grass(img, x, y, 97);
+  img.fill(x + 7, y + 7, 2, 9, 'n');
+  img.box(x + 1, y + 1, 14, 7, '$');
+  img.fill(x + 1, y + 1, 14, 2, '&');
 }
 
 // ---------- player (facing down / up / left; right = mirrored left) ----------

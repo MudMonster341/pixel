@@ -180,8 +180,11 @@ A standard court is **18×9 tiles** (36×18 m at 2 m/tile, including run-off), b
 - `courtCornerTL` / `courtCornerTR` / `courtCornerBL` / `courtCornerBR`: right-angle joins where a
   sideline meets a baseline.
 - `courtCenterMark`: a baseline tile with the small centre-mark tick.
-- `courtNet`: the net across the middle — taped top edge, mesh, end posts. Visual only (not solid),
-  so it doesn't block the run-off either side of the court.
+- `courtNet` / `courtNetPostT` / `courtNetPostB`: the net across the middle — a thin (2 px) line
+  down a single column, with a small post where it meets the top/bottom sideline (`courtNetPostT`/
+  `courtNetPostB`; the plain `courtNet` tiles between them have no post). Redrawn for FB-0020: it
+  used to fill two whole tiles edge to edge with dark stripes, which read as an unexplained thick
+  block rather than a net. Visual only (not solid), so it doesn't block the run-off either side.
 
 Arrangement (columns 0–17, rows 0–8; documented as a comment above the tennis-court tiles in
 `tools/make-assets.js` and used as-is in the catalog's mock scene):
@@ -193,12 +196,14 @@ Arrangement (columns 0–17, rows 0–8; documented as a comment above the tenni
 | Col 2, rows 2–6 | left baseline (`courtLineV`) |
 | Col 15, rows 2–6 | right baseline (`courtLineV`) |
 | Col 5 / col 12, rows 2–6 | service lines (`courtLineV`) |
-| Cols 8–9, rows 2–6 | the net (`courtNet`) |
+| Col 8, row 2 / row 6 | the net where it meets the sideline (`courtNetPostT`/`courtNetPostB`) |
+| Col 8, rows 3–5 | the net (`courtNet`) |
 | Row 4, cols 6–7 and 10–11 | centre service line either side of the net (`courtLineH`) |
 | Row 1/7 × col 2/15 | the four corners (`courtCornerTL/TR/BL/BR`) |
 | Row 4 × col 2/15 | centre marks (`courtCenterMark`) |
 | Everywhere else inside cols 2–15, rows 1–7 | `court` |
-| Outside that rectangle | run-off (whatever ground the court sits on, e.g. `sand`) |
+| Outside that rectangle | run-off (whatever ground the court sits on) plus a hedge one tile further
+  out, and a green apron in between (ADR 0009: bare sand around the court read oddly) |
 
 ### Buildings (FB-0011)
 
@@ -223,6 +228,22 @@ roof, corners and an entrance:
 `fence` (existing name, unchanged) plus a directional kit: `fenceH` / `fenceV` (straight runs),
 `fenceCornerTL` / `fenceCornerTR` / `fenceCornerBL` / `fenceCornerBR` (corners), and `fenceGate` (a
 walkable opening between two posts, `solid: false`, unlike the rest of the fence kit).
+
+### Signboard (ADR 0009)
+
+`signboard`: a small post-mounted sign on lawn, solid, placed in front of each named BITS
+building's entrance by `tools/campus/build-campus.js`.
+
+### Tree/palm canopy fix (FB-0019, ADR 0009)
+
+The round tree canopy (`treeCanopyTL/TR/BL/BR`) and the date palm canopy (`palmCanopyTL/TR/BL/BR`)
+used to leave a visible gap above the trunk tile planted directly below them: the round canopy's
+ellipse narrowed away from the trunk's column, and the palm's fronds didn't reach down to the tile
+edge at all. Fixed by giving the round canopy a flat "skirt" near the bottom of its silhouette (wide
+enough to cover the trunk's columns regardless of the ellipse's curve) and giving the palm a solid
+"neck" from the crown straight down to the tile edge over the trunk's columns. No tile names or
+positions changed, only what's drawn inside `treeCanopyBL`/`palmCanopyBL` (and their TL/TR/BR
+counterparts, which share the same shape function).
 
 ## Asset sources and licenses
 

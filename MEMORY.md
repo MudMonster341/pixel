@@ -302,3 +302,27 @@ runs in its own worktree alongside the campus rebuild.
 **Decisions:** none new (ADR 0008 still holds) · **Failures:** none
 
 **Next:** P1 merge (Sonnet), then P2 + P4 in parallel.
+
+## 2026-09-16/17 — Overnight: campus v2 (ADR 0009), cutscene, interiors running in parallel
+
+**Did:**
+- FB-0021: the owner rejected C1.5's square schematic and chose "Real layout, straightened" in chat.
+  Wrote ADR 0009, which supersedes 0008.
+- New feedback triaged:
+  - FB-0018: a full-screen map
+  - FB-0019: palm and tree trunks detached from their canopies
+  - FB-0020: the tennis net drawn as a thick block
+- FB-0001, 0002 and 0017 merged (04cc7c8) and marked fixed. The owner verified FB-0007 to FB-0016 in the inbox.
+- A stable play copy runs from worktree `../2D_pixel_game-play` (launch config "play", feedback still
+  written to the main tree), so agents' half-finished edits don't break the owner's session.
+- Three Sonnet agents are running in parallel:
+  - P2 campus v2 (main tree)
+  - P4 cutscene, location banner and full-screen map (`feature/cutscene` worktree)
+  - P3 interiors for all Main, Library and Mechanical Block floors (`feature/interiors` worktree)
+- The owner asked for straight interior layouts with classrooms properly placed, and a full layout.
+- All three agents hit the account usage limit around midnight and were resumed with SendMessage after the reset.
+
+**Decisions:** ADR 0009 · **Failures:** usage limit (not a code problem)
+
+**Next:** review and merge in order: P2 (main) → P4 → P3, with Sonnet resolving any merge conflicts;
+then QA (P5); then a morning update for the owner.

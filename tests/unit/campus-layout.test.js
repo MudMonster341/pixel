@@ -1,12 +1,13 @@
-// Regression tests for the campus layout rebuild (ADR 0008): a hand-designed, straight schematic
-// plan instead of a rasterisation of OpenStreetMap. Named after the owner's feedback items on the
-// old (rasterised) map that this rebuild fixes.
+// Regression tests for the campus layout, named after the owner's original feedback items (FB-0003
+// to FB-0016) on the very first rasterised map. ADR 0008 (a hand-drawn schematic) rewrote these to
+// check fixed numbers in tools/campus/layout.js; ADR 0009 (back to OpenStreetMap, straightened and
+// cleaned up) rewrites them again to check the same intent on the real, generated layout instead of
+// on hand-picked constants, since layout.js is now settings and clean-up rules, not a drawn plan.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { ROOT, loadGameData } = require('../helpers/game-data');
-const layout = require('../../tools/campus/layout');
 
 const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile } = loadGameData();
 const MAP_FILE = path.join(ROOT, 'assets', 'maps', 'campus.json');
@@ -14,8 +15,6 @@ const json = JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'));
 const grid = gridFromTiled(json);
 const objects = tiledObjects(json);
 const walkable = (x, y) => isWalkableTile(grid, tileInfo, x, y);
-const nameOf = (index) => (index >= 0 ? tileInfo.tiles[index].name : null);
-const tileAt = (x, y) => nameOf(grid[y]?.[x]);
 
 const structuresLayer = json.layers.find((l) => l.name === 'structures').data;
 const groundLayer = json.layers.find((l) => l.name === 'ground').data;
@@ -50,8 +49,9 @@ const spawn = objects.find((o) => o.type === 'spawn');
 const campusZone = objects.find((o) => o.type === 'area' && o.props.kind === 'campus');
 const doors = objects.filter((o) => o.type === 'door');
 const gates = objects.filter((o) => o.type === 'gate');
+const reachableFromSpawn = reachableFrom({ x: Math.floor(spawn.x), y: Math.floor(spawn.y) });
 
-// ---------- FB-0009: the map is straight, not angular ----------
+// ---------- FB-0004/FB-0009/FB-0013: the map is straight, the fence is a closed loop broken only by gates ----------
 
 const FENCE_FAMILY = new Set(['fenceH', 'fenceV', 'fenceCornerTL', 'fenceCornerTR', 'fenceCornerBL', 'fenceCornerBR']);
 const WALL_FAMILY = new Set([
@@ -67,16 +67,12 @@ test('FB-0009: fence and wall tiles never join in a diagonal-only (staircase) li
   let staircases = 0;
   for (let y = 0; y < json.height - 1; y++) {
     for (let x = 0; x < json.width - 1; x++) {
-      // A diagonal pair of structural tiles with neither orthogonal neighbour filled is a
-      // stair-step corner: the classic look of a line drawn at an angle on a square grid.
       if (isStructural(x, y) && isStructural(x + 1, y + 1) && !isStructural(x + 1, y) && !isStructural(x, y + 1)) staircases++;
       if (isStructural(x + 1, y) && isStructural(x, y + 1) && !isStructural(x, y) && !isStructural(x + 1, y + 1)) staircases++;
     }
   }
   assert.equal(staircases, 0, `found ${staircases} diagonal-only (staircase) joins between fence/wall tiles`);
 });
-
-// ---------- FB-0004/FB-0013: the fence is a closed straight loop, broken only by gates ----------
 
 test('FB-0004/FB-0013: the campus fence is a closed straight loop broken only by the two gates', () => {
   assert.ok(campusZone, 'no campus zone object');
@@ -108,9 +104,9 @@ test('FB-0004/FB-0013: the campus fence is a closed straight loop broken only by
   assert.equal(gapsInLoop, 0, `the fence perimeter has ${gapsInLoop} cells that are neither fence nor a gate`);
 });
 
-// ---------- FB-0003: only real BITS buildings (and the spawn's outside world) inside the fence ----------
+// ---------- FB-0003: only real BITS buildings (and neighbouring campuses outside it) ----------
 
-test('FB-0003: no non-BITS ("other" style) buildings are inside the campus fence', () => {
+test('FB-0003: no non-BITS ("other" style) buildings overlap the campus fence', () => {
   assert.ok(campusZone, 'no campus zone object');
   const fx0 = campusZone.x;
   const fy0 = campusZone.y;
@@ -124,29 +120,84 @@ test('FB-0003: no non-BITS ("other" style) buildings are inside the campus fence
 
 // ---------- FB-0005/FB-0007: internal walkways are proper, even-width paths, not scattered ----------
 
-test('FB-0005/FB-0007: every internal walkway run has one constant width', () => {
-  for (const w of [...layout.walkways, ...layout.parkPaths]) {
-    const width = w.x1 - w.x0 + 1;
-    const height = w.y1 - w.y0 + 1;
-    const crossWidth = width >= height ? height : width;
-    assert.equal(crossWidth, layout.walkwayWidth, `walkway run ${JSON.stringify(w)} is not a constant ${layout.walkwayWidth} tiles wide`);
+test('FB-0005/FB-0007: internal walkways are a constant-width brick path, not raw OpenStreetMap footways', () => {
+  // A walkway run's cross-section (measured a few tiles in from either end, to skip a junction
+  // with another path or a road) should hold to one width the whole way -- never widen or narrow,
+  // and never show the ragged edge a rasterised OpenStreetMap footway would have.
+  const x0 = Math.round(campusZone.x);
+  const y0 = Math.round(campusZone.y);
+  const x1 = x0 + Math.round(campusZone.width);
+  const y1 = y0 + Math.round(campusZone.height);
+  let walkwayTiles = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      if (groundNameAt(x, y) === 'walkway') walkwayTiles++;
+    }
   }
+  assert.ok(walkwayTiles > 200, `expected a real network of walkway tiles inside the fence, found ${walkwayTiles}`);
+
+  // Sample several straight (horizontal or vertical) walkway runs, well clear of a junction with a
+  // crossing path (skipped by requiring the run to be clearly long in one direction and clearly
+  // short in the other): the cross-section should stay the same a few tiles either side.
+  let sampledRuns = 0;
+  for (let y = y0 + 4; y < y1 - 4 && sampledRuns < 6; y++) {
+    for (let x = x0 + 4; x < x1 - 4 && sampledRuns < 6; x++) {
+      if (groundNameAt(x, y) !== 'walkway') continue;
+      let hx0 = x;
+      let hx1 = x;
+      while (groundNameAt(hx0 - 1, y) === 'walkway') hx0--;
+      while (groundNameAt(hx1 + 1, y) === 'walkway') hx1++;
+      let vy0 = y;
+      let vy1 = y;
+      while (groundNameAt(x, vy0 - 1) === 'walkway') vy0--;
+      while (groundNameAt(x, vy1 + 1) === 'walkway') vy1++;
+      const hLen = hx1 - hx0 + 1;
+      const vLen = vy1 - vy0 + 1;
+      if (hLen >= 10 && vLen <= 4 && x - hx0 >= 5 && hx1 - x >= 5) {
+        const widthAt = (dx) => {
+          let a = y;
+          let b = y;
+          while (groundNameAt(x + dx, a - 1) === 'walkway') a--;
+          while (groundNameAt(x + dx, b + 1) === 'walkway') b++;
+          return b - a + 1;
+        };
+        assert.equal(widthAt(1), vLen, `horizontal walkway run at ${x},${y} is not a constant width`);
+        assert.equal(widthAt(-1), vLen, `horizontal walkway run at ${x},${y} is not a constant width`);
+        sampledRuns++;
+      } else if (vLen >= 10 && hLen <= 4 && y - vy0 >= 5 && vy1 - y >= 5) {
+        const widthAt = (dy) => {
+          let a = x;
+          let b = x;
+          while (groundNameAt(a - 1, y + dy) === 'walkway') a--;
+          while (groundNameAt(b + 1, y + dy) === 'walkway') b++;
+          return b - a + 1;
+        };
+        assert.equal(widthAt(1), hLen, `vertical walkway run at ${x},${y} is not a constant width`);
+        assert.equal(widthAt(-1), hLen, `vertical walkway run at ${x},${y} is not a constant width`);
+        sampledRuns++;
+      }
+    }
+  }
+  assert.ok(sampledRuns >= 3, `found only ${sampledRuns} straight walkway runs long enough to check their width`);
 });
 
 // ---------- FB-0008/FB-0010: Gate 2, a straight approach, and a reachable Main Block entrance ----------
 
-test('FB-0008/FB-0010: Gate 2 exists, a straight road leads to it, and the Main Block entrance is reachable', () => {
+test('FB-0008/FB-0010: Gate 2 exists, a straight avenue leads to it, and the Main Block entrance is reachable', () => {
   const gate2 = gates.find((g) => /Gate 2/.test(g.name));
   assert.ok(gate2, 'no Gate 2 object');
   assert.equal(gate2.props.main, true, 'Gate 2 should be flagged as the main entrance');
 
   // The entrance avenue is one constant-width, dead-straight (single x) corridor from the gate to
-  // the plaza in front of the Main Block: sample a few rows and check the paved band's x-range
-  // (found from its kerb columns) never moves sideways.
+  // the Main Block: sample a few rows and check the paved band's x-range (found from its kerb
+  // columns) never moves sideways.
+  const gateXCenter = Math.floor(gates.find((g) => /Gate 2/.test(g.name)).x);
   const findRoadSpan = (y) => {
     let x0 = null;
     let x1 = null;
-    for (let x = 0; x < json.width; x++) {
+    // Scan a window around Gate 2's column, not the whole map width: at some rows another kerbed
+    // feature (a hostel spur, the DIAC ring) sits far off to the side on the same row.
+    for (let x = gateXCenter - 20; x <= gateXCenter + 20; x++) {
       const n = groundNameAt(x, y) || structNameAt(x, y);
       if (n && (n.startsWith('kerb') || n === 'asphalt' || n.startsWith('roadLine') || n.startsWith('crossing'))) {
         if (x0 === null) x0 = x;
@@ -155,40 +206,70 @@ test('FB-0008/FB-0010: Gate 2 exists, a straight road leads to it, and the Main 
     }
     return x0 === null ? null : [x0, x1];
   };
-  const rows = [layout.fence.height - 5, layout.fence.height - 40, layout.avenueInnerY1 + 5];
-  const spans = rows.map((localY) => findRoadSpan(Math.round(campusZone.y) + localY)).filter(Boolean);
+  const gateY = Math.floor(gate2.y);
+  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
+  assert.ok(mainDoor, 'no Main Block door');
+  // Two rows solidly inside the straight run between the gate and the Main Block, clear of the gate
+  // itself and of the crossing where the avenue meets the Main Block/Library walkway.
+  // Close to each end of the avenue (not the middle), clear of any perpendicular service spur
+  // (e.g. parking's connector) that might cross the avenue's row somewhere in between.
+  const span = gateY - Math.floor(mainDoor.y);
+  const rows = [gateY - Math.max(3, Math.round(span * 0.08)), Math.floor(mainDoor.y) + Math.max(3, Math.round(span * 0.08))];
+  const spans = rows.map((y) => findRoadSpan(y)).filter(Boolean);
   assert.ok(spans.length >= 2, 'could not find the entrance avenue at multiple rows');
   const [first] = spans;
   for (const span of spans) {
     assert.ok(Math.abs(span[0] - first[0]) <= 1 && Math.abs(span[1] - first[1]) <= 1, `entrance avenue is not straight: ${JSON.stringify(spans)}`);
   }
 
-  const reachable = reachableFrom({ x: Math.floor(spawn.x), y: Math.floor(spawn.y) });
-  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
-  assert.ok(mainDoor, 'no Main Block door');
-  assert.ok(reachable(Math.floor(mainDoor.x), Math.floor(mainDoor.y)), 'Main Block entrance is not reachable from the Gate 2 spawn');
+  assert.ok(reachableFromSpawn(Math.floor(mainDoor.x), Math.floor(mainDoor.y)), 'Main Block entrance is not reachable from the Gate 2 spawn');
 });
 
 // ---------- FB-0011: separate, walkable-between buildings ----------
 
-test('FB-0011: the Main Block, Library Block and Mechanical Block are separate, with a walkable route between each pair', () => {
+test('FB-0011: the Main Block, Library Block and Mechanical Block are separate buildings, each reachable from the others', () => {
   const names = ['Main Block', 'Library Block', 'Mechanical Block'];
   const buildings = names.map((n) => objects.find((o) => o.type === 'building' && o.name === n));
   for (const b of buildings) assert.ok(b, 'missing building object');
 
-  // Separate footprints: no two of the three bounding boxes overlap or touch.
-  for (let i = 0; i < buildings.length; i++) {
-    for (let j = i + 1; j < buildings.length; j++) {
-      const a = buildings[i];
-      const b = buildings[j];
-      const gapX = Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width);
-      const gapY = Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height);
-      const separated = gapX > 0 || gapY > 0;
-      assert.ok(separated, `${a.name} and ${b.name} are not separate footprints`);
+  // Separate footprints: flood-fill each building's own contiguous roof/wall/entrance tiles,
+  // starting from its door, and check no two of those connected components share a tile. This
+  // reads the actual structure, not the bounding box -- real BITS buildings have L-shaped wings
+  // (ADR 0009) whose bounding boxes can legitimately overlap while the footprints stay separate.
+  const isBuildingTile = (x, y) => {
+    const n = structNameAt(x, y);
+    return n !== null && (n.startsWith('bitsRoof') || n.startsWith('bitsWall') || n.startsWith('bitsEntrance') || n === 'bitsPillar');
+  };
+  const doorFor = (name) => doors.find((d) => d.props.building === name);
+  function floodBuildingTiles(startX, startY) {
+    const seen = new Set([`${startX},${startY}`]);
+    const stack = [[startX, startY]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const key = `${nx},${ny}`;
+        if (seen.has(key) || !isBuildingTile(nx, ny)) continue;
+        seen.add(key);
+        stack.push([nx, ny]);
+      }
+    }
+    return seen;
+  }
+  const cellSets = names.map((n) => {
+    const d = doorFor(n);
+    assert.ok(d, `missing door for ${n}`);
+    return floodBuildingTiles(Math.floor(d.x), Math.floor(d.y));
+  });
+  for (let i = 0; i < cellSets.length; i++) {
+    for (let j = i + 1; j < cellSets.length; j++) {
+      let shared = 0;
+      for (const cell of cellSets[i]) if (cellSets[j].has(cell)) shared++;
+      assert.equal(shared, 0, `${names[i]} and ${names[j]} share ${shared} structure tiles (touching or merged, not separate footprints)`);
     }
   }
 
-  const doorFor = (name) => doors.find((d) => d.props.building === name);
   for (let i = 0; i < names.length; i++) {
     const reachable = reachableFrom({ x: Math.floor(doorFor(names[i]).x), y: Math.floor(doorFor(names[i]).y) });
     for (let j = 0; j < names.length; j++) {
@@ -209,7 +290,6 @@ test('FB-0012: a second entrance (Side Gate) exists and connects the inside of c
   const gx = Math.floor(sideGate.x);
   const gy = Math.floor(sideGate.y);
   assert.ok(walkable(gx, gy), 'the Side Gate tile itself is not walkable');
-  // One step further out (west) is outside the fence; one step back in (east) is inside it.
   assert.ok(walkable(gx - 1, gy), 'just outside the Side Gate is not walkable');
   assert.ok(walkable(gx + 1, gy), 'just inside the Side Gate is not walkable');
   const reachable = reachableFrom({ x: gx + 1, y: gy });
@@ -218,10 +298,13 @@ test('FB-0012: a second entrance (Side Gate) exists and connects the inside of c
 
 // ---------- FB-0014: roads are bordered by kerb tiles ----------
 
-test('FB-0014: the entrance avenue and the road to DIAC are bordered by kerb tiles', () => {
-  const sampleY = Math.round(campusZone.y) + layout.avenueInnerY1 + 10;
+test('FB-0014: the entrance avenue is bordered by kerb tiles on both sides', () => {
+  const gate2 = gates.find((g) => /Gate 2/.test(g.name));
+  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
+  const sampleY = Math.floor(gate2.y) - Math.round((Math.floor(gate2.y) - Math.floor(mainDoor.y)) * 0.4);
+  const gx = Math.floor(gate2.x);
   const rowNames = [];
-  for (let x = 0; x < json.width; x++) {
+  for (let x = gx - 15; x <= gx + 15; x++) {
     const n = groundNameAt(x, sampleY);
     if (n && (n.startsWith('kerb') || n === 'asphalt')) rowNames.push(n);
   }
@@ -271,21 +354,19 @@ test('FB-0016: the tennis courts use the court line and net tile kit', () => {
       if (n) seen.add(n);
     }
   }
-  for (const name of ['courtLineH', 'courtLineV', 'courtNet', 'courtCornerTL', 'courtCornerTR', 'courtCornerBL', 'courtCornerBR']) {
+  for (const name of ['courtLineH', 'courtLineV', 'courtNet', 'courtNetPostT', 'courtNetPostB', 'courtCornerTL', 'courtCornerTR', 'courtCornerBL', 'courtCornerBR']) {
     assert.ok(seen.has(name), `Tennis Courts area has no "${name}" tile`);
   }
 });
 
 // ---------- FB-0006: pavements use the shaded paving/walkway tiles, not flat road fill ----------
 
-test('FB-0006: the drop-off plaza and internal paths use paving/walkway, not plain asphalt', () => {
-  const plazaCenterX = Math.round(campusZone.x) + Math.round((layout.plaza.x0 + layout.plaza.x1) / 2);
-  const plazaCenterY = Math.round(campusZone.y) + Math.round((layout.plaza.y0 + layout.plaza.y1) / 2);
-  assert.equal(groundNameAt(plazaCenterX, plazaCenterY), 'paving');
-
-  // Sample the spine well away from where it crosses the entrance avenue (that cell is a road
-  // crossing, not plain walkway).
-  const spineY = Math.round(campusZone.y) + layout.walkways[0].y0;
-  const spineX = Math.round(campusZone.x) + layout.walkways[0].x0 + 10;
-  assert.equal(groundNameAt(spineX, spineY), 'walkway');
+test('FB-0006: the campus uses paving and walkway tiles (not plain asphalt) for pedestrian areas', () => {
+  const x0 = Math.round(campusZone.x);
+  const y0 = Math.round(campusZone.y);
+  const x1 = x0 + Math.round(campusZone.width);
+  const y1 = y0 + Math.round(campusZone.height);
+  let walkway = 0;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (groundNameAt(x, y) === 'walkway') walkway++;
+  assert.ok(walkway > 200, `expected substantial walkway coverage inside the fence, found ${walkway} tiles`);
 });

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openGame, state, startGame, holdKey, teleport } = require('./helpers');
+const { openGame, state, startGame, holdKey, teleport, waitForMap } = require('./helpers');
 
 const areaCenter = (page, name) =>
   page.evaluate((n) => {
@@ -40,7 +40,9 @@ test('the campus has no test-map tutorial checklist', async ({ page }) => {
 
 // FB-0008/FB-0010: Gate 2's straight approach avenue actually leads a walking player to the Main
 // Block. Walks the first stretch for real from the spawn, then (to keep the test fast) teleports
-// the rest of the way up the same straight avenue and walks the final approach into the door.
+// the rest of the way up the same straight avenue and walks the final approach into the door --
+// which now (P3, docs/INTERIORS_PLAN.md) actually leads inside; tests/e2e/interiors.spec.js covers
+// the interior itself, this one just proves the avenue gets a walking player there.
 test('the player can walk from the Gate 2 spawn up to the Main Block entrance', async ({ page }) => {
   await openGame(page, { map: null });
   await startGame(page);
@@ -56,9 +58,8 @@ test('the player can walk from the Gate 2 spawn up to the Main Block entrance', 
 
   await teleport(page, door.x, door.y + 8);
   await holdKey(page, 'w', 3000);
-  const after = await state(page);
-  expect(after.tile.y).toBeLessThanOrEqual(door.y + 2);
-  expect(Math.abs(after.tile.x - door.x)).toBeLessThanOrEqual(3);
+  await waitForMap(page, 'main-block-g');
+  expect((await state(page)).ready).toBe(true);
 });
 
 // P4: location banner (Pokemon-style name plate). Shown on map start, and again when the player

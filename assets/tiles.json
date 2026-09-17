@@ -667,6 +667,198 @@
       "solid": true,
       "overhead": false,
       "color": "#7c9f5d"
+    },
+    {
+      "name": "intFloorFoyer",
+      "solid": false,
+      "overhead": false,
+      "color": "#f0eadc"
+    },
+    {
+      "name": "intFloorClassroom",
+      "solid": false,
+      "overhead": false,
+      "color": "#d1c2a1"
+    },
+    {
+      "name": "intFloorCarpet",
+      "solid": false,
+      "overhead": false,
+      "color": "#566684"
+    },
+    {
+      "name": "intFloorLabVinyl",
+      "solid": false,
+      "overhead": false,
+      "color": "#cddede"
+    },
+    {
+      "name": "intFloorLibrary",
+      "solid": false,
+      "overhead": false,
+      "color": "#7a968a"
+    },
+    {
+      "name": "intFloorStage",
+      "solid": false,
+      "overhead": false,
+      "color": "#c6905e"
+    },
+    {
+      "name": "intFloorCourt",
+      "solid": false,
+      "overhead": false,
+      "color": "#428b8d"
+    },
+    {
+      "name": "intDoorway",
+      "solid": false,
+      "overhead": false,
+      "color": "#5b3d2e"
+    },
+    {
+      "name": "intStairsUp",
+      "solid": false,
+      "overhead": false,
+      "color": "#9a9a98"
+    },
+    {
+      "name": "intStairsDown",
+      "solid": false,
+      "overhead": false,
+      "color": "#9b9a98"
+    },
+    {
+      "name": "intLift",
+      "solid": true,
+      "overhead": false,
+      "color": "#5e5e64"
+    },
+    {
+      "name": "intAtriumVoid",
+      "solid": true,
+      "overhead": false,
+      "color": "#838383"
+    },
+    {
+      "name": "intAtriumRailing",
+      "solid": true,
+      "overhead": false,
+      "color": "#dbd7cd"
+    },
+    {
+      "name": "intDesk",
+      "solid": true,
+      "overhead": false,
+      "color": "#765c4a"
+    },
+    {
+      "name": "intTeacherDesk",
+      "solid": true,
+      "overhead": false,
+      "color": "#5b402f"
+    },
+    {
+      "name": "intWhiteboardWall",
+      "solid": true,
+      "overhead": false,
+      "color": "#c3ac97"
+    },
+    {
+      "name": "intBench",
+      "solid": true,
+      "overhead": false,
+      "color": "#9aa8ac"
+    },
+    {
+      "name": "intComputerBench",
+      "solid": true,
+      "overhead": false,
+      "color": "#8796a3"
+    },
+    {
+      "name": "intSink",
+      "solid": true,
+      "overhead": false,
+      "color": "#778698"
+    },
+    {
+      "name": "intCabinet",
+      "solid": true,
+      "overhead": false,
+      "color": "#727377"
+    },
+    {
+      "name": "intSofa",
+      "solid": true,
+      "overhead": false,
+      "color": "#3f6082"
+    },
+    {
+      "name": "intNoticeboard",
+      "solid": true,
+      "overhead": false,
+      "color": "#937c58"
+    },
+    {
+      "name": "intReceptionDesk",
+      "solid": true,
+      "overhead": false,
+      "color": "#805e49"
+    },
+    {
+      "name": "intLocker",
+      "solid": true,
+      "overhead": false,
+      "color": "#395090"
+    },
+    {
+      "name": "intAuditoriumSeat",
+      "solid": true,
+      "overhead": false,
+      "color": "#5a282c"
+    },
+    {
+      "name": "intBadmintonNet",
+      "solid": false,
+      "overhead": false,
+      "color": "#589496"
+    },
+    {
+      "name": "intCourtLineIndoor",
+      "solid": false,
+      "overhead": false,
+      "color": "#4c9193"
+    },
+    {
+      "name": "intTTTable",
+      "solid": true,
+      "overhead": false,
+      "color": "#467278"
+    },
+    {
+      "name": "intBed",
+      "solid": true,
+      "overhead": false,
+      "color": "#9fb0d2"
+    },
+    {
+      "name": "intCurtain",
+      "solid": true,
+      "overhead": false,
+      "color": "#7290a8"
+    },
+    {
+      "name": "intMedicalDesk",
+      "solid": true,
+      "overhead": false,
+      "color": "#7c5540"
+    },
+    {
+      "name": "intMachine",
+      "solid": true,
+      "overhead": false,
+      "color": "#726e64"
     }
   ]
 }

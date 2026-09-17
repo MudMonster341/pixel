@@ -12,6 +12,10 @@ const PICKUP_RANGE = 10;
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
 const PLAYER_IDLE = { down: 0, up: 3, left: 6, right: 6 };
 const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
+// A door/stairs object's `facing` property is the direction the player faces once they arrive AT
+// that object (see docs/INTERIORS_PLAN.md "door object format"). Spawning one tile further along
+// that direction lands the player just past the threshold, not standing on the trigger tile itself.
+const DIRECTION_OFFSET = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 // Where the held item sits relative to the player's center, per facing (FB-0002).
 // `front: true` draws it over the player; `front: false` draws it behind (partly hidden).
@@ -31,6 +35,9 @@ class WorldScene extends Phaser.Scene {
     this.mapKey = data.map || initialMapKey();
     this.def = MAPS[this.mapKey];
     this.spawn = data.spawn || this.def.spawn;
+    // Set when a Tiled door/stairs object sent the player here (instead of a concrete `spawn`):
+    // the name of the object to land in front of, resolved once `this.mapObjects` exists (buildMap).
+    this.spawnAt = data.spawnAt || null;
     this.transitioning = false;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
   }
@@ -89,6 +96,7 @@ class WorldScene extends Phaser.Scene {
       }
       this.tileData = gridFromTiled(json);
       this.mapObjects = tiledObjects(json);
+      if (!this.spawn && this.spawnAt) this.spawn = this.resolveSpawnAt(this.spawnAt);
       if (!this.spawn) {
         const spawn = this.mapObjects.find((o) => o.type === 'spawn');
         this.spawn = { x: Math.floor(spawn.x), y: Math.floor(spawn.y), facing: spawn.props.facing };
@@ -216,16 +224,36 @@ class WorldScene extends Phaser.Scene {
     this.updateHeldItem(time, moving);
   }
 
-  // Doors are one tile wide, so walking at one slightly off-center would snag on the wall.
+  // Every warp trigger point on this map, in one shape: text-map `warps` entries (already
+  // {x,y,to,spawn}) plus Tiled `door`/`stairs` objects with a `to` property (campus buildings,
+  // interior stairs). Used by both doorAssist (below) and checkWarps.
+  warpPoints() {
+    const objectWarps = (this.mapObjects || [])
+      .filter((o) => (o.type === 'door' || o.type === 'stairs') && o.props.to)
+      .map((o) => ({ x: Math.floor(o.x), y: Math.floor(o.y), to: o.props.to, spawnAt: o.props.toId, name: o.name }));
+    return [...(this.def.warps || []), ...objectWarps];
+  }
+
+  // Doors are one or two tiles wide, so walking at one slightly off-center would snag on the wall.
   // If a warp tile is just ahead, return a sideways speed that slides the player into line.
   doorAssist(dy, speed) {
     const body = this.player.body;
     const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
-    const warp = (this.def.warps || []).find(
+    const warp = this.warpPoints().find(
       (w) => w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE,
     );
     if (!warp) return null;
     return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -speed, speed);
+  }
+
+  // Resolves a door/stairs object's name into a spawn point: one tile past it, in the direction
+  // its own `facing` property says an arriving player should face (docs/INTERIORS_PLAN.md).
+  resolveSpawnAt(name) {
+    const target = (this.mapObjects || []).find((o) => o.name === name);
+    if (!target) return null;
+    const facing = target.props.facing || 'down';
+    const [dx, dy] = DIRECTION_OFFSET[facing] || [0, 0];
+    return { x: Math.floor(target.x) + dx, y: Math.floor(target.y) + dy, facing };
   }
 
   // Shows the selected hotbar item in the character's hand, in front of or behind the body
@@ -318,15 +346,29 @@ class WorldScene extends Phaser.Scene {
     const body = this.player.body;
     const tileX = Math.floor(body.center.x / TILE);
     const tileY = Math.floor((body.bottom - 1) / TILE);
-    const warp = (this.def.warps || []).find((w) => w.x === tileX && w.y === tileY);
+    const warp = this.warpPoints().find((w) => w.x === tileX && w.y === tileY);
     if (!warp) return;
+
+    // A door/stairs object can point at a map that doesn't exist yet (a building not linked up,
+    // or built by a parallel worktree not yet merged): warn and toast instead of crashing
+    // (docs/ARCHITECTURE.md rule 1, "validate and fail loudly", extended here to "fail softly for
+    // the player, loudly in the console").
+    if (!MAPS[warp.to]) {
+      if (!this.warnedUnknownMaps) this.warnedUnknownMaps = new Set();
+      if (!this.warnedUnknownMaps.has(warp.to)) {
+        console.warn(`${warp.name || 'a door'} leads to an unknown map "${warp.to}"`);
+        this.game.events.emit('toast', 'Closed for now.');
+        this.warnedUnknownMaps.add(warp.to);
+      }
+      return;
+    }
 
     this.transitioning = true;
     this.player.setVelocity(0, 0);
     this.player.anims.stop();
     this.prompt.setVisible(false);
     this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn }));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt }));
   }
 
   // The named area/zone/building object (if any) the player's feet are currently inside, smallest

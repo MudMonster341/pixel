@@ -1058,10 +1058,19 @@ rectObjectFrame('cutscene', 'Gate 2 entrance', gate2U - AVENUE_W / 2, fenceFrame
   { name: 'cutscene', type: 'string', value: 'gate2' },
 ]);
 
+// Interior door format (docs/INTERIORS_PLAN.md, P3): a point object, type: 'door', named
+// "<Building> entrance", with properties `to` (interior map key, from layout.buildings[id].to),
+// `toId` (the name of the door/stairs object to land on in that map -- every interior's exterior
+// door is named "<Building> Ground Floor entrance", see tools/interiors/plans.js) and `facing`
+// (the direction the player faces once they arrive AT THIS object, i.e. when exiting the building
+// back onto campus). world.js resolves `to`/`toId` generically for any Tiled door/stairs object;
+// an unknown `to` map logs a warning and shows a toast instead of crashing.
 for (const b of buildingList.filter((b) => b.doorCell)) {
   pointObject('door', `${b.name} entrance`, b.doorCell[0], b.doorCell[1], [
     { name: 'building', type: 'string', value: b.name },
     { name: 'to', type: 'string', value: b.to },
+    { name: 'toId', type: 'string', value: `${b.name} Ground Floor entrance` },
+    { name: 'facing', type: 'string', value: 'down' }, // arriving here (exiting the building) faces away from it, into the avenue/plaza
   ]);
 }
 

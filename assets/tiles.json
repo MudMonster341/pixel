@@ -252,7 +252,7 @@
       "name": "bitsRoof",
       "solid": true,
       "overhead": false,
-      "color": "#d5a486"
+      "color": "#9f9284"
     },
     {
       "name": "bitsWall",
@@ -270,7 +270,7 @@
       "name": "otherRoof",
       "solid": true,
       "overhead": false,
-      "color": "#9fa4ae"
+      "color": "#9fa3ad"
     },
     {
       "name": "otherWall",
@@ -516,31 +516,31 @@
       "name": "bitsRoofT",
       "solid": true,
       "overhead": false,
-      "color": "#c99b80"
+      "color": "#978a7e"
     },
     {
       "name": "bitsRoofL",
       "solid": true,
       "overhead": false,
-      "color": "#c99b80"
+      "color": "#978a7e"
     },
     {
       "name": "bitsRoofR",
       "solid": true,
       "overhead": false,
-      "color": "#c99b80"
+      "color": "#978a7e"
     },
     {
       "name": "bitsRoofTL",
       "solid": true,
       "overhead": false,
-      "color": "#bb9078"
+      "color": "#928276"
     },
     {
       "name": "bitsRoofTR",
       "solid": true,
       "overhead": false,
-      "color": "#bb9078"
+      "color": "#928276"
     },
     {
       "name": "bitsEntranceL",
@@ -588,25 +588,25 @@
       "name": "otherRoofL",
       "solid": true,
       "overhead": false,
-      "color": "#969ba5"
+      "color": "#969aa4"
     },
     {
       "name": "otherRoofR",
       "solid": true,
       "overhead": false,
-      "color": "#969ba5"
+      "color": "#969aa5"
     },
     {
       "name": "otherRoofTL",
       "solid": true,
       "overhead": false,
-      "color": "#8b8f99"
+      "color": "#8a8e99"
     },
     {
       "name": "otherRoofTR",
       "solid": true,
       "overhead": false,
-      "color": "#8b8f99"
+      "color": "#8a8f99"
     },
     {
       "name": "fenceH",
@@ -738,7 +738,13 @@
       "name": "intAtriumVoid",
       "solid": true,
       "overhead": false,
-      "color": "#838383"
+      "color": "#7b776a"
+    },
+    {
+      "name": "intAtriumVoidEdge",
+      "solid": true,
+      "overhead": false,
+      "color": "#646159"
     },
     {
       "name": "intAtriumRailing",
@@ -816,7 +822,7 @@
       "name": "intAuditoriumSeat",
       "solid": true,
       "overhead": false,
-      "color": "#5a282c"
+      "color": "#59272b"
     },
     {
       "name": "intBadmintonNet",

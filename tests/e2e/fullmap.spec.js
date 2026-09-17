@@ -66,3 +66,27 @@ test('the full-screen map never labels a nameless neighbouring building, but kee
   expect(labelTexts).toContain('Main Block');
   expect(labelTexts).toContain('Gate 2');
 });
+
+// QA P5: on interior maps, a long caption like "MECHANICAL BLOCK - GROUND FLOOR" ran past the right
+// edge of the minimap panel (see qa-shots/indoor-main-block-g-auditorium.png). Minimap.setLabel
+// (ui.js) now shrinks the font (and truncates as a last resort) until the caption's own rendered
+// bounds fit -- checked here against every real map name, not just the one or two visited in a
+// normal playthrough.
+test('the minimap caption always stays inside the panel, for every map in MAPS (no overflow past the right edge)', async ({ page }) => {
+  await openGame(page, { map: null });
+  await startGame(page);
+
+  const results = await page.evaluate(() => {
+    const mm = game.scene.getScene('ui').minimap;
+    const panelRight = mm.area.x - 12 + mm.width; // the panel's own absolute right edge
+    return Object.values(MAPS).map((def) => {
+      mm.setLabel(def.name.toUpperCase());
+      return { name: def.name, right: mm.label.x + mm.label.width, panelRight };
+    });
+  });
+
+  expect(results.length).toBeGreaterThan(5); // sanity: MAPS actually resolved in the page
+  for (const r of results) {
+    expect(r.right, `"${r.name}"'s caption (right edge ${r.right}) overflows the minimap panel (right edge ${r.panelRight})`).toBeLessThanOrEqual(r.panelRight);
+  }
+});

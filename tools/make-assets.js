@@ -56,8 +56,12 @@ const PALETTE = {
   '@': '#3f8a8c', '#': '#e8e8e8',         // court + line
   $: '#e6cba4', '%': '#cfae86',           // BITS wall + shade
   '&': '#cf8a6c', '*': '#2f3a44',         // BITS trim + glass
-  '+': '#d9a88a', '=': '#b9876c',         // BITS roof (light terracotta) + roof edge
-  '^': '#c9ccd3', '~': '#a4a9b3',         // other buildings: wall + roof
+  // FB-0022 (QA): flat concrete roof (from directly above, this is the whole tile) -- a
+  // darker/greyer tone than it used to be, deliberately distinct from both the reddish-brown brick
+  // paving ('7'/'-'/'_' below) and the blue-grey "other building" roof ('~'), so a roof never reads
+  // as pavement from the map/minimap. ',' is the AC-unit/skylight speckle on top of it.
+  '+': '#9c9488', '=': '#b9876c', ',': '#6e675a', // BITS roof (grey concrete) + roof edge + AC unit
+  '^': '#c9ccd3', '~': '#a4a9b3', '·': '#7d818a', // other buildings: wall + roof + roof speckle
   '<': '#7c8088',                          // fence
   // campus kit additions (FB-0006/0011/0014/0015/0016): appended, existing keys unchanged
   '-': '#d9927a', _: '#6f362c',           // paving bevel: highlight + deep shadow
@@ -65,6 +69,10 @@ const PALETTE = {
   // interior kit (P3, interiors): floor variants per room type + a couple of furniture fabrics.
   // Walls reuse the BITS wall/trim/glass keys above ($ % & *) so buildings match inside and out.
   µ: '#f2ede0', ß: '#ded4bd',             // foyer/lobby floor: light + fleck
+  // FB from QA: the atrium void used to be a flat grey checkerboard that read as a missing texture.
+  // It's now a darkened version of the foyer floor above (ø/Ø), with a darker vignette band (º) on
+  // the ring of void tiles touching the railing, so it reads as a shadowed drop to the floor below.
+  ø: '#85827b', Ø: '#7a7568', º: '#55534e',
   '[': '#d7c9a8', ']': '#bfae8a',         // classroom floor: light + plank line
   '{': '#5b6b8a', '}': '#42506b',         // office/club carpet: light + weave
   '¦': '#cfe0e0', '¬': '#a9c2c2',         // lab vinyl: light + speckle
@@ -522,10 +530,10 @@ const TILES = [
   { name: 'turf', draw: turf },
   { name: 'court', draw: (img, x, y) => img.fill(x, y, TILE, TILE, '@') },
   { name: 'fence', solid: true, draw: fence },
-  { name: 'bitsRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '+', '=') },
+  { name: 'bitsRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '+', '=', ',') },
   { name: 'bitsWall', solid: true, draw: bitsWall },
   { name: 'bitsDoor', draw: bitsDoor },
-  { name: 'otherRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<') },
+  { name: 'otherRoof', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<', '·') },
   { name: 'otherWall', solid: true, draw: otherWall },
 
   // ---- campus kit additions, appended after the original 44 tiles (indices are stable) ----
@@ -630,6 +638,7 @@ const TILES = [
   { name: 'intStairsDown', draw: intStairsDown },
   { name: 'intLift', solid: true, draw: intLift },
   { name: 'intAtriumVoid', solid: true, draw: intAtriumVoid },
+  { name: 'intAtriumVoidEdge', solid: true, draw: intAtriumVoidEdge },
   { name: 'intAtriumRailing', solid: true, draw: intAtriumRailing },
   { name: 'intDesk', solid: true, draw: intDesk },
   { name: 'intTeacherDesk', solid: true, draw: intTeacherDesk },
@@ -703,8 +712,12 @@ function fence(img, x, y) {
   img.fill(x, y + 13, TILE, 1, '2');
 }
 
-function flatRoof(img, x, y, base, edge) {
-  img.fill(x, y, TILE, TILE, base);
+// `speck` (FB-0022, QA: "roofs read as pavement") scatters a few darker AC-unit/skylight dots over
+// the flat fill, so a big roof reads as a textured rooftop from above rather than a flat colour
+// block that can be mistaken for paving; the parapet edge strip is unchanged.
+function flatRoof(img, x, y, base, edge, speck) {
+  if (speck) speckle(img, x, y, base, speck, 733, 5);
+  else img.fill(x, y, TILE, TILE, base);
   img.fill(x, y, TILE, 1, edge);
   img.fill(x, y, 1, TILE, edge);
 }
@@ -1009,7 +1022,7 @@ function courtNetPost(img, x, y, side) {
 // -- FB-0011: BITS + other-building fronts (roof edges, entrance, pillar) and a fence kit --
 
 function bitsRoofEdge(img, x, y, edges) {
-  img.fill(x, y, TILE, TILE, '+');
+  speckle(img, x, y, '+', ',', 739, 5); // same AC-unit texture as the plain roof fill (flatRoof)
   if (edges.top) img.fill(x, y, TILE, 3, '=');
   if (edges.left) img.fill(x, y, 3, TILE, '=');
   if (edges.right) img.fill(x + TILE - 3, y, 3, TILE, '=');
@@ -1017,7 +1030,7 @@ function bitsRoofEdge(img, x, y, edges) {
 }
 
 function otherRoofEdge(img, x, y, edges) {
-  img.fill(x, y, TILE, TILE, '~');
+  speckle(img, x, y, '~', '·', 997, 5);
   if (edges.top) img.fill(x, y, TILE, 3, '<');
   if (edges.left) img.fill(x, y, 3, TILE, '<');
   if (edges.right) img.fill(x + TILE - 3, y, 3, TILE, '<');
@@ -1138,10 +1151,21 @@ function intLift(img, x, y) {
   img.set(x + 7, y + 7, 'Y');
 }
 
-// The mezzanine's atrium opening (railing-bordered, non-walkable): a cool, flat grey so it clearly
-// reads as a drop to the foyer below, against the mezzanine's own warm beige floor around it.
+// The mezzanine's atrium opening (railing-bordered, non-walkable): a view straight down onto the
+// ground-floor foyer below, so it reads as a drop rather than a hole in the texture -- the same
+// fleck pattern as intFloorFoyer, several shades darker (as if seen through the well, away from the
+// mezzanine's own lighting).
 function intAtriumVoid(img, x, y) {
-  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (Math.floor(xx / 4) + Math.floor(yy / 4)) % 2 === 0 ? 'o' : 'O'));
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx + yy * 3) % 9 === 0 ? 'ø' : 'Ø'));
+}
+// The ring of void tiles that touch the railing (build-interiors.js atriumVoid): the same darkened
+// foyer floor, with a soft shadow band along the tile's own edges -- cast by the railing lip above --
+// so the drop reads clearly no matter which side of the rectangle the tile sits on.
+function intAtriumVoidEdge(img, x, y) {
+  forEachPixel((xx, yy) => {
+    const edgeDist = Math.min(xx, TILE - 1 - xx, yy, TILE - 1 - yy);
+    img.set(x + xx, y + yy, edgeDist < 3 ? 'º' : (xx + yy * 3) % 9 === 0 ? 'ø' : 'Ø');
+  });
 }
 function intAtriumRailing(img, x, y) {
   intFloorFoyer(img, x, y);

@@ -668,6 +668,72 @@ for (const w of ways) {
   if (!paved && !isD54Way(w)) for (const p of points) if (!insideFence(...p)) externalRoadSamples.push(p);
 }
 
+// D54 (Academic City Road): real OpenStreetMap geometry that runs for kilometres in each direction
+// with a very gentle overall curve -- each individual OSM segment (a straight line between two real
+// nodes, by definition) can still drift a couple of tiles from end to end when it's a kilometre+
+// long, even though any short stretch of it reads as dead straight. The loop above paints its full
+// length as a plain, always-connected asphalt fill, which is why it read as a bare grey slab (QA).
+// This overlays the same kerb + lane-marking road kit as the Gate 2 avenue on every part of it that's
+// close enough to axis-aligned (a generous slope tolerance -- a real gentle curve, not a turn or
+// intersection), one short chunk at a time: chunking keeps each chunk's own drift down to a fraction
+// of a tile, so the kerb tracks the real gentle curve as a "staircase" of short straight rectangles
+// instead of one rigid rectangle whose ends would drift away from the drawn road over a long run.
+// Segments are clipped to the map's own drawn bounds [minU,maxU] first, since only the part on
+// screen matters and the raw way runs for kilometres past either edge of the map.
+const D54_SLOPE_TOL = 0.06; // ~3.4 degrees off axis: generous for a gentle real curve, strict enough to skip an actual turn/intersection
+const D54_CHUNK_METERS = 24;
+function clipSegmentToURange(a, b, uMin, uMax) {
+  const du = b[0] - a[0];
+  let t0 = 0;
+  let t1 = 1;
+  if (Math.abs(du) < 1e-9) {
+    if (a[0] < uMin || a[0] > uMax) return null;
+  } else {
+    let ta = (uMin - a[0]) / du;
+    let tb = (uMax - a[0]) / du;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(0, ta);
+    t1 = Math.min(1, tb);
+    if (t0 >= t1) return null;
+  }
+  const lerp = (t) => [a[0] + t * du, a[1] + t * (b[1] - a[1])];
+  return [lerp(t0), lerp(t1)];
+}
+function paveD54Chunk(a, b, width) {
+  const du = b[0] - a[0];
+  const dv = b[1] - a[1];
+  if (Math.hypot(du, dv) < width) return; // too short for a sensible kerb cap
+  if (insideFence(...a) || insideFence(...b)) return; // never inside the fence
+  if (Math.abs(dv) <= Math.abs(du) * D54_SLOPE_TOL) {
+    const level = (a[1] + b[1]) / 2;
+    paveRectFrame(Math.min(a[0], b[0]), level - width / 2, Math.max(a[0], b[0]), level + width / 2, 'asphalt', 'h');
+  } else if (Math.abs(du) <= Math.abs(dv) * D54_SLOPE_TOL) {
+    const level = (a[0] + b[0]) / 2;
+    paveRectFrame(level - width / 2, Math.min(a[1], b[1]), level + width / 2, Math.max(a[1], b[1]), 'asphalt', 'v');
+  } // else: a real turn/intersection, not close enough to an axis -- leave the plain fill from the loop above
+}
+for (const w of ways) {
+  if (!isD54Way(w)) continue;
+  const width = layout.roadWidths[w.tags.highway] || layout.roadWidths.primary;
+  const points = w.points.map(ringShift);
+  for (let i = 0; i < points.length - 1; i++) {
+    const clipped = clipSegmentToURange(points[i], points[i + 1], minU, maxU);
+    if (!clipped) continue;
+    const [a, b] = clipped;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const steps = Math.max(1, Math.ceil(length / D54_CHUNK_METERS));
+    for (let s = 0; s < steps; s++) {
+      const t0 = s / steps;
+      const t1 = (s + 1) / steps;
+      paveD54Chunk(
+        [a[0] + t0 * (b[0] - a[0]), a[1] + t0 * (b[1] - a[1])],
+        [a[0] + t1 * (b[0] - a[0]), a[1] + t1 * (b[1] - a[1])],
+        width,
+      );
+    }
+  }
+}
+
 // ================= 11. Gate 2: booth + straight approach, connected into the outside road network =================
 
 function paveRectFrame(u0, v0, u1, v1, fillName, laneAxis) {
@@ -693,6 +759,12 @@ function paveRectFrame(u0, v0, u1, v1, fillName, laneAxis) {
     return null;
   };
   forRectFrame(u0, v0, u1, v1, (x, y) => {
+    // FB-0022 (QA): never let a road/kerb overwrite a building's own footprint (roof, parapet or
+    // wall) -- a rectangle routed close to a building used to erase a strip of its roof and paint
+    // pavement over it. roofOwner (section 9) is fully populated for every building before any
+    // road/walkway code runs, so this is a safe, cheap guard regardless of the two rectangles' exact
+    // relative geometry.
+    if (roofOwner[y * W + x] !== -1) return;
     const side = kerbSide(x, y);
     if (side) {
       structures[y * W + x] = -1;
@@ -713,6 +785,7 @@ function fillRectFrame(u0, v0, u1, v1, tileName, skipInsideFence) {
     const u = minU + (x + 0.5) * MPT;
     const v = minV + (y + 0.5) * MPT;
     if (skipInsideFence && insideFence(u, v)) return;
+    if (roofOwner[y * W + x] !== -1) return; // FB-0022: never draw a walkway/connector over a building
     structures[y * W + x] = -1;
     ground[y * W + x] = TILE[tileName];
   });
@@ -729,8 +802,51 @@ function connectRect(p0, p1, widthMeters, tileName, bend = 'h', avoidFence = fal
   fillRectFrame(p0[0] - r, p0[1] - r, corner[0] + r, corner[1] + r, tileName, avoidFence);
   fillRectFrame(corner[0] - r, corner[1] - r, p1[0] + r, p1[1] + r, tileName, avoidFence);
 }
+// FB-0022 (QA): a plain 2-segment bend can clip straight through a building that sits between the
+// two points -- the academic complex's real footprints are large and L-shaped (Main Block wraps
+// around part of the courtyard), so a door on one side of it isn't always reachable by a bend that
+// only tries the two obvious corners. Every BITS building's own real footprint rectangles (the same
+// ones drawn in section 9), used to check a candidate path before it's painted, not after.
+const BITS_FOOTPRINTS = buildingList.filter((b) => b.isBits).flatMap((b) => b.rects || [bbox(b.poly)]);
+function segmentHitsFootprint(a, b, r, rect) {
+  const lo = { u: Math.min(a[0], b[0]) - r, v: Math.min(a[1], b[1]) - r };
+  const hi = { u: Math.max(a[0], b[0]) + r, v: Math.max(a[1], b[1]) + r };
+  return lo.u < rect.u1 && hi.u > rect.u0 && lo.v < rect.v1 && hi.v > rect.v0;
+}
+function bendIsClear(p0, corner, p1, r) {
+  return [[p0, corner], [corner, p1]].every(([a, b]) => !BITS_FOOTPRINTS.some((rect) => segmentHitsFootprint(a, b, r, rect)));
+}
+// A column at or near `startU`, clear of every BITS building footprint for the whole [v0,v1] run --
+// walked outward from `startU` (typically the destination door's own column) a couple of metres at a
+// time until a clear one turns up, so a detour goes around the *nearest* edge of whatever is blocking
+// the direct route rather than an arbitrary one.
+function findClearColumn(startU, v0, v1, r) {
+  const vLo = Math.min(v0, v1) - r;
+  const vHi = Math.max(v0, v1) + r;
+  const blocked = (u) => BITS_FOOTPRINTS.some((rect) => u - r < rect.u1 && u + r > rect.u0 && vLo < rect.v1 && vHi > rect.v0);
+  if (!blocked(startU)) return startU;
+  const step = MPT * 2;
+  for (let i = 1; i <= 500; i++) {
+    if (!blocked(startU + i * step)) return startU + i * step;
+    if (!blocked(startU - i * step)) return startU - i * step;
+  }
+  return startU; // give up (500 steps is generous); the roofOwner guard in fillRectFrame is the last line of defence
+}
 function connectWalkway(p0, p1, bend = 'h') {
-  connectRect(p0, p1, layout.walkwayWidthMeters, 'walkway', bend);
+  const width = layout.walkwayWidthMeters;
+  const r = width / 2;
+  const cornerH = [p1[0], p0[1]];
+  const cornerV = [p0[0], p1[1]];
+  const preferredCorner = bend === 'h' ? cornerH : cornerV;
+  const otherCorner = bend === 'h' ? cornerV : cornerH;
+  if (bendIsClear(p0, preferredCorner, p1, r)) return connectRect(p0, p1, width, 'walkway', bend);
+  if (bendIsClear(p0, otherCorner, p1, r)) return connectRect(p0, p1, width, 'walkway', bend === 'h' ? 'v' : 'h');
+  // Both direct bends cross a building: detour around it via a third waypoint, a column clear of
+  // every building for the whole vertical run between the two points.
+  const bypassU = findClearColumn(p1[0], p0[1], p1[1], r);
+  connectRect(p0, [bypassU, p0[1]], width, 'walkway', 'h');
+  connectRect([bypassU, p0[1]], [bypassU, p1[1]], width, 'walkway', 'v');
+  connectRect([bypassU, p1[1]], p1, width, 'walkway', 'h');
 }
 
 const AVENUE_W = layout.gate2.approachWidthMeters;
@@ -949,12 +1065,33 @@ function inSpan(v, a, b) {
 structOnLawn(gx(gate2U - AVENUE_W / 2 - 3), gy(fenceFrame.v1 - 2), TILE.flowerbed);
 structOnLawn(gx(gate2U + AVENUE_W / 2 + 3), gy(fenceFrame.v1 - 2), TILE.flowerbed);
 
+// FB-0022 (QA): trees need at least 1 tile of clearance from paths, roads and building walls/doors
+// -- not just avoid sitting directly on them (isLawn already did that) -- so they never crowd a
+// doorway or narrow the walkable gap between two buildings into an impassable one. Checked against
+// a 1-tile margin all around the tree's own 2x3 footprint (canopy + trunk).
+const TREE_CLEARANCE_TILES = new Set([
+  'walkway', 'asphalt', 'paving', 'parking', 'track', 'turf', 'court',
+  'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+  'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
+]);
+function hasTreeClearance(cx, topY) {
+  for (let y = topY - 1; y <= topY + 3; y++) {
+    for (let x = cx - 1; x <= cx + 2; x++) {
+      if (!inGrid(x, y)) continue;
+      if (roofOwner[y * W + x] !== -1) return false; // a building's own footprint (roof/wall/door)
+      const groundName = tileInfo.tiles[ground[y * W + x]].name;
+      if (TREE_CLEARANCE_TILES.has(groundName)) return false;
+    }
+  }
+  return true;
+}
 function plantTree(cx, topY, kind) {
   const cells = [
     [cx, topY], [cx + 1, topY], [cx, topY + 1], [cx + 1, topY + 1],
     [cx, topY + 2],
   ];
   if (!cells.every(([x, y]) => isLawn(x, y))) return false;
+  if (!hasTreeClearance(cx, topY)) return false;
   const canopy = kind === 'palm'
     ? ['palmCanopyTL', 'palmCanopyTR', 'palmCanopyBL', 'palmCanopyBR']
     : ['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR'];
@@ -1074,12 +1211,84 @@ for (const b of buildingList.filter((b) => b.doorCell)) {
   ]);
 }
 
+// FB-0022 (QA): the single 'building' object below is a bounding box, used for the full-screen
+// map's label and a few tests -- for an L-shaped building (several real BITS buildings have wings,
+// decomposeIntoRects) that bbox can cover empty ground between the wings, or even spill into a
+// neighbouring building's own plaza, and areaHere() (world.js) used to read building names from it
+// directly: standing right outside the Mechanical Block's door could then resolve to "Main Block"
+// if Main Block's bbox happened to reach that far. Two more precise object sets are emitted instead
+// for anything that does point-containment, built from the *exact* cells footprintCells (section 9)
+// enumerated for this building -- not its rects' or polygon's bounding box, which for a non-
+// rectangular "other" building (no decomposeIntoRects) would claim corners that aren't really part
+// of it -- grouped into per-row rectangles the same way drawBuilding groups its own wall runs:
+//  - 'buildingFootprint': the exact footprint, no extension -- ground truth for tests (e.g. "no
+//    walkway tile lies inside a building footprint") that must not be fooled by a tile the walkway
+//    code already painted over.
+//  - 'zone': the same footprint, but its southmost row (where the door is, if any) is extended a
+//    few tiles further south, so standing just outside a door still resolves to this building, not
+//    whatever bbox a different building happens to cover. A few real BITS buildings sit only a tile
+//    or two apart (ADR 0009), so this reaches a little past the wall thickness alone.
+//    world.js's areaHere() reads building names from 'zone', not 'building'.
 for (const b of buildingList) {
   const box = buildingBBox(b);
   rectObjectFrame('building', b.name, box.u0, box.v0, box.u1, box.v1 + b.wallTiles * MPT, [
     { name: 'style', type: 'string', value: b.style },
     { name: 'unverified', type: 'bool', value: Boolean(b.unverified) },
   ]);
+  const cellsByRow = new Map();
+  footprintCells(b, (x, y) => {
+    if (!cellsByRow.has(y)) cellsByRow.set(y, []);
+    cellsByRow.get(y).push(x);
+  });
+  if (!cellsByRow.size) continue;
+  const rows = [...cellsByRow.keys()].sort((a, c) => a - c);
+  const maxRow = rows[rows.length - 1];
+  // Horizontal runs per row first (a row can have more than one, e.g. an L-shape's notch)...
+  const runsByRow = new Map();
+  for (const y of rows) {
+    const xs = [...cellsByRow.get(y)].sort((a, c) => a - c);
+    const runs = [];
+    let runStart = xs[0];
+    let prev = xs[0];
+    for (let i = 1; i <= xs.length; i++) {
+      if (i === xs.length || xs[i] !== prev + 1) {
+        runs.push({ x0: runStart, x1: prev });
+        if (i < xs.length) runStart = xs[i];
+      }
+      if (i < xs.length) prev = xs[i];
+    }
+    runsByRow.set(y, runs);
+  }
+  // ...then each run is grown downward through identical runs on the following rows, so a plain
+  // rectangular block (most of them, especially a decomposeIntoRects piece) collapses back down to
+  // one object instead of one per row.
+  const consumed = new Set();
+  for (const y of rows) {
+    runsByRow.get(y).forEach((run, idx) => {
+      const key = `${y}:${idx}`;
+      if (consumed.has(key)) return;
+      let y1 = y;
+      for (;;) {
+        const nextRuns = runsByRow.get(y1 + 1);
+        const nextIdx = nextRuns ? nextRuns.findIndex((r) => r.x0 === run.x0 && r.x1 === run.x1) : -1;
+        if (nextIdx === -1) break;
+        consumed.add(`${y1 + 1}:${nextIdx}`);
+        y1++;
+      }
+      rectObjectGrid('buildingFootprint', b.name, run.x0, y, run.x1, y1, [{ name: 'style', type: 'string', value: b.style }]);
+      // Extend south from wherever the real door actually is, not just "the building's overall
+      // southmost row" -- on an L-shaped building the door's own run isn't always the one that
+      // reaches furthest south (Library Block: its door sits on a shorter run than a wing beside
+      // it), so anchoring on the geometric maxRow could extend the wrong piece and leave the door's
+      // own approach uncovered.
+      const doorOnThisRun = b.doorCell && b.doorCell[0] >= run.x0 && b.doorCell[0] <= run.x1 && b.doorCell[1] >= y && b.doorCell[1] <= y1 + b.wallTiles + 1;
+      const zoneY1 = doorOnThisRun ? b.doorCell[1] + 2 : y1 === maxRow ? y1 + b.wallTiles + 2 : y1;
+      rectObjectGrid('zone', b.name, run.x0, y, run.x1, zoneY1, [
+        { name: 'style', type: 'string', value: b.style },
+        { name: 'unverified', type: 'bool', value: Boolean(b.unverified) },
+      ]);
+    });
+  }
 }
 
 rectObjectFrame('area', layout.manual.centralLawn.name, ...layout.manual.centralLawn.rect.slice(0, 2), layout.manual.centralLawn.rect[0] + layout.manual.centralLawn.rect[2], layout.manual.centralLawn.rect[1] + layout.manual.centralLawn.rect[3], [{ name: 'kind', type: 'string', value: 'lawn' }]);

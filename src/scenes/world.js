@@ -371,10 +371,13 @@ class WorldScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt }));
   }
 
-  // The named area/zone/building object (if any) the player's feet are currently inside, smallest
-  // match wins (objectAt in maplogic.js), e.g. "Athletics Track" over the whole campus outline.
+  // The named area/zone object (if any) the player's feet are currently inside, smallest match wins
+  // (objectAt in maplogic.js), e.g. "Athletics Track" over the whole campus outline. Building names
+  // come from 'zone' objects (one per real footprint rectangle, generated alongside the coarser
+  // 'building' bbox used only for labels -- QA: the bbox of an L-shaped building can spill into a
+  // neighbouring building's plaza and win there, which 'zone's precise footprint rectangles don't).
   areaHere() {
-    return objectAt(this.mapObjects, ['area', 'zone', 'building'], this.player.x / TILE, this.player.y / TILE);
+    return objectAt(this.mapObjects, ['area', 'zone'], this.player.x / TILE, this.player.y / TILE);
   }
 
   // Location banner (Pokemon-style name plate, P4): tells the UI scene when the player enters a

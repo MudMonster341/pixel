@@ -23,7 +23,7 @@ const tileInfo = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.jso
 const TILE = Object.fromEntries(tileInfo.tiles.map((tile, i) => [tile.name, i]));
 
 const REQUIRED_TILES = [
-  'edge', 'intDoorway', 'intStairsUp', 'intStairsDown', 'intLift', 'intAtriumVoid', 'intAtriumRailing',
+  'edge', 'intDoorway', 'intStairsUp', 'intStairsDown', 'intLift', 'intAtriumVoid', 'intAtriumVoidEdge', 'intAtriumRailing',
   'intFloorFoyer', 'intFloorClassroom', 'intFloorCarpet', 'intFloorLabVinyl', 'intFloorLibrary',
   'intFloorStage', 'intFloorCourt', 'asphalt',
   'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR',
@@ -200,12 +200,16 @@ class Floor {
   }
 
   // The atrium void + railing (mezzanine looking down into the foyer below): a rectangle of
-  // non-walkable "void" tiles bordered by a railing on every side.
+  // non-walkable "void" tiles bordered by a railing on every side. The ring just inside the railing
+  // gets the shadowed edge variant (QA: the void used to look like a missing texture; it now reads
+  // as a drop to the foyer floor below, darkest right under the railing lip).
   atriumVoid(x0, y0, x1, y1) {
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const onBorder = x === x0 || x === x1 || y === y0 || y === y1;
-        this.structures[this.idx(x, y)] = TILE[onBorder ? 'intAtriumRailing' : 'intAtriumVoid'];
+        const onShadowEdge = !onBorder && (x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1);
+        const tile = onBorder ? 'intAtriumRailing' : onShadowEdge ? 'intAtriumVoidEdge' : 'intAtriumVoid';
+        this.structures[this.idx(x, y)] = TILE[tile];
       }
     }
   }

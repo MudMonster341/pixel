@@ -9,7 +9,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
-const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile } = loadGameData();
+const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile, objectAt } = loadGameData();
 const MAP_FILE = path.join(ROOT, 'assets', 'maps', 'campus.json');
 const json = JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'));
 const grid = gridFromTiled(json);
@@ -303,5 +303,135 @@ test('the Athletics Track and Tennis Courts are reachable on foot from spawn', (
       }
     }
     assert.ok(found, `${name} (centre ${cx},${cy}) is not reachable on foot from spawn`);
+  }
+});
+
+// ---------- FB-0022: walkways/roads never overwrite a building's own footprint ----------
+
+const PATH_LIKE_GROUND = new Set(['walkway', 'asphalt', 'paving', 'parking', ...['T', 'B', 'L', 'R', 'TL', 'TR', 'BL', 'BR'].map((s) => `kerb${s}`), 'roadLineH', 'roadLineV', 'crossingH', 'crossingV']);
+
+test('FB-0022: no walkway or road tile lies inside any building footprint', () => {
+  // buildingFootprint objects (build-campus.js section 17) are the ground truth: the exact rectangles
+  // a building was drawn from, independent of whatever ended up in the compiled structures layer --
+  // a walkway that overwrote a roof clears that cell's structure tile, so checking structure tile
+  // names alone (the earlier QA check) can't catch this; checking against the footprint rectangles
+  // themselves can.
+  // Real BITS buildings only: a neighbouring non-BITS ("other") building outside the fence is
+  // allowed to have a real OpenStreetMap road drawn across it (section 16 -- deliberate, unrelated
+  // to this bug: those buildings aren't enterable, and the road wins rather than blocking traffic
+  // that was never meant to route around them).
+  const footprints = objects.filter((o) => o.type === 'buildingFootprint' && o.props.style === 'bits');
+  assert.ok(footprints.length > 0, 'no BITS buildingFootprint objects on the map');
+  const violations = [];
+  for (const f of footprints) {
+    const x0 = Math.round(f.x);
+    const y0 = Math.round(f.y);
+    const x1 = x0 + Math.round(f.width);
+    const y1 = y0 + Math.round(f.height);
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const g = groundNameAt(x, y);
+        if (g && PATH_LIKE_GROUND.has(g)) violations.push(`${f.name} footprint has ${g} at ${x},${y}`);
+      }
+    }
+  }
+  assert.equal(violations.length, 0, `found walkway/road tiles inside a building footprint: ${violations.slice(0, 10).join('; ')}`);
+});
+
+// ---------- FB-0022: the flat roof reads as a roof, not as pavement, from above ----------
+
+test('FB-0022: the flat roof tile is clearly distinct from the paving tile in average colour', () => {
+  const colorOf = (name) => tileInfo.tiles.find((t) => t.name === name).color;
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const dist = (a, b) => {
+    const [ar, ag, ab] = rgb(a);
+    const [br, bg, bb] = rgb(b);
+    return Math.hypot(ar - br, ag - bg, ab - bb);
+  };
+  const paving = colorOf('paving');
+  for (const roofName of ['bitsRoof', 'otherRoof']) {
+    const d = dist(colorOf(roofName), paving);
+    assert.ok(d > 40, `${roofName} (${colorOf(roofName)}) is too close to paving (${paving}), distance ${d.toFixed(1)}`);
+  }
+});
+
+// ---------- FB-0022: trees keep at least 1 tile of clearance from paths, roads and buildings ----------
+
+test('FB-0022: every tree/palm trunk has at least 1 tile of clearance from any walkway/road tile or building footprint', () => {
+  const footprints = objects.filter((o) => o.type === 'buildingFootprint' && o.props.style === 'bits');
+  const insideAnyFootprint = (x, y) => footprints.some((f) => x >= f.x && x < f.x + f.width && y >= f.y && y < f.y + f.height);
+  const trunkNames = new Set(['treeTrunk', 'palmTrunk']);
+  let trunkCount = 0;
+  const violations = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const s = structNameAt(x, y);
+      if (!trunkNames.has(s)) continue;
+      trunkCount++;
+      for (let yy = y - 1; yy <= y + 1; yy++) {
+        for (let xx = x - 1; xx <= x + 1; xx++) {
+          if (xx === x && yy === y) continue;
+          if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+          const g = groundNameAt(xx, yy);
+          if (g && PATH_LIKE_GROUND.has(g)) violations.push(`${s} at ${x},${y} is adjacent to ${g} at ${xx},${yy}`);
+          if (insideAnyFootprint(xx, yy)) violations.push(`${s} at ${x},${y} is adjacent to a building footprint cell ${xx},${yy}`);
+        }
+      }
+    }
+  }
+  assert.ok(trunkCount > 20, `expected plenty of trees, found ${trunkCount}`);
+  assert.equal(violations.length, 0, `trees too close to a path/road/building: ${violations.slice(0, 10).join('; ')}`);
+});
+
+// ---------- D54 gets the road kit (kerbs + lane markings) where it's straight ----------
+
+test('D54 gets kerbs and lane markings near the campus, not a plain grey slab', () => {
+  // A kerbed cross-section: a column where a 'kerbT' tile sits above a short run of asphalt/lane
+  // marking tiles that ends in a 'kerbB' tile, above (north of) the campus fence -- the same road
+  // kit as the Gate 2 avenue, rather than every D54 tile being bare asphalt.
+  let found = null;
+  for (let x = 0; x < W && !found; x++) {
+    for (let y = 0; y < Math.floor(campusZone.y) - 1; y++) {
+      if (groundNameAt(x, y) !== 'kerbT') continue;
+      let y1 = y + 1;
+      while (y1 < H && ['asphalt', 'roadLineH', 'roadLineV'].includes(groundNameAt(x, y1))) y1++;
+      if (groundNameAt(x, y1) === 'kerbB' && y1 - y >= 3) {
+        found = { x, y0: y, y1 };
+        break;
+      }
+    }
+  }
+  assert.ok(found, 'no kerbed D54 cross-section (kerbT ... asphalt/lane markings ... kerbB) found north of the campus');
+});
+
+// ---------- The tile in front of each building's door resolves to that building, never another ----------
+
+test('the tile in front of each building door resolves to that building (or a neutral area), never a different building', () => {
+  // areaHere() (world.js) reads building names from 'zone' objects, one per real footprint
+  // rectangle (extended south, on the rectangle that reaches the door, to cover the plaza right in
+  // front of it) -- not from the coarse 'building' bbox, whose bounding box can spill into a
+  // neighbouring building's own plaza on an L-shaped footprint (QA: standing outside the Mechanical
+  // Block's door used to read "Main Block").
+  const doors = objects.filter((o) => o.type === 'door' && o.props.building);
+  assert.ok(doors.length >= 3, `expected at least 3 building doors, found ${doors.length}`);
+  const hitTestObjects = objects.filter((o) => o.type === 'area' || o.type === 'zone');
+  for (const door of doors) {
+    const x = Math.floor(door.x);
+    // The door's threshold, then a few tiles south (away from the building, matching its own
+    // `facing: down`) -- some real BITS buildings sit only a tile or two apart (ADR 0009), so the
+    // first walkable tile in that direction is used rather than a fixed offset that could land
+    // inside a neighbour's wall.
+    let y = Math.floor(door.y);
+    let steps = 0;
+    while (steps < 6 && !walkable(x, y)) {
+      y += 1;
+      steps += 1;
+    }
+    assert.ok(walkable(x, y), `no walkable tile found south of ${door.name}`);
+    const hit = objectAt(hitTestObjects, ['area', 'zone'], x, y);
+    assert.ok(
+      !hit || hit.name === door.props.building,
+      `${x},${y} (in front of ${door.props.building}'s door) resolved to "${hit && hit.name}", not "${door.props.building}"`,
+    );
   }
 });

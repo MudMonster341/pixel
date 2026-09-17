@@ -118,6 +118,37 @@ async function shootOutdoors(browser) {
   const mainDoor = find('door', (o) => o.props.building === 'Main Block');
   const libraryDoor = find('door', (o) => o.props.building === 'Library Block');
   const mechDoor = find('door', (o) => o.props.building === 'Mechanical Block');
+  // "Just outside the door": the nearest walkable tile south of it (never the door's own tile --
+  // landing exactly there re-triggers the door's own warp, sending the shot straight back inside),
+  // not a fixed offset -- a few real BITS buildings sit only a tile or two apart (ADR 0009), so a
+  // fixed +2 can land inside a neighbouring building's own wall instead of the plaza (QA: this is
+  // exactly how the "wrong area name at the Mechanical Block" bug was found and screenshotted).
+  const front = await page.evaluate((doors) => {
+    const world = game.scene.getScene('world');
+    const nearestWalkable = (door) => {
+      if (!door) return null;
+      const dx = Math.floor(door.x);
+      const dy = Math.floor(door.y);
+      let best = null;
+      let bestDist = Infinity;
+      for (let oy = 0; oy <= 6; oy++) {
+        for (let ox = -4; ox <= 4; ox++) {
+          if (ox === 0 && oy === 0) continue; // the door tile itself: skip, it would re-trigger the warp
+          const x = dx + ox;
+          const y = dy + oy;
+          if (!isWalkableTile(world.tileData, world.tileInfo, x, y)) continue;
+          const dist = ox * ox + oy * oy;
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = { x, y };
+          }
+        }
+      }
+      return best || { x: dx, y: dy + 1 };
+    };
+    return doors.map(nearestWalkable);
+  }, [mainDoor, libraryDoor, mechDoor]);
+  const [mainFront, libraryFront, mechFront] = front;
   const track = area('Athletics Track');
   const tennis = area('Tennis Courts');
   const otherCourts = area('Courts');
@@ -130,9 +161,9 @@ async function shootOutdoors(browser) {
     ['spawn', spawn],
     ['gate-2', gate2],
     ['avenue', gate2 && mainDoor && { x: gate2.x, y: (gate2.y + mainDoor.y) / 2 }],
-    ['main-block-front', mainDoor && { x: mainDoor.x, y: mainDoor.y + 2 }],
-    ['library-block-front', libraryDoor && { x: libraryDoor.x, y: libraryDoor.y + 2 }],
-    ['mechanical-block-front', mechDoor && { x: mechDoor.x, y: mechDoor.y + 2 }],
+    ['main-block-front', mainFront],
+    ['library-block-front', libraryFront],
+    ['mechanical-block-front', mechFront],
     ['athletics-track', track && areaCenter(track)],
     ['tennis-courts', tennis && areaCenter(tennis)],
     ['courts', otherCourts && areaCenter(otherCourts)],

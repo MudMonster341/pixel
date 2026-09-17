@@ -157,7 +157,27 @@ class Minimap {
     this.scrollY = 0;
     this.image.setTexture(key).setScale(this.cell).setVisible(this.visible);
     this.applyWindow();
-    this.label.setText(world.def.name.toUpperCase());
+    this.setLabel(world.def.name.toUpperCase());
+  }
+
+  // The caption (e.g. "MECHANICAL BLOCK - GROUND FLOOR") must never run past the panel's right edge
+  // (QA P5): shrink the font first (works for every real map name), then, only if some future name
+  // is still too wide even at the smallest readable size, truncate with an ellipsis as a last resort
+  // so the bound is guaranteed regardless of what a map is named.
+  setLabel(text) {
+    const maxWidth = this.width - 28; // 14px inset each side, clear of the panel border
+    const minSize = 5;
+    let size = 8;
+    this.label.setFontSize(size).setText(text);
+    while (this.label.width > maxWidth && size > minSize) {
+      size -= 1;
+      this.label.setFontSize(size);
+    }
+    let shown = text;
+    while (this.label.width > maxWidth && shown.length > 1) {
+      shown = shown.slice(0, -1);
+      this.label.setText(`${shown}…`);
+    }
   }
 
   applyWindow() {

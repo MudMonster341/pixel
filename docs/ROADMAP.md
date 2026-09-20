@@ -36,12 +36,19 @@ Tasks are written so one run can finish one. Keep them that size.
 
 ## M2 — Art overhaul (Pokémon class)
 
-- [ ] Characters: the lead redrawn at 16×24 with a real face, hair, and 4-frame walks in 4 directions; shadows
-- [ ] The LUG volunteer NPC, plus 2-3 background students, same quality
-- [ ] Outdoor tiles: re-shade lawn, paths, roads, walls and trees so the campus reads as DS-era Pokémon
-- [ ] Interior tiles: floors, walls, doors, stairs and furniture redrawn to the same standard
-- [ ] UI kit: classy dialog box, panels, buttons, quest tracker, and the hotbar, all in one visual language
-- [ ] Title screen and pause menu (ESC), with the game's name and art
+**Direction change (owner, FB-0025, 2026-09-20): use ready-made free-licence asset packs instead of
+drawing our own.** "Don't try making assets on your own because you are sort of bad at it. Find open
+source asset packages... change all the trees, pavements, everything."
+
+- [ ] Research free-licence 16 px packs (trees, paths, roads, buildings, interiors, characters, UI), check every licence, download the best, show mock scenes: `docs/research/asset-packs.md`
+- [ ] Owner picks the pack from the mock-ups
+- [ ] Swap the tile generator over: tile names map to pack tiles, maps keep working, draw only what no pack covers
+- [ ] Characters from the pack (the lead in pink, the LUG volunteer, background students), 4-direction walks
+- [ ] UI kit from the pack: dialog box, panels, menus, cursors
+- [ ] CREDITS.md lists every pack, author and licence; packs live in `assets/vendor/<pack>/` with their LICENSE
+
+
+- [x] Title screen, loading screen, pause menu, controls taught as you go (FB-0023), and `docs/GAME_FEEL.md`, our Pokémon-flow standard (FB-0024) — in progress 2026-09-20
 
 ## M3 — The story slice (the actual game)
 

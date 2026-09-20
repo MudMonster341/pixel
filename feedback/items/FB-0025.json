@@ -4,9 +4,9 @@
   "type": "idea",
   "area": "Maps & buildings",
   "priority": "high",
-  "status": "new",
+  "status": "in-progress",
   "createdAt": "2026-09-20T19:00:04.300Z",
-  "updatedAt": "2026-09-20T19:00:04.300Z",
+  "updatedAt": "2026-09-20T19:25:58.478Z",
   "details": "Find open source asset packacges with assets liek trees, pathways and all of that alreayd amde and use them, dont make so find and download and se thoise isntead. change al the traees, pavements, everytihgn,",
   "context": {
     "map": "campus",
@@ -49,13 +49,24 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0025.jpg",
-  "thread": [],
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Fair. An agent is searching itch.io, OpenGameArt, Kenney and similar for free-licence 16px packs covering trees, paths, roads, buildings, interiors, characters and UI frames, checking the licence of each (CC0 or CC-BY only, nothing Pokémon-ripped), and will show a mock campus scene and interior built from the best one before we switch. I'll send you the comparison to pick from.",
+      "at": "2026-09-20T19:25:58.478Z"
+    }
+  ],
   "resolution": null,
   "history": [
     {
       "at": "2026-09-20T19:00:04.300Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-09-20T19:25:58.399Z",
+      "by": "agent",
+      "status": "in-progress"
     }
   ]
 }

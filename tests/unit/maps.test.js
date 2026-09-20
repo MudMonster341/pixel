@@ -79,7 +79,7 @@ for (const [key, def] of Object.entries(MAPS).filter(([, def]) => def.rows)) {
       assert.ok(walkable(npc.x, npc.y), `${npc.id} stands on a solid tile`);
       const neighbours = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => reachable(npc.x + dx, npc.y + dy));
       assert.ok(neighbours.length > 0, `${npc.id} can't be reached from the spawn`);
-      assert.equal(typeof npc.talk, 'function', `${npc.id} has no talk()`);
+      assert.ok(Array.isArray(npc.dialog) && npc.dialog.length > 0, `${npc.id} has no dialog`);
     }
   });
 

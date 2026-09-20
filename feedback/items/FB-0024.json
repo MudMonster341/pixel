@@ -1,0 +1,61 @@
+{
+  "id": "FB-0024",
+  "title": "GAme sense and design,.",
+  "type": "idea",
+  "area": "General",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-20T18:58:16.033Z",
+  "updatedAt": "2026-09-20T18:58:16.033Z",
+  "details": "Study the whole games design of pokemon, downlaod a simulatpr and play the game, or see atutorial with screens, ow it flows, the star and everythinbg, that sort fo game desig of premium feeling si what im trying o recrate. Can you so that for me please",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 238,
+      "y": 171
+    },
+    "pixel": {
+      "x": 3816,
+      "y": 2744
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "intro",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2af2b73",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 982,
+      "height": 914
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.2553.1 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-20T18:57:04.479Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0024.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-20T18:58:16.033Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

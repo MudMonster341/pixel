@@ -5,7 +5,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js'];
+const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js', 'src/dialog.js'];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
 class TinyEmitter {
@@ -47,17 +47,23 @@ class FakeStorage {
 
 function loadGameData() {
   const localStorage = new FakeStorage();
+  // A bare-bones `window.game.events` (state.js's notifyStateChanged() and dialog.js's
+  // emitDialogEvent() both no-op without it): lets dialog tests spy on toast/cutscene/minigame
+  // action events the same way the real game's event bus would carry them, without a browser.
+  const gameEvents = new TinyEmitter();
   const context = vm.createContext({
     Phaser: { Events: { EventEmitter: TinyEmitter } },
     console,
     URLSearchParams,
     localStorage,
+    window: { game: { events: gameEvents } },
   });
   for (const file of SCRIPTS) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
   }
   const get = (name) => vm.runInContext(name, context);
   return {
+    gameEvents,
     ITEMS: get('ITEMS'),
     MAPS: get('MAPS'),
     STRUCTURES: get('STRUCTURES'),
@@ -74,6 +80,11 @@ function loadGameData() {
     objectAt: get('objectAt'),
     notSeenCutscene: get('notSeenCutscene'),
     notifyStateChanged: get('notifyStateChanged'),
+    matchesWhen: get('matchesWhen'),
+    pickDialogEntry: get('pickDialogEntry'),
+    hasNewDialog: get('hasNewDialog'),
+    applyDialogActions: get('applyDialogActions'),
+    dialogEntryKey: get('dialogEntryKey'),
     saveGame: get('saveGame'),
     loadGame: get('loadGame'),
     listProfiles: get('listProfiles'),

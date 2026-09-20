@@ -99,58 +99,72 @@ tools/                 asset generator, feedback store + CLI
 
 ## Scripts: conditions and actions
 
-All story logic is data made of **conditions** ("is this true?") and **actions** ("do this").
-`systems/script.js` is the only code that runs them.
+All story logic is data made of **conditions** ("is this true?") and **actions** ("do this"), so
+adding a line of dialog, a flag or a quest step never means touching engine code.
 
-**Conditions**
+*Today:* built for **NPC dialog** only (`src/dialog.js`; roadmap M1). An entity-wide version of the
+same idea (chests, triggers, locked doors reacting to conditions) is still to come -- when it's
+built it should reuse this vocabulary rather than invent a second one.
+
+An NPC's `dialog` (`src/maps.js`, one array per NPC) is a list of entries. `interact()`
+(`src/scenes/world.js`) shows the lines of the *first* entry whose `when` matches, then runs that
+entry's `actions` -- or, if the entry has `choices` instead of running its own actions right away,
+shows a selectable list and runs whichever option's own `actions` the player picked.
+
+**Conditions** (`when`; every key present must match -- there's no `all`/`any` yet):
 ```js
-{ flag: 'tomas.gaveClue' }            // flag is set
-{ notFlag: 'door.opened' }
-{ hasItem: 'starShard', count: 3 }
-{ all: [ ...conditions ] }            // AND
-{ any: [ ...conditions ] }            // OR
+{ flag: 'tomasGaveSword' }                // truthy
+{ flag: 'tomasChats', value: 2 }          // equals exactly (numbers too, e.g. a chat-cycle counter)
+{ notFlag: 'tomasGaveSword' }             // falsy
+{ stage: 'hunting' }                      // GameState.quest.stage === 'hunting'
+{ hasItem: 'sword' }                      // holding at least one (add `count` for more)
+{ hasKey: 'physicsLab' }                  // GameState.quest.keys.physicsLab is true
+{ seen: false }                           // this exact entry has never been shown before
 ```
 
-**Actions**
+**Actions** (run against GameState by `applyDialogActions()`, which calls
+`GameState.notifyStateChanged()` once at the end if anything changed, so autosave picks it up):
 ```js
-{ say: ['line one', 'line two'] }     // dialog with the current speaker
-{ choice: {                           // player picks an answer; each option runs its own actions
-    prompt: 'Will you help me?',
-    options: [
-      { text: 'Of course!', do: [{ setFlag: 'mira.helping' }, { say: ['Thank you!'] }] },
-      { text: 'Not now.',   do: [{ say: ['Oh... come back later.'] }] },
-    ],
-} }
-{ goto: 'mira-riddle' }               // jump to another dialog entry (for longer branching flows)
-{ giveItem: 'sword' }
-{ takeItem: 'starShard', count: 3 }
-{ setFlag: 'tomas.gaveClue' }
-{ addClue: 'shard-1' }                // adds a clue to the journal
-{ toast: 'The ground rumbles...' }
-{ reveal: 'meadow-hidden-chest' }     // make a hidden entity appear
-{ openDoor: 'secret-door' }
-{ warp: { map: 'cave', x: 5, y: 9, facing: 'up' } }
-{ cameraShake: 300 }
+{ give: 'keycard' }                       // adds an item; if the bag is full, the rest of this
+                                           // action list is skipped and a generic toast shows instead
+{ setFlag: 'metVolunteer' }               // sets a flag to true
+{ setFlag: { name: 'tomasChats', value: 2 } }   // sets a flag to any value
+{ stage: 'hunting' }                      // GameState.quest.stage = 'hunting'
+{ key: 'physicsLab' }                     // GameState.quest.keys.physicsLab = true
+{ toast: 'The volunteer waves you over.' }
+{ cutscene: 'gate2' }                     // plays a cutscene (src/cutscenes.js)
+{ minigame: 'tetris' }                    // M4 stub for now: just the event, nothing plays it yet
 ```
 
-**NPC dialog** is a list of entries. The *first* entry whose `when` matches is used; `id` lets
-`goto` jump to an entry:
+**Examples** (`src/maps.js`, the two test-map NPCs -- the LUG volunteer's real script is still M3):
 ```js
-export default {
-  id: 'tomas',
-  name: 'Tomas',
-  sprite: 'npc-tomas',
-  dialog: [
-    { when: { hasItem: 'starShard', count: 3 }, do: [{ say: ['You found them all! Try the old door.'] }] },
-    { when: { notFlag: 'tomas.metPlayer' }, bubble: '!', do: [
-      { say: ['Oh! A visitor!', 'They say a shard lies where the lake meets the rocks.'] },
-      { addClue: 'shard-lake' },
-      { setFlag: 'tomas.metPlayer' },
-    ] },
-    { do: [{ say: ['Good luck out there.'] }] },   // fallback, no `when`
+// Tomas (house): a plain entry, first match wins.
+dialog: [
+  {
+    id: 'give-sword',
+    when: { notFlag: 'tomasGaveSword' },
+    lines: ['Oh! A visitor!', 'Here, take my old sword.'],
+    actions: [{ give: 'sword' }, { setFlag: 'tomasGaveSword' }, { toast: 'You got the Old Sword!' }],
+  },
+  // ...more entries, e.g. `{ when: { flag: 'tomasChats', value: 0 }, lines: [...], actions: [...] }`
+],
+
+// Guide (meadow): an entry with no `when` (always matches) that asks a `choices` question instead
+// of running its own top-level `actions` -- only the picked option's own `actions` run.
+dialog: [{
+  id: 'ask-hint',
+  lines: ['Want a hint about the meadow?'],
+  choices: [
+    { text: 'Yes, please!', lines: ['Try the tall grass.'], actions: [{ setFlag: 'guideHintYes' }] },
+    { text: 'No thanks.', lines: ['Suit yourself.'], actions: [{ setFlag: 'guideHintNo' }] },
   ],
-};
+}],
 ```
+
+The interaction bubble above an NPC (`src/scenes/world.js` `updatePrompt()`, art in
+`tools/make-assets.js` `PROMPT_E`/`PROMPT_BANG`) shows **"!"** while the entry that would be shown
+next has never been seen before (`hasNewDialog()`), and **"E"** once it has -- `GameState.seenDialog`
+(a set of `"npcId:entryId"` keys, saved like everything else) is what remembers that across a reload.
 
 ## Entities (things placed on a map)
 

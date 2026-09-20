@@ -86,7 +86,32 @@ const MAPS = {
       { id: 'meadow-phone', item: 'phone', x: 24, y: 8 },
       { id: 'meadow-notebook', item: 'notebook', x: 34, y: 21 },
     ],
-    npcs: [],
+    // A second test-map NPC (alongside Tomas in the house), purely to exercise dialog choices
+    // (roadmap M1) end to end: a plain intro line, then a Yes/No choice, each branch with its own
+    // follow-up line and actions. Not story content (docs/STORY.md) -- an engine fixture like Tomas.
+    npcs: [{
+      id: 'guide',
+      name: 'Guide',
+      x: 14,
+      y: 12,
+      facing: 'down',
+      dialog: [{
+        id: 'ask-hint',
+        lines: ['Want a hint about the meadow?'],
+        choices: [
+          {
+            text: 'Yes, please!',
+            lines: ['Check the tall grass to the east.'],
+            actions: [{ setFlag: 'guideHintYes' }, { toast: 'Hint received!' }],
+          },
+          {
+            text: 'No thanks.',
+            lines: ['Suit yourself.'],
+            actions: [{ setFlag: 'guideHintNo' }],
+          },
+        ],
+      }],
+    }],
   },
 
   house: {
@@ -122,37 +147,52 @@ const MAPS = {
       { id: 'house-laptop', item: 'laptop', x: 14, y: 6 },
       { id: 'house-coffee', item: 'coffee', x: 17, y: 9 },
     ],
-    npcs: [{ id: 'tomas', name: 'Tomas', x: 8, y: 4, facing: 'down', talk: talkToTomas }],
+    npcs: [{
+      id: 'tomas',
+      name: 'Tomas',
+      x: 8,
+      y: 4,
+      facing: 'down',
+      // Data-driven dialog (src/dialog.js, docs/ARCHITECTURE.md): the first entry whose `when`
+      // matches GameState wins. Kept as the engine's test-map example (CLAUDE.md: the owner writes
+      // the real story; the LUG volunteer's script arrives in M3).
+      dialog: [
+        {
+          id: 'give-sword',
+          when: { notFlag: 'tomasGaveSword' },
+          lines: [
+            'Oh! A visitor! Nobody has knocked on my door in a long time.',
+            "I'm Tomas. I've looked after this meadow for sixty years.",
+            'You look like an adventurer. Here, take my old sword.',
+            'My back is too stiff to swing it these days. Look after it!',
+          ],
+          actions: [
+            { give: 'sword' },
+            { setFlag: 'tomasGaveSword' },
+            { toast: 'You got the Old Sword!' },
+          ],
+        },
+        // After the sword, Tomas cycles through 3 chats (`tomasChats` wraps 0 -> 1 -> 2 -> 0 -- the
+        // same rotation the old hand-written talk() used), each entry advancing the counter itself.
+        {
+          id: 'chat-0',
+          when: { flag: 'tomasChats', value: 0 },
+          lines: ['I hear strange noises past the trees at night...', 'Keep that sword close.'],
+          actions: [{ setFlag: { name: 'tomasChats', value: 1 } }],
+        },
+        {
+          id: 'chat-1',
+          when: { flag: 'tomasChats', value: 1 },
+          lines: ["I've dropped a few things around the meadow over the years.", 'Try the tall grass. Things love to hide in there.'],
+          actions: [{ setFlag: { name: 'tomasChats', value: 2 } }],
+        },
+        {
+          id: 'chat-2',
+          when: { flag: 'tomasChats', value: 2 },
+          lines: ['The lake to the south is lovely at sunset.', 'Far too cold for swimming, mind you.'],
+          actions: [{ setFlag: { name: 'tomasChats', value: 0 } }],
+        },
+      ],
+    }],
   },
 };
-
-// An NPC's `talk` returns the lines to show, plus an optional `onEnd` that runs when the
-// conversation closes and may return a message to pop up on screen.
-function talkToTomas(state) {
-  if (!state.flags.tomasGaveSword) {
-    return {
-      lines: [
-        'Oh! A visitor! Nobody has knocked on my door in a long time.',
-        "I'm Tomas. I've looked after this meadow for sixty years.",
-        'You look like an adventurer. Here, take my old sword.',
-        'My back is too stiff to swing it these days. Look after it!',
-      ],
-      onEnd: () => {
-        if (!state.inventory.add('sword')) return 'Your bag is full!';
-        state.flags.tomasGaveSword = true;
-        notifyStateChanged(); // src/save.js autosaves soon after a flag changes
-        return 'You got the Old Sword!';
-      },
-    };
-  }
-
-  const chats = [
-    ['I hear strange noises past the trees at night...', 'Keep that sword close.'],
-    ["I've dropped a few things around the meadow over the years.", 'Try the tall grass. Things love to hide in there.'],
-    ['The lake to the south is lovely at sunset.', 'Far too cold for swimming, mind you.'],
-  ];
-  const lines = chats[state.flags.tomasChats % chats.length];
-  state.flags.tomasChats++;
-  notifyStateChanged();
-  return { lines };
-}

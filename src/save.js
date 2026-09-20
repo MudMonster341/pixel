@@ -39,6 +39,7 @@ function snapshotState(state) {
     quest: { stage: state.quest.stage, keys: { ...state.quest.keys } },
     collected: [...state.collected],
     seenCutscenes: [...state.seenCutscenes],
+    seenDialog: [...state.seenDialog],
   };
 }
 
@@ -67,6 +68,7 @@ function applyState(state, saved) {
   };
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
+  state.seenDialog = new Set(saved.seenDialog || []);
 }
 
 function saveGame(profile = currentProfile(), state = GameState) {

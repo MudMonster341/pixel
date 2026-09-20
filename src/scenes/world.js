@@ -139,7 +139,10 @@ class WorldScene extends Phaser.Scene {
       this.physics.add.collider(this.player, npc);
       return npc;
     });
-    this.prompt = this.add.image(0, 0, 'prompt').setVisible(false).setDepth(100000);
+    // Interaction bubble (docs/STYLE_GUIDE.md "Speech bubbles"): frame 0 = "E" (something to say),
+    // frame 1 = "!" (something *new* to say, see dialog.js hasNewDialog()). Only the nearest NPC in
+    // range gets one, same as before (updatePrompt()).
+    this.prompt = this.add.image(0, 0, 'prompt', 0).setVisible(false).setDepth(100000);
   }
 
   createPickups() {
@@ -311,11 +314,19 @@ class WorldScene extends Phaser.Scene {
     if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(NPC_FRAME.left).setFlipX(dx > 0);
     else npc.setFrame(dy < 0 ? NPC_FRAME.up : NPC_FRAME.down).setFlipX(false);
 
-    const { lines, onEnd } = npc.def.talk(GameState);
-    this.scene.get('ui').dialog.open(npc.def.name, lines, () => {
-      const message = onEnd && onEnd();
-      if (message) this.game.events.emit('toast', message);
-    });
+    const picked = pickDialogEntry(npc.def, GameState);
+    if (!picked) return; // no dialog data at all -- shouldn't happen for a real NPC
+    const { entry, key } = picked;
+    GameState.seenDialog.add(key); // "!" becomes "E" as soon as the line is shown, not after it closes
+    notifyStateChanged(); // src/save.js autosaves soon after (seenDialog is part of the save)
+
+    // DialogBox (src/scenes/ui.js) shows `entry.lines`, then either closes (calling back with no
+    // choice) or, if `entry.choices` is set, shows the picked list and calls back with whichever
+    // option the player chose. Either way, only one actions list ever runs: the choice's own, or
+    // the entry's own when there was no choice to make.
+    this.scene.get('ui').dialog.open(npc.def.name, entry.lines || [], (choice) => {
+      applyDialogActions((choice || entry).actions, GameState);
+    }, entry.choices || null);
     this.game.events.emit('npc-talked', npc.def.id);
   }
 
@@ -346,10 +357,19 @@ class WorldScene extends Phaser.Scene {
     }
   }
 
+  // The bubble is hidden while blocked (dialog/tutorial/fullmap open) and, since this only runs
+  // while the scene itself is active, automatically hidden for the whole time a cutscene has this
+  // scene paused too. It bobs gently either way; the "!" state also gets a soft scale pulse so a
+  // player scanning the screen notices new content (docs/STYLE_GUIDE.md).
   updatePrompt(blocked, time) {
     const npc = blocked ? null : this.nearestNpc();
     this.prompt.setVisible(Boolean(npc));
-    if (npc) this.prompt.setPosition(npc.x, npc.y - 18 + Math.round(Math.sin(time / 200)));
+    if (!npc) return;
+    const isNew = hasNewDialog(npc.def, GameState);
+    this.prompt.setFrame(isNew ? 1 : 0);
+    const bob = Math.round(Math.sin(time / 200));
+    this.prompt.setPosition(npc.x, npc.y - 18 + bob);
+    this.prompt.setScale(isNew ? 1 + 0.08 * Math.sin(time / 150) : 1);
   }
 
   checkWarps() {

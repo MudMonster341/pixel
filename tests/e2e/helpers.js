@@ -50,9 +50,17 @@ function state(page) {
       ready: world.player.active && !world.transitioning && world.sys.isActive(),
       slots: GameState.inventory.slots,
       selected: GameState.inventory.selected,
+      flags: GameState.flags,
+      quest: GameState.quest,
       tutorial: { stage: ui.tutorial.stage, completed: [...ui.tutorial.completed], cardOpen: ui.tutorial.cardOpen },
       dialogOpen: ui.dialog.isOpen,
+      // `choices` is set only while a choice list is on screen (src/scenes/ui.js DialogBox); each
+      // entry's own `text`, and the currently highlighted index (up/down or W/S move it).
+      dialogChoices: ui.dialog.choices ? ui.dialog.choices.map((choice) => choice.text) : null,
+      dialogChoiceIndex: ui.dialog.choiceIndex,
       promptVisible: world.prompt.visible,
+      // 0 = "E" (talk), 1 = "!" (something new to say) -- see src/dialog.js hasNewDialog().
+      promptFrame: world.prompt.frame ? Number(world.prompt.frame.name) : null,
       minimapVisible: ui.minimap.visible,
       toast: ui.toast.text.text,
       worldActive: world.sys.isActive(),

@@ -13,7 +13,8 @@ class BootScene extends Phaser.Scene {
     this.load.spritesheet('player', 'assets/player.png', sheet);
     this.load.spritesheet('npc', 'assets/npc.png', sheet);
     this.load.spritesheet('items', 'assets/items.png', sheet);
-    this.load.image('prompt', 'assets/prompt.png');
+    // 2 frames: 0 = "E" (talk), 1 = "!" (something new to say, see src/dialog.js hasNewDialog()).
+    this.load.spritesheet('prompt', 'assets/prompt.png', sheet);
     for (const def of Object.values(MAPS)) {
       if (def.tiled) this.load.tilemapTiledJSON(`map-${def.tiled}`, `assets/maps/${def.tiled}.json`);
     }

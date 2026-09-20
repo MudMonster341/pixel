@@ -6,7 +6,7 @@
 //   npc.png                 3 frames: down / up / left
 //   items.png               item icons, in the order of src/items.js
 //   held-items.png          tiny 8x8 versions shown in the character's hand, same order/frames
-//   prompt.png              the "E" bubble shown above someone you can talk to
+//   prompt.png              interaction bubble, 2 frames: "E" (talk) and "!" (something new to say)
 //
 // Hand-drawn sprites are text: one character = one pixel, "." = transparent.
 // Change a character, re-run the script, refresh the browser.
@@ -1603,7 +1603,10 @@ const HELD_ITEM_ICONS = [
   ], 8, 8),
 ];
 
-const PROMPT = sprite('prompt', [
+// The interaction bubble (docs/STYLE_GUIDE.md "Speech bubbles and interaction"): frame 0 is the
+// white "E" keycap shown whenever something's in range; frame 1 is the gold "!" shown instead when
+// it has something new to say (src/dialog.js hasNewDialog(), drawn by src/scenes/world.js).
+const PROMPT_E = sprite('prompt-e', [
   '................',
   '..KKKKKKKKKKKK..',
   '..KWWWWWWWWWWK..',
@@ -1614,6 +1617,25 @@ const PROMPT = sprite('prompt', [
   '..KWWWKKKKWWWK..',
   '..KWWWWWWWWWWK..',
   '..KOOOOOOOOOOK..',
+  '..KKKKKKKKKKKK..',
+  '.......KK.......',
+  '................',
+  '................',
+  '................',
+  '................',
+]);
+
+const PROMPT_BANG = sprite('prompt-bang', [
+  '................',
+  '..KKKKKKKKKKKK..',
+  '..KYYYYYYYYYYK..',
+  '..KYYYYKKYYYYK..',
+  '..KYYYYKKYYYYK..',
+  '..KYYYYKKYYYYK..',
+  '..KYYYYYYYYYYK..',
+  '..KYYYYKKYYYYK..',
+  '..KYYYYYYYYYYK..',
+  '..KyyyyyyyyyyK..',
   '..KKKKKKKKKKKK..',
   '.......KK.......',
   '................',
@@ -1675,8 +1697,9 @@ const heldItems = new Img(HELD_ITEM_ICONS.length * HELD_ITEM_SIZE, HELD_ITEM_SIZ
 HELD_ITEM_ICONS.forEach((icon, i) => heldItems.draw(icon, i * HELD_ITEM_SIZE, 0));
 write('held-items.png', heldItems);
 
-const prompt = new Img(TILE, TILE);
-prompt.draw(PROMPT, 0, 0);
+const prompt = new Img(2 * TILE, TILE);
+prompt.draw(PROMPT_E, 0, 0);
+prompt.draw(PROMPT_BANG, TILE, 0);
 write('prompt.png', prompt);
 
 console.log(`Wrote ${TILES.length} tiles, player, npc, ${ITEM_ICONS.length} items and prompt to assets/`);

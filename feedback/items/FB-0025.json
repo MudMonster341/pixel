@@ -1,0 +1,61 @@
+{
+  "id": "FB-0025",
+  "title": "Odnt try maiking asserts on your own because you are sort of bad at it",
+  "type": "idea",
+  "area": "Maps & buildings",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-20T19:00:04.300Z",
+  "updatedAt": "2026-09-20T19:00:04.300Z",
+  "details": "Find open source asset packacges with assets liek trees, pathways and all of that alreayd amde and use them, dont make so find and download and se thoise isntead. change al the traees, pavements, everytihgn,",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 238,
+      "y": 161
+    },
+    "pixel": {
+      "x": 3822,
+      "y": 2581
+    },
+    "facing": "down",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2af2b73",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 982,
+      "height": 914
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.2553.1 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-20T18:58:58.961Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0025.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-20T19:00:04.300Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

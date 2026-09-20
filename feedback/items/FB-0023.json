@@ -1,0 +1,74 @@
+{
+  "id": "FB-0023",
+  "title": "keep only the importnat isntructions or add a scroll or as you go you are introduced to the new controls",
+  "type": "bug",
+  "area": "UI",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-20T18:57:03.462Z",
+  "updatedAt": "2026-09-20T18:57:03.462Z",
+  "details": "roght now it is going outside the box, UI wise a nightmare at the veryt start, ther game you havce a start game screen witha  name like BITS and then a play button which adds an initial load screen tot he start poitn and then the coontrols show up, liek aveyr proper pokemon game play. cnayou go ahead, and study pokemon game deisgn properly, and completely enand then we can go ahea dand do this fbecause this needs ot be done properly",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 238,
+      "y": 171
+    },
+    "pixel": {
+      "x": 3816,
+      "y": 2744
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "intro",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2af2b73",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 982,
+      "height": 914
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.2553.1 Chrome/152.0.7977.76 Safari/537.36 MSIX",
+    "capturedAt": "2026-09-20T18:54:38.404Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 257,
+      "y": 413
+    },
+    "world": {
+      "x": 3742,
+      "y": 2792
+    },
+    "tile": {
+      "x": 233,
+      "y": 174
+    }
+  },
+  "screenshot": "screenshots/FB-0023.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-20T18:57:03.462Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

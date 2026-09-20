@@ -48,6 +48,14 @@ class UIScene extends Phaser.Scene {
     });
     this.game.events.on('area-entered', (name) => this.locationBanner.show(name));
     this.game.events.on('toast', (message) => this.toast.show(message));
+    // A dialog `{ cutscene: 'key' }` action (src/dialog.js) fires this; handled here (a persistent
+    // scene, never restarted) rather than in world.js itself, so it always reaches whichever
+    // WorldScene instance is current even if a map change happened in between.
+    this.game.events.on('cutscene:requested', (key) => {
+      const world = this.scene.get('world');
+      if (!CUTSCENES[key]) { console.warn(`dialog action requested unknown cutscene "${key}"`); return; }
+      if (world.sys.isActive() && !world.transitioning) world.playCutscene(key);
+    });
     const world = this.scene.get('world');
     if (world.tileData) this.minimap.setMap(world);
 
@@ -456,10 +464,18 @@ class Hotbar {
 
 const CHARS_PER_SECOND = 45;
 
+// A dialog entry can offer choices (roadmap M1, docs/ARCHITECTURE.md): after its `lines` finish
+// typing, instead of closing, the box shows a selectable list (up/down or W/S move the highlight,
+// Enter/E/Space picks). Keyboard only, same box, no new art.
 class DialogBox {
   constructor(scene) {
     this.scene = scene;
     this.isOpen = false;
+    this.choices = null; // the list currently shown, or null while plain lines are typing/showing
+    this.pendingChoices = null; // set by open(); shown once `lines` run out
+    this.choiceTexts = null;
+    this.choiceIndex = 0;
+    this.selectedChoice = null; // the choice the player picked, passed to onClose() at the very end
     this.box = { x: 100, y: 382, w: 760, h: 138 };
     const { x, y, w, h } = this.box;
 
@@ -471,15 +487,29 @@ class DialogBox {
     this.arrow = scene.add.triangle(x + w - 34, y + h - 26, 0, 0, 16, 0, 8, 10, COLORS.gold).setOrigin(0, 0);
     this.parts = [this.panel, this.nameTag, this.name, this.body, this.arrow];
     this.parts.forEach((part) => part.setDepth(50).setVisible(false));
+
+    // One-shot keys use keydown events, never JustDown (ERR-0001). These are no-ops whenever
+    // `this.choices` is null, so they're harmless in scenes/moments without a choice on screen
+    // (e.g. the cutscene player, which never passes `choices` to open()).
+    for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (event) => !event.repeat && this.moveChoice(-1));
+    for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (event) => !event.repeat && this.moveChoice(1));
+    scene.input.keyboard.on('keydown-ENTER', (event) => {
+      if (!event.repeat && this.choices) this.confirmChoice();
+    });
   }
 
   // `speaker` may be null/empty for a narration-style box with no name tag (the cutscene player,
-  // src/scenes/cutscene.js, reuses this exact class for its message box).
-  open(speaker, lines, onClose) {
+  // src/scenes/cutscene.js, reuses this exact class for its message box). `choices`, if given, is
+  // shown once `lines` are done; `onClose(choice)` fires when the whole thing closes -- `choice` is
+  // the picked option, or undefined for a plain (choice-less) conversation.
+  open(speaker, lines, onClose, choices = null) {
     const { x, y } = this.box;
     this.lines = lines;
     this.index = 0;
     this.onClose = onClose;
+    this.pendingChoices = choices;
+    this.choices = null;
+    this.selectedChoice = null;
     this.isOpen = true;
 
     this.nameTag.clear();
@@ -489,7 +519,10 @@ class DialogBox {
     }
     this.parts.forEach((part) => part.setVisible(true));
     this.name.setVisible(Boolean(speaker));
-    this.startLine();
+
+    // A choices-only entry (a question with no lead-in line) skips straight to the list.
+    if (this.lines.length === 0 && this.pendingChoices) this.showChoices();
+    else this.startLine();
   }
 
   startLine() {
@@ -500,27 +533,94 @@ class DialogBox {
     this.body.setText('');
   }
 
-  // Called when the player presses E/Space: finish the line, or go to the next one.
+  // Called when the player presses E/Space: pick the highlighted choice, finish the line being
+  // typed, or go to the next one (or the choice list, if this was the last line).
   advance() {
+    if (this.choices) {
+      this.confirmChoice();
+      return;
+    }
     if (this.typing) {
       this.shown = this.fullText.length;
       return;
     }
     this.index++;
     if (this.index < this.lines.length) this.startLine();
+    else if (this.pendingChoices) this.showChoices();
     else this.close();
+  }
+
+  // Replaces the body text with a selectable list. `this.choices` being non-null is what tells
+  // advance()/moveChoice() we're in "picking" mode instead of "reading" mode.
+  showChoices() {
+    this.choices = this.pendingChoices;
+    this.pendingChoices = null;
+    this.choiceIndex = 0;
+    this.typing = false;
+    this.body.setText('');
+    this.buildChoiceTexts();
+  }
+
+  buildChoiceTexts() {
+    this.destroyChoiceTexts();
+    const { x, y } = this.box;
+    this.choiceTexts = this.choices.map((choice, i) => uiText(this.scene, x + 30, y + 30 + i * 26, choice.text, 16).setDepth(51));
+    this.refreshChoiceHighlight();
+  }
+
+  refreshChoiceHighlight() {
+    this.choiceTexts.forEach((text, i) => {
+      const current = i === this.choiceIndex;
+      text.setText(`${current ? '>' : ' '} ${this.choices[i].text}`).setColor(current ? COLORS.highlight : COLORS.text);
+    });
+  }
+
+  destroyChoiceTexts() {
+    (this.choiceTexts || []).forEach((text) => text.destroy());
+    this.choiceTexts = null;
+  }
+
+  moveChoice(direction) {
+    if (!this.isOpen || !this.choices) return;
+    this.choiceIndex = (this.choiceIndex + direction + this.choices.length) % this.choices.length;
+    this.refreshChoiceHighlight();
+  }
+
+  // The chosen option's own `lines` (if any) play out like a normal line sequence; once they finish,
+  // advance() finds no more lines and no pending choices left, so it closes as usual.
+  confirmChoice() {
+    const choice = this.choices[this.choiceIndex];
+    this.choices = null;
+    this.destroyChoiceTexts();
+    this.selectedChoice = choice;
+    if (choice.lines && choice.lines.length) {
+      this.lines = choice.lines;
+      this.index = 0;
+      this.startLine();
+    } else {
+      this.close();
+    }
   }
 
   close() {
     this.isOpen = false;
+    this.destroyChoiceTexts();
+    this.choices = null;
+    this.pendingChoices = null;
     this.parts.forEach((part) => part.setVisible(false));
     const callback = this.onClose;
+    const choice = this.selectedChoice;
     this.onClose = null;
-    if (callback) callback();
+    this.selectedChoice = null;
+    if (callback) callback(choice);
   }
 
   update(time, delta) {
     if (!this.isOpen) return;
+    if (this.choices) {
+      this.arrow.setVisible(false); // no "next line" arrow while picking
+      return;
+    }
     if (this.typing) {
       this.shown = Math.min(this.fullText.length, this.shown + (delta / 1000) * CHARS_PER_SECOND);
       this.body.setText(this.fullText.slice(0, Math.floor(this.shown)));

@@ -47,10 +47,13 @@ const GameState = {
   inventory: new Inventory(5),
   collected: new Set(), // ids of pickups already taken, so they don't respawn
   seenCutscenes: new Set(), // keys of CUTSCENES already played this session, so they don't replay (P4)
+  // Dialog entries already shown at least once, keyed "npcId:entryId" (src/dialog.js
+  // dialogEntryKey()). Drives the "!" vs "E" interaction bubble and any `when: { seen }` condition.
+  seenDialog: new Set(),
   flags: { tomasGaveSword: false, tomasChats: 0 },
   // The treasure hunt (docs/STORY.md): what part of it she's reached, and which of the 3 keys are
-  // found. Nothing sets `stage`/`keys` yet -- the NPC dialog + script runner that will (M1) just
-  // needs the data to already be here, saved and restored like everything else.
+  // found. Set by dialog actions (`{ stage: ... }`/`{ key: ... }`, src/dialog.js), saved and
+  // restored like everything else.
   quest: {
     stage: 'arrival', // 'arrival' -> 'briefed' -> 'hunting' -> 'done'
     keys: { physicsLab: false, icvl: false, room195: false },

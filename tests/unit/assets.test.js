@@ -68,7 +68,7 @@ test('sprite sheets have the sizes the game expects', () => {
 
   assert.deepEqual(pngSize(path.join(ASSETS, 'player.png')), { width: 3 * TILE, height: 3 * TILE });
   assert.deepEqual(pngSize(path.join(ASSETS, 'npc.png')), { width: 3 * TILE, height: TILE });
-  assert.deepEqual(pngSize(path.join(ASSETS, 'prompt.png')), { width: TILE, height: TILE });
+  assert.deepEqual(pngSize(path.join(ASSETS, 'prompt.png')), { width: 2 * TILE, height: TILE }); // "E" + "!" frames
 
   const items = pngSize(path.join(ASSETS, 'items.png'));
   for (const [id, item] of Object.entries(ITEMS)) {

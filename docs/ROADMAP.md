@@ -27,9 +27,9 @@ Tasks are written so one run can finish one. Keep them that size.
 ## M1 — Story engine (the toolkit the script needs)
 
 - [x] Quest/flag state in GameState (`flags`, `keys`, `stage`), plus save/load to localStorage with versioned saves and profile-ready storage (2026-09-20, `src/save.js`)
-- [ ] Data-driven NPC dialog: lines chosen by flags, with an `onEnd` action list (give item, set flag, start mini-game, play cutscene)
-- [ ] Dialog choices (yes/no and branches), matching the UI box style
-- [ ] Interaction bubble: a floating **E** above any NPC/thing in range (owner asked for this), plus **!** for new info
+- [x] Data-driven NPC dialog: lines chosen by flags, with an action list (give item, set flag, award key, start mini-game, play cutscene) (2026-09-20, `src/dialog.js`)
+- [x] Dialog choices (yes/no and branches), keyboard-driven (2026-09-20)
+- [x] Interaction bubble: floating **E** above anyone in range, **!** when they have something new (2026-09-20)
 - [ ] Blocked doors: a `locked` reason shown as a toast ("Locked for the event"), driven by map object properties
 - [ ] Quest tracker panel: "Keys: 1 / 3" and the current objective
 - [ ] Journal (J): the clues received so far

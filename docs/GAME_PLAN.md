@@ -65,6 +65,20 @@ SECRET DOOR
 | Conversation choices | **Yes.** Answers can branch the conversation into different flows |
 | Saving | **Yes.** Progress survives closing the browser. Build it so **multiple player profiles** (and later login) can each have their own save, without a rewrite. Profiles and login themselves come much later |
 
+## Owner decisions (2026-09-20)
+
+| Question | Decision |
+|---|---|
+| The story | Told in full: see [STORY.md](STORY.md). The game is a **birthday gift**, ending in an animated card |
+| Deadline | 2 to 4 weeks from 2026-09-20 |
+| Art | Keep the 16 px tile grid, **redraw everything** to Pokémon standard: characters with faces and shading, classy UI boxes, animations |
+| Map | The OpenStreetMap-based campus stays. **Minor enhancements only** |
+| Mini-games | Three, one per key: platformer, flappy-style flyer, Tetris, each with a score target |
+| Card media | The owner supplies **photos and a video** in `assets/card/` (never committed) |
+| Delivery | A Windows **.exe** with an icon ([ADR 0010](../decisions/0010-ship-as-windows-exe-and-web-build.md)), web build kept for dev |
+| How the work runs | A **scheduled loop** over [ROADMAP.md](ROADMAP.md) ([ADR 0011](../decisions/0011-autonomous-roadmap-loop.md)) |
+| Quality bar | Strict UI and UX tests, game feel, animations: "everything needs to be really good and on the spot" |
+
 ## Base components: what exists and what's needed
 
 ✅ = done · 🔲 = to build

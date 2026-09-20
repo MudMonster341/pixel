@@ -1,6 +1,6 @@
 # Pixel Quest — context
 
-**Last updated:** 2026-09-17 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-20 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -37,6 +37,17 @@ explain the story once the base map is done.
 - **Open questions for the owner:** where the real main entrance (Gate 2) is (asked in FB-0022); the second gate's name.
 - **Not yet:** ES modules, flags/scripts, saving, backpack, dialog choices, the story (the owner explains it after the base map).
 - **Next:** the owner verifies FB-0018 to FB-0022, then entrance position, interior polish from feedback, then the Foundation phase of GAME_PLAN.md.
+
+## Where this is going (2026-09-20)
+The owner told the full story and set the finish line: a sendable **Windows .exe** of the LUG
+treasure hunt, ending in an animated **birthday card**, within 2-4 weeks.
+- **What to build:** [docs/STORY.md](docs/STORY.md) (the script) and [docs/ROADMAP.md](docs/ROADMAP.md)
+  (M1 story engine → M2 art overhaul → M3 story slice → M4 mini-games → M5 feel → M6 ship → M7 QA).
+- **How the work runs:** a scheduled loop every 3 hours does one roadmap task, feedback first
+  ([ADR 0011](decisions/0011-autonomous-roadmap-loop.md)).
+- **Delivery:** Electron portable .exe, web build kept for dev ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
+- **Art:** the 16 px grid stays; everything gets redrawn to a much higher standard.
+- **Map:** the current campus is the keeper, minor enhancements only.
 
 ## How to run it
 ```

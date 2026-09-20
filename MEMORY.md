@@ -352,3 +352,28 @@ then QA (P5); then a morning update for the owner.
 **Decisions:** none new · **Failures:** usage limits; one QA miss (roof check)
 
 **Next:** owner verification; the Gate 2 position; interior polish from feedback.
+
+## 2026-09-20 — Story, roadmap, the scheduled loop, and M1 save/load
+
+**Did:**
+- The owner told the full story (LUG treasure hunt, three keys won through mini-games, ending in an
+  animated birthday card) and set the finish line: a sendable Windows .exe in 2-4 weeks, with
+  Pokémon-class art. Wrote [docs/STORY.md](docs/STORY.md) and [docs/ROADMAP.md](docs/ROADMAP.md) (M1-M7).
+- Decisions recorded: [ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md) (Electron .exe,
+  web build kept for dev) and [ADR 0011](decisions/0011-autonomous-roadmap-loop.md) (a scheduled loop
+  over the roadmap, every 3 hours, owner feedback first). GAME_PLAN and CONTEXT updated.
+- Checked for real BITS Dubai floor plans: none are published (official site, 2025 prospectus PDF,
+  Wikipedia, 2GIS, Google). The virtual tour's scene links stay the best source. Asked the owner for
+  the Physics Lab, ICVL and Room 195 positions.
+- First roadmap task done by a Sonnet agent: quest state (stage, 3 keys) + versioned, profile-ready
+  save/load in `src/save.js`, autosave debounced on real events, `?save=0` and `?profile=` switches,
+  player position restored on reload. 145 unit + 63 e2e tests.
+
+**Why:** the loop needs a written source of truth because each scheduled run starts with no memory
+of the last one, so the roadmap, ADRs and this log are how work carries across runs.
+
+**Decisions:** ADR 0010, ADR 0011 · **Failures:** one e2e flake remains (world-bounds edge test,
+passes on repeat); logged as an M7 task.
+
+**Next:** M1 data-driven NPC dialog with flag conditions and `onEnd` actions, so the quest stage and
+keys are actually set by the story.

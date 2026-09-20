@@ -140,6 +140,7 @@ function talkToTomas(state) {
       onEnd: () => {
         if (!state.inventory.add('sword')) return 'Your bag is full!';
         state.flags.tomasGaveSword = true;
+        notifyStateChanged(); // src/save.js autosaves soon after a flag changes
         return 'You got the Old Sword!';
       },
     };
@@ -152,5 +153,6 @@ function talkToTomas(state) {
   ];
   const lines = chats[state.flags.tomasChats % chats.length];
   state.flags.tomasChats++;
+  notifyStateChanged();
   return { lines };
 }

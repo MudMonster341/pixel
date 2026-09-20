@@ -26,7 +26,7 @@ Tasks are written so one run can finish one. Keep them that size.
 
 ## M1 — Story engine (the toolkit the script needs)
 
-- [ ] Quest/flag state in GameState (`flags`, `keys`, `stage`), plus save/load to localStorage with versioned saves and profile-ready storage
+- [x] Quest/flag state in GameState (`flags`, `keys`, `stage`), plus save/load to localStorage with versioned saves and profile-ready storage (2026-09-20, `src/save.js`)
 - [ ] Data-driven NPC dialog: lines chosen by flags, with an `onEnd` action list (give item, set flag, start mini-game, play cutscene)
 - [ ] Dialog choices (yes/no and branches), matching the UI box style
 - [ ] Interaction bubble: a floating **E** above any NPC/thing in range (owner asked for this), plus **!** for new info
@@ -76,6 +76,8 @@ Tasks are written so one run can finish one. Keep them that size.
 - [ ] A README for the person receiving the game
 
 ## M7 — Continuous QA (runs every loop, never "done")
+
+- [ ] Chase the remaining e2e flake: `robustness.spec.js` "walking into every edge" fails about 1 run in 4 on world bounds by ~2 px (passes on repeat; see ERR-0002/0003)
 
 - [ ] Strict UI tests: every panel at every window size, no overlap, no text overflow, nothing covering the player
 - [ ] UX checks: every screen reachable by keyboard only; no dead ends; every prompt readable in under 2 s

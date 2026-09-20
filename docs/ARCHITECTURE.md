@@ -70,16 +70,32 @@ tools/                 asset generator, feedback store + CLI
 
 ## State, saving and (future) profiles
 
-- **GameState is plain data**, with no Phaser objects or functions, so it turns into JSON as-is:
-  `{ version, profileId, map, position, facing, inventory, flags, collected, journal, playTimeMs }`.
-- **`save.js` goes through a storage adapter.** Today that's a `localStorage` adapter using the key
-  `pixelquest:v1:profile:<profileId>:slot:<n>`. Later a server adapter adds login. Game code never
-  touches `localStorage` directly.
-- **Every save carries a `version`.** Loading an older version runs migration steps; it never
-  crashes and never silently drops progress.
-- **`profileId` is `"local"`** until profiles exist. Everything that reads or writes a save takes
-  the profile id, so adding profiles later means adding a picker, not rewriting saves.
-- Autosave runs on map change and after story events.
+- **GameState (`src/state.js`) is plain data**, with no Phaser objects or functions except the
+  `Inventory` instance (itself just an emitter over a plain `slots` array), so it turns into JSON
+  almost as-is: `map`, `position` (`{x, y}` in tiles), `facing`, `inventory`, `flags`, `quest`
+  (`{ stage, keys }`, the treasure hunt's progress), `collected` and `seenCutscenes` (kept live as
+  `Set`s for fast lookups, turned into arrays only for saving). `WorldScene` keeps `map`/`position`/
+  `facing` current every frame (`syncGameState()`), so a save always reflects where she actually is.
+- **`src/save.js` is today's storage adapter**, going straight to `localStorage` under the key
+  `pixelquest.save.v1.<profile>`. A save is `{ version, savedAt, profile, state }`, where `state` is
+  GameState's plain-data snapshot (`snapshotState()`/`applyState()`). Game code never touches
+  `localStorage` directly -- only `saveGame()`/`loadGame()`/`listProfiles()`/`deleteProfile()` do.
+  A server adapter later would keep this same four-function shape.
+- **Every save carries a `version`** (`SAVE_VERSION`). `loadGame()` runs it through `migrate()`;
+  a version this build can't understand (older than any migration step covers, or newer than the
+  build knows) makes it start fresh with a console warning instead of crashing or half-applying data.
+- **One profile is one `localStorage` key.** `DEFAULT_PROFILE = 'default'`; `?profile=<name>` in the
+  URL picks another. Adding a picker (or, much later, login swapping the adapter for a server one)
+  means calling these same functions with a different profile string, not rewriting saves.
+- **Autosave** (`initAutosave()`, called from `main.js` once the game boots) debounces a `saveGame()`
+  a short moment after any of: a map change (`map-entered`), a quest/flag change
+  (`state-changed`, emitted by `GameState.notifyStateChanged()`), a cutscene seen (`cutscene-seen`),
+  walking (`player-moved`), or the inventory changing -- and flushes immediately on `pagehide`/
+  `beforeunload` if a save is still pending, so closing the tab mid-debounce doesn't lose it.
+- **At boot**, `main.js` calls `loadGame()` before creating the Phaser game (unless `?save=0`); if it
+  restores a map, `BootScene` starts `WorldScene` on that map at that position/facing instead of the
+  map's own spawn point. `?save=0` skips both loading and autosaving entirely, so it can't touch a
+  real save -- used by default in `tests/e2e/helpers.js` so tests stay deterministic.
 
 ## Scripts: conditions and actions
 

@@ -8,19 +8,33 @@ const { FEEDBACK_DIR } = require('./paths');
 // `map` defaults to the meadow test map; pass `map: null` for the real start map (the campus).
 // Cutscenes are off by default (`?cutscene=0`) so a test walking through Gate 2 for some other
 // reason isn't interrupted; tests/e2e/cutscene.spec.js passes `cutscene: true` to turn them back on.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false } = {}) {
+// Saving defaults off (`?save=0`, src/save.js): most tests reload/re-navigate within a test and must
+// not continue from whatever autosave a previous step wrote, or start from a leftover save at all.
+// tests/e2e/save.spec.js passes `save: true` to opt back in, and `profile` to pick a save slot.
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.goto(`/?dev=${dev ? 1 : 0}${map ? `&map=${map}` : ''}${cutscene ? '' : '&cutscene=0'}`);
+  const params = new URLSearchParams({ dev: dev ? '1' : '0' });
+  if (map) params.set('map', map);
+  if (!cutscene) params.set('cutscene', '0');
+  if (!save) params.set('save', '0');
+  if (profile) params.set('profile', profile);
+  await page.goto(`/?${params.toString()}`);
+  await waitForBoot(page);
+  return { errors };
+}
+
+// Waits for the world + UI scenes to be up and running. openGame() calls this after page.goto();
+// tests/e2e/save.spec.js also calls it directly after page.reload(), which doesn't go through openGame.
+async function waitForBoot(page) {
   await page.waitForFunction(() => {
     const world = window.game?.scene.getScene('world');
     const ui = window.game?.scene.getScene('ui');
     return Boolean(world?.player?.active && ui?.tutorial);
   });
-  return { errors };
 }
 
 function state(page) {
@@ -121,4 +135,7 @@ function feedbackCli(args) {
   });
 }
 
-module.exports = { openGame, state, startGame, holdKey, holdKeys, pressUntil, teleport, waitForMap, finishDialog, countItem, feedbackCli };
+module.exports = {
+  openGame, waitForBoot, state, startGame, holdKey, holdKeys, pressUntil, teleport, waitForMap, finishDialog,
+  countItem, feedbackCli,
+};

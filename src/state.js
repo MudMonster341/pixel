@@ -39,8 +39,27 @@ class Inventory extends Phaser.Events.EventEmitter {
 }
 
 const GameState = {
+  // Where the player is, kept current every frame by WorldScene (src/scenes/world.js) so a save
+  // taken at any moment reflects the real position, not just the spot she last warped through.
+  map: null, // current/last map key, or null until the world scene has run at least one frame
+  position: null, // { x, y } in tiles
+  facing: 'down',
   inventory: new Inventory(5),
   collected: new Set(), // ids of pickups already taken, so they don't respawn
   seenCutscenes: new Set(), // keys of CUTSCENES already played this session, so they don't replay (P4)
   flags: { tomasGaveSword: false, tomasChats: 0 },
+  // The treasure hunt (docs/STORY.md): what part of it she's reached, and which of the 3 keys are
+  // found. Nothing sets `stage`/`keys` yet -- the NPC dialog + script runner that will (M1) just
+  // needs the data to already be here, saved and restored like everything else.
+  quest: {
+    stage: 'arrival', // 'arrival' -> 'briefed' -> 'hunting' -> 'done'
+    keys: { physicsLab: false, icvl: false, room195: false },
+  },
 };
+
+// Call after changing GameState.flags or GameState.quest so autosave (src/save.js) saves soon.
+// `window.game` doesn't exist yet the moment this script first runs (main.js creates it later, and
+// unit tests never create it at all), so this is a no-op until the game has actually booted.
+function notifyStateChanged() {
+  if (typeof window !== 'undefined' && window.game) window.game.events.emit('state-changed');
+}

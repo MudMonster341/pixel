@@ -5,9 +5,9 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js'];
+const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js'];
 
-// Just enough of Phaser's EventEmitter for state.js
+// Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
 class TinyEmitter {
   constructor() {
     this.listeners = {};
@@ -22,8 +22,37 @@ class TinyEmitter {
   }
 }
 
+// Just enough of window.localStorage for save.js: an in-memory Map behind the same string-keyed
+// get/set/remove/key/length interface. Fresh per loadGameData() call, like everything else here.
+class FakeStorage {
+  constructor() {
+    this.store = new Map();
+  }
+  getItem(key) {
+    return this.store.has(key) ? this.store.get(key) : null;
+  }
+  setItem(key, value) {
+    this.store.set(key, String(value));
+  }
+  removeItem(key) {
+    this.store.delete(key);
+  }
+  key(index) {
+    return [...this.store.keys()][index] ?? null;
+  }
+  get length() {
+    return this.store.size;
+  }
+}
+
 function loadGameData() {
-  const context = vm.createContext({ Phaser: { Events: { EventEmitter: TinyEmitter } }, console, URLSearchParams });
+  const localStorage = new FakeStorage();
+  const context = vm.createContext({
+    Phaser: { Events: { EventEmitter: TinyEmitter } },
+    console,
+    URLSearchParams,
+    localStorage,
+  });
   for (const file of SCRIPTS) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
   }
@@ -44,6 +73,15 @@ function loadGameData() {
     cutscenesEnabled: get('cutscenesEnabled'),
     objectAt: get('objectAt'),
     notSeenCutscene: get('notSeenCutscene'),
+    notifyStateChanged: get('notifyStateChanged'),
+    saveGame: get('saveGame'),
+    loadGame: get('loadGame'),
+    listProfiles: get('listProfiles'),
+    deleteProfile: get('deleteProfile'),
+    initAutosave: get('initAutosave'),
+    currentProfile: get('currentProfile'),
+    saveEnabled: get('saveEnabled'),
+    localStorage,
     tileInfo: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8')),
   };
 }

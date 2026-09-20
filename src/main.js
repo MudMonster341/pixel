@@ -21,11 +21,22 @@ class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('ui');
-    this.scene.start('world');
+    this.scene.start('world', continueSpawnData());
   }
 }
 
+// If a save was loaded (see startGame() below) and no `?map=` explicitly picked a different map for
+// dev/tests, resume on GameState's own map/position/facing instead of the map's normal spawn point
+// (docs/ARCHITECTURE.md: "Autosave runs on map change and after story events" implies the reverse
+// too -- continuing should land you back where that autosave left you).
+function continueSpawnData() {
+  const explicitMap = typeof location !== 'undefined' && new URLSearchParams(location.search).has('map');
+  if (explicitMap || !GameState.map || !MAPS[GameState.map] || !GameState.position) return undefined;
+  return { map: GameState.map, spawn: { x: GameState.position.x, y: GameState.position.y, facing: GameState.facing } };
+}
+
 function startGame() {
+  if (saveEnabled()) loadGame(currentProfile()); // ?save=0 boots fresh without touching the stored save
   // Exposed on window so you can poke at it from the browser console (e.g. game.scene.getScene('world').player).
   window.game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -39,6 +50,7 @@ function startGame() {
     physics: { default: 'arcade', arcade: { debug: false } },
     scene: [BootScene, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
   });
+  if (saveEnabled()) initAutosave(window.game, currentProfile());
 }
 
 // Dev mode loads developer tools (the feedback overlay). It's on by default when running locally.

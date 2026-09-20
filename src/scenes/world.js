@@ -166,6 +166,16 @@ class WorldScene extends Phaser.Scene {
     this.checkWarps();
     this.checkAreas();
     this.checkCutscene();
+    this.syncGameState();
+  }
+
+  // Keeps GameState's map/position/facing current every frame, so a save taken at any moment (or
+  // the browser just being closed) reflects where she actually is, not just her last warp target
+  // (docs/ARCHITECTURE.md: "Anything that must survive a map change or a save goes in GameState").
+  syncGameState() {
+    GameState.map = this.mapKey;
+    GameState.facing = this.facing;
+    GameState.position = { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) };
   }
 
   // E / Space: next line of dialog, or talk to whoever is nearby.
@@ -406,6 +416,7 @@ class WorldScene extends Phaser.Scene {
   // cutscene scene, which resumes 'world' itself when it's done (src/scenes/cutscene.js).
   playCutscene(key) {
     GameState.seenCutscenes.add(key);
+    this.game.events.emit('cutscene-seen', key); // src/save.js autosaves soon after
     this.player.setVelocity(0, 0);
     this.player.anims.stop();
     this.prompt.setVisible(false);

@@ -1,0 +1,16 @@
+Kyrise's 16x16 RPG Icon Pack -- License
+
+Quoted verbatim from the OpenGameArt.org asset page
+(https://opengameart.org/content/kyrises-free-16x16-rpg-icon-pack):
+
+  License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://creativecommons.org/licenses/by/4.0/
+
+This licence requires attribution. Credit given in CREDITS.md as:
+"Kyrise's 16x16 RPG Icon Pack" by Kyrise, https://kyrise.itch.io/,
+via https://opengameart.org/content/kyrises-free-16x16-rpg-icon-pack,
+CC BY 4.0.
+
+No file named LICENSE or README was included inside the downloaded zip
+itself; this file records the licence exactly as stated on the asset's
+official OpenGameArt page at time of download (see SOURCE.txt for the date).

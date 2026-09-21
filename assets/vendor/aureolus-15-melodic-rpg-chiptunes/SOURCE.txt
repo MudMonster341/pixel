@@ -1,0 +1,21 @@
+Pack:      15 Melodic RPG Chiptunes
+Author:    Aureolus_Omicron
+URL:       https://opengameart.org/content/15-melodic-rpg-chiptunes
+License:   CC0 ("CC0. No credit required." -- stated verbatim on the OpenGameArt
+           page) https://creativecommons.org/publicdomain/zero/1.0/
+Downloaded: 2026-09-21
+Downloaded by: research task (owner request: free packs for music/SFX for M5)
+Original zip: 15_melodic_rpg_chiptunes_ogg.zip from
+  https://opengameart.org/sites/default/files/15_melodic_rpg_chiptunes_ogg.zip
+Original zip sha256: 85ac8a965d19e8db93f09e57e490080ae4550f3fcdda13de2db61a449b94f094
+Format: 15 .ogg tracks (full loop-length compositions, not one-shot stingers).
+Covers: rpgchip01_title_screen.ogg (title screen loop candidate),
+  rpgchip03_town.ogg (a calm walkable-overworld loop, candidate for the outdoor
+  campus bed), rpgchip02_bittersweet_story.ogg (slower/sentimental, candidate
+  for the birthday-card ending), plus 12 more (dungeon, battle, airship,
+  game-over, etc.) not obviously needed by this game's story but included
+  since they were one zip.
+Does not cover: short UI/SFX stingers (see the three kenney-* audio folders).
+Note: this is the only music (as opposed to sound-effect) pack downloaded --
+  M5 (per CONTEXT.md/GAME_PLAN.md) still needs someone to actually pick and
+  wire in 2-3 of these 15 tracks; not done here, this is research only.

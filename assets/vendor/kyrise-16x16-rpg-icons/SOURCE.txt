@@ -1,0 +1,20 @@
+Pack:      Kyrise's 16x16 RPG Icon Pack (V1.2)
+Author:    Kyrise (https://kyrise.itch.io/)
+URL:       https://opengameart.org/content/kyrises-free-16x16-rpg-icon-pack
+License:   CC BY 4.0 -- attribution required. See LICENSE.txt in this folder
+           for the exact quote. Full text: https://creativecommons.org/licenses/by/4.0/
+Downloaded: 2026-09-21
+Downloaded by: research task (owner request: props/keys/reward-box search)
+Original zip: Kyrises_16x16_RPG_Icon_Pack_V1.2.zip from
+  https://opengameart.org/sites/default/files/Kyrises_16x16_RPG_Icon_Pack_V1.2.zip
+Original zip sha256: d3ec6e7b990c94e8658b6a3358667bd06fcf031edcb6fe06ccf8efa518839bab
+Format: 300+ individual PNGs at 16x16, 32x32 and 48x48 (plus 3 full
+  spritesheets), each icon with its own black outline already drawn.
+Covers, directly relevant to STORY.md's treasure hunt: key_01a-e and
+  key_02a-e (multiple key designs -- candidates for the 3 keys), gift_01a-f
+  (a closed gift box) and giftopen_01a-f (a 6-frame box-opening animation --
+  a strong direct match for "the box opens into the birthday card" beat).
+  Also has potions, food, weapons, armor, tools etc. not needed by this game.
+Does not cover: any 16x16 tile-grid ground tiles (this is icon-only, meant
+  for inventory/UI display at STYLE_GUIDE's "Item icon 16x16, shown at 3x"
+  size, which is exactly this pack's native resolution).

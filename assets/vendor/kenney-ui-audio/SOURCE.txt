@@ -1,0 +1,19 @@
+Pack:      UI Audio (UI SFX Set)
+Author:    Kenney Vleugels, for Kenney (www.kenney.nl)
+URL:       https://kenney.nl/assets/ui-audio
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as License.txt in this folder (Kenney's own
+           license file from the zip). Attribution ("Kenney" or
+           "www.kenney.nl") is requested but not required.
+Downloaded: 2026-09-21
+Downloaded by: research task (owner request: free packs for music/SFX for M5)
+Original zip: kenney_ui-audio.zip from
+  https://kenney.nl/media/pages/assets/ui-audio/490d233f68-1677590494/kenney_ui-audio.zip
+Original zip sha256: 946fc23a63d535d693eb31b2eabb80c8c28d6351e2186b344ceb71b2cb1d5eb6
+Format: 51 .ogg files in Audio/ (click1-5, mouseclick1, mouserelease1,
+  rollover1-6, switch1-38)
+Covers: menu/dialog blips -- click/rollover for menu navigation, switch sounds
+  for confirm/cancel/page-advance in the dialog box (the typewriter "line done"
+  moment) and the pause menu.
+Does not cover: footsteps/world SFX (see kenney-rpg-audio) or music.

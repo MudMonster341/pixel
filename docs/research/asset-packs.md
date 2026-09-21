@@ -204,3 +204,194 @@ reviewed per `docs/QA_PLAN.md`.
 Each of 2-6 above should regenerate `assets/tiles.png`/`tiles.json` via `npm run assets`, run
 `npm test`, and get a fresh `npm run qa:shots` pass before being considered done, per
 `docs/TESTING.md` and this repo's normal "done" bar.
+
+## Addendum, 2026-09-21: characters, icons, and audio
+
+**Status: research only.** `src/` and `tools/` untouched (another agent was working on
+`tools/make-assets.js`/`tools/campus` at the same time). Five new packs downloaded into
+`assets/vendor/` (details and licences below); nothing wired in yet.
+
+This follows up the "Characters -- still hand-drawn" and "no CC0/CC-BY UI/sound pack" gaps the
+original survey above left open, plus a fresh look at what a free UI pack, sound, music and
+prop/reward search turns up.
+
+### 1. Characters: what LimeZu's free pack actually gives us
+
+`assets/vendor/limezu-modern-interiors-free/Modern tiles_Free/Characters_free/` has four named
+characters (**Adam**, **Alex**, **Amelia**, **Bob**), each as ~8 separate PNGs (a big composite
+sheet, plus `_idle`, `_idle_anim`, `_run`, `_phone`, `_sit`, `_sit2`, `_sit3`). Reading the PNGs
+directly (a small decoder was written for this research, since `tools/lib/png.js` only *encodes* --
+see "Tooling note" below) instead of trusting filenames turned up two things the filenames don't
+tell you:
+
+- **Frame layout confirmed:** the `_idle_16x16.png` files are 64x32 = 4 frames of 16x32, one per
+  direction, in **down, up, left, right** order -- the same convention this game's own
+  `docs/STYLE_GUIDE.md` uses (down/up/left, right mirrored), just with right drawn explicitly
+  instead of mirrored. The `_run_16x16.png` files (384x32 = 24 columns) do have genuine walk-cycle
+  motion -- leg spread and arm position change frame-to-frame (verified by dumping raw pixels column
+  by column: columns 0/2/5 show a narrow "feet together" pose, columns 1/3/4 a wider stride, column 6
+  a fully back-turned pose with no face visible). It is **not** just a static bust repeated, as the
+  first few frames alone can look.
+- **The sprite is taller than this game's 16x16 frame.** Every character's actual pixels occupy
+  roughly **rows 10-31 of a 32-tall canvas (about 22 px)**, not a clean 16x16 -- confirmed on both
+  the current characters and the legacy `Old/mv/Character_2_16x16_RPGMAKER.png` sample (same ~21-row
+  footprint). This is a real integration cost: dropping LimeZu characters in means either **cropping
+  ~6 px off the top of the hair** to force a 16-tall frame, or moving the player/NPC frame to 16x24,
+  which `docs/STYLE_GUIDE.md` already flags as "an option later." Not a blocker, but not a drop-in
+  either -- flagging so whoever wires this in doesn't get a surprise.
+- **Recoloring one into the pink-top lead is realistic and was proven, not just asserted.** Built a
+  small recolor script (palette-swap by exact RGB match, using this game's *real* lead colours read
+  straight out of `tools/make-assets.js`'s `PALETTE`/`LEAD_COLORS` -- hair `#2a1c14`, skin
+  `#f4c9a0`/`#d49a6a`, top `#ff6fb1`/`#d94b8f`) and ran it against two candidates:
+  - **Amelia** (brown hair, tan skin, dusty-rose top in the original) -- her hairstyle silhouette
+    (a rounded bob with side-swept fringe) reads as clearly feminine before *and* after recolor, and
+    the recolored result is a convincing match for the existing hand-drawn lead.
+  - **Bob** (already near-black hair and fair skin in the original, grey-blue top) -- needed only the
+    top recolored to pink; skin/hair needed just a snap-to-exact-palette touch-up. His haircut reads
+    more unisex/masculine, though, so despite needing less color work he's the weaker silhouette match.
+  - Both recolors, plus the two untouched originals (Alex, Adam) and the current in-game
+    `assets/player.png` for direct comparison, plus a genuine 3-frame walk-motion sample (from the
+    `_run` sheet, recolored) are in **`docs/research/character-pack-preview-limezu.png`**. Judging it
+    honestly: the Amelia recolor is a believable stand-in for the lead and arguably has *more*
+    expressive detail (visible strands, blush, a distinct fringe) than the current flat hand-drawn
+    16x16 player sprite, at the cost of the height mismatch above and needing every frame (idle +
+    run + the direction set) redone with the same palette swap, not just the one frame shown here.
+  - **Licence check (read directly from the pack, not just cited from memory):** the free pack ships
+    its own `LICENSE.txt` inside `assets/vendor/limezu-modern-interiors-free/Modern tiles_Free/`:
+    > FREE VERSION LICENSE: CAN: YOU CAN USE THE ASSET IN NON COMMERCIAL PROJECTS / YOU CAN EDIT THE
+    > SPRITES AND USE THEM IN NON COMMERCIAL PROJECTS. CAN'T: YOU CAN'T USE THE ASSET IN COMMERCIAL
+    > PROJECTS / YOU CAN'T EDIT THE SPRITES AND USE THEM IN COMMERCIAL PROJECTS / YOU CAN'T EDIT AND
+    > RESELL THE SPRITES.
+
+    Editing (i.e. recoloring) for this non-commercial gift is explicitly allowed. Matches
+    [ADR 0012](../../decisions/0012-third-party-asset-packs.md) exactly; nothing new needed here.
+
+**Recommendation: recolor Amelia's sprite set into the lead**, accepting the frame-height decision
+above as a follow-up task (crop to 16 vs. adopt 16x24). This is better value than any alternative
+found:
+
+- **LPC generator** (`liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator`,
+  CC-BY-SA 3.0 / GPLv3): re-confirmed from the original survey -- native 64x64 frames need a 4x
+  downscale to fit this game's 16x16, which loses most of the linework that makes LPC art readable.
+  Still not recommended for the reason already given above; not re-downloaded.
+- **Mana Seed "Farmer Sprite System"** by Seliel the Shaper (`seliel-the-shaper.itch.io/farmer-base`,
+  free): checked fresh for this task. Native cell is **64x64 with a 32px-tall sprite** -- a 4x/2x
+  mismatch, similar to LPC. Its licence (quoted from
+  `selieltheshaper.weebly.com/user-license.html`) also states redistribution is prohibited even for
+  the free tier, and -- more unusually -- **bars using the asset in a project that also uses
+  AI-generated content** ("Projects cannot use this asset alongside AI-generated content"). Since
+  this game is being built by an AI agent, that clause is a real disqualifier on top of the scale
+  mismatch. Not downloaded.
+- **LimeZu's paid Modern User Interface pack** (`limezu.itch.io/modernuserinterface`, ~$3.90): has
+  **no free version** -- checked the pack's own page and devlogs directly. Confirms the free-version
+  gap noted in the original survey's dialog-mockup verdict still stands; the Kenney Pixel UI Pack
+  remains "scrap material," not a finished design.
+- A further web sweep for other free 16x16-exact, 4-direction, clearly-licensed character packs
+  (`Little RPG Characters` by Starmixu, `Cute Fantasy RPG` by Kenmi, various itch.io "16x16 character
+  template" results) turned up nothing better: these are fantasy-knight/farming themed, a worse
+  content fit for a university campus than LimeZu's already-modern-dressed cast, so they weren't
+  downloaded or licence-checked in depth.
+
+### 2. Icons: keys and a reward box (new find)
+
+**Kyrise's 16x16 RPG Icon Pack (V1.2)** by Kyrise, downloaded to
+`assets/vendor/kyrise-16x16-rpg-icons/` -- **CC BY 4.0** (attribution required; quoted and recorded
+in that folder's own `LICENSE.txt`, since the zip itself ships no licence file -- the CC BY 4.0 text
+is instead quoted verbatim from the OpenGameArt page). 300+ individually-outlined 16x16/32x32/48x48
+icons. Directly relevant to `docs/STORY.md`'s "find 3 keys hidden around campus... hands her a small
+box":
+
+- `key_01a-e` and `key_02a-e`: ten key designs in different metals/colours -- enough to give the
+  three story keys (Physics Lab, ICVL, Room 195) visually distinct icons instead of three identical
+  sprites.
+- `gift_01a-c`: closed, ribbon-wrapped present-style boxes (red/green/purple) -- candidates for the
+  reward, though their candy-cane ribbon styling reads more "Christmas" than "birthday gift" and
+  would need a recolor.
+- `giftopen_01a-f`: **corrects an assumption made while planning this research** -- the name
+  suggested a single box's open-animation frames, but they're actually **six different closed
+  treasure-chest designs** (red/green/white/blue/yellow variants), not a sequence. Still useful: a
+  plain chest reads less "Christmas" than the ribboned gift boxes and may be the better match for
+  "a small box" from the volunteer.
+- See **`docs/research/kyrise-icon-preview.png`** for all of the above rendered at 6x (the style
+  guide's "shown at 3x" plus headroom for this preview).
+
+**Recommendation:** adopt for the 3 keys and the reward box specifically; skip the rest of the pack
+(potions/weapons/armor aren't needed).
+
+### 3. Sound and music for M5 (new find)
+
+jsfxr is already the plan for simple procedural blips per `CONTEXT.md`/`docs/GAME_PLAN.md`; these
+fill the gap for things jsfxr doesn't do well (footsteps, doors, and real music beds):
+
+- **Kenney "RPG Audio"** (`assets/vendor/kenney-rpg-audio/`) -- CC0. 51 `.ogg` files: 10 footstep
+  variants, door open/close (x4/x2) and creak (x3), book open/close/flip/place, coin/handle-coins,
+  cloth, knife, metal-pot sounds. Covers player footsteps, room-door transitions, and a
+  key-pickup/coin-handle sound.
+- **Kenney "UI Audio"** (`assets/vendor/kenney-ui-audio/`) -- CC0. 51 `.ogg` files: click/rollover/
+  switch sounds for menu navigation, dialog-box page-advance, and the pause menu.
+- **Kenney "Music Jingles"** (`assets/vendor/kenney-music-jingles/`) -- CC0. 85 short (1-3s) stingers
+  across 5 instrument styles (8-bit, hit, pizzicato, sax, steel). Good for "key found" / "mini-game
+  won" / "box opens" moments; **not** loopable background music.
+- **"15 Melodic RPG Chiptunes"** by Aureolus_Omicron (OpenGameArt,
+  `assets/vendor/aureolus-15-melodic-rpg-chiptunes/`) -- CC0 ("CC0. No credit required." quoted
+  verbatim from the asset page). 15 full-length `.ogg` tracks, not stingers. `rpgchip01_title_screen`
+  and `rpgchip03_town` are the two immediately useful ones (title screen loop, calm overworld bed);
+  `rpgchip02_bittersweet_story` is a slower, more sentimental candidate for the birthday-card ending.
+  The other 12 (dungeon/battle/airship/game-over) don't fit this story and can be ignored or deleted
+  later -- they were downloaded as one zip.
+
+All four are CC0 or CC0-quoted, so nothing here is licence-blocked; picking specific tracks/sounds
+and wiring them into the audio system is a real M5 task, not done here.
+
+### 4. Props, signage, benches/bins/lamps
+
+Already covered by what's already in `assets/vendor/kenney-roguelike-modern-city/` per the original
+survey above (benches, planters, streetlamps, small shopfront facades). No new prop pack was found
+that beats or meaningfully adds to that CC0 set, so nothing new was downloaded for this category.
+
+### What was downloaded (this addendum)
+
+| Folder | Pack | Licence | sha256 of original zip |
+|---|---|---|---|
+| `assets/vendor/kenney-rpg-audio/` | RPG Audio (Kenney) | CC0 1.0 | `6dbeaf8544da958d8f2adcb4a4a4b76c1ade34a05f8ab9edccd327da7375f38b` |
+| `assets/vendor/kenney-ui-audio/` | UI Audio (Kenney) | CC0 1.0 | `946fc23a63d535d693eb31b2eabb80c8c28d6351e2186b344ceb71b2cb1d5eb6` |
+| `assets/vendor/kenney-music-jingles/` | Music Jingles (Kenney) | CC0 1.0 | `b729ba57959bd58793d2c5cafa348aaf2655d354f3da35ec4729e03ec77197b8` |
+| `assets/vendor/kyrise-16x16-rpg-icons/` | Kyrise's 16x16 RPG Icon Pack V1.2 | CC BY 4.0 | `d3ec6e7b990c94e8658b6a3358667bd06fcf031edcb6fe06ccf8efa518839bab` |
+| `assets/vendor/aureolus-15-melodic-rpg-chiptunes/` | 15 Melodic RPG Chiptunes | CC0 | `85ac8a965d19e8db93f09e57e490080ae4550f3fcdda13de2db61a449b94f094` |
+
+Each folder has its own `SOURCE.txt` (URL, author, licence, download date, sha256) and either the
+pack's own bundled `License.txt`/`LICENSE.txt` or, where none was bundled (Kyrise, the chiptunes), a
+`LICENSE.txt` written here quoting the licence exactly as stated on the source page. Total new
+download size: **~47 MB** (the chiptunes zip alone is ~41 MB of the 15 `.ogg` tracks), combined with
+the ~1.1 MB already in `assets/vendor/` from the original survey and the two non-commercial packs the
+owner downloaded directly -- comfortably under the 100 MB budget.
+
+None of these five licences forbid redistribution (CC0 is public domain; CC BY 4.0 permits
+redistribution with credit), so **`.gitignore` did not need a new entry** -- only the two
+non-commercial, no-redistribution packs (LimeZu, Sprout Lands) are excluded from git, per the
+existing rule.
+
+No pack in this addendum needed a click-through or account to download; all five were plain zip
+downloads.
+
+### Tooling note: a scratch PNG decoder
+
+`tools/lib/png.js` only encodes PNGs (no decoder existed anywhere in the repo), so reading vendor
+sprite sheets pixel-by-pixel for this research (frame layout, exact colours, building the recolor
+mockups) needed one. A minimal decoder (inflate via Node's built-in `zlib`, supporting color types
+0/2/3/4/6 at 8-bit depth, all five PNG filter types) was written as a **throwaway script outside this
+repo** (in the research session's scratch directory, not committed) to produce the two preview PNGs
+above. If a future task wants to do this kind of atlas/palette work for real (the "atlas loader" idea
+in this doc's original Migration Plan), that decoder would need a proper home in `tools/lib/` --
+not added there now, since this task's brief was research-only and `tools/` was off-limits.
+
+### Recommendation summary (this addendum)
+
+1. **Characters:** recolor LimeZu's Amelia sprite set (idle + run, all directions) into the lead's
+   exact palette; decide separately whether to crop to 16 tall or move to a 16x24 frame.
+2. **Icons:** adopt Kyrise's key and chest/gift icons for the 3 keys and the reward box.
+3. **Audio:** wire in a subset of Kenney's RPG Audio (footsteps, doors) and UI Audio (menu/dialog
+   blips) for M5; pick 1-2 tracks from the 15 melodic chiptunes for the title screen and card.
+4. **Still a gap:** no free pack was found for background students/crowd variety beyond what LimeZu's
+   four named characters (Adam, Alex, Amelia, Bob) already give -- recoloring those four differently
+   (as the game already plans for the lead) remains the only free option for NPC variety.

@@ -1,0 +1,20 @@
+Pack:      RPG Audio
+Author:    Kenney Vleugels, for Kenney (www.kenney.nl)
+URL:       https://kenney.nl/assets/rpg-audio
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as License.txt in this folder (Kenney's own
+           license file from the zip). Attribution ("Kenney" or
+           "www.kenney.nl") is requested but not required.
+Downloaded: 2026-09-21
+Downloaded by: research task (owner request: free packs for music/SFX for M5)
+Original zip: kenney_rpg-audio.zip from
+  https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip
+Original zip sha256: 6dbeaf8544da958d8f2adcb4a4a4b76c1ade34a05f8ab9edccd327da7375f38b
+Format: 51 .ogg files in Audio/
+Covers: footsteps (footstep00-09), doors (doorOpen_1-2, doorClose_1-4, creak1-3,
+  metalLatch), cloth/belt rustle, book open/close/flip/place, coin/handle-coins
+  jingle, knife/metal sounds. Directly useful for: player footsteps, room/door
+  transitions, the key pickup sound (handleCoins or metalClick), book/desk
+  interactions in labs and the library.
+Does not cover: UI clicks (see kenney-ui-audio) or music.

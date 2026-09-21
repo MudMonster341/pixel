@@ -37,3 +37,26 @@ require. The raw packs are not in this repository; download them again if you ne
 - **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0
   1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
   Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).
+
+## Character, icon, and audio survey (added 2026-09-21, see docs/research/asset-packs.md)
+
+Research only -- none of these are wired into the game yet (`src/` and `tools/` untouched).
+
+- **RPG Audio**, **UI Audio** and **Music Jingles** by **Kenney Vleugels** ([kenney.nl](https://kenney.nl),
+  `assets/vendor/kenney-rpg-audio/`, `assets/vendor/kenney-ui-audio/`, `assets/vendor/kenney-music-jingles/`)
+  -- CC0 1.0 (public domain). Footsteps, doors/creaks, book/coin sounds; UI clicks/rollovers/switches;
+  and 85 short musical stingers. Not wired in -- candidate SFX for M5.
+- **15 Melodic RPG Chiptunes** by **Aureolus_Omicron** (OpenGameArt,
+  `assets/vendor/aureolus-15-melodic-rpg-chiptunes/`) -- CC0 ("CC0. No credit required."). 15 full-length
+  loopable tracks including a title-screen theme and a calm town/overworld loop. Not wired in --
+  candidate background music for M5.
+- **Kyrise's 16x16 RPG Icon Pack (V1.2)** by **Kyrise** (OpenGameArt,
+  `assets/vendor/kyrise-16x16-rpg-icons/`) -- **CC BY 4.0, attribution required**:
+  "Kyrise's 16x16 RPG Icon Pack" by Kyrise (https://kyrise.itch.io/), via
+  [opengameart.org/content/kyrises-free-16x16-rpg-icon-pack](https://opengameart.org/content/kyrises-free-16x16-rpg-icon-pack),
+  CC BY 4.0. 300+ 16x16/32x32/48x48 item icons with outlines already drawn; includes several key
+  designs and closed/open treasure-chest icons, a strong content match for the 3-key/reward-box
+  treasure hunt in docs/STORY.md. Not wired in yet.
+- **LimeZu Modern Interiors Free's characters** (already in `assets/vendor/limezu-modern-interiors-free/`,
+  same licence as above) were surveyed as the female-lead candidate: see
+  docs/research/asset-packs.md's 2026-09-21 addendum for the recolor mockup and verdict.

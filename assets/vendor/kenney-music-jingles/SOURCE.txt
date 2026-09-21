@@ -1,0 +1,21 @@
+Pack:      Music Jingles
+Author:    Kenney Vleugels, for Kenney (www.kenney.nl)
+URL:       https://kenney.nl/assets/music-jingles
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled inside this folder (Kenney's own license file
+           from the zip, alongside the Audio/ subfolders). Attribution
+           ("Kenney" or "www.kenney.nl") is requested but not required.
+Downloaded: 2026-09-21
+Downloaded by: research task (owner request: free packs for music/SFX for M5)
+Original zip: kenney_music-jingles.zip from
+  https://kenney.nl/media/pages/assets/music-jingles/f37e530b9e-1677590399/kenney_music-jingles.zip
+Original zip sha256: b729ba57959bd58793d2c5cafa348aaf2655d354f3da35ec4729e03ec77197b8
+Format: 85 short .ogg stingers across 5 subfolders (8-Bit jingles, Hit jingles,
+  Pizzicato jingles, Sax jingles, Steel jingles) -- each 1-3 seconds, not
+  loopable background music.
+Covers: short musical stings for discrete moments -- a key found, a mini-game
+  won, the box opening. The "8-Bit jingles" subfolder is the closest style
+  match to this game's chiptune-ish target sound.
+Does not cover: a loopable title-screen or card bed (see
+  aureolus-15-melodic-rpg-chiptunes for that).

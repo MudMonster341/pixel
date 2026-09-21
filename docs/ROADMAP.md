@@ -55,6 +55,16 @@ source asset packages... change all the trees, pavements, everything."
 
 ## M3 — The story slice (the actual game)
 
+### M3a — The opening (owner brief, 2026-09-21; see [STORY.md](STORY.md) "Opening")
+- [ ] Title screen redesigned properly: big drawn buttons with depth, shaded panels, animated background
+- [ ] Mustafa's greeting: a character portrait and dialog that introduces the lead and the day
+- [ ] Name entry (typed + on-screen keyboard, default name, saved)
+- [ ] Character customisation: clothes colour (and hair/skin if cheap), previewed live, saved, used everywhere
+- [ ] Bus arrival animation at the main gate: bus drives in, stops, she steps off, bus leaves, then the gate cutscene
+- [ ] Entrance cutscene at the Main Block: steps, pillars, glass front under the red arch
+- [ ] "A little 3D": depth pass on UI and cutscene art (bevels, shadows, perspective, eased motion)
+
+
 - [ ] Entrance cutscene: the Main Block steps, pillars and red arch, drawn from photos as reference
 - [ ] Main Block foyer becomes the story hub: the LUG stall behind the staircase, other exits politely blocked
 - [ ] The volunteer: full dialog, gives the hunt, reacts to progress, and hands over the reward at the end

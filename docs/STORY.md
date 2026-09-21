@@ -4,9 +4,31 @@
 ask in the feedback thread instead. The ending is a **birthday surprise** for a real person, so the
 whole game is a gift: everything before the card exists to lead up to it.
 
+## Opening (owner brief, 2026-09-21)
+
+Before beat 1, the game opens the way a Pokémon game does.
+
+0. **Title screen.** Properly drawn, with big pressable buttons, not plain text rows. It must look
+   good: this is the first thing anyone sees.
+1. **"Hello there!"** A character called **Mustafa** greets the player. He's the friendly organiser
+   type who explains things: who the lead is (a new student arriving at BITS Pilani Dubai), what's
+   about to happen, and he keeps it short.
+2. **Name entry.** The player types the lead's name (on-screen keyboard plus real typing, with a
+   sensible default so it can be skipped).
+3. **Character customisation.** At least clothes colour, picked from swatches, previewed live on her
+   sprite. Hair and skin tone too if it's cheap to add.
+4. **The arrival animation.** A bus drives in from off-screen, stops at the BITS main gate, the door
+   opens, she steps off, the bus pulls away. Then the gate cutscene plays and she walks in.
+5. She walks up the avenue to the **Main Block entrance**, where the entrance cutscene (steps,
+   pillars, the glass front under the red arch) plays. Then the story below begins.
+
+**Look:** the owner's words are "currently it looks very blocky and 2D, a little 3D please". Everything
+in this opening needs depth: shaded and bevelled buttons and panels, drop shadows, a sense of
+perspective in the cutscene art, and movement that eases rather than snaps.
+
 ## Beats
 
-1. **Arrival.** The lead (a new student: pink clothes, black hair, fair skin) walks up to the main
+1. **Arrival.** (after the opening above) The lead (a new student: pink clothes, black hair, fair skin) walks up to the main
    gate. The **gate cutscene** plays: "Welcome to BITS Pilani, Dubai Campus!"
 2. **The walk in.** She walks straight up the avenue to the Main Block entrance.
 3. **The entrance cutscene (new).** A close-up pixel scene of the real entrance: the steps, the

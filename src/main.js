@@ -17,7 +17,7 @@ class BootScene extends Phaser.Scene {
 
   preload() {
     this.loadStartedAt = Date.now();
-    uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 'PIXEL QUEST', 16, COLORS.highlight).setOrigin(0.5);
+    uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 'BITS DUBAI', 16, COLORS.highlight).setOrigin(0.5);
     uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, 'LOADING...', 8, COLORS.dim).setOrigin(0.5);
 
     const barX = (GAME_WIDTH - LOADING_BAR_W) / 2;

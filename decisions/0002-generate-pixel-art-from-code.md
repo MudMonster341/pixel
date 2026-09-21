@@ -1,10 +1,10 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-13
 authored_by: agent
 derived_from: ["user request 2026-09-13: 'build the assets', free assets only"]
 supersedes: null
-superseded_by: null
+superseded_by: "0012"
 ---
 
 # 0002 — Generate the starter pixel art from text sprites in a script

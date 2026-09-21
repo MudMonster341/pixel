@@ -176,6 +176,7 @@ function titleState(page) {
   return page.evaluate(() => {
     const t = game.scene.getScene('title');
     return {
+      stage: t.stage, // 'intro' (just the blinking prompt) or 'menu' (the prompt's been pressed)
       menuItems: t.menuItems.map((item) => item.id),
       menuIndex: t.menuIndex,
       controlsVisible: t.controls.visible,
@@ -185,8 +186,12 @@ function titleState(page) {
 }
 
 // Moves the highlight to the given menu item with real ArrowDown presses (keyboard-driven, per
-// docs/GAME_FEEL.md), then presses Enter to confirm it.
+// docs/GAME_FEEL.md), then presses Enter to confirm it. The menu only exists once the "PRESS ENTER"
+// intro prompt has been pressed once (docs/GAME_FEEL.md: never both on screen at once), so this
+// presses it first if needed.
 async function chooseTitleMenu(page, id) {
+  if ((await titleState(page)).stage === 'intro') await page.keyboard.press('Enter');
+  await expect.poll(async () => (await titleState(page)).stage).toBe('menu');
   for (let i = 0; i < 10; i++) {
     const { menuItems, menuIndex } = await titleState(page);
     if (menuItems[menuIndex] === id) break;

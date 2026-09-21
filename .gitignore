@@ -13,3 +13,10 @@ feedback/items/*.tmp
 
 # P5 QA visual walkthrough screenshots (npm run qa:shots) -- regenerate, don't commit
 qa-shots/
+
+# Third-party asset packs: licensed for use in this project, NOT for redistribution.
+# The game ships their art baked into assets/tiles.png etc.; the raw packs stay local.
+# (See decisions/0012-third-party-asset-packs.md and CREDITS.md for how to get them.)
+assets/External Tilesets/
+assets/vendor/limezu-modern-interiors-free/
+assets/vendor/sprout-lands-basic/

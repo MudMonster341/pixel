@@ -4,12 +4,18 @@
 // straight past this scene (and the loading screen after it) to the old instant-boot behaviour --
 // tests/e2e/helpers.js openGame() sets that by default so the other ~65 specs don't need to know
 // this scene exists at all.
+//
+// Two stages, never both on screen together (owner feedback, 2026-09-20/21): 'intro' is just the
+// logo and a blinking "PRESS ENTER"; pressing it reveals 'menu', which replaces the prompt with the
+// actual menu instead of repeating the same instruction next to it.
 
 const TITLE_MENU_BASE = [
   { id: 'play', label: 'Play' },
   { id: 'controls', label: 'Controls' },
   { id: 'credits', label: 'Credits' },
 ];
+const MENU_ROW_H = 32;
+const MENU_PANEL_W = 280;
 
 class TitleScene extends Phaser.Scene {
   constructor() {
@@ -22,6 +28,7 @@ class TitleScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#12131a');
+    this.stage = 'intro'; // 'intro' -> 'menu'
 
     // A slow, gentle pan of the Gate 2 illustration, the same "fill the width, pan the taller image"
     // technique src/scenes/cutscene.js uses -- reusing an asset that already exists rather than
@@ -29,42 +36,67 @@ class TitleScene extends Phaser.Scene {
     // texture reuse, no new art at all).
     const tex = this.textures.get('title-bg').getSourceImage();
     const scale = GAME_WIDTH / tex.width;
-    // Dim enough that the illustration reads as a moody backdrop, not competing content -- the gate
-    // art has its own bright signboard text, which would otherwise fight the menu for attention
-    // wherever the slow pan happens to place it (docs/GAME_FEEL.md "nothing overflows or fights the
-    // frame it's in" -- the same "measure, don't guess" spirit as the panel-sizing rules).
+    // Dim enough that the illustration reads as a moody backdrop, not competing content.
     this.bg = this.add.image(GAME_WIDTH / 2, 0, 'title-bg').setOrigin(0.5, 0).setScale(scale).setAlpha(0.3);
     const panTo = Math.min(0, -(tex.height * scale - GAME_HEIGHT));
     this.tweens.add({ targets: this.bg, y: panTo, duration: 22000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.6).setOrigin(0, 0);
 
-    this.add.text(GAME_WIDTH / 2, 128, 'PIXEL QUEST', {
+    this.add.text(GAME_WIDTH / 2, 118, 'BITS DUBAI', {
       fontFamily: FONT, fontSize: '24px', color: COLORS.highlight,
     }).setOrigin(0.5).setStroke('#1a1c2c', 6).setShadow(3, 3, '#000000', 0, true, true);
-    uiText(this, GAME_WIDTH / 2, 168, 'A BITS Pilani Dubai treasure hunt', 8, COLORS.dim).setOrigin(0.5).setStroke('#1a1c2c', 4);
+    uiText(this, GAME_WIDTH / 2, 158, 'The LUG Treasure Hunt', 8, COLORS.dim).setOrigin(0.5).setStroke('#1a1c2c', 4);
 
+    this.pressEnter = uiText(this, GAME_WIDTH / 2, 340, 'PRESS ENTER', 12, COLORS.text).setOrigin(0.5);
+
+    // The menu sits in its own opaque panel (docs/STYLE_GUIDE.md "Panels": navy 92% opacity, cream
+    // border) rather than bare text over the illustration -- the fix for the menu reading against
+    // the gate sign's own bright lettering, wherever the slow pan happens to place it. Built now but
+    // kept hidden until the "PRESS ENTER" prompt is actually pressed (buildMenu() below).
     this.menuIndex = 0;
     this.menuItems = this.buildMenuItems();
-    const startY = 268;
-    this.menuTexts = this.menuItems.map((item, i) => {
-      const text = uiText(this, GAME_WIDTH / 2, startY + i * 34, item.label, 12, COLORS.text).setOrigin(0.5).setStroke('#1a1c2c', 5);
-      text.setInteractive({ useHandCursor: true })
-        .on('pointerover', () => { this.menuIndex = i; this.refreshMenu(); })
-        .on('pointerdown', () => { this.menuIndex = i; this.confirmMenu(); });
-      return text;
-    });
-    this.refreshMenu();
-
-    this.pressEnter = uiText(this, GAME_WIDTH / 2, GAME_HEIGHT - 40, 'PRESS ENTER', 12, COLORS.text)
-      .setOrigin(0.5).setStroke('#1a1c2c', 5);
+    this.buildMenu();
 
     this.controls = new ControlsPanel(this);
     this.credits = this.buildCredits();
+
+    // Mouse click also reveals the menu from the intro prompt (the owner plays in a browser); once
+    // revealed, the menu's own rows own clicks instead (see buildMenu() above).
+    this.input.on('pointerdown', () => { if (this.stage === 'intro') this.showMenu(); });
 
     for (const key of ['UP', 'W']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(-1); });
     for (const key of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(1); });
     for (const key of ['ENTER', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.onConfirm(); });
     this.input.keyboard.on('keydown-ESC', (e) => { if (!e.repeat) this.onCancel(); });
+  }
+
+  buildMenu() {
+    const h = MENU_ROW_H * this.menuItems.length + 40;
+    const x = (GAME_WIDTH - MENU_PANEL_W) / 2;
+    const y = 340 - h / 2; // centered on the same spot the "PRESS ENTER" prompt occupied
+    this.menuBox = { x, y, w: MENU_PANEL_W, h };
+
+    this.menuPanel = this.add.graphics();
+    drawPanel(this.menuPanel, x, y, MENU_PANEL_W, h);
+    this.menuTexts = this.menuItems.map((item, i) => {
+      const rowY = y + 24 + i * MENU_ROW_H;
+      const text = uiText(this, GAME_WIDTH / 2, rowY, item.label, 12, COLORS.text).setOrigin(0.5);
+      text.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => { if (this.stage === 'menu') { this.menuIndex = i; this.refreshMenu(); } })
+        .on('pointerdown', () => { if (this.stage === 'menu') { this.menuIndex = i; this.confirmMenu(); } });
+      return text;
+    });
+    this.menuParts = [this.menuPanel, ...this.menuTexts];
+    this.menuParts.forEach((part) => part.setVisible(false));
+    this.refreshMenu();
+  }
+
+  // "PRESS ENTER" and the menu are never both on screen (owner feedback: showing both said the same
+  // thing twice) -- this is the one-way switch between them.
+  showMenu() {
+    this.stage = 'menu';
+    this.pressEnter.setVisible(false);
+    this.menuParts.forEach((part) => part.setVisible(true));
   }
 
   // Continue only shows up when a save actually exists (docs/GAME_FEEL.md); its own label says
@@ -88,7 +120,7 @@ class TitleScene extends Phaser.Scene {
     const panel = this.add.graphics();
     drawPanel(panel, x, y, w, h);
     const lines = [
-      'PIXEL QUEST',
+      'BITS DUBAI: THE LUG TREASURE HUNT',
       '',
       'Built with Phaser 3, free and open source.',
       'Campus layout from OpenStreetMap contributors,',
@@ -116,7 +148,7 @@ class TitleScene extends Phaser.Scene {
   }
 
   moveMenu(direction) {
-    if (this.controls.visible || this.credits.visible) return;
+    if (this.stage !== 'menu' || this.controls.visible || this.credits.visible) return;
     this.menuIndex = (this.menuIndex + direction + this.menuItems.length) % this.menuItems.length;
     this.refreshMenu();
   }
@@ -128,9 +160,12 @@ class TitleScene extends Phaser.Scene {
     });
   }
 
+  // Enter/Space: reveals the menu from the intro prompt the first time, confirms the highlighted
+  // row every time after (docs/GAME_FEEL.md -- one prompt at a time, never both on screen).
   onConfirm() {
     if (this.controls.visible) { this.controls.close(); return; }
     if (this.credits.visible) { this.closeCredits(); return; }
+    if (this.stage === 'intro') { this.showMenu(); return; }
     this.confirmMenu();
   }
 
@@ -157,6 +192,6 @@ class TitleScene extends Phaser.Scene {
   }
 
   update(time) {
-    this.pressEnter.setAlpha(Math.floor(time / 500) % 2 ? 0.35 : 1);
+    if (this.stage === 'intro') this.pressEnter.setAlpha(Math.floor(time / 500) % 2 ? 0.35 : 1);
   }
 }

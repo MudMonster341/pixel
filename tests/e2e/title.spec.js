@@ -68,6 +68,29 @@ test('FB-0023: Esc opens the pause menu; Resume closes it and movement still wor
   expect((await state(page)).x).toBeGreaterThan(before.x);
 });
 
+test('FB-0023: Quit to Title (from pause) stops the world and returns to the title screen', async ({ page }) => {
+  await openGame(page, { map: null });
+  await startGame(page);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await state(page)).pause.visible).toBe(true);
+  // Resume -> Controls -> Save -> Quit to Title.
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+
+  // Once quit, world/ui may have torn down their own objects on shutdown -- check via scene
+  // activity and the title scene itself, not state() (which reaches into ui/world internals).
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('title'))).toBe(true);
+  expect(await page.evaluate(() => game.scene.isActive('world'))).toBe(false);
+  expect(await page.evaluate(() => game.scene.isActive('ui'))).toBe(false);
+  expect((await titleState(page)).stage).toBe('intro'); // a fresh title, not mid-menu from before
+
+  // And it's a real, working title screen afterward: Play works from here too.
+  await chooseTitleMenu(page, 'play');
+  await waitForBoot(page);
+  expect((await state(page)).map).toBe('campus');
+});
+
 test('FB-0023: the controls panel fits inside its own frame at 960x540 and two other window sizes', async ({ page }) => {
   test.info().annotations.push({ type: 'issue', description: 'FB-0023' });
   await openGame(page, { map: null });

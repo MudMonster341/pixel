@@ -44,13 +44,18 @@ index.html
    │                                                                          │
    ▼                                                                          │
 TITLE SCREEN (src/scenes/title.js, scene key 'title')                        │
-  Big pixel logo + subtitle, a slowly panning campus illustration,            │
-  a blinking "PRESS ENTER", and a menu:                                       │
-    Play                                                                      │
-    Continue (only if a save exists; shows roughly where it left off)         │
-    Controls                                                                  │
-    Credits                                                                   │
-  Arrows/W-S + Enter, or mouse click. Controls/Credits open as overlays       │
+  "BITS DUBAI" + "The LUG Treasure Hunt" over a slowly panning, dimmed        │
+  campus illustration. Two stages, never both on screen (owner feedback:     │
+  showing the prompt and the menu together said the same thing twice):       │
+    intro: a blinking "PRESS ENTER" only                                     │
+    menu (Enter/Space/click reveals it, replacing the prompt): a panel       │
+      (docs/STYLE_GUIDE.md panel style, opaque -- so it never has to fight   │
+      the illustration underneath for legibility) listing                   │
+        Play                                                                 │
+        Continue (only if a save exists; shows roughly where it left off)    │
+        Controls                                                             │
+        Credits                                                              │
+  Arrows/W-S + Enter, or mouse click. Controls/Credits open as overlays      │
   on top of the title, Esc/Enter closes them back to the menu.                │
    │ Play → resetGameState()          │ Continue → loadGame(profile)          │
    ▼                                                                          │

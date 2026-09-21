@@ -217,7 +217,7 @@ class WorldScene extends Phaser.Scene {
 
     const ui = this.scene.get('ui');
     const blocked = !ui.tutorial || ui.isBlocking();
-    this.movePlayer(blocked, time, delta);
+    this.movePlayer(blocked, time);
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
@@ -246,7 +246,7 @@ class WorldScene extends Phaser.Scene {
     else if (!ui.isBlocking()) this.interact();
   }
 
-  movePlayer(blocked, time, delta) {
+  movePlayer(blocked, time) {
     const k = this.keys;
     const p = this.player;
     let dx = 0;
@@ -291,7 +291,7 @@ class WorldScene extends Phaser.Scene {
       p.anims.play(`walk-${this.facing}`, true);
     }
 
-    this.updateHeldItem(time, moving, velocity, delta);
+    this.updateHeldItem(time, moving);
   }
 
   // Every warp trigger point on this map, in one shape: text-map `warps` entries (already
@@ -328,7 +328,7 @@ class WorldScene extends Phaser.Scene {
 
   // Shows the selected hotbar item in the character's hand, in front of or behind the body
   // depending on facing, with a small bob while walking (FB-0002).
-  updateHeldItem(time, moving, velocity, delta) {
+  updateHeldItem(time, moving) {
     const slot = GameState.inventory.selectedSlot;
     if (!slot) {
       this.heldItem.setVisible(false);
@@ -341,14 +341,24 @@ class WorldScene extends Phaser.Scene {
     const offset = HELD_OFFSET[this.facing];
     const bob = moving ? Math.round(Math.sin(time / 100)) : 0;
     // p.x/p.y here are last frame's position: this runs from movePlayer, which sets this frame's
-    // velocity but reads back in before Arcade Physics' own step integrates it, so an unadjusted
-    // p.x/p.y trails the player by a full frame's travel (~1.3px at walk speed) on top of the bob
-    // above (tests/e2e/held-item.spec.js's "FB-0025" test caught this: up to 2.3px combined, over
-    // its own 2px tolerance). Extrapolating by this frame's own velocity*delta predicts where the
-    // physics step is about to put the player, cancelling that lag instead of loosening the test.
-    const dt = (delta || 0) / 1000;
-    const x = p.x + velocity.x * dt;
-    const y = p.y + velocity.y * dt;
+    // velocity, but Arcade Physics doesn't copy its already-stepped body back onto p.x/p.y until
+    // *after* this whole update() returns (Body.postUpdate(), fired on the scene's POST_UPDATE
+    // event -- see ERR-0006). An earlier version of this guessed the pending movement as
+    // `velocity * delta`, assuming physics would integrate this frame's velocity for the whole of
+    // this frame's wall-clock delta -- but Arcade's World steps on a *fixed* 1/60s clock with its
+    // own accumulator (`body.preUpdate` only calls `body.update()`, which is what actually moves
+    // `body.position`, when enough real time has accumulated to cross that boundary), so a step can
+    // land 0 or 2+ times in a single rendered frame whenever frame timing is uneven -- common under
+    // load, and not actually rare. The guess and the real step size would then disagree by up to a
+    // full 1/60s of travel (~1.3px at walk speed), which is exactly what tests/e2e/held-item.spec.js's
+    // "FB-0025" test caught (2.3-2.7px combined with the 1px bob above, over its own 2px tolerance).
+    // Fix: don't guess. `body.position` has *already* been advanced by this frame's real step (it
+    // runs on the UPDATE event, before this function), so `position - prevFrame` (also already
+    // computed, by Body.preUpdate at the very top of this same frame) is the *exact* delta
+    // Phaser is about to add to p.x/p.y in postUpdate -- not a prediction, the literal number.
+    const body = p.body;
+    const x = p.x + (body.position.x - body.prevFrame.x);
+    const y = p.y + (body.position.y - body.prevFrame.y);
     this.heldItem
       .setFrame(ITEMS[slot.item].frame)
       .setFlipX(p.flipX)

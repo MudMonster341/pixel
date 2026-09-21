@@ -164,3 +164,54 @@ catch-all filtering single a-z characters) is unaffected letter-for-letter now.
 **Recognise it next time:** a screen that combines free-form text entry with an arrow-key-navigated
 grid of options → any alias between "a navigation key" and "a character that can legally be typed"
 is a bug, not a convenience; only alias direction keys that can never also be valid input.
+
+## ERR-0006 — The held item could actually be drawn up to ~2.7px off the hand for a frame (2026-09-21)
+
+**Symptom:** `tests/e2e/held-item.spec.js`'s "FB-0025" test (held item sits at the hand position, in
+all 4 directions) was flaky in a way ERR-0002's `expect.poll` fix didn't touch: it passed in
+isolation and in most full runs, but failed roughly 1 run in 10-15 under `--repeat-each=20`, always
+the same way -- `expect(Math.abs(held.x/y - player.x/y - expected.x/y)).toBeLessThanOrEqual(2)`
+receiving 2.3-2.7, just over the tolerance. The test already used `expect.poll` for everything
+timing-sensitive; this wasn't a stale read.
+
+**Context:** `updateHeldItem()` (`src/scenes/world.js`) runs from `movePlayer()`, inside
+`WorldScene.update()`. `player.x`/`player.y` there are last frame's values: Arcade Physics steps
+the body on the scene's `UPDATE` event (before `update()` runs) but doesn't copy the stepped body
+back onto the game object's `x`/`y` until `Body.postUpdate()`, on `POST_UPDATE` (after `update()`
+returns) -- so anything read mid-`update()` is one sync behind. A prior fix (see the old code
+comment this entry replaces) extrapolated the pending movement as `velocity * delta`, betting that
+Arcade's physics step for this tick would cover exactly this frame's own wall-clock `delta`.
+
+**Root cause:** that bet is false by design. Phaser's Arcade `World` steps on a **fixed** 1/60s
+clock with its own carry-over accumulator (confirmed by reading `phaser@3.80.1`'s `World.js`/
+`Body.js`: `body.update()`, which is what actually moves `body.position`, only runs when
+`world._elapsed` has crossed a full `1000/60`ms boundary -- `willStep` in `World.update()`).
+Real frame timing is never perfectly 16.667ms, so a rendered frame can land 0, 1, or (after a
+stall) 2+ physics steps. `velocity * delta` assumed exactly 1, in proportion to whatever the raw
+delta was. Confirmed with an instrumented build (hooking the scene's `postupdate` event to log
+`time/delta/velocity/heldItem vs player` every frame): under uniform 60fps timing the guess was
+accurate to a few thousandths of a pixel, but the very first frame after a key is pressed (velocity
+0 → 80, before Arcade's *next* `UPDATE` event has integrated it) already showed a `+1.33px` transient
+(one fixed step's worth) purely from `delta` disagreeing with the accumulator -- and the FB-0025
+test polls for `facing`, which changes on exactly that frame, so it was reading the worst-case
+moment essentially every run, not a rare one. Under `--repeat-each` load, uneven frame pacing made
+that transient exceed the test's 2px tolerance often enough to be visibly flaky. This was a real,
+if usually sub-2px and easy to miss, visual bug: the held item genuinely could render detached from
+the hand for a frame, not just a test-reading artifact.
+
+**Fix:** stopped guessing. `body.position` has *already* been advanced by this frame's real step by
+the time `updateHeldItem()` runs (the physics step is on `UPDATE`, before `update()`), and
+`Body.preUpdate()` already snapshotted the pre-step value as `body.prevFrame` at the very top of
+this same frame -- so `body.position.x - body.prevFrame.x` (and `.y`) is not a prediction, it's the
+exact number `Body.postUpdate()` is about to add to `player.x`/`player.y` a moment later. Held-item
+position is now `player.x/y + (body.position - body.prevFrame) + offset`, with no `velocity`/`delta`
+involved at all. Confirmed with `--repeat-each=50` on the FB-0025 test alone (all green) and two full
+`npm run test:e2e` runs (all held-item tests green both times; two unrelated, pre-existing
+campus-layout failures from concurrent work in `tools/campus/` are out of scope for this fix).
+
+**Recognise it next time:** any visual that computes its own absolute position from a physics body's
+velocity/delta instead of reading the body's already-stepped state directly → check whether Arcade
+Physics is on a fixed timestep (`world.fixedStep`, default true) before trusting `velocity * delta`
+to match what the body will actually do this tick; prefer `body.position`/`body.prevFrame` (or
+attaching the visual as a child of the body's game object) over re-deriving physics Phaser has
+already computed.

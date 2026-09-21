@@ -69,10 +69,9 @@ test('FB-0025: the held item sits at the hand position for the new 16x24 frame, 
     await expect.poll(() => page.evaluate(() => game.scene.getScene('world').facing)).toBe(facing);
     const held = await heldItem(page);
     const expected = await page.evaluate((f) => HELD_OFFSET[f], facing);
-    // updateHeldItem() computes the held sprite's position from the player's position as of the
-    // *previous* physics step (it runs before that frame's physics integration), so while moving it
-    // trails the player by up to one frame's worth of travel (~1.3px at walk speed) on top of its
-    // own 1px walking bob on y -- a small, expected lag, not a wrong offset.
+    // updateHeldItem() (ERR-0006) reads the physics body's already-stepped position directly rather
+    // than guessing this frame's movement from velocity*delta, so it tracks the player exactly, with
+    // no load-dependent lag; the remaining tolerance just covers the item's own 1px walking bob on y.
     expect(Math.abs(held.x - held.playerX - expected.x)).toBeLessThanOrEqual(2);
     expect(Math.abs(held.y - held.playerY - expected.y)).toBeLessThanOrEqual(2);
     await page.keyboard.up(key);

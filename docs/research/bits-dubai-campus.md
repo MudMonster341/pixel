@@ -166,3 +166,26 @@ entrance photos in the fetched text).
 - Hostels: 4–5 storey beige blocks with recessed windows and grilles at ground level.
 - Foyer interior: light floor, white curved balconies, large screens, backlit portrait panels.
 - Library interior: white tiled floor, green-grey columns, wooden desks and shelving.
+
+## Layout correction from the owner (2026-09-21, high priority)
+
+The owner rejected the generated layout: *"take a step back and look at the map first... it doesn't
+map back to the actual layout... as soon as you get in there's a roundabout and then parking on the
+left and right, look at satellite images and then improve the map."*
+
+They sent a Google Maps screenshot, rotated the way they want the game to read
+([reference/owner-google-maps-orientation.jpg](reference/owner-google-maps-orientation.jpg), their
+screenshot, reference only, never shipped in the game). What it shows:
+
+- **Sheikh Zayed bin Hamdan (D54) runs straight along the TOP** of the picture, horizontal.
+- The campus sits just below it as a wide block, with its own boundary road.
+- **The entrance is on the lower-right side**, off the DIAC ring road, with a **small roundabout just
+  inside the gate** and a **bus stop** on the approach road right outside.
+- Internal roads form a **loop** around the academic buildings rather than one straight avenue.
+- The **Cricket/Football field** is on the **left (west)** end of the campus.
+- DIAC Park's big circle is to the lower right, outside the campus.
+
+**What this means for the game map:** the entrance stops being a straight avenue up the middle. You
+come in from the lower right, pass the roundabout, with **parking on both sides**, and the loop road
+takes you round to the Main Block. Rebuild `tools/campus/layout.js` against satellite imagery in this
+orientation, keeping everything axis-aligned in the game ([ADR 0009](../../decisions/0009-campus-from-osm-straightened-and-cleaned.md)).

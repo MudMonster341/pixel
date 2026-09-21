@@ -45,3 +45,20 @@ Rules that follow:
   Sprout Lands greenery between them. Everything gets recoloured towards the campus palette in
   [STYLE_GUIDE.md](../docs/STYLE_GUIDE.md), and mismatches are a bug worth reporting.
 - A clean clone can't regenerate the art without the packs, so `assets/` generated files stay committed.
+
+## Addendum, 2026-09-21: no paid exteriors pack; build the BITS blocks in that style instead
+
+The owner turned down LimeZu's paid Modern Exteriors ($2.50): *"I don't think we need it, we are
+trying to build the BITS building, not those drop-in ones, we would have to edit anyway, so
+understand how he makes it, copy and paste."*
+
+So building exteriors are **made by us, in the packs' visual language**:
+- Study how the free packs construct a building: wall panel + trim band + window unit + roof/parapet
+  edge, the size of each piece, the shading ramps (light top face, mid wall, dark base line), the
+  1 px dark outline, and how they avoid tiling seams. The Room Builder sheet in Modern Interiors Free
+  is the reference.
+- **Reuse actual pieces** where they fit (the free licence allows editing): take window, door, step
+  and trim units, recolour them to the BITS palette (sand `#E6CBA4`, shade `#CFAE86`, terracotta trim
+  `#CF8A6C`, glass `#2F3A44`) and compose them into the Main, Library and Mechanical Block fronts.
+- The result is a **BITS building kit**, not generic shopfronts: the real blocks' proportions, the
+  arched glass entrance, corner towers and parapets.

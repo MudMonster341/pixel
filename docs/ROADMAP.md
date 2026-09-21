@@ -43,7 +43,10 @@ source asset packages... change all the trees, pavements, everything."
 - [ ] Research free-licence 16 px packs (trees, paths, roads, buildings, interiors, characters, UI), check every licence, download the best, show mock scenes: `docs/research/asset-packs.md`
 - [ ] Owner picks the pack from the mock-ups
 - [ ] Swap the tile generator over: tile names map to pack tiles, maps keep working, draw only what no pack covers
-- [ ] Characters from the pack (the lead in pink, the LUG volunteer, background students), 4-direction walks
+- [ ] Interiors from LimeZu Modern Interiors Free: Room Builder walls/floors/doors + furniture, recoloured to the campus palette
+- [ ] Outdoor greenery from Sprout Lands: trees, bushes, flowers, grass detail, recoloured
+- [ ] **BITS building kit, made by us in the packs' style** (owner, 2026-09-21: no paid exteriors pack; learn how the packs build a wall and reuse/recolour their window, door and trim pieces)
+- [ ] Characters from LimeZu Modern Interiors Free (the lead, the LUG volunteer, background students), 4-direction walks
 - [ ] UI kit from the pack: dialog box, panels, menus, cursors
 - [ ] CREDITS.md lists every pack, author and licence; packs live in `assets/vendor/<pack>/` with their LICENSE
 

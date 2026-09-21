@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { decodePNG } = require('./lib/png-decode');
 
 const TILE = 16;
 const TILESET_COLUMNS = 8;
@@ -105,6 +106,24 @@ class Img {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) this.set(ox + x, oy + y, key);
   }
 
+  // Like `set`, but takes a raw RGBA quad instead of a PALETTE key (FB-0025: for copying/recoloring
+  // pixels out of a vendor atlas, which don't come from our own palette). a=0 is a no-op (leaves
+  // whatever's already there alone, so callers don't need to pre-clear); 0<a<255 alpha-blends over
+  // the existing pixel instead of overwriting it, since a couple of source packs have soft edges.
+  setRGBA(x, y, r, g, b, a) {
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h || a === 0) return;
+    const i = (y * this.w + x) * 4;
+    if (a >= 255) {
+      this.data[i] = r; this.data[i + 1] = g; this.data[i + 2] = b; this.data[i + 3] = 255;
+      return;
+    }
+    const ia = 255 - a;
+    this.data[i] = Math.round((r * a + this.data[i] * ia) / 255);
+    this.data[i + 1] = Math.round((g * a + this.data[i + 1] * ia) / 255);
+    this.data[i + 2] = Math.round((b * a + this.data[i + 2] * ia) / 255);
+    this.data[i + 3] = Math.min(255, this.data[i + 3] + a);
+  }
+
   // Filled rectangle with a 1px outline
   box(ox, oy, w, h, key) {
     this.fill(ox, oy, w, h, 'K');
@@ -172,6 +191,188 @@ function chunk(type, data) {
   const crc = Buffer.alloc(4);
   crc.writeUInt32BE(crc32(body));
   return Buffer.concat([len, body, crc]);
+}
+
+// ---------- vendor atlas: blit + recolor (FB-0025, docs/research/asset-packs.md) ----------
+// Copies rectangles out of the CC0 packs in assets/vendor/ instead of drawing pixels by hand, for
+// the specific tiles the owner asked to replace (roads/kerbs/paths/greenery/parked cars). Tile
+// *names*, their *order* in tiles.json, and their `solid`/`overhead` flags never change here --
+// only what gets drawn into a tile's slot, exactly like re-drawing a hand-drawn tile would.
+
+const VENDOR_DIR = path.join(__dirname, '..', 'assets', 'vendor');
+const atlasCache = new Map();
+// Reads and decodes a vendor PNG once (relative to assets/vendor/), then serves it from a cache --
+// several tiles below sample the same sheet.
+function loadAtlas(relPath) {
+  if (!atlasCache.has(relPath)) {
+    atlasCache.set(relPath, decodePNG(fs.readFileSync(path.join(VENDOR_DIR, relPath))));
+  }
+  return atlasCache.get(relPath);
+}
+
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+// Copies an sw x sh rectangle from `atlas` (as returned by loadAtlas) into `img` at (dx, dy),
+// optionally scaled to a different dw x dh (nearest-neighbor -- vehicle sprites aren't 16x16) and/or
+// rotated a quarter turn at a time (kerb edges: one drawn source, rotated per side). `remap(r,g,b,a)`
+// recolors each sampled pixel before it's drawn, so a pack's own colors can be pulled onto this
+// game's palette instead of sitting next to it looking foreign. Fully transparent source pixels are
+// skipped (leaving whatever's already at that destination pixel, usually nothing yet).
+function blitAtlas(img, dx, dy, atlas, sx, sy, sw, sh, opts = {}) {
+  const { dw = sw, dh = sh, offsetX = 0, offsetY = 0, rotate = 0, flipX = false, flipY = false, remap = null } = opts;
+  for (let ddy = 0; ddy < dh; ddy++) {
+    for (let ddx = 0; ddx < dw; ddx++) {
+      let cx = flipX ? dw - 1 - ddx : ddx;
+      let cy = flipY ? dh - 1 - ddy : ddy;
+      // Quarter-turn rotations, valid because every rotated blit in this file is square (16x16).
+      if (rotate === 90) { const t = cx; cx = cy; cy = dh - 1 - t; }
+      else if (rotate === 180) { cx = dw - 1 - cx; cy = dh - 1 - cy; }
+      else if (rotate === 270) { const t = cx; cx = dw - 1 - cy; cy = t; }
+      const srcX = sx + Math.floor((cx * sw) / dw);
+      const srcY = sy + Math.floor((cy * sh) / dh);
+      const si = (srcY * atlas.width + srcX) * 4;
+      let r = atlas.data[si];
+      let g = atlas.data[si + 1];
+      let b = atlas.data[si + 2];
+      let a = atlas.data[si + 3];
+      if (a === 0) continue;
+      if (remap) [r, g, b, a] = remap(r, g, b, a);
+      img.setRGBA(dx + offsetX + ddx, dy + offsetY + ddy, r, g, b, a);
+    }
+  }
+}
+
+// Buckets a source pixel into one of `rampHexes` (given dark-to-light) by where its luminance falls
+// within [loLum, hiLum] -- a *narrow* range fitted to the specific source tile's own shading, not
+// 0-255, since a pack tile's highlight/shadow tones usually sit close together. Luminance outside
+// that range is treated as a near-black outline (snapped to the game's `#1a1c2c` outline color) or a
+// bright paint marking (snapped to `lineHex`), so kerb lines and lane markings stay crisp instead of
+// being folded into the material ramp.
+function remapShaded(rampHexes, { loLum, hiLum, outlineBelow = 60, lineAbove = 190, lineHex = '#ffffff' } = {}) {
+  const ramp = rampHexes.map(hexToRgb);
+  const outline = hexToRgb('#1a1c2c');
+  const line = hexToRgb(lineHex);
+  return (r, g, b, a) => {
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (lum <= outlineBelow) return [outline[0], outline[1], outline[2], a];
+    if (lum >= lineAbove) return [line[0], line[1], line[2], a];
+    const t = Math.max(0, Math.min(0.999, (lum - loLum) / (hiLum - loLum)));
+    const [nr, ng, nb] = ramp[Math.floor(t * ramp.length)];
+    return [nr, ng, nb, a];
+  };
+}
+
+// The Modern City sheet's asphalt is a near-flat dark grey (~60-68) with bright white/yellow paint
+// on top -- recolor the body onto this game's own asphalt ramp ('3'/'4') and snap paint to this
+// game's line colors (court-line white '#e8e8e8', accent gold for yellow lines) instead of folding
+// the (much brighter) paint into the same narrow luminance bucket as the road surface.
+function remapRoad(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  if (r > 150 && g > 100 && b < 100) return [...hexToRgb('#ffd23f'), a]; // yellow line -> accent gold
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (lum > 150) return [...hexToRgb('#e8e8e8'), a]; // bright paint -> this game's line color
+  return [...hexToRgb(lum >= 64 ? '#6d707a' : '#5b5d66'), a]; // asphalt body, 2-tone
+}
+
+// The sidewalk paver's brick body sits in a narrow band (~149-166 luminance); its kerb/gutter line
+// is a dark near-black edge plus a light grey-blue stripe. Recolor the body onto this game's own
+// brick-paving ramp ('8'/'7'/'-') and snap the line to black/white, matching the hand-drawn kerb's
+// existing black-and-white gutter line (kept for FB-0014's own regression test).
+function remapPaver(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (lum < 90) return [...hexToRgb('#1a1c2c'), a];
+  if (lum > 190) return [...hexToRgb('#ffffff'), a];
+  const hex = lum < 153 ? '#9c5a4a' : lum < 162 ? '#c0735c' : '#d9927a';
+  return [...hexToRgb(hex), a];
+}
+
+// This game's own Grass and Leaves ramps (STYLE_GUIDE palette table), reused so pack greenery sits
+// on the same hues as the hand-drawn grass/trees around it instead of introducing new colors.
+const remapGrass = remapShaded(['#3d8a3f', '#5ab552', '#8fd46a'], { loLum: 113, hiLum: 133 });
+const remapLeaves = remapShaded(['#1f5227', '#2f7a3a', '#4fa34a'], { loLum: 118, hiLum: 148 });
+
+// ---------- vendor source rects (docs/research/asset-packs.md) ----------
+// Roguelike Modern City pack (Kenney, CC0): 16x16 tiles on a 17px pitch (1px margin). Coordinates
+// found by decoding the sheet and eyeballing/measuring crops -- see MEMORY.md for how.
+const MODERN_CITY = 'kenney-roguelike-modern-city/Spritesheet/roguelikeCity_magenta.png';
+const cityTile = (col, row) => ({ atlas: MODERN_CITY, sx: col * 17, sy: row * 17, sw: 16, sh: 16 });
+const PACK = {
+  asphalt: cityTile(11, 19), // plain dark asphalt, no markings
+  laneDash: cityTile(9, 19), // a short white dash, centered
+  crosswalk: cityTile(12, 22), // evenly spaced vertical white bars
+  parkingPaint: cityTile(9, 22), // two horizontal white stall-paint bars on asphalt
+  kerbPaver: cityTile(0, 22), // brick sidewalk paver with a dark/white gutter line along its bottom edge
+  plainPaver: cityTile(0, 19), // the same paver, no line -- for walkway's plain fill
+  grass: cityTile(0, 24), // flat speckled grass fill
+  bush: cityTile(31, 13), // a round clipped bush/shrub, transparent outside its silhouette
+};
+// Pixel Vehicle Pack (Kenney, CC0): irregular small top-down sprites, not on the 16x16 tile grid --
+// each is its own PNG, decoded on demand (they're 4-bit palette images, see tools/lib/png-decode.js).
+const VEHICLE_DIR = 'kenney-pixel-vehicle-pack/PNG/Cars';
+function vehicleSprite(file) {
+  return loadAtlas(path.join(VEHICLE_DIR, file));
+}
+// Scales a whole vehicle sprite down (nearest-neighbor) to fit inside maxW x maxH, keeping its
+// aspect ratio, and centers it in the 16x16 tile -- these sprites are their own irregular size
+// (e.g. a 29x13 sedan), not pre-cut to the tile grid like the Modern City sheet.
+function blitVehicle(img, x, y, atlas, { maxW = 16, maxH = 12 } = {}) {
+  const scale = Math.min(maxW / atlas.width, maxH / atlas.height);
+  const dw = Math.max(1, Math.round(atlas.width * scale));
+  const dh = Math.max(1, Math.round(atlas.height * scale));
+  blitAtlas(img, x, y, atlas, 0, 0, atlas.width, atlas.height, {
+    dw,
+    dh,
+    offsetX: Math.round((TILE - dw) / 2),
+    offsetY: Math.round((TILE - dh) / 2),
+  });
+}
+
+// A straight kerb edge is the paver-with-line tile rotated so its line faces the right side; the
+// line sits in the source tile's bottom 4px (rows 12-15), so after each rotation the same 4px band
+// sits at the corresponding edge -- used directly for a straight kerbT/B/L/R tile, or as a strip
+// overlaid on a plain base for a corner (see atlasKerbCorner).
+const KERB_ROTATE = { B: 0, L: 90, T: 180, R: 270 };
+const KERB_BAND = {
+  B: { x: 0, y: 12, w: 16, h: 4 },
+  T: { x: 0, y: 0, w: 16, h: 4 },
+  L: { x: 0, y: 0, w: 4, h: 16 },
+  R: { x: 12, y: 0, w: 4, h: 16 },
+};
+function atlasKerbSide(img, x, y, side) {
+  blitAtlas(img, x, y, loadAtlas(PACK.kerbPaver.atlas), PACK.kerbPaver.sx, PACK.kerbPaver.sy, 16, 16, {
+    rotate: KERB_ROTATE[side],
+    remap: remapPaver,
+  });
+}
+// Only the band strip for `side` (its gutter line + a little paver either side of it), overlaid on
+// top of whatever's already there -- how a corner tile gets both of its two lines.
+function atlasKerbBand(img, x, y, side) {
+  const band = KERB_BAND[side];
+  const full = new Img(16, 16);
+  blitAtlas(full, 0, 0, loadAtlas(PACK.kerbPaver.atlas), PACK.kerbPaver.sx, PACK.kerbPaver.sy, 16, 16, {
+    rotate: KERB_ROTATE[side],
+    remap: remapPaver,
+  });
+  for (let yy = 0; yy < band.h; yy++) {
+    for (let xx = 0; xx < band.w; xx++) {
+      const i = ((band.y + yy) * 16 + (band.x + xx)) * 4;
+      img.setRGBA(x + band.x + xx, y + band.y + yy, full.data[i], full.data[i + 1], full.data[i + 2], full.data[i + 3]);
+    }
+  }
+}
+// A straight border (kerbT/B/L/R): the whole tile is the rotated paver-with-line source.
+function atlasKerbEdge(img, x, y, sides) {
+  if (sides.length === 1) {
+    atlasKerbSide(img, x, y, sides);
+    return;
+  }
+  // A corner (two sides, e.g. "TL"): a plain-paver base (no baked-in line) plus both sides' bands,
+  // so the corner shows the paver texture with a line along each of its two road-facing edges.
+  blitAtlas(img, x, y, loadAtlas(PACK.plainPaver.atlas), PACK.plainPaver.sx, PACK.plainPaver.sy, 16, 16, { remap: remapPaver });
+  for (const side of sides) atlasKerbBand(img, x, y, side);
 }
 
 // Seeded random so the art is the same every time you run the script.
@@ -448,8 +649,20 @@ function plant(img, x, y) {
 // so reordering is safe; `solid` tiles block the player.
 const TILES = [
   // outdoors
-  { name: 'grass', draw: (img, x, y) => grass(img, x, y, 1) },
-  { name: 'grass2', draw: (img, x, y) => grass(img, x, y, 2) },
+  // FB-0025: flat grass fill from the Modern City pack (assets/vendor/, CC0), recolored onto this
+  // game's own Grass ramp. grass2 gets a few darker tufts so a run of tiles doesn't look stamped.
+  {
+    name: 'grass',
+    draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass }),
+  },
+  {
+    name: 'grass2',
+    draw: (img, x, y) => {
+      blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+      const r = rng(3);
+      for (let i = 0; i < 4; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'g');
+    },
+  },
   {
     name: 'flowers',
     draw: (img, x, y) => {
@@ -523,7 +736,8 @@ const TILES = [
   // campus (tools/campus/build-campus.js). 1 tile = 2 m outdoors.
   { name: 'sand', draw: (img, x, y) => speckle(img, x, y, '1', '2', 45, 12) },
   { name: 'campusGround', draw: (img, x, y) => speckle(img, x, y, '5', '6', 49, 10) },
-  { name: 'asphalt', draw: (img, x, y) => speckle(img, x, y, '3', '4', 47, 14) },
+  // FB-0025: plain asphalt from the Modern City pack, recolored onto this game's own asphalt ramp.
+  { name: 'asphalt', draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(PACK.asphalt.atlas), PACK.asphalt.sx, PACK.asphalt.sy, 16, 16, { remap: remapRoad }) },
   { name: 'paving', draw: paving },
   { name: 'parking', draw: parkingBay },
   { name: 'track', draw: runningTrack },
@@ -555,15 +769,18 @@ const TILES = [
   { name: 'crossingV', draw: crossingV },
   { name: 'walkway', draw: walkway },
 
-  // FB-0015: lush lawn variants, clipped hedge, round bush, a flower bed, and two kinds of tree.
-  // Trees are split into a solid trunk (ground level) and a 2x2 overhead canopy (see STYLE_GUIDE).
-  { name: 'lawn', draw: (img, x, y) => grass(img, x, y, 71) },
+  // FB-0015/FB-0025: lush lawn variants (now the Modern City pack's grass fill, FB-0025 -- flatter
+  // than the old procedural ramp on its own, but it doesn't repeat as an obvious grid, and it sits
+  // right next to the pack's own paths/kerbs/hedges without clashing), clipped hedge, round bush, a
+  // flower bed, and two kinds of tree. Trees are split into a solid trunk (ground level) and a 2x2
+  // overhead canopy (see STYLE_GUIDE).
+  { name: 'lawn', draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass }) },
   {
     name: 'lawn2',
     draw: (img, x, y) => {
-      grass(img, x, y, 73);
-      const r = rng(75);
-      for (let i = 0; i < 3; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'l');
+      blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+      const r = rng(75); // a few darker tufts so lawn/lawn2 don't look like the exact same stamp
+      for (let i = 0; i < 4; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'g');
     },
   },
   { name: 'hedge', solid: true, draw: hedge },
@@ -659,6 +876,16 @@ const TILES = [
   { name: 'intCurtain', solid: true, draw: intCurtain },
   { name: 'intMedicalDesk', solid: true, draw: intMedicalDesk },
   { name: 'intMachine', solid: true, draw: intMachine },
+
+  // ---- FB-0025: parked cars, Pixel Vehicle Pack (assets/vendor/, CC0) ----
+  // Decoration for tools/campus/build-campus.js's parking lot: a few colors/models for variety,
+  // kept in their pack colors (no palette remap -- they already read fine next to the bright,
+  // saturated campus palette, per docs/research/asset-packs.md's own mockup). Each sprite is scaled
+  // down to fit inside one tile, since the pack's cars aren't pre-cut to a 16x16 grid.
+  { name: 'carSedan', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('sedan.png')) },
+  { name: 'carSedanBlue', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('sedan_blue.png')) },
+  { name: 'carSuv', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('suv_green.png')) },
+  { name: 'carVan', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('van_small.png')) },
 ];
 
 // ---------- campus tiles ----------
@@ -688,8 +915,15 @@ function paving(img, x, y) {
   });
 }
 
+// FB-0025: the pack's own parking-paint tile (PACK.parkingPaint, two horizontal stall-line bars)
+// looked good as a single tile, but tiled across a whole lot its bars line up into a wall-to-wall
+// horizontal ladder that reads as crosswalk stripes covering the entire lot, not individual stalls
+// -- worse than the original, so it's not used here (kept in PACK for reference/other uses). Instead:
+// the pack's own plain-asphalt fill (already used for `asphalt`, so the lot matches its own aisles)
+// plus the single hand-drawn stall-divider column from before FB-0025, which reads cleanly at any
+// lot size and pairs correctly with the parked-car tiles now sitting in every other column.
 function parkingBay(img, x, y) {
-  speckle(img, x, y, '3', '4', 41, 10);
+  blitAtlas(img, x, y, loadAtlas(PACK.asphalt.atlas), PACK.asphalt.sx, PACK.asphalt.sy, 16, 16, { remap: remapRoad });
   img.fill(x, y, 1, TILE, '#');
 }
 
@@ -784,70 +1018,43 @@ function otherWallEnd(img, x, y, side) {
 // ---------- campus kit additions (FB-0006, FB-0011, FB-0014, FB-0015, FB-0016) ----------
 // Appended after the original campus tiles; see docs/STYLE_GUIDE.md "Campus kit" for the full list.
 
-// -- FB-0014: roads with kerb edges + a raised pavement, lane markings, a crossing, walkways --
+// -- FB-0014/FB-0025: roads with kerb edges + a raised pavement, lane markings, a crossing,
+// walkways -- all now blitted from the Roguelike Modern City pack (assets/vendor/, CC0) instead of
+// drawn as flat procedural fills. See PACK above for the source rects and docs/STYLE_GUIDE.md
+// "Campus kit" for which pack tile backs which name.
 
-// A road/path rectangle's border: a paved (sidewalk) band along the named edge(s), a black-and-white
-// kerb line between it and the road surface, and asphalt filling the rest. `sides` is a string built
-// from 'T'/'B'/'L'/'R'; combining two perpendicular sides makes a corner piece.
+// A road rectangle's border: `sides` is a string built from 'T'/'B'/'L'/'R' ('kerbEdge(img,x,y,
+// "TL")' etc. below); one letter is a straight edge, two make a corner. atlasKerbEdge/atlasKerbSide/
+// atlasKerbBand (defined above, with the vendor-atlas helpers) do the actual rotation/compositing.
 function kerbEdge(img, x, y, sides) {
-  speckle(img, x, y, '3', '4', 61, 10); // asphalt base
-  const band = 5;
-  const kerbW = 2;
-  const kerbAt = (i) => (Math.floor(i / 4) % 2 === 0 ? 'W' : 'K');
-  const sidewalkAt = (gx, gy) => brickBevel(gx, gy, (gy >> 2) % 2 ? 4 : 0, 8, '7');
-  if (sides.includes('T')) {
-    for (let yy = 0; yy < band; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, sidewalkAt(xx, yy));
-    for (let yy = band; yy < band + kerbW; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, kerbAt(xx));
-  }
-  if (sides.includes('B')) {
-    for (let yy = TILE - band; yy < TILE; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, sidewalkAt(xx, yy - (TILE - band)));
-    for (let yy = TILE - band - kerbW; yy < TILE - band; yy++) for (let xx = 0; xx < TILE; xx++) img.set(x + xx, y + yy, kerbAt(xx));
-  }
-  if (sides.includes('L')) {
-    for (let xx = 0; xx < band; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, sidewalkAt(xx, yy));
-    for (let xx = band; xx < band + kerbW; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, kerbAt(yy));
-  }
-  if (sides.includes('R')) {
-    for (let xx = TILE - band; xx < TILE; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, sidewalkAt(xx - (TILE - band), yy));
-    for (let xx = TILE - band - kerbW; xx < TILE - band; xx++) for (let yy = 0; yy < TILE; yy++) img.set(x + xx, y + yy, kerbAt(yy));
-  }
+  atlasKerbEdge(img, x, y, sides);
 }
 
 function roadLineH(img, x, y) {
-  speckle(img, x, y, '3', '4', 63, 10);
-  img.fill(x + 6, y + 7, 4, 2, 'W');
+  blitAtlas(img, x, y, loadAtlas(PACK.laneDash.atlas), PACK.laneDash.sx, PACK.laneDash.sy, 16, 16, { remap: remapRoad });
 }
 function roadLineV(img, x, y) {
-  speckle(img, x, y, '3', '4', 65, 10);
-  img.fill(x + 7, y + 6, 2, 4, 'W');
+  blitAtlas(img, x, y, loadAtlas(PACK.laneDash.atlas), PACK.laneDash.sx, PACK.laneDash.sy, 16, 16, { rotate: 90, remap: remapRoad });
 }
 function crossingH(img, x, y) {
-  speckle(img, x, y, '3', '4', 67, 6);
-  for (let xx = 1; xx < TILE; xx += 4) img.fill(x + xx, y, 2, TILE, 'W');
+  blitAtlas(img, x, y, loadAtlas(PACK.crosswalk.atlas), PACK.crosswalk.sx, PACK.crosswalk.sy, 16, 16, { remap: remapRoad });
 }
 function crossingV(img, x, y) {
-  speckle(img, x, y, '3', '4', 69, 6);
-  for (let yy = 1; yy < TILE; yy += 4) img.fill(x, y + yy, TILE, 2, 'W');
+  blitAtlas(img, x, y, loadAtlas(PACK.crosswalk.atlas), PACK.crosswalk.sx, PACK.crosswalk.sy, 16, 16, { rotate: 90, remap: remapRoad });
 }
 
 // A brick walkway with a light stone edging along its long (north/south) sides, so a run of these
-// tiles reads as one continuous bordered path across lawn or sand, not a grid of framed squares:
-// the border only shows where the path meets the ground, not at the seam between two path tiles.
+// tiles reads as one continuous bordered path across lawn or sand, not a grid of framed squares --
+// the border only shows where the path meets the ground, not at the seam between two path tiles
+// (unchanged design from FB-0006/FB-0014; only the brick fill itself now comes from the vendor
+// pack's paver texture instead of a procedural brick-bevel, since that's the specific "reads as a
+// stamped grid up close" complaint FB-0025 named).
 function walkway(img, x, y) {
-  forEachPixel((xx, yy) => {
-    if (yy === 0 || yy === 15) {
-      img.set(x + xx, y + yy, xx % 2 === 0 ? 'Q' : 'O');
-      return;
-    }
-    const inRow = yy - 1;
-    const offset = (Math.floor(inRow / 3) % 2) ? 3 : 0;
-    const withinRow = inRow % 3;
-    const brickX = (xx + offset) % 6;
-    let key = '7';
-    if (withinRow === 2 || brickX === 5) key = '8';
-    else if (withinRow === 0 || brickX === 0) key = '-';
-    img.set(x + xx, y + yy, key);
-  });
+  blitAtlas(img, x, y, loadAtlas(PACK.plainPaver.atlas), PACK.plainPaver.sx, PACK.plainPaver.sy, 16, 16, { remap: remapPaver });
+  img.fill(x, y, TILE, 1, 'Q');
+  for (let xx = 0; xx < TILE; xx += 2) img.set(x + xx + 1, y, 'O');
+  img.fill(x, y + TILE - 1, TILE, 1, 'Q');
+  for (let xx = 0; xx < TILE; xx += 2) img.set(x + xx + 1, y + TILE - 1, 'O');
 }
 
 // -- FB-0015: lush lawn, hedges, bushes, a flower bed, and trees with overhead canopies --
@@ -863,18 +1070,13 @@ function hedge(img, x, y) {
   img.fill(x + TILE - 2, y, 2, TILE, 'e');
 }
 
+// FB-0025: a round clipped bush/shrub from the Modern City pack, over the pack's own grass fill
+// (same source as the `lawn`/`grass` tiles below) so the bush's transparent corners show the same
+// grass the rest of the lawn is drawn with, matching the hand-drawn version's own base-then-blob
+// composition (STYLE_GUIDE "every piece transparent outside its own silhouette").
 function bush(img, x, y) {
-  grass(img, x, y, 77);
-  const inside = (xx, yy) => ((xx - 7.5) / 6.5) ** 2 + ((yy - 8) / 6) ** 2 < 1;
-  for (let yy = 0; yy < TILE; yy++) {
-    for (let xx = 0; xx < TILE; xx++) {
-      if (inside(xx, yy)) {
-        img.set(x + xx, y + yy, xx < 8 && yy < 9 ? 't' : xx > 9 || yy > 10 ? 'e' : 'T');
-      } else if (inside(xx - 1, yy) || inside(xx + 1, yy) || inside(xx, yy - 1) || inside(xx, yy + 1)) {
-        img.set(x + xx, y + yy, 'K');
-      }
-    }
-  }
+  blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+  blitAtlas(img, x, y, loadAtlas(PACK.bush.atlas), PACK.bush.sx, PACK.bush.sy, 16, 16, { remap: remapLeaves });
 }
 
 // A small brick-edged planter (a garden bed border, not a fill color close to the soil, so the

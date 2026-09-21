@@ -22,29 +22,18 @@ require. The raw packs are not in this repository; download them again if you ne
   Outdoor greenery: trees, bushes, flowers, grass detail.
   Licence: non-commercial, editing allowed, **credit required**, the pack itself must not be
   redistributed. *Assets - From: Sprout Lands - By: Cup Nooble.*
-- **Roguelike Modern City pack** and **Pixel Vehicle Pack** by **Kenney** ([kenney.nl](https://kenney.nl)) --
-  roads, kerbs, crossings, pavements and parked cars. CC0 1.0 (public domain).
-- **Cool School Tileset** by **NettySvit** (OpenGameArt) -- classroom furniture reference. CC0 1.0.
-
-## Fonts
-
-- **Press Start 2P** by Cody "CodeMan38" Boisclair -- [SIL Open Font License](https://scripts.sil.org/OFL),
-  loaded from Google Fonts.
-
-## Vendored asset packs (research only, not yet wired into the game)
-
-Downloaded 2026-09-20 for the FB-0025 asset-pack survey
-([docs/research/asset-packs.md](docs/research/asset-packs.md)). Not yet used by any tile, sprite or
-UI element in `src/` or `tools/` -- kept in `assets/vendor/` for evaluation and possible future
-integration. Each folder has its own `LICENSE.txt` and `SOURCE.txt` with the exact download details.
-
-- **Roguelike Modern City pack** by Kenney Vleugels / [kenney.nl](https://kenney.nl) -- CC0 1.0.
-  `assets/vendor/kenney-roguelike-modern-city/`
-- **Pixel Vehicle Pack** by Kenney / [kenney.nl](https://kenney.nl) -- CC0 1.0.
-  `assets/vendor/kenney-pixel-vehicle-pack/`
-- **Pixel UI Pack** by Kenney / [kenney.nl](https://kenney.nl) -- CC0 1.0.
-  `assets/vendor/kenney-pixel-ui-pack/`
-- **Cool School Tileset** by NettySvit ([OpenGameArt](https://opengameart.org/content/cool-school-tileset)) -- CC0 1.0.
-  `assets/vendor/cool-school-tileset/`
-
-None of these require attribution under CC0, but they're credited here anyway as good practice.
+- **Roguelike Modern City pack** and **Pixel Vehicle Pack** by **Kenney** ([kenney.nl](https://kenney.nl),
+  `assets/vendor/kenney-roguelike-modern-city/` and `assets/vendor/kenney-pixel-vehicle-pack/`) --
+  CC0 1.0 (public domain). **In use**: `walkway`, all 8 kerb tiles, `asphalt`, `roadLineH`/
+  `roadLineV`, `crossingH`/`crossingV`, `parking` (asphalt only -- see docs/STYLE_GUIDE.md for why
+  the stall lines stay hand-drawn), and the parked cars (`carSedan`,
+  `carSedanBlue`, `carSuv`, `carVan`) -- see `tools/make-assets.js`'s `PACK` table and
+  docs/STYLE_GUIDE.md's "Campus kit" for exactly which tile uses which source rect. `lawn`/`lawn2`/
+  `grass`/`grass2`/`bush` also currently use this pack's flat grass/shrub tiles as an interim step
+  (this table above assigns outdoor greenery to Sprout Lands instead; that swap hasn't happened yet,
+  so these five tile names are Kenney art for now, recolored onto the existing Grass/Leaves ramps).
+  Kenney's Pixel UI Pack (`assets/vendor/kenney-pixel-ui-pack/`) was surveyed but **not used** --
+  worse fit than the existing hand-drawn dialog box.
+- **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0
+  1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
+  Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).

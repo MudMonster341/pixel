@@ -226,6 +226,10 @@ test('no solid tile (tree trunk, hedge, signboard, ...) sits on a walkway or roa
       if (!g || !BLOCKING_GROUND.has(g)) continue;
       const s = structNameAt(x, y);
       if (!s) continue;
+      // FB-0025: a parked car occupying a parking space is intentional (that's the point of a
+      // parking lot), unlike a tree/hedge/sign accidentally placed on a road or walkway -- exempt
+      // just that one case, only on 'parking' ground, so a real generator bug elsewhere still fails.
+      if (g === 'parking' && s.startsWith('car')) continue;
       const tile = tileInfo.tiles[structuresLayer[y * W + x] - 1];
       if (tile.solid) violations.push(`${s} on ${g} at ${x},${y}`);
     }
@@ -278,6 +282,10 @@ test('no isolated walkway/road island (every walkway/road tile is reachable on f
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (!HARDSCAPE_TILE_NAMES.has(groundNameAt(x, y))) continue;
+      // FB-0025: a parking cell with a parked car on it is never meant to be stood on, so it's not
+      // an "island" bug the way an unreachable stretch of open walkway/asphalt would be.
+      const s = structNameAt(x, y);
+      if (s && s.startsWith('car')) continue;
       hardscapeTileCount++;
       if (!reachable[y * W + x]) unreachable.push([x, y]);
     }

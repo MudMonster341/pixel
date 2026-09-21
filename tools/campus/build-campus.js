@@ -945,6 +945,29 @@ paveRectFrame(gate2U - AVENUE_W / 2 + 1, mainDoor[1] - layout.walkwayWidthMeters
 
 paveRectFrame(parkingFeature.rect[0], parkingFeature.rect[1], parkingFeature.rect[0] + parkingFeature.rect[2], parkingFeature.rect[1] + parkingFeature.rect[3], 'parking');
 
+// FB-0025: a few parked cars (Pixel Vehicle Pack, assets/vendor/, CC0) so the lot doesn't read as an
+// empty grey rectangle. Placed only on plain 'parking' cells with nothing there yet (never on the
+// lot's own kerb ring, which paveRectFrame just drew) and in two rows hugging the north/south kerb
+// with a gap of at least one tile column between cars, so a wide open driving aisle stays down the
+// middle and every car has walkable ground on at least one side -- there's no walkway inside this
+// lot for FB-0022's "no solid tile on a walkway" rule to apply to, but leaving it open keeps the lot
+// itself crossable on foot, same as any other ground tile. Deterministic (no RNG, like the rest of
+// this generator): the 4 colors/models just cycle in a fixed order.
+{
+  const PARKING_CARS = [TILE.carSedan, TILE.carSedanBlue, TILE.carSuv, TILE.carVan];
+  const x0 = gx(parkingFeature.rect[0]) + 1;
+  const x1 = gx(parkingFeature.rect[0] + parkingFeature.rect[2]) - 1;
+  const y0 = gy(parkingFeature.rect[1]) + 1;
+  const y1 = gy(parkingFeature.rect[1] + parkingFeature.rect[3]) - 1;
+  let n = 0;
+  for (const y of [y0, y1]) {
+    for (let x = x0; x < x1; x += 2) {
+      if (!inGrid(x, y) || ground[y * W + x] !== TILE.parking || structures[y * W + x] !== -1) continue;
+      structures[y * W + x] = PARKING_CARS[n++ % PARKING_CARS.length];
+    }
+  }
+}
+
 function otherCourt(x0, y0, x1, y1) {
   forRectFrame(x0, y0, x1, y1, (x, y) => (ground[y * W + x] = TILE.court));
 }

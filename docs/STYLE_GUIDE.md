@@ -135,33 +135,69 @@ structures layers drawn at the player's depth. Overhead tiles are never solid: t
 over whatever is underneath. No renderer reads this yet; it's data for the layout rebuild (ADR 0008)
 to wire into an above-player layer.
 
-### Roads, kerbs and paths (FB-0014)
+### Roads, kerbs and paths (FB-0014, art replaced by FB-0025)
 
 - `kerbT` / `kerbB` / `kerbL` / `kerbR`: the border of a road or path rectangle on that side of the
-  tile — a paved sidewalk band, a black-and-white kerb line, and asphalt filling the rest.
-  `kerbTL` / `kerbTR` / `kerbBL` / `kerbBR`: the corners, where two borders meet. Combine all eight
-  around a rectangle of `asphalt` to get a road with kerbs and a raised pavement on every side.
-- `roadLineH` / `roadLineV`: a short dashed lane marking on asphalt, for a horizontal or vertical road.
+  tile — a paved sidewalk band with a black-and-white gutter line, asphalt filling the rest of the
+  road. `kerbTL` / `kerbTR` / `kerbBL` / `kerbBR`: the corners, where two borders meet. Combine all
+  eight around a rectangle of `asphalt` to get a road with kerbs and a raised pavement on every side.
+  **Art source (FB-0025):** the Kenney Roguelike Modern City pack's sidewalk-paver-with-gutter-line
+  tile, rotated a quarter turn per side (corners overlay both sides' gutter-line bands on a plain
+  paver base) — see `tools/make-assets.js` `atlasKerbEdge`/`PACK.kerbPaver`.
+- `roadLineH` / `roadLineV`: a short dashed lane marking on asphalt, for a horizontal or vertical
+  road. **Art source:** the pack's lane-dash tile (`PACK.laneDash`), `roadLineV` is the same source
+  rotated 90°.
 - `crossingH` / `crossingV`: a zebra crossing band (stripes run perpendicular to the road so a
-  horizontal road gets `crossingH`, a vertical one `crossingV`).
+  horizontal road gets `crossingH`, a vertical one `crossingV`). **Art source:** the pack's crosswalk
+  tile (`PACK.crosswalk`), `crossingV` rotated 90° from the same source.
 - `walkway`: a brick path with a light stone edge on its long (north/south) sides only, so a run of
   walkway tiles reads as one continuous bordered path across lawn or sand — the border doesn't
   repeat at the seam between two tiles, which would look like a flat grid (the thing FB-0006 and
   FB-0014 both flagged). Best suited to paths running roughly east–west; a north–south path shows
-  the border on the wrong sides until a rotated variant is added.
-- `paving` (existing name, redrawn for FB-0006): brick pavers with a highlight on each brick's
-  top-left edge and a shadow on its bottom-right edge, per the light-from-top-left rule, plus mortar
-  joints — four tones, not a flat fill.
+  the border on the wrong sides until a rotated variant is added. **Art source:** the pack's plain
+  paver tile (`PACK.plainPaver`) for the brick fill; the top/bottom stone-edge rows stay hand-drawn
+  (unchanged design, just re-fed with pack texture underneath).
+- `parking`: parking-bay ground. **Art source:** the pack's plain asphalt (`PACK.asphalt`, same as
+  the `asphalt` tile) for the base, but the stall-divider line stays the original hand-drawn single
+  white column (`PACK.parkingPaint`, a two-bar stall-paint tile, is in `PACK` but *not* used here --
+  tiled across a whole lot its two bars line up into a wall-to-wall horizontal ladder that reads as
+  crosswalk stripes covering the entire lot, not individual stalls; worse than the original, so kept
+  hand-drawn instead. See the `parkingBay` function).
+- `paving` (existing name, redrawn for FB-0006): **kept hand-drawn** — brick pavers with a highlight
+  on each brick's top-left edge and a shadow on its bottom-right edge, per the light-from-top-left
+  rule, plus mortar joints — four tones, not a flat fill. Not in FB-0025's swap list (only
+  `walkway`/kerbs/roads were named), and no pack tile was a clear improvement over it.
+- Every pack tile above is recolored onto this game's *existing* palette ramps (asphalt `3`/`4`,
+  paving `7`/`8`/`-`, plus black/white for the kerb line) rather than kept in the pack's own colors
+  — `tools/make-assets.js`'s `remapRoad`/`remapPaver` bucket each source pixel by luminance onto
+  those ramps, so the pack art doesn't sit next to the hand-drawn buildings looking like a different
+  game's tileset. No new palette colors were needed.
 
-### Green campus (FB-0015)
+### Green campus (FB-0015, grass/bush art replaced by FB-0025)
 
-- `lawn`, `lawn2`: lush grass variants (same Grass ramp as the base `grass`/`grass2` tiles, different
-  seeds/tufts) — alternate between them so a lawn doesn't look like one stamped tile.
-- `hedge`: a solid, tileable clipped hedge (Leaves ramp) with a highlight top/left edge and shadow
-  bottom/right edge.
-- `bush`: a solid, round clipped bush.
-- `flowerbed`: a solid brick-edged planter (light stone border against dark soil, so the edge
-  actually reads) with a few flowers — an obstacle, not a walkable ground tile.
+**Note (found while doing this pass):** [ADR 0012](../decisions/0012-third-party-asset-packs.md),
+accepted the same day as this pass, assigns outdoor greenery (trees, bushes, flowers, grass detail)
+to the Sprout Lands pack instead of Kenney's. That swap hasn't happened yet -- Sprout Lands isn't in
+`assets/vendor/` at the time of writing -- so `lawn`/`lawn2`/`grass`/`grass2`/`bush` below are Kenney
+art for now, as an interim improvement over the old hand-drawn version. Revisit these five once
+Sprout Lands is actually wired in.
+
+- `lawn`, `lawn2`: lush grass variants. **Art source (FB-0025):** the Modern City pack's flat grass
+  fill (`PACK.grass`), recolored onto the existing Grass ramp; `lawn2` (and the base `grass`/`grass2`
+  tiles, which got the same swap) add a few darker procedural tufts on top so they don't look like
+  the exact same stamp repeated. Flatter than the old hand-drawn grass ramp on its own — a small step
+  down in isolation — but it doesn't repeat as an obvious grid next to the pack's own paths/kerbs,
+  which is the specific complaint FB-0025 raised.
+- `hedge`: **kept hand-drawn.** The pack's only shrub art is a round, standalone bush blob (see
+  `bush` below), not a tileable edge-to-edge hedge row; using it for a continuous hedge would leave
+  visible gaps at every tile seam. No pack tile fit, so the existing clipped-hedge art (Leaves ramp,
+  highlight top/left, shadow bottom/right) stays.
+- `bush`: **Art source (FB-0025):** the pack's round clipped bush/shrub (`PACK.bush`, recolored onto
+  the Leaves ramp) over the pack's own grass fill as its base, replacing the procedurally-drawn
+  circle — same base-then-blob composition as before, just with pack art in both layers.
+- `flowerbed`: **kept hand-drawn.** The pack's closest equivalent is a plain planter box with no
+  flowers visible; the existing brick-edged planter with three flowers already matches this file's
+  own description better than the pack art would after a recolor.
 - Trees are split into a solid trunk (ground level, drawn like any other object) and a 2×2 overhead
   canopy above it (drawn on the above-player layer — see `overhead` above):
   - `treeTrunk` + `treeCanopyTL` / `treeCanopyTR` / `treeCanopyBL` / `treeCanopyBR`: a round shade tree.
@@ -244,6 +280,34 @@ enough to cover the trunk's columns regardless of the ellipse's curve) and givin
 "neck" from the crown straight down to the tile edge over the trunk's columns. No tile names or
 positions changed, only what's drawn inside `treeCanopyBL`/`palmCanopyBL` (and their TL/TR/BR
 counterparts, which share the same shape function).
+
+### Trees and palms: kept hand-drawn (FB-0025)
+
+FB-0025 asked for trees to be replaced from a pack too, and the Roguelike Modern City pack does have
+round tree art -- but it's a single 16x16 tile (a top-down canopy with its own trunk baked into the
+same tile), not the trunk-plus-2x2-overhead-canopy split this game's trees use for the "walk behind
+the canopy" depth cue (STYLE_GUIDE "Layering", above). Fitting the pack's tree into that split would
+mean either upscaling one small tile into four (blocky, and the pack's own trunk pixels would end up
+buried inside the canopy quadrants instead of at the base where `treeTrunk`/`palmTrunk` go), or
+giving up the 2x2 canopy/walk-behind effect entirely. Neither reads as better than the existing
+hand-drawn round-tree/date-palm canopies, so `treeTrunk`/`treeCanopy*`/`palmTrunk`/`palmCanopy*` are
+unchanged. Hedges/bushes/lawn/paths (all flat, single-tile ground dressing) didn't have this problem
+and were swapped; trees were the one place this survey's own migration plan flagged as needing a
+judgment call, and the call was to keep the depth effect.
+
+### Parked cars (FB-0025)
+
+`carSedan` / `carSedanBlue` / `carSuv` / `carVan`: decoration for the student parking lot
+(`tools/campus/build-campus.js`, section 13), not part of the 16x16 tile-name catalog's original
+"content is data" grid-drawing convention -- each is a Pixel Vehicle Pack sprite (CC0,
+`assets/vendor/kenney-pixel-vehicle-pack/`) at its own irregular size (e.g. a 29x13 sedan), scaled
+down (nearest-neighbor, aspect preserved) and centered in a 16x16 tile with the sprite's own colors
+kept as-is (no palette recolor -- they already read fine next to the bright campus palette). Solid,
+placed only on plain `parking` ground tiles with two rows hugging the lot's north/south kerb and a
+gap between cars, leaving the middle of the lot open as a driving aisle. A parked car is one full
+16x16 tile (2 m) here, smaller than a real car's actual footprint -- a deliberate simplification, the
+same scale compromise every other single-tile prop in this kit (`rock`, `flowerbed`, a tree trunk)
+already makes.
 
 ## Interior kit
 

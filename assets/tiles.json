@@ -6,13 +6,13 @@
       "name": "grass",
       "solid": false,
       "overhead": false,
-      "color": "#59b351"
+      "color": "#5ab452"
     },
     {
       "name": "grass2",
       "solid": false,
       "overhead": false,
-      "color": "#59b351"
+      "color": "#5ab351"
     },
     {
       "name": "flowers",
@@ -210,7 +210,7 @@
       "name": "asphalt",
       "solid": false,
       "overhead": false,
-      "color": "#5c5e67"
+      "color": "#5b5d66"
     },
     {
       "name": "paving",
@@ -222,7 +222,7 @@
       "name": "parking",
       "solid": false,
       "overhead": false,
-      "color": "#64666f"
+      "color": "#64666e"
     },
     {
       "name": "track",
@@ -282,91 +282,91 @@
       "name": "kerbT",
       "solid": false,
       "overhead": false,
-      "color": "#7c6969"
+      "color": "#d28e78"
     },
     {
       "name": "kerbB",
       "solid": false,
       "overhead": false,
-      "color": "#7c6969"
+      "color": "#d28e78"
     },
     {
       "name": "kerbL",
       "solid": false,
       "overhead": false,
-      "color": "#7b6768"
+      "color": "#d28e78"
     },
     {
       "name": "kerbR",
       "solid": false,
       "overhead": false,
-      "color": "#7b6767"
+      "color": "#d28e78"
     },
     {
       "name": "kerbTL",
       "solid": false,
       "overhead": false,
-      "color": "#8c6c68"
+      "color": "#d59580"
     },
     {
       "name": "kerbTR",
       "solid": false,
       "overhead": false,
-      "color": "#8f6f6a"
+      "color": "#d49480"
     },
     {
       "name": "kerbBL",
       "solid": false,
       "overhead": false,
-      "color": "#8c6c68"
+      "color": "#d4947f"
     },
     {
       "name": "kerbBR",
       "solid": false,
       "overhead": false,
-      "color": "#8f6f6a"
+      "color": "#d2927e"
     },
     {
       "name": "roadLineH",
       "solid": false,
       "overhead": false,
-      "color": "#61636c"
+      "color": "#64666e"
     },
     {
       "name": "roadLineV",
       "solid": false,
       "overhead": false,
-      "color": "#61636c"
+      "color": "#64666e"
     },
     {
       "name": "crossingH",
       "solid": false,
       "overhead": false,
-      "color": "#adaeb3"
+      "color": "#a2a3a7"
     },
     {
       "name": "crossingV",
       "solid": false,
       "overhead": false,
-      "color": "#adaeb3"
+      "color": "#a2a3a7"
     },
     {
       "name": "walkway",
       "solid": false,
       "overhead": false,
-      "color": "#ba7c6a"
+      "color": "#cb8c77"
     },
     {
       "name": "lawn",
       "solid": false,
       "overhead": false,
-      "color": "#59b351"
+      "color": "#5ab452"
     },
     {
       "name": "lawn2",
       "solid": false,
       "overhead": false,
-      "color": "#5ab452"
+      "color": "#5ab351"
     },
     {
       "name": "hedge",
@@ -378,7 +378,7 @@
       "name": "bush",
       "solid": true,
       "overhead": false,
-      "color": "#3d7e3f"
+      "color": "#50a34b"
     },
     {
       "name": "flowerbed",
@@ -865,6 +865,30 @@
       "solid": true,
       "overhead": false,
       "color": "#726e64"
+    },
+    {
+      "name": "carSedan",
+      "solid": true,
+      "overhead": false,
+      "color": "#78b096"
+    },
+    {
+      "name": "carSedanBlue",
+      "solid": true,
+      "overhead": false,
+      "color": "#6e96be"
+    },
+    {
+      "name": "carSuv",
+      "solid": true,
+      "overhead": false,
+      "color": "#77b593"
+    },
+    {
+      "name": "carVan",
+      "solid": true,
+      "overhead": false,
+      "color": "#78ba95"
     }
   ]
 }

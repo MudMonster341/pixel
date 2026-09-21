@@ -461,3 +461,26 @@ actual screenshots (`qa-shots/intro/`), not just a functional pass.
 
 **Next:** merge `feature/intro` into `main` (another agent is changing building/greenery art on `main`
 in parallel -- expect to merge, not rebase blindly); then the Main Block foyer/LUG stall (M3 beat 4).
+
+## 2026-09-21 — The opening, and buildings that look like buildings
+
+**Did:**
+- **Opening (M3a, owner brief):** title screen with big bevelled buttons and parallax, Mustafa's
+  greeting with a portrait, name entry (typed + on-screen keyboard, saved and used in-game), clothes
+  colour customisation with a live animated preview ([ADR 0014](decisions/0014-opening-customisation-recolor-sheets.md):
+  one baked sheet per colour), the bus arrival at the gate, and a Main Block entrance cutscene.
+  Built on `feature/intro`, merged (conflict was only the generated campus.json: regenerated).
+- **Art:** greenery from Sprout Lands (seamless hedges, bushes, flowerbeds, tufts, recoloured to a dry
+  campus green), and BITS buildings now get a 4-tile front facade (cap / windows / body / base) so they
+  read as buildings; paving stops at walls instead of painting over them; the Main Block has the red-arch entrance.
+- **Fixed:** the held-item position for 16×24 frames (velocity extrapolation, not a looser test).
+- 192 unit + 81 e2e tests green.
+
+**Why:** the owner's "it looks blocky and bad" was right on both the opening and the buildings.
+
+**Decisions:** ADR 0014 · **Failures:** ERR-0005 (WASD stole on-screen-keyboard focus during name entry)
+
+**Next (owner, high priority):** rebuild the campus LAYOUT from satellite imagery. Their reference
+screenshot ([docs/research/reference/owner-google-maps-orientation.jpg](docs/research/reference/owner-google-maps-orientation.jpg))
+shows D54 along the top, the entrance on the lower right with a roundabout just inside and parking on
+both sides, a loop road round the academic core, and the sports field at the west end.

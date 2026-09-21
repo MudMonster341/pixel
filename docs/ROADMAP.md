@@ -40,9 +40,9 @@ Tasks are written so one run can finish one. Keep them that size.
 drawing our own.** "Don't try making assets on your own because you are sort of bad at it. Find open
 source asset packages... change all the trees, pavements, everything."
 
-- [ ] Research free-licence 16 px packs (trees, paths, roads, buildings, interiors, characters, UI), check every licence, download the best, show mock scenes: `docs/research/asset-packs.md`
-- [ ] Owner picks the pack from the mock-ups
-- [ ] Swap the tile generator over: tile names map to pack tiles, maps keep working, draw only what no pack covers
+- [x] Research free-licence 16 px packs, licences checked, best downloaded: `docs/research/asset-packs.md` (2026-09-20)
+- [x] Owner picked: free packs only, then supplied LimeZu Modern Interiors Free and Sprout Lands themselves (2026-09-21)
+- [x] Swap the tile generator over: atlas blit + name→source-rect table; paths, kerbs, roads, crossings, grass and parked cars now come from Kenney (2026-09-21)
 - [ ] Interiors from LimeZu Modern Interiors Free: Room Builder walls/floors/doors + furniture, recoloured to the campus palette
 - [ ] Outdoor greenery from Sprout Lands: trees, bushes, flowers, grass detail, recoloured
 - [ ] **BITS building kit, made by us in the packs' style** (owner, 2026-09-21: no paid exteriors pack; learn how the packs build a wall and reuse/recolour their window, door and trim pieces)

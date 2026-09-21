@@ -377,3 +377,29 @@ passes on repeat); logged as an M7 task.
 
 **Next:** M1 data-driven NPC dialog with flag conditions and `onEnd` actions, so the quest stage and
 keys are actually set by the story.
+
+## 2026-09-21 — Opening flow, and art moves to real asset packs
+
+**Did:**
+- **Opening (FB-0023, FB-0024):** title screen ("BITS DUBAI / The LUG Treasure Hunt", panning gate art,
+  press-enter then a menu panel), a real loading screen, an ESC pause menu with Quit to Title, and the
+  overflowing controls card replaced by hints that appear when first needed. `docs/GAME_FEEL.md` is now
+  the UI standard (studied from how Pokémon structures its opening, dialog and transitions).
+  Found and fixed ERR-0004 on the way: the HUD's listeners weren't torn down on quit, so relaunching crashed it.
+- **Art direction (FB-0025):** the owner said to stop drawing assets and use ready-made packs, then
+  downloaded LimeZu Modern Interiors Free and Sprout Lands Basic. [ADR 0012](decisions/0012-third-party-asset-packs.md)
+  supersedes 0002: art comes from packs, we draw only what no pack covers. The owner declined the paid
+  Modern Exteriors pack, so the BITS blocks get built by us in the packs' style instead (ADR 0012 addendum).
+- **First swap landed:** a PNG decoder plus an atlas-blit path in make-assets, and paths, kerbs, roads,
+  lane lines, crossings, grass and new parked cars now come from Kenney's CC0 city pack.
+  179 unit + 72 e2e tests. Kerbs went from a black-and-white barcode to terracotta brick; the car park reads properly.
+- Licences: the two owner-supplied packs are non-commercial with credit required, so the game must never
+  be sold, and raw packs stay out of git (gitignored); CREDITS.md lists everyone.
+
+**Why:** the owner's judgement on the art was right, and packs cost nothing but a licence constraint
+that a private gift can live with.
+
+**Decisions:** ADR 0012 (+ addendum) · **Failures:** ERR-0004
+
+**Next:** Sprout Lands greenery, the BITS building kit in the packs' style, then interiors and characters
+from LimeZu. A research agent is checking free character packs and free UI/sound packs.

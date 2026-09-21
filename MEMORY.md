@@ -403,3 +403,20 @@ that a private gift can live with.
 
 **Next:** Sprout Lands greenery, the BITS building kit in the packs' style, then interiors and characters
 from LimeZu. A research agent is checking free character packs and free UI/sound packs.
+
+## 2026-09-21 — The lead stops being a blob
+
+**Did:** characters now come from LimeZu's free pack, recoloured in the generator: the lead is Amelia
+with black hair, fair skin and a pink top, with a 6-frame walk in all directions and an idle
+animation; the LUG volunteer and two background students come from Adam, Alex and Bob. Character
+frames moved 16×16 → **16×24** ([ADR 0013](decisions/0013-characters-are-16x24-from-the-pack.md)),
+which touched the sprite loaders, animations, held-item offsets and the physics body.
+182 unit + 74 e2e tests.
+
+**Why:** the owner said the character art looked bad, and it did. The taller frame is what the pack
+needs and is the usual proportion for this kind of game.
+
+**Decisions:** ADR 0013 · **Failures:** a wrong body-offset derivation broke the house door until the
+e2e tests caught it; the invariant (feet at origin + 8) is now written down in the ADR.
+
+**Next:** Sprout Lands greenery, then the BITS building kit in the packs' style, then interiors.

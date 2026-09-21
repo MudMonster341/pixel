@@ -18,6 +18,8 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   GameState.quest.keys.icvl = true;
   GameState.collected.add('meadow-apple-1');
   GameState.seenCutscenes.add('gate2-welcome');
+  GameState.playerName = 'ZARA';
+  GameState.customization.clothes = 'lavender';
 
   assert.equal(saveGame('default', GameState), true);
   assert.ok(localStorage.getItem(SAVE_KEY));
@@ -33,6 +35,8 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   GameState.quest.keys.icvl = false;
   GameState.collected.clear();
   GameState.seenCutscenes.clear();
+  GameState.playerName = 'Aisha';
+  GameState.customization.clothes = 'pink';
 
   assert.equal(loadGame('default', GameState), true);
   assert.equal(GameState.map, 'campus');
@@ -46,6 +50,9 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   assert.equal(GameState.flags.tomasChats, 3);
   assert.equal(GameState.quest.stage, 'hunting');
   assert.equal(GameState.quest.keys.icvl, true);
+  // M3a: her chosen name and look round-trip like everything else.
+  assert.equal(GameState.playerName, 'ZARA');
+  assert.deepEqual(plain(GameState.customization), { clothes: 'lavender' });
   // GameState.collected/.seenCutscenes come from the vm sandbox's own realm, so `instanceof Set`
   // (checking against *this* file's Set) isn't reliable -- check by behaviour instead: a real Set
   // has a working `.has()`, and JSON.stringify on a Set (unlike a plain object/array) yields '{}'.
@@ -137,6 +144,23 @@ test('unknown/extra fields in a save do not crash loading', () => {
   assert.equal(GameState.flags.tomasGaveSword, true);
   assert.equal(GameState.quest.stage, 'briefed');
   assert.equal(GameState.quest.keys.icvl, true);
+});
+
+test('M3a: a save from before playerName/customization existed falls back to the live defaults, not a crash', () => {
+  const { GameState, loadGame, localStorage } = loadGameData();
+  localStorage.setItem(SAVE_KEY, JSON.stringify({
+    version: 1,
+    savedAt: Date.now(),
+    profile: 'default',
+    state: {
+      map: 'campus', flags: {}, quest: {}, collected: [], seenCutscenes: [],
+      // no playerName, no customization -- an old save written before M3a existed
+    },
+  }));
+
+  assert.doesNotThrow(() => loadGame('default', GameState));
+  assert.equal(GameState.playerName, 'Aisha'); // untouched, still whatever GameState already had
+  assert.deepEqual(plain(GameState.customization), { clothes: 'pink' });
 });
 
 test('an inventory slot referencing an item that no longer exists is dropped, not crashed on', () => {

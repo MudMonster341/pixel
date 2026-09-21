@@ -1428,6 +1428,18 @@ for (const b of buildingList.filter((b) => b.doorCell)) {
   ]);
 }
 
+// M3a (docs/STORY.md "Opening" step 5 / beat 3): an "entrance" cutscene trigger a few tiles south of
+// (outside) the Main Block's real door -- the same "a few tiles before the door" shape as the Gate 2
+// trigger above, so the illustration plays as she walks up the avenue, just before stepping through
+// the door into the interior map. Grid coordinates (not frame metres) since it's built directly from
+// the door's own drawn cell, the same way the door object right above it is.
+if (mainBlock.doorCell) {
+  const [doorX0, doorY] = mainBlock.doorCell;
+  rectObjectGrid('cutscene', 'Main Block entrance cutscene', doorX0 - 2, doorY + 1, doorX0 + 3, doorY + 3, [
+    { name: 'cutscene', type: 'string', value: 'entrance' },
+  ]);
+}
+
 // FB-0022 (QA): the single 'building' object below is a bounding box, used for the full-screen
 // map's label and a few tests -- for an L-shaped building (several real BITS buildings have wings,
 // decomposeIntoRects) that bbox can cover empty ground between the wings, or even spill into a

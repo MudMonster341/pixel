@@ -16,6 +16,15 @@ test('titleEnabled() defaults on, ?title=0 turns it off', () => {
   assert.equal(titleEnabled('?title=1'), true);
 });
 
+test('introEnabled() defaults on, ?intro=0 turns it off (M3a: title Play -> the opening chain)', () => {
+  const { introEnabled } = loadGameData();
+  assert.equal(introEnabled(''), true);
+  assert.equal(introEnabled(), true); // no `location` in this sandbox, same as the other *Enabled() helpers
+  assert.equal(introEnabled('?intro=0'), false);
+  assert.equal(introEnabled('?map=campus&intro=0'), false);
+  assert.equal(introEnabled('?intro=1'), true);
+});
+
 test('resetGameState() puts a played-in state back to fresh-boot defaults', () => {
   const { GameState, resetGameState } = loadGameData();
   GameState.map = 'house';
@@ -31,6 +40,8 @@ test('resetGameState() puts a played-in state back to fresh-boot defaults', () =
   GameState.seenCutscenes.add('gate2');
   GameState.seenDialog.add('tomas:give-sword');
   GameState.seenHints.add('move');
+  GameState.playerName = 'ZARA';
+  GameState.customization.clothes = 'sky';
 
   resetGameState(GameState);
 
@@ -47,6 +58,11 @@ test('resetGameState() puts a played-in state back to fresh-boot defaults', () =
   assert.equal(GameState.seenCutscenes.size, 0);
   assert.equal(GameState.seenDialog.size, 0);
   assert.equal(GameState.seenHints.size, 0);
+  // M3a: a fresh "Play" also resets the opening's own picks (title.js sends her through the
+  // greeting/name-entry/customize chain again, which will set these fresh, but a build with
+  // `?intro=0` skips that chain entirely and must still start from the documented defaults).
+  assert.equal(GameState.playerName, 'Aisha');
+  assert.deepEqual(plain(GameState.customization), { clothes: 'pink' });
   // The same live Inventory instance, not a replacement -- anything already listening to it
   // (hotbar, tutorial checklist) must keep working after a "Play" from the title screen.
   assert.equal(typeof GameState.inventory.on, 'function');

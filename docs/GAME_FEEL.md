@@ -58,6 +58,10 @@ TITLE SCREEN (src/scenes/title.js, scene key 'title')                        │
   Arrows/W-S + Enter, or mouse click. Controls/Credits open as overlays      │
   on top of the title, Esc/Enter closes them back to the menu.                │
    │ Play → resetGameState()          │ Continue → loadGame(profile)          │
+   ▼                                  │                                       │
+THE M3a OPENING (`?intro=0` skips straight to LOADING, same as `?title=0`     │
+skips TITLE -- see "The M3a opening" below) ─────────────────────────────────▶│
+   │                                                                          │
    ▼                                                                          │
 LOADING SCREEN (src/main.js BootScene, scene key 'boot') ◀─────────────────────┘
   Logo, "LOADING...", a progress bar driven by Phaser's real loader
@@ -93,6 +97,65 @@ Esc (world, not mid-dialog) → PAUSE MENU (src/scenes/ui.js PauseMenu)
 Esc's full priority order in `UIScene`: the full-screen map closes first if it's open (that's an
 older, still-valid rule), then Pause owns Esc, except while a conversation is on screen — you can't
 pause mid-dialog, same as you can't in Pokemon either.
+
+## The M3a opening (owner brief, 2026-09-21, docs/STORY.md "Opening")
+
+Title's "Play" (new game only -- "Continue" skips straight to loading, she's already named and
+dressed) chains through four scenes before ever reaching the loading screen, each its own file in
+`src/scenes/intro-*.js`, each fading 250ms in and out like every other scene change in this game:
+
+```
+'greeting' → 'name-entry' → 'customize' → 'bus-arrival' → 'boot'
+```
+
+- **`greeting`**: Mustafa's portrait + the game's own dialog box (reused from ui.js, exactly like the
+  cutscene player does) -- a handful of short lines, skippable.
+- **`name-entry`**: real typing *and* an on-screen keyboard grid (arrows + Enter, or a click), a
+  default name so a single Enter/Esc accepts it and moves on, letters/spaces only, 10 characters.
+- **`customize`**: a live, animated preview of her actual sprite, clothes-color swatches (left/right
+  or click), a default so it's skippable the same way.
+- **`bus-arrival`**: no player input at all beyond Esc (a pure cutscene, not a menu) -- the bus drives
+  in, stops, the door opens, she steps down, the door closes, the bus pulls away. Ends by handing off
+  to `boot` exactly where "Play" always did, so the existing Gate 2 cutscene trigger (campus map, a
+  few tiles past the default spawn) fires normally the moment she takes her first real steps --
+  the bus scene doesn't re-implement or duplicate that trigger, it just lands her in front of it.
+
+`?intro=0` skips the whole chain straight to `boot`, the same shape as `?title=0` skips the title
+screen: `tests/e2e/helpers.js` `openTitle()` sets it off by default, only `tests/e2e/intro.spec.js`
+turns it on. Every scene in the chain follows the same skip rule as everything else in this file
+(rule 7 below): Esc always accepts whatever's currently chosen/typed and moves to the next scene,
+never a dead end.
+
+## "A little 3D": the rules this pass settled on (owner brief 2026-09-21)
+
+The owner's words: *"currently it looks very blocky and 2D, a little 3D please."* Four concrete
+techniques, applied consistently rather than once on one screen, so later work matches:
+
+1. **Every panel gets a 1px inner bevel.** `drawPanel()` (src/scenes/ui.js) now draws a faint light
+   line along its own top/left inside the border and a faint dark line along the bottom/right, on top
+   of the existing drop shadow and cream border -- because every panel in the game already calls
+   `drawPanel()` (dialog box, pause menu, minimap, credits, the title's own menu background), this one
+   change lifts the whole game's UI at once, consistent with STYLE_GUIDE.md's "one light source,
+   top-left" rule for every other asset.
+2. **Buttons are a real widget, not styled text.** `drawButtonState()`/`class Button` (src/scenes/
+   ui.js): a drop shadow, a bevelled edge (inverted when pressed, so it reads as pushed in), and three
+   states (normal/hover/pressed) that mouse and keyboard both drive into the same drawing code -- a
+   keyboard Enter gets the same press-then-release visual a click does (`Button.flashPress()`). Used
+   for the title screen's whole menu (the owner's specific ask: "big buttons... drawn properly").
+3. **Parallax, not one image panning alone.** The title screen's backdrop is two layers moving at
+   different speeds: the existing Gate 2 illustration panning slowly (unchanged), and a new
+   silhouette strip (`assets/cutscenes/title-fg.png`, palms + a fence line) scrolling sideways faster,
+   underneath the menu. Two speeds is what makes it read as depth instead of a flat, moving picture.
+4. **Ground shadows and forced perspective everywhere a character or a building stands.** The player
+   and every NPC now cast a soft ellipse shadow (`WorldScene` `playerShadow`/per-NPC shadow), matching
+   what pickups already did (STYLE_GUIDE.md "Drop shadows"). Every cutscene illustration
+   (`tools/make-cutscenes.js`) narrows its road/steps toward the horizon rather than drawing them a
+   constant width -- the same forced-perspective trick the original Gate 2 scene already used for its
+   avenue, now also used for the new entrance scene's steps.
+
+Motion follows the rest of this file's existing rule (never a flat instant cut): every tween added in
+this pass uses an easing curve (`Cubic.easeOut` to decelerate into a stop, `Cubic.easeIn` to
+accelerate away, `Sine.easeOut` for a short hop), never `Linear`.
 
 ## In-fiction hints replace the controls card (FB-0023)
 

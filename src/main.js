@@ -35,7 +35,13 @@ class BootScene extends Phaser.Scene {
     const charSheet = { frameWidth: TILE, frameHeight: CHAR_HEIGHT };
     this.load.image('tiles', 'assets/tiles.png');
     this.load.json('tileinfo', 'assets/tiles.json');
-    this.load.spritesheet('player', 'assets/player.png', charSheet);
+    // M3a customisation (src/scenes/intro-customize.js): she picked a clothes-color swatch, one of
+    // tools/make-assets.js's CLOTHES_SWATCHES, each baked into its own `player-<id>.png` sheet ahead
+    // of time (see that file's "character customisation" comment for why -- no runtime recolor here,
+    // just picking which pre-baked file to load). `?intro=0`/an old save/Continue never visited the
+    // customisation screen, so GameState.customization always has the 'pink' default to fall back on.
+    const clothes = (GameState.customization && GameState.customization.clothes) || 'pink';
+    this.load.spritesheet('player', `assets/player-${clothes}.png`, charSheet);
     this.load.spritesheet('npc', 'assets/npc.png', charSheet);
     // Campus NPCs (FB-0025): recolored pack characters, same sheet layout as the player, used by
     // NPC defs with a `character` field (src/maps.js, src/scenes/world.js createNpcs()).
@@ -100,7 +106,10 @@ function startGame() {
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: [first, ...rest, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
+    // M3a opening (docs/STORY.md "Opening"): title's own "Play" chains through these four scenes
+    // (src/scenes/intro-*.js) before ever reaching 'boot' -- see title.js startPlay(). Registered
+    // here like every other scene; only the first array entry auto-starts (see the comment above).
+    scene: [first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, BusArrivalScene, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
   });
   if (saveEnabled()) initAutosave(window.game, currentProfile());
 }

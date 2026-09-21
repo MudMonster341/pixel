@@ -27,10 +27,117 @@ function uiText(scene, x, y, str, size = 8, color = COLORS.text) {
   });
 }
 
+// "A little 3D" (docs/GAME_FEEL.md): every panel in the game already went through drawPanel(), so
+// giving it a 1px inner bevel here -- a lighter line along the top/left inside the border, a darker
+// one along the bottom/right -- lifts every dialog box, minimap, pause menu and panel in one place,
+// consistent with docs/STYLE_GUIDE.md's "one light source, top-left" rule for every other asset in
+// the game. The outer drop shadow (offset fill behind the panel) is unchanged.
 function drawPanel(g, x, y, w, h) {
   g.fillStyle(0x000000, 0.35).fillRect(x + 4, y + 4, w, h);
   g.fillStyle(COLORS.panel, 0.92).fillRect(x, y, w, h);
   g.lineStyle(4, COLORS.border, 1).strokeRect(x + 2, y + 2, w - 4, h - 4);
+  g.lineStyle(1, 0xffffff, 0.18).lineBetween(x + 5, y + 5, x + w - 5, y + 5).lineBetween(x + 5, y + 5, x + 5, y + h - 5);
+  g.lineStyle(1, 0x000000, 0.25).lineBetween(x + 5, y + h - 5, x + w - 5, y + h - 5).lineBetween(x + w - 5, y + 5, x + w - 5, y + h - 5);
+}
+
+// ---------- big drawn button (M3a title screen redesign, docs/GAME_FEEL.md "a little 3D") ----------
+// Bevelled, shaded, with its own drop shadow -- the title's Play/Continue/Controls/Credits rows used
+// to be plain text; the owner's brief specifically asked for "big buttons... drawn properly". Three
+// visual states (normal/hover/pressed) are all drawn up front into one Graphics object and swapped
+// by redrawing, the same "measure once, redraw on state change" shape every other panel in this file
+// already uses (see Hotbar.refresh(), DialogBox), so it fits this codebase's existing conventions
+// rather than introducing a new "component" system just for this screen.
+function drawButtonState(g, x, y, w, h, state) {
+  g.clear();
+  const lift = state === 'pressed' ? 2 : 0; // a pressed button sinks toward its own shadow
+  const by = y + lift;
+  // Drop shadow, softer/closer when pressed (less "floating").
+  g.fillStyle(0x000000, state === 'pressed' ? 0.25 : 0.4).fillRect(x + 3, y + 6, w, h);
+  // Base fill: navy panel tone, brighter on hover/selected so keyboard focus is obvious without text
+  // changing color alone (docs/GAME_FEEL.md rule 7: keyboard-first).
+  const base = state === 'hover' ? 0x24273c : COLORS.panel;
+  g.fillStyle(base, 0.96).fillRect(x, by, w, h);
+  // Bevel: light top/left, dark bottom/right (STYLE_GUIDE "one light source, top-left"), inverted
+  // when pressed so the button reads as pushed in rather than popped out.
+  const hiAlpha = state === 'pressed' ? 0.12 : 0.35;
+  const loAlpha = state === 'pressed' ? 0.35 : 0.4;
+  const hiSide = state === 'pressed' ? 0x000000 : 0xffffff;
+  const loSide = state === 'pressed' ? 0xffffff : 0x000000;
+  g.lineStyle(2, hiSide, hiAlpha).lineBetween(x + 2, by + 2, x + w - 2, by + 2).lineBetween(x + 2, by + 2, x + 2, by + h - 2);
+  g.lineStyle(2, loSide, loAlpha).lineBetween(x + 2, by + h - 2, x + w - 2, by + h - 2).lineBetween(x + w - 2, by + 2, x + w - 2, by + h - 2);
+  // Outer border: gold when selected/hovered (matches the rest of the UI's highlight color), cream otherwise.
+  g.lineStyle(3, state === 'hover' ? COLORS.gold : COLORS.border, 1).strokeRect(x + 1, by + 1, w - 2, h - 2);
+  return by; // callers reposition their label text to track the press-lift
+}
+
+// A whole button: its own Graphics (drawButtonState above), a centered label, and a Zone for mouse
+// input. Keyboard focus is driven externally (whoever owns a row of these -- title.js's menu, the
+// customisation screen's swatches -- moves `focused` with arrow keys, same as every other
+// keyboard-driven list in this game); mouse hover/press are handled here directly. Both input paths
+// funnel into the same drawButtonState() so a keyboard-selected button and a mouse-hovered one look
+// identical (docs/GAME_FEEL.md rule 7: mouse is always an addition, never a different experience).
+class Button {
+  constructor(scene, x, y, w, h, label, onConfirm) {
+    this.scene = scene;
+    this.box = { x, y, w, h };
+    this.hovered = false;
+    this.focused = false;
+    this.pressedVisual = false;
+    this.graphics = scene.add.graphics();
+    this.text = uiText(scene, x + w / 2, y + h / 2, label, 12, COLORS.text).setOrigin(0.5);
+    this.zone = scene.add.zone(x, y, w, h).setOrigin(0, 0).setInteractive({ useHandCursor: true });
+    this.zone.on('pointerover', () => { this.hovered = true; this.redraw(); });
+    this.zone.on('pointerout', () => { this.hovered = false; this.pressedVisual = false; this.redraw(); });
+    this.zone.on('pointerdown', () => { this.pressedVisual = true; this.redraw(); });
+    this.zone.on('pointerup', () => {
+      const wasPressed = this.pressedVisual;
+      this.pressedVisual = false;
+      this.redraw();
+      if (wasPressed && onConfirm) onConfirm();
+    });
+    this.redraw();
+  }
+
+  setLabel(label) {
+    this.text.setText(label);
+  }
+
+  setFocused(focused) {
+    if (focused === this.focused) return;
+    this.focused = focused;
+    this.redraw();
+  }
+
+  // A keyboard confirm (Enter/Space) gets the same pressed-then-release visual a click does, just on
+  // a short timer instead of a real pointerup, so it's clear something was activated either way.
+  flashPress(onDone) {
+    this.pressedVisual = true;
+    this.redraw();
+    this.scene.time.delayedCall(90, () => {
+      this.pressedVisual = false;
+      this.redraw();
+      if (onDone) onDone();
+    });
+  }
+
+  redraw() {
+    const state = this.pressedVisual ? 'pressed' : this.hovered || this.focused ? 'hover' : 'normal';
+    const by = drawButtonState(this.graphics, this.box.x, this.box.y, this.box.w, this.box.h, state);
+    this.text.setY(by + this.box.h / 2).setColor(state === 'hover' ? COLORS.highlight : COLORS.text);
+  }
+
+  setVisible(visible) {
+    this.graphics.setVisible(visible);
+    this.text.setVisible(visible);
+    if (visible) this.zone.setInteractive();
+    else this.zone.disableInteractive();
+  }
+
+  destroy() {
+    this.graphics.destroy();
+    this.text.destroy();
+    this.zone.destroy();
+  }
 }
 
 class UIScene extends Phaser.Scene {

@@ -14,7 +14,13 @@ const { FEEDBACK_DIR } = require('./paths');
 // Title defaults off (`?title=0`, FB-0023/0024, src/scenes/title.js): almost every spec here plays
 // the world/UI directly and has no reason to sit through the title/loading screens first; only
 // tests/e2e/title.spec.js passes `title: true` to exercise that flow itself.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false } = {}) {
+// `intro` (the M3a opening chain, src/maplogic.js introEnabled()) also defaults off here, not just in
+// openTitle() below: a spec can reach the title screen at runtime without ever navigating through
+// openTitle() (title.spec.js's "Quit to Title" test does exactly this), and the URL's query string --
+// set once, here, at the very first page.goto() -- is what every later scene transition still reads,
+// since none of them reload the page. Defaulting it off here too means "Play" from a
+// runtime-reached title screen behaves the same as everywhere else in this file: straight to 'boot'.
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -26,6 +32,7 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (!save) params.set('save', '0');
   if (profile) params.set('profile', profile);
   if (!title) params.set('title', '0');
+  if (!intro) params.set('intro', '0');
   await page.goto(`/?${params.toString()}`);
   await waitForBoot(page);
   return { errors };
@@ -157,7 +164,11 @@ function feedbackCli(args) {
 // Like openGame(), but leaves the title screen ON (openGame() defaults it off with `?title=0` for
 // every other spec) and waits for the title scene itself instead of the world/ui scenes, which
 // don't exist yet at this point -- they're only started once Play/Continue is chosen.
-async function openTitle(page, { map, save = false, profile } = {}) {
+// `intro` defaults off (`?intro=0`, src/maplogic.js introEnabled()) the same way `cutscene`/`save`
+// do: most title-flow specs want Play to land straight on 'boot', same as before the M3a opening
+// (Mustafa's greeting/name entry/customisation/bus arrival) existed. tests/e2e/intro.spec.js passes
+// `intro: true` to exercise that chain of scenes itself.
+async function openTitle(page, { map, save = false, profile, intro = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -167,6 +178,7 @@ async function openTitle(page, { map, save = false, profile } = {}) {
   if (map) params.set('map', map);
   if (!save) params.set('save', '0');
   if (profile) params.set('profile', profile);
+  if (!intro) params.set('intro', '0');
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   return { errors };

@@ -101,6 +101,16 @@ function titleEnabled(search) {
   return qs.get('title') !== '0';
 }
 
+// `?intro=0` skips the M3a opening (Mustafa's greeting, name entry, customisation, the bus arrival)
+// straight to the loading screen, the same way `?title=0` skips the title screen itself -- most
+// title-flow tests still want the title screen but not a multi-scene opening every time they press
+// Play; tests/e2e/helpers.js openTitle() sets this by default, only the opening's own spec turns it
+// back on. `search` is injectable, same pattern as the helpers above.
+function introEnabled(search) {
+  const qs = new URLSearchParams(search ?? (typeof location === 'undefined' ? '' : location.search));
+  return qs.get('intro') !== '0';
+}
+
 // The smallest object (by tile area) among a Tiled map's objects whose type is one of `types` and
 // whose rectangle contains the point (x, y) — all in tile units, as tiledObjects() returns them.
 // Smallest-first so a specific area (e.g. "Athletics Track") wins over a bigger one it sits inside

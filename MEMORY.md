@@ -420,3 +420,44 @@ needs and is the usual proportion for this kind of game.
 e2e tests caught it; the invariant (feet at origin + 8) is now written down in the ADR.
 
 **Next:** Sprout Lands greenery, then the BITS building kit in the packs' style, then interiors.
+
+## 2026-09-21 — M3a: the opening (title redesign, Mustafa, name entry, customisation, the bus)
+
+**Did:** built the whole opening the owner's brief described (docs/STORY.md "Opening"), in
+`../2D_pixel_game-intro` (branch `feature/intro`, based on `main` at `08c0295`):
+- **Title screen redesigned:** big drawn buttons (`src/scenes/ui.js` `Button`/`drawButtonState()` --
+  bevelled, drop-shadowed, hover/pressed states, keyboard and mouse both drive the same visual) and a
+  second parallax layer (`assets/cutscenes/title-fg.png`, a palm/fence silhouette scrolling faster
+  than the existing gate pan) instead of the old plain text-row menu.
+- **Four new scenes chain off "Play"** (`src/scenes/intro-greeting.js`, `intro-name.js`,
+  `intro-customize.js`, `intro-bus.js`): Mustafa's portrait + dialog greeting; name entry (real typing
+  + an arrow-key/mouse on-screen keyboard, 10-char letters/spaces, a default that skips it in one
+  Enter); clothes-color customisation (5 swatches, live animated preview); a bus drives in, stops,
+  she steps off, it pulls away, then hands off to the existing campus spawn/Gate 2 cutscene unchanged.
+  `?intro=0` skips the whole chain, the same shape as `?title=0` (tests/e2e/helpers.js openTitle()/
+  openGame() both default it off, so none of the other specs needed to change).
+- **New art**, all generated (`tools/make-assets.js`, `tools/make-cutscenes.js`, never hand-edited):
+  5 clothes-swatch character sheets ([ADR 0014](decisions/0014-opening-customisation-recolor-sheets.md)),
+  Mustafa's portrait, the bus sprite, the title's parallax strip, and a new "entrance" cutscene
+  illustration (Main Block steps/pillars/arch), triggered by a map object the same way Gate 2's is
+  (`tools/campus/build-campus.js`).
+- **"A little 3D" pass, written into docs/GAME_FEEL.md:** every panel gets a 1px inner bevel now (one
+  change to `drawPanel()`, so the whole game's UI lifted at once); the player and NPCs cast a ground
+  shadow; every new tween eases instead of moving linearly.
+- Found and fixed two real bugs by looking at the screenshots and running the tests repeatedly, not
+  just reading the code: `WASD` aliased to the on-screen keyboard's arrow navigation silently stole
+  focus off "OK" whenever her own name contained one of those letters (ERR-0005); typing over the
+  pre-filled default name appended to it instead of replacing it, first caught by
+  `tools/qa-shots-intro.js`'s own screenshot, not a test.
+- 184 unit + 81 e2e tests (was 182 + 74 on `main`), all green with `E2E_PORT=4180 npm test`. One
+  pre-existing, unrelated e2e flake confirmed via `git stash` against `main`'s own committed code
+  (`held-item.spec.js`, a ~2px timing margin) -- not touched, out of scope for this task.
+
+**Why:** the owner's words were "it looks really bad right now... a little 3D please" -- the title/
+opening is the very first thing anyone sees, so it got real design effort and several passes at the
+actual screenshots (`qa-shots/intro/`), not just a functional pass.
+
+**Decisions:** ADR 0014 · **Failures:** ERR-0005
+
+**Next:** merge `feature/intro` into `main` (another agent is changing building/greenery art on `main`
+in parallel -- expect to merge, not rebase blindly); then the Main Block foyer/LUG stall (M3 beat 4).

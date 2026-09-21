@@ -41,6 +41,10 @@ function snapshotState(state) {
     seenCutscenes: [...state.seenCutscenes],
     seenDialog: [...state.seenDialog],
     seenHints: [...state.seenHints],
+    // M3a: her chosen name and look (src/scenes/intro-name.js, intro-customize.js). A save from
+    // before this existed simply has neither field; applyState() below falls back to the defaults.
+    playerName: state.playerName,
+    customization: { ...state.customization },
   };
 }
 
@@ -71,6 +75,10 @@ function applyState(state, saved) {
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
   state.seenDialog = new Set(saved.seenDialog || []);
   state.seenHints = new Set(saved.seenHints || []);
+  // M3a: falls back to whatever GameState already had (the just-booted defaults, see src/state.js)
+  // for a save written before these fields existed, exactly like `flags`/`quest` above.
+  state.playerName = typeof saved.playerName === 'string' && saved.playerName ? saved.playerName : state.playerName;
+  state.customization = { ...state.customization, ...(saved.customization || {}) };
 }
 
 function saveGame(profile = currentProfile(), state = GameState) {

@@ -163,6 +163,11 @@ class WorldScene extends Phaser.Scene {
     this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
     // The currently-selected hotbar item, shown in the character's hand (FB-0002).
     this.heldItem = this.add.image(this.player.x, this.player.y, 'held-items', 0).setVisible(false);
+    // "A little 3D" (docs/GAME_FEEL.md): a soft ground shadow under her feet, the same ellipse-under-
+    // the-object rule pickups already follow (STYLE_GUIDE.md "Drop shadows"), just repositioned every
+    // frame in movePlayer() instead of being static. Depth sits one below the player's own so it
+    // never draws over her feet.
+    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 9, 12, 4, 0x000000, 0.28).setDepth(this.player.y - 1);
   }
 
   createNpcs() {
@@ -183,6 +188,9 @@ class WorldScene extends Phaser.Scene {
       npc.def = def;
       npc.idleFrames = idleFrames;
       this.physics.add.collider(this.player, npc);
+      // Same ground shadow as the player (see createPlayer()); NPCs don't move yet, so a static
+      // shadow needs no per-frame update.
+      this.add.ellipse(npc.x, npc.y + 9, 12, 4, 0x000000, 0.28).setDepth(npc.y - 1);
       return npc;
     });
     // Interaction bubble (docs/STYLE_GUIDE.md "Speech bubbles"): frame 0 = "E" (something to say),
@@ -260,6 +268,7 @@ class WorldScene extends Phaser.Scene {
     }
     p.setVelocity(velocity.x, velocity.y);
     p.setDepth(p.y);
+    this.playerShadow.setPosition(p.x, p.y + 9).setDepth(p.y - 1);
     p.anims.timeScale = running ? RUN_ANIM_SCALE : 1;
 
     const moved = Phaser.Math.Distance.Between(this.lastPosition.x, this.lastPosition.y, p.x, p.y);

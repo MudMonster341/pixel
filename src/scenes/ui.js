@@ -1,5 +1,11 @@
 // The UI scene runs on top of the world at full resolution (no zoom), so text stays crisp.
-// It is never restarted, so the tutorial and HUD persist when the world changes maps.
+// It is never restarted by an ordinary map change, so the tutorial and HUD persist across those --
+// but "Quit to Title" (PauseMenu) does stop and later relaunch it, so anything this scene or its
+// components subscribe to on a *persistent* emitter (GameState.inventory, `game.events` -- as
+// opposed to `this.input.keyboard`/`this.events`, which belong to the scene itself and are cleaned
+// up by Phaser automatically on shutdown) must unsubscribe again on shutdown, or the next 'ui'
+// instance ends up sharing that emitter with a previous instance's already-destroyed game objects,
+// which throws the moment something like inventory.emit('changed') reaches them.
 
 const COLORS = {
   panel: 0x1a1c2c,
@@ -44,25 +50,33 @@ class UIScene extends Phaser.Scene {
     this.hints = new HintBanner(this);
     this.pause = new PauseMenu(this);
 
-    this.game.events.on('map-entered', (world) => {
+    // Named so they can be un-subscribed again in shutdown() below -- see the file-header comment.
+    this.onMapEntered = (world) => {
       this.minimap.setMap(world);
       this.locationBanner.show(world.def.name);
-    });
-    this.game.events.on('area-entered', (name) => this.locationBanner.show(name));
-    this.game.events.on('toast', (message) => this.toast.show(message));
+    };
+    this.onAreaEntered = (name) => this.locationBanner.show(name);
+    this.onToast = (message) => this.toast.show(message);
     // In-fiction hints (FB-0023/0024, docs/GAME_FEEL.md): world.js emits these the first moment
     // each one is relevant ("hint:move" as soon as she can walk, "hint:talk" the first time an NPC
     // is in range, ...). HintBanner itself is what actually remembers "already shown" (GameState.
     // seenHints), so emitting one more than once is harmless.
-    this.game.events.on('hint', (id) => this.hints.trigger(id));
+    this.onHint = (id) => this.hints.trigger(id);
     // A dialog `{ cutscene: 'key' }` action (src/dialog.js) fires this; handled here (a persistent
-    // scene, never restarted) rather than in world.js itself, so it always reaches whichever
-    // WorldScene instance is current even if a map change happened in between.
-    this.game.events.on('cutscene:requested', (key) => {
+    // scene, at least across ordinary map changes) rather than in world.js itself, so it always
+    // reaches whichever WorldScene instance is current even if a map change happened in between.
+    this.onCutsceneRequested = (key) => {
       const world = this.scene.get('world');
       if (!CUTSCENES[key]) { console.warn(`dialog action requested unknown cutscene "${key}"`); return; }
       if (world.sys.isActive() && !world.transitioning) world.playCutscene(key);
-    });
+    };
+    this.game.events.on('map-entered', this.onMapEntered);
+    this.game.events.on('area-entered', this.onAreaEntered);
+    this.game.events.on('toast', this.onToast);
+    this.game.events.on('hint', this.onHint);
+    this.game.events.on('cutscene:requested', this.onCutsceneRequested);
+    this.events.once('shutdown', () => this.teardown());
+
     const world = this.scene.get('world');
     if (world.tileData) this.minimap.setMap(world);
 
@@ -81,6 +95,20 @@ class UIScene extends Phaser.Scene {
       if (this.fullMap.visible) this.fullMap.close();
       else if (!this.dialog.isOpen) this.pause.onEscape();
     });
+  }
+
+  // Undoes every subscription create() made on a *persistent* emitter (GameState.inventory,
+  // `game.events`), run once when "Quit to Title" stops this scene (see the file-header comment).
+  // Scene-local subscriptions (this.input.keyboard, this.events) don't need this: Phaser tears
+  // those down on its own as part of the same shutdown.
+  teardown() {
+    this.game.events.off('map-entered', this.onMapEntered);
+    this.game.events.off('area-entered', this.onAreaEntered);
+    this.game.events.off('toast', this.onToast);
+    this.game.events.off('hint', this.onHint);
+    this.game.events.off('cutscene:requested', this.onCutsceneRequested);
+    this.hotbar.teardown();
+    this.tutorial.teardown();
   }
 
   // FB-0018: click the minimap or press N to see the whole current map, full screen. Blocked while
@@ -403,11 +431,15 @@ class Hotbar {
       if (dy !== 0) inventory.select((inventory.selected + Math.sign(dy) + count) % count);
     });
 
-    inventory.on('changed', () => this.refresh());
-    inventory.on('selected', () => {
+    // Named so teardown() can undo them -- `inventory` is GameState.inventory, a persistent
+    // singleton that outlives this scene, see the file-header comment on why that matters.
+    this.onChanged = () => this.refresh();
+    this.onSelected = () => {
       this.refresh();
       this.flashName();
-    });
+    };
+    inventory.on('changed', this.onChanged);
+    inventory.on('selected', this.onSelected);
     this.visible = true;
     this.refresh();
   }
@@ -465,6 +497,11 @@ class Hotbar {
     this.alpha = alpha;
     [this.panel, this.frames, this.itemName].forEach((part) => part.setAlpha(alpha));
     this.slots.forEach((slot) => [slot.icon, slot.number, slot.amount].forEach((part) => part.setAlpha(alpha)));
+  }
+
+  teardown() {
+    this.inventory.off('changed', this.onChanged);
+    this.inventory.off('selected', this.onSelected);
   }
 }
 
@@ -919,15 +956,30 @@ class Tutorial {
     this.buildChecklist();
     if (this.stage === 'steps') this.checklist.setVisible(true);
 
-    const events = scene.game.events;
-    events.on('player-moved', (distance) => {
+    // Named so teardown() can undo them -- `scene.game.events` and GameState.inventory are both
+    // persistent singletons that outlive this scene, see ui.js's file-header comment.
+    this.events = scene.game.events;
+    this.onPlayerMoved = (distance) => {
       this.walked += distance;
       if (this.walked > 64) this.complete('move');
-    });
-    events.on('map-entered', (world) => world.mapKey === 'house' && this.complete('enter'));
-    events.on('npc-talked', (id) => id === 'tomas' && this.complete('talk'));
-    GameState.inventory.on('added', () => this.complete('pickup'));
-    GameState.inventory.on('selected', () => this.complete('select'));
+    };
+    this.onMapEntered = (world) => world.mapKey === 'house' && this.complete('enter');
+    this.onNpcTalked = (id) => id === 'tomas' && this.complete('talk');
+    this.onAdded = () => this.complete('pickup');
+    this.onSelected = () => this.complete('select');
+    this.events.on('player-moved', this.onPlayerMoved);
+    this.events.on('map-entered', this.onMapEntered);
+    this.events.on('npc-talked', this.onNpcTalked);
+    GameState.inventory.on('added', this.onAdded);
+    GameState.inventory.on('selected', this.onSelected);
+  }
+
+  teardown() {
+    this.events.off('player-moved', this.onPlayerMoved);
+    this.events.off('map-entered', this.onMapEntered);
+    this.events.off('npc-talked', this.onNpcTalked);
+    GameState.inventory.off('added', this.onAdded);
+    GameState.inventory.off('selected', this.onSelected);
   }
 
   buildChecklist() {

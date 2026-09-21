@@ -188,17 +188,29 @@ function titleState(page) {
 // Moves the highlight to the given menu item with real ArrowDown presses (keyboard-driven, per
 // docs/GAME_FEEL.md), then presses Enter to confirm it. The menu only exists once the "PRESS ENTER"
 // intro prompt has been pressed once (docs/GAME_FEEL.md: never both on screen at once), so this
-// presses it first if needed.
+// presses it first if needed. Every press goes through pressUntil (ERR-0003: a one-shot keydown
+// occasionally never fires at all under load, not just late) rather than a bare `press()`, since a
+// title-flow test can easily fire several of these keydowns back to back with little real time
+// between them.
 async function chooseTitleMenu(page, id) {
-  if ((await titleState(page)).stage === 'intro') await page.keyboard.press('Enter');
-  await expect.poll(async () => (await titleState(page)).stage).toBe('menu');
+  if ((await titleState(page)).stage === 'intro') {
+    await pressUntil(page, 'Enter', async () => (await titleState(page)).stage === 'menu');
+  }
   for (let i = 0; i < 10; i++) {
     const { menuItems, menuIndex } = await titleState(page);
     if (menuItems[menuIndex] === id) break;
-    await page.keyboard.press('ArrowDown');
+    await pressUntil(page, 'ArrowDown', async () => (await titleState(page)).menuIndex !== menuIndex);
   }
   expect((await titleState(page)).menuItems[(await titleState(page)).menuIndex]).toBe(id);
-  await page.keyboard.press('Enter');
+
+  // What "confirmed" means depends on which item it was: Controls/Credits open their own overlay;
+  // Play/Continue fade out and hand off to the loading screen, stopping this scene.
+  const confirmed = async () => {
+    if (id === 'controls') return (await titleState(page)).controlsVisible;
+    if (id === 'credits') return (await titleState(page)).creditsVisible;
+    return !(await page.evaluate(() => game.scene.isActive('title')));
+  };
+  await pressUntil(page, 'Enter', confirmed);
 }
 
 module.exports = {

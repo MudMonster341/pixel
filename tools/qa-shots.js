@@ -310,7 +310,11 @@ async function shootTitleAndPause(browser) {
   await page.goto(`${BASE_URL}/?dev=0&map=campus`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   await page.waitForTimeout(200); // let the background pan/blink settle into a representative frame
-  await shoot(page, 'title-screen');
+  await shoot(page, 'title-screen'); // intro stage: logo + blinking "PRESS ENTER", no menu yet
+
+  await page.keyboard.press('Enter'); // reveals the menu (never shown together with the prompt)
+  await page.waitForFunction(() => game.scene.getScene('title').stage === 'menu');
+  await shoot(page, 'title-menu');
 
   await page.keyboard.press('Enter'); // "Play" is the default highlighted item
   // The branded loading screen (src/main.js BootScene): catch it before the world takes over.

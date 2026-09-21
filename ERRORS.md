@@ -96,3 +96,43 @@ Used for both minimap-toggle tests in place of a bare `page.keyboard.press` + `e
 **Recognise it next time:** an `expect.poll` on a one-shot `keydown-*` UI action times out at its
 *full* duration (not just "a bit slow") → suspect a dropped input event rather than a rendering
 delay, and consider retrying the keypress itself, not just the read.
+
+## ERR-0004 — Quit to Title crashed with "Cannot read properties of null (reading 'cut')" (2026-09-21)
+
+**Symptom:** Adding "Quit to Title" to the pause menu (FB-0023/0024): choosing Play again from the
+title screen after quitting silently did nothing -- no fade, no loading screen -- and the browser
+console showed an uncaught `TypeError: Cannot read properties of null (reading 'cut')` the instant
+`resetGameState()` ran. Never happened on a fresh page load, only after a quit-and-relaunch.
+
+**Context:** `src/scenes/ui.js`'s file header used to say "It is never restarted" -- true until this
+feature, since every other scene transition (map changes, cutscenes) is a `WorldScene` restart, not
+a `UIScene` one. Several of `UIScene`'s components (`Hotbar`, `Tutorial`) subscribe directly to two
+*persistent* emitters that outlive any one scene instance: `GameState.inventory` (a module-level
+singleton, `src/state.js`) and `game.events` (Phaser's central bus, as opposed to a scene's own
+`this.events`/`this.input.keyboard`, which Phaser tears down automatically on shutdown).
+
+**Root cause:** `PauseMenu.quitToTitle()` calls `scene.stop('ui')`, which destroys that `UIScene`
+instance's Phaser game objects (icons, graphics, text) -- but nothing removed the listeners
+`Hotbar`/`Tutorial` had registered on `GameState.inventory` and `game.events` back in `create()`.
+Those listeners are plain closures over `this`, so they kept a live reference to the now-destroyed
+objects. The next relaunch of `'ui'` (via Title's Play/Continue → `BootScene`) created a *second*
+`Hotbar`/`Tutorial` that registered its own listeners on the same two persistent emitters, on top of
+the first, still-live ones. The very next `resetGameState()` (Title's own "Play" handler) called
+`inventory.emit('changed')`, which reached *both* the new Hotbar and the stale, destroyed one --
+the stale one's `slot.icon.setFrame(...)` tried to read a destroyed `Frame`'s internals (`cutX`/
+`cutWidth`, which is what "reading 'cut'" was) and threw, aborting the whole handler chain (Phaser's
+event emitter doesn't isolate one listener's exception from the others) before the fade/scene-start
+code after it ever ran.
+
+**Fix:** Every direct subscription any `UIScene` component makes on `GameState.inventory` or
+`game.events` is now a named handler stored on `this`, and `UIScene` runs `this.events.once(
+'shutdown', () => this.teardown())`, which unsubscribes all of them (including delegating to
+`Hotbar.teardown()`/`Tutorial.teardown()`) before the scene's objects are gone. Scene-local
+subscriptions (`this.input.keyboard.on(...)`, `scene.input.on('wheel', ...)`) didn't need this --
+Phaser already cleans those up as part of the same shutdown.
+
+**Recognise it next time:** a scene that used to be "never restarted" gains a way to stop and
+relaunch it (a title screen, a "return to menu", anything beyond the usual map-change restart) →
+audit every one of its components for subscriptions on something that outlives the scene itself
+(a module-level singleton, `game.events`, `localStorage` polling) and add matching teardown, not
+just for this scene but for anything else built on the same "it's never restarted" assumption.

@@ -44,7 +44,7 @@ source asset packages... change all the trees, pavements, everything."
 - [x] Owner picked: free packs only, then supplied LimeZu Modern Interiors Free and Sprout Lands themselves (2026-09-21)
 - [x] Swap the tile generator over: atlas blit + name→source-rect table; paths, kerbs, roads, crossings, grass and parked cars now come from Kenney (2026-09-21)
 - [ ] Interiors from LimeZu Modern Interiors Free: Room Builder walls/floors/doors + furniture, recoloured to the campus palette
-- [ ] **Campus layout v3 from satellite (owner, high priority): D54 on top, entrance lower-right with a roundabout inside the gate, parking both sides, loop road, field at the west end**
+- [x] **Campus layout v3 from satellite: entrance lower-right, roundabout inside the gate, parking both sides, loop road round the academic core (2026-09-22, FB-0026)**
 - [x] Outdoor greenery from Sprout Lands: hedges, bushes, flowerbeds, tufts, recoloured (2026-09-21)
 - [x] **BITS building kit, made by us in the packs' style** (owner, 2026-09-21: no paid exteriors pack; learn how the packs build a wall and reuse/recolour their window, door and trim pieces)
 - [x] Characters from LimeZu Modern Interiors Free: the lead (recoloured Amelia: black hair, fair skin, pink top), the LUG volunteer and two students, 16×24 with 4-direction walks and idle (2026-09-21, ADR 0013)

@@ -484,3 +484,24 @@ in parallel -- expect to merge, not rebase blindly); then the Main Block foyer/L
 screenshot ([docs/research/reference/owner-google-maps-orientation.jpg](docs/research/reference/owner-google-maps-orientation.jpg))
 shows D54 along the top, the entrance on the lower right with a roundabout just inside and parking on
 both sides, a loop road round the academic core, and the sports field at the west end.
+
+## 2026-09-22 — Campus layout v3, and a real bug behind a "flaky" test
+
+**Did:**
+- **Campus v3** from the owner's satellite reference: Gate 2 moved off the Main Block centreline to the
+  east (0.82 across the fence), a square roundabout with a hedged island just inside the gate, parking
+  on both sides of the entrance road, and a loop road round the academic core instead of one straight
+  avenue. Sports field, hostels, DIAC Park and the building art are unchanged. 196 unit + 81 e2e green,
+  with four new FB-0026 tests (roundabout position, parking both sides, loop encircles the core,
+  spawn→Main Block walk stays on roads).
+- **ERR-0006:** the "flaky" held-item test was a real bug. Held-item position guessed the player's
+  movement as velocity × frame delta, but Arcade Physics steps on a fixed 1/60 s clock, so on the frame
+  you turn, the item could sit ~2.7 px out of place. It now reads the body's actual step for that frame.
+
+**Why:** the owner said the map didn't match the real campus; it didn't, structurally. A test that only
+fails under load is a bug until proven otherwise, and this one was.
+
+**Decisions:** none new · **Failures:** ERR-0006
+
+**Next:** interiors from LimeZu (Room Builder walls/floors + furniture), then M3 story content
+(the LUG stall, the three key rooms), then mini-games.

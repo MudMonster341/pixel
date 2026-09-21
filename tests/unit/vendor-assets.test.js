@@ -105,7 +105,10 @@ test('FB-0025: the new parked-car tiles are appended after every existing tile, 
   cars.forEach((name, i) => {
     assert.equal(tileIndex(name), lastExistingIndex + 1 + i, `"${name}" should come right after ${before[1]}, in order`);
   });
-  assert.equal(tileIndex('carVan'), tileInfo.tiles.length - 1, 'carVan should be the very last tile');
+  // FB-0025 addendum (BITS building kit, 2026-09-21) appended the Main Block's grand-entrance tiles
+  // right after the parked cars, so carVan is no longer the literal last tile in the catalog -- the
+  // rule this test actually cares about is append-only ordering, checked below instead of "is last".
+  assert.equal(tileIndex('carVan'), tileIndex('bitsEntranceGrandL') - 1, 'carVan should be immediately followed by later appended tiles, not have tiles inserted after it out of order');
 });
 
 test('FB-0025: parked-car tiles are solid, with transparent corners (they\'re a prop on top of the parking-lot ground, not a full-tile fill)', () => {

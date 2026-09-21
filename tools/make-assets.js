@@ -64,6 +64,12 @@ const PALETTE = {
   '@': '#3f8a8c', '#': '#e8e8e8',         // court + line
   $: '#e6cba4', '%': '#cfae86',           // BITS wall + shade
   '&': '#cf8a6c', '*': '#2f3a44',         // BITS trim + glass
+  // BITS building kit addendum (2026-09-21, decisions/0012 addendum): studied from LimeZu's Room
+  // Builder wall swatches (docs/STYLE_GUIDE.md "How our buildings are built") -- a light cap band
+  // under the roofline, a cool (not same-hue) baseboard where the wall meets the ground, and a
+  // genuinely red arch band for the Main Block's grand entrance (the existing '&' trim is salmon,
+  // too close to the wall body to read as "a red arch" on its own).
+  wallHi: '#f2ddb8', baseCool: '#6b7280', archRed: '#9c3a28',
   // FB-0022 (QA): flat concrete roof (from directly above, this is the whole tile) -- a
   // darker/greyer tone than it used to be, deliberately distinct from both the reddish-brown brick
   // paving ('7'/'-'/'_' below) and the blue-grey "other building" roof ('~'), so a roof never reads
@@ -73,7 +79,11 @@ const PALETTE = {
   '<': '#7c8088',                          // fence
   // campus kit additions (FB-0006/0011/0014/0015/0016): appended, existing keys unchanged
   '-': '#d9927a', _: '#6f362c',           // paving bevel: highlight + deep shadow
-  ':': '#8fbf52', ';': '#4f7a2f',         // date palm fronds: light + dark
+  // FB-0025 addendum (2026-09-21): retuned to match the new Sprout-Lands-sourced tree/hedge/bush
+  // ramp below (DRY_LEAVES) so hand-drawn palms don't clash with the recolored pack greenery next
+  // to them -- palms were the one tree type Sprout Lands had nothing suitable for (no date palm),
+  // so they stay hand-drawn but now share the same dry, Dubai-appropriate green.
+  ':': '#8fc463', ';': '#4f7a30',         // date palm fronds: light + dark
   // interior kit (P3, interiors): floor variants per room type + a couple of furniture fabrics.
   // Walls reuse the BITS wall/trim/glass keys above ($ % & *) so buildings match inside and out.
   µ: '#f2ede0', ß: '#ded4bd',             // foyer/lobby floor: light + fleck
@@ -301,6 +311,29 @@ function remapPaver(r, g, b, a) {
 const remapGrass = remapShaded(['#3d8a3f', '#5ab552', '#8fd46a'], { loLum: 113, hiLum: 133 });
 const remapLeaves = remapShaded(['#1f5227', '#2f7a3a', '#4fa34a'], { loLum: 118, hiLum: 148 });
 
+// Sprout Lands greenery addendum (2026-09-21, decisions/0012 addendum): a *new*, more muted ramp for
+// the pack-sourced trees/hedges/bushes/flowerbed/grass tufts below, deliberately distinct from the
+// bright `remapLeaves` ramp above (still used by Kenney's `bush` fallback nowhere now, kept only for
+// any other caller) -- the owner asked for "Dubai-dry greens rather than lush farm green" (Sprout
+// Lands' own art is bright farm-green), so this ramp centers on the campus lawn's own tone
+// (`#6FAE4A`) instead of the saturated Leaves highlight. loLum/hiLum fitted to Basic_Grass_Biom_
+// things.png's own decoded luminance range for its leaf tones (~114-207, sampled directly);
+// outlineBelow raised to 95 because Sprout Lands outlines its shapes in a dark *purple*-tinted green
+// (~lum 77), not nearer-black like Kenney's, so the default 60 cutoff would leave it uncaught.
+const remapDryLeaves = remapShaded(['#33501f', '#4f7a30', '#6fae4a'], { loLum: 108, hiLum: 210, outlineBelow: 95, lineAbove: 235 });
+// Wraps a remap so it only touches green-dominant pixels (leaves/foliage) and passes anything else
+// (a flower's pink petals, say) through unchanged -- for source crops that mix foliage with a
+// non-green subject, so the subject keeps its own pack color instead of being folded into the leaf
+// ramp by luminance alone.
+function remapGreenOnly(greenRemap) {
+  return (r, g, b, a) => {
+    if (a === 0) return [r, g, b, a];
+    if (g > r + 6 && g > b + 6) return greenRemap(r, g, b, a);
+    return [r, g, b, a];
+  };
+}
+const remapFlowerLeaf = remapGreenOnly(remapDryLeaves);
+
 // ---------- vendor source rects (docs/research/asset-packs.md) ----------
 // Roguelike Modern City pack (Kenney, CC0): 16x16 tiles on a 17px pitch (1px margin). Coordinates
 // found by decoding the sheet and eyeballing/measuring crops -- see MEMORY.md for how.
@@ -314,7 +347,33 @@ const PACK = {
   kerbPaver: cityTile(0, 22), // brick sidewalk paver with a dark/white gutter line along its bottom edge
   plainPaver: cityTile(0, 19), // the same paver, no line -- for walkway's plain fill
   grass: cityTile(0, 24), // flat speckled grass fill
-  bush: cityTile(31, 13), // a round clipped bush/shrub, transparent outside its silhouette
+  bush: cityTile(31, 13), // a round clipped bush/shrub, transparent outside its silhouette (no longer
+  // used by `bush` itself, FB-0025 addendum below, but left here as-is since `lawn`/`lawn2` still
+  // use PACK.grass as their base fill and the tile stays a legitimate reference).
+};
+// Sprout Lands Basic pack (Cup Nooble, non-commercial + editing allowed, credited in CREDITS.md):
+// outdoor greenery per decisions/0012's addendum. All four rects below are decoded/measured crops
+// from the same sheet -- see MEMORY.md for how each one was located (connected-component bounding
+// boxes plus eyeballed zoomed crops, since sprites on this sheet aren't laid out on a clean 16x16
+// grid the way Kenney's is).
+const SPROUT_GRASS_BIOM = 'sprout-lands-basic/Sprout Lands - Sprites - Basic pack/Objects/Basic_Grass_Biom_things.png';
+const SPROUT = {
+  // A complete, plain round tree (no fruit/blotches) -- canopy only, cropped just above where its
+  // trunk begins (row 24 of this crop) so no brown trunk pixel ever enters the green-only canopy
+  // remap below. Sampled into the game's existing 32x32 virtual canopy space (canopyQuadrantFromAtlas).
+  treeCanopy: { atlas: SPROUT_GRASS_BIOM, sx: 20, sy: 1, sw: 24, sh: 23 },
+  // The plain (no-berry) right half of a symmetric round double-bush -- used for the standalone
+  // `bush` tile.
+  bush: { atlas: SPROUT_GRASS_BIOM, sx: 16, sy: 48, sw: 16, sh: 16 },
+  // The flattest, fullest-height cross-section of a long oval bush (avoiding both its rounded end
+  // caps and the small brown twig at its right tip) -- opaque top-to-bottom at both its left and
+  // right edges, so tiling this same 16x16 crop along a run reads as one continuous hedge with no
+  // transparent gap at the seam between tiles (regression test: campus-tiles.test.js).
+  hedge: { atlas: SPROUT_GRASS_BIOM, sx: 41, sy: 64, sw: 16, sh: 16 },
+  // A small pink flower on a leafy tuft (no soil/pot base) for the flowerbed, and a tiny grass-tuft
+  // sprout for lawn2's speckle.
+  flower: { atlas: SPROUT_GRASS_BIOM, sx: 96, sy: 48, sw: 16, sh: 16 },
+  tuft: { atlas: SPROUT_GRASS_BIOM, sx: 97, sy: 18, sw: 8, sh: 5 },
 };
 // Pixel Vehicle Pack (Kenney, CC0): irregular small top-down sprites, not on the 16x16 tile grid --
 // each is its own PNG, decoded on demand (they're 4-bit palette images, see tools/lib/png-decode.js).
@@ -786,18 +845,21 @@ const TILES = [
     name: 'lawn2',
     draw: (img, x, y) => {
       blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
-      const r = rng(75); // a few darker tufts so lawn/lawn2 don't look like the exact same stamp
-      for (let i = 0; i < 4; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'g');
+      // FB-0025 addendum: a small Sprout Lands grass-tuft sprite (SPROUT.tuft) instead of loose dark
+      // dots, so lawn2 doesn't look like the exact same stamp as `lawn` -- and now reads as a little
+      // planted tuft instead of a few stray pixels.
+      const r = rng(75);
+      blitAtlas(img, x + randInt(r, 0, 8), y + randInt(r, 0, 10), loadAtlas(SPROUT.tuft.atlas), SPROUT.tuft.sx, SPROUT.tuft.sy, 8, 5, { remap: remapDryLeaves });
     },
   },
   { name: 'hedge', solid: true, draw: hedge },
   { name: 'bush', solid: true, draw: bush },
   { name: 'flowerbed', solid: true, draw: flowerbed },
   { name: 'treeTrunk', solid: true, draw: treeTrunk },
-  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 0, roundCanopyShape, roundCanopyTone) },
-  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 0, roundCanopyShape, roundCanopyTone) },
-  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 1, roundCanopyShape, roundCanopyTone) },
-  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 1, roundCanopyShape, roundCanopyTone) },
+  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, roundCanopyShape, SPROUT.treeCanopy, remapDryLeaves) },
+  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, roundCanopyShape, SPROUT.treeCanopy, remapDryLeaves) },
+  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, roundCanopyShape, SPROUT.treeCanopy, remapDryLeaves) },
+  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, roundCanopyShape, SPROUT.treeCanopy, remapDryLeaves) },
   { name: 'palmTrunk', solid: true, draw: palmTrunk },
   { name: 'palmCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 0, 0, palmCanopyShape, palmCanopyTone) },
   { name: 'palmCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrant(img, x, y, 1, 0, palmCanopyShape, palmCanopyTone) },
@@ -825,8 +887,8 @@ const TILES = [
   { name: 'bitsRoofR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { right: true }) },
   { name: 'bitsRoofTL', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, left: true }) },
   { name: 'bitsRoofTR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, right: true }) },
-  { name: 'bitsEntranceL', draw: (img, x, y) => bitsEntrance(img, x, y, true) },
-  { name: 'bitsEntranceR', draw: (img, x, y) => bitsEntrance(img, x, y, false) },
+  { name: 'bitsEntranceL', draw: (img, x, y) => bitsEntrance(img, x, y, true, false) },
+  { name: 'bitsEntranceR', draw: (img, x, y) => bitsEntrance(img, x, y, false, false) },
   { name: 'bitsPillar', solid: true, draw: bitsPillar },
   { name: 'otherWallPlain', solid: true, draw: otherWallPlain },
   { name: 'otherWallEndL', solid: true, draw: (img, x, y) => otherWallEnd(img, x, y, 'L') },
@@ -893,6 +955,31 @@ const TILES = [
   { name: 'carSedanBlue', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('sedan_blue.png')) },
   { name: 'carSuv', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('suv_green.png')) },
   { name: 'carVan', solid: true, draw: (img, x, y) => blitVehicle(img, x, y, vehicleSprite('van_small.png')) },
+
+  // ---- BITS building kit addendum (2026-09-21, decisions/0012 addendum): the Main Block's real,
+  // grander entrance -- glass front under a genuinely red arch, per docs/research/bits-dubai-campus.md
+  // "Look (from photos)". Separate tile names (not a parameter on the existing bitsEntranceL/R) so
+  // Library/Mechanical/hostels keep the ordinary entrance look and only the Main Block gets this one
+  // (tools/campus/layout.js's `grand: true`, tools/campus/build-campus.js drawBuilding).
+  { name: 'bitsEntranceGrandL', draw: (img, x, y) => bitsEntrance(img, x, y, true, true) },
+  { name: 'bitsEntranceGrandR', draw: (img, x, y) => bitsEntrance(img, x, y, false, true) },
+
+  // ---- BITS building kit addendum (2026-09-21, coordinator review): a 4-tile-tall front facade,
+  // one dedicated tile per band, so a BITS building's front reads as a real wall with windows from
+  // a normal standing distance instead of a couple of thin bands under a huge roof. See the
+  // functions' own comment above for the full reasoning. ----
+  { name: 'bitsFacadeCap', solid: true, draw: bitsFacadeCap },
+  { name: 'bitsFacadeCapEndL', solid: true, draw: (img, x, y) => bitsFacadeCapEnd(img, x, y, 'L') },
+  { name: 'bitsFacadeCapEndR', solid: true, draw: (img, x, y) => bitsFacadeCapEnd(img, x, y, 'R') },
+  { name: 'bitsFacadeWindow', solid: true, draw: bitsFacadeWindow },
+  { name: 'bitsFacadeWindowEndL', solid: true, draw: (img, x, y) => bitsFacadeWindowEnd(img, x, y, 'L') },
+  { name: 'bitsFacadeWindowEndR', solid: true, draw: (img, x, y) => bitsFacadeWindowEnd(img, x, y, 'R') },
+  { name: 'bitsFacadeBody', solid: true, draw: bitsFacadeBody },
+  { name: 'bitsFacadeBodyEndL', solid: true, draw: (img, x, y) => bitsFacadeBodyEnd(img, x, y, 'L') },
+  { name: 'bitsFacadeBodyEndR', solid: true, draw: (img, x, y) => bitsFacadeBodyEnd(img, x, y, 'R') },
+  { name: 'bitsFacadeBase', solid: true, draw: bitsFacadeBase },
+  { name: 'bitsFacadeBaseEndL', solid: true, draw: (img, x, y) => bitsFacadeBaseEnd(img, x, y, 'L') },
+  { name: 'bitsFacadeBaseEndR', solid: true, draw: (img, x, y) => bitsFacadeBaseEnd(img, x, y, 'R') },
 ];
 
 // ---------- campus tiles ----------
@@ -963,13 +1050,20 @@ function flatRoof(img, x, y, base, edge, speck) {
   img.fill(x, y, 1, TILE, edge);
 }
 
-// Sand-beige render with a salmon cornice, a panel line, a dark base course and two small
-// windows (FB-0011: one big window per tile made every row read as a band of glass).
+// Sand-beige render, banded per docs/STYLE_GUIDE.md "How our buildings are built" (studied from
+// LimeZu's Room Builder wall swatches, FB-0025 addendum): a dark roofline outline, a light cap band
+// where the wall meets the roof, a trim line, the body (with a panel line and, on `bitsWall`, two
+// small windows), a shadow line, and a *cool* baseboard sliver at the ground -- deliberately a
+// different hue from the trim, not just a darker version of it, matching the pack's own grey-blue
+// kick plate against a warm wall.
 function bitsWallPlain(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 2, '&'); // cornice / trim line
-  img.fill(x + 7, y + 2, 1, 12, '%'); // panel line
-  img.fill(x, y + 14, TILE, 2, '%'); // dark base course
+  img.fill(x, y, TILE, 1, 'K'); // roofline outline
+  img.fill(x, y + 1, TILE, 3, 'wallHi'); // light cap band
+  img.fill(x, y + 4, TILE, 1, '&'); // trim line
+  img.fill(x + 7, y + 5, 1, 9, '%'); // panel line
+  img.fill(x, y + 14, TILE, 1, '%'); // shadow line just above the base
+  img.fill(x, y + 15, TILE, 1, 'baseCool'); // cool baseboard where the wall meets the ground
 }
 
 function bitsWall(img, x, y) {
@@ -989,6 +1083,60 @@ function bitsWallEnd(img, x, y, side) {
   img.fill(x + x0, y, w, TILE, '%');
   img.fill(x + x0, y, w, 2, '=');
 }
+
+// BITS building kit addendum (2026-09-21, coordinator review): a building's outdoor front reads as
+// a roof-textured plain when its wall is only 1-2 tiles tall next to a 20+ tile-wide roof -- at the
+// game's zoom (3x, ~20x11 tiles visible) almost nothing of the actual wall is on screen from a
+// normal standing position. The front is now 4 tiles tall, one dedicated tile per band instead of
+// every row repeating the same cap+trim+body+base band squished into one tile:
+// cap (meets the roof) / window (a real, full-size window) / body (plain) / base (meets the ground,
+// where the entrance is carved in). `tools/campus/build-campus.js`'s drawBuilding assigns one of
+// these per wall row instead of repeating bitsWallPlain/bitsWall for every row (which stay exactly
+// as they were, still used for interiors and un-touched here).
+function bitsFacadeCap(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 1, 'K'); // roofline outline
+  img.fill(x, y + 1, TILE, 10, 'wallHi'); // tall light cap band -- this is the building's crown
+  img.fill(x, y + 11, TILE, 2, '&'); // trim line
+}
+
+function bitsFacadeWindow(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x + 2, y + 1, 12, 14, '&'); // frame, nearly the full tile: this row exists to *be* windows
+  img.fill(x + 3, y + 2, 10, 12, '*'); // glass
+  img.set(x + 5, y + 4, 'W');
+  img.set(x + 5, y + 5, 'W'); // a taller glint than the small punched windows, matching the bigger pane
+}
+
+function bitsFacadeBody(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x + 7, y, 1, TILE, '%'); // panel line, full height -- no cap/base bands to interrupt it here
+}
+
+function bitsFacadeBase(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 3, '%'); // shadow band where the body above ends
+  img.fill(x, y + 13, TILE, 2, '%'); // shadow just above the baseboard
+  img.fill(x, y + 15, TILE, 1, 'baseCool'); // cool baseboard where the wall meets the ground
+}
+
+// Shared corner treatment for every facade band above: darken a 3px side column (the 3/4-view
+// "shadowed side face" rule, same as the original bitsWallEnd) plus its own roofline outline pixel,
+// so a building turning a corner reads consistently across all 4 bands, not just the old 2.
+function facadeEnd(drawPlain) {
+  return (img, x, y, side) => {
+    drawPlain(img, x, y);
+    const w = 3;
+    const x0 = side === 'L' ? 0 : TILE - w;
+    img.fill(x + x0, y, w, TILE, '%');
+    img.set(x + x0, y, 'K');
+    img.set(x + x0 + (side === 'L' ? w - 1 : 0), y, 'K');
+  };
+}
+const bitsFacadeCapEnd = facadeEnd(bitsFacadeCap);
+const bitsFacadeWindowEnd = facadeEnd(bitsFacadeWindow);
+const bitsFacadeBodyEnd = facadeEnd(bitsFacadeBody);
+const bitsFacadeBaseEnd = facadeEnd(bitsFacadeBase);
 
 // Glass entrance under a salmon arch
 function bitsDoor(img, x, y) {
@@ -1066,37 +1214,38 @@ function walkway(img, x, y) {
 
 // -- FB-0015: lush lawn, hedges, bushes, a flower bed, and trees with overhead canopies --
 
+// FB-0025 addendum (2026-09-21): recolored from Sprout Lands (SPROUT.hedge) instead of hand-drawn --
+// see that rect's comment for exactly which crop and why it tiles seamlessly. A grass undercoat
+// (same source/remap as `lawn`) goes down first, same reasoning as `bush` below: any thin gap in the
+// bush silhouette shows the surrounding lawn's own texture, not a black hole.
 function hedge(img, x, y) {
-  forEachPixel((xx, yy) => {
-    const key = (xx + yy * 3) % 7 === 0 ? 't' : (xx * 2 + yy) % 11 === 0 ? 'e' : 'T';
-    img.set(x + xx, y + yy, key);
-  });
-  img.fill(x, y, TILE, 2, 't');
-  img.fill(x, y, 2, TILE, 't');
-  img.fill(x, y + TILE - 2, TILE, 2, 'e');
-  img.fill(x + TILE - 2, y, 2, TILE, 'e');
+  blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+  blitAtlas(img, x, y, loadAtlas(SPROUT.hedge.atlas), SPROUT.hedge.sx, SPROUT.hedge.sy, 16, 16, { remap: remapDryLeaves });
 }
 
-// FB-0025: a round clipped bush/shrub from the Modern City pack, over the pack's own grass fill
-// (same source as the `lawn`/`grass` tiles below) so the bush's transparent corners show the same
-// grass the rest of the lawn is drawn with, matching the hand-drawn version's own base-then-blob
-// composition (STYLE_GUIDE "every piece transparent outside its own silhouette").
+// FB-0025 addendum: a standalone round shrub, now from Sprout Lands (SPROUT.bush) instead of the
+// Modern City pack, over the same Kenney grass undercoat as `lawn`/`hedge` so the bush's transparent
+// corners still match the ground around it (STYLE_GUIDE "every piece transparent outside its own
+// silhouette").
 function bush(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
-  blitAtlas(img, x, y, loadAtlas(PACK.bush.atlas), PACK.bush.sx, PACK.bush.sy, 16, 16, { remap: remapLeaves });
+  blitAtlas(img, x, y, loadAtlas(SPROUT.bush.atlas), SPROUT.bush.sx, SPROUT.bush.sy, 16, 16, { remap: remapDryLeaves });
 }
 
 // A small brick-edged planter (a garden bed border, not a fill color close to the soil, so the
-// edge actually reads against the dirt) with a few flowers.
+// edge actually reads against the dirt) with three Sprout Lands flowers (FB-0025 addendum: was three
+// hand-drawn dots) scaled down to fit -- the planter frame itself stays hand-drawn since no pack has
+// a matching plain soil/brick box, per this pass's own "reuse actual pieces where they fit" rule.
 function flowerbed(img, x, y) {
   img.fill(x, y, TILE, TILE, 'n');
   img.fill(x, y, TILE, 2, 'Q');
   img.fill(x, y, 2, TILE, 'Q');
   img.fill(x, y + TILE - 2, TILE, 2, 'o');
   img.fill(x + TILE - 2, y, 2, TILE, 'o');
-  flower(img, x + 4, y + 5, 'W');
-  flower(img, x + 10, y + 6, 'P');
-  flower(img, x + 7, y + 10, 'Y');
+  const spot = (dx, dy) => blitAtlas(img, x + dx, y + dy, loadAtlas(SPROUT.flower.atlas), SPROUT.flower.sx, SPROUT.flower.sy, 16, 16, { dw: 8, dh: 8, remap: remapFlowerLeaf });
+  spot(1, 3);
+  spot(7, 2);
+  spot(4, 8);
 }
 
 // Tall trees are split into a solid trunk (drawn under the player, like any other object) and a
@@ -1140,10 +1289,33 @@ const roundCanopyShape = (gx, gy) => {
   if (((gx - 16) / 15.5) ** 2 + ((gy - 15) / 14) ** 2 <= 1) return true;
   return gy >= 27 && gy <= 30 && Math.abs(gx - 16) <= 12;
 };
-const roundCanopyTone = (gx, gy) => {
-  const d = (gx - 16) + (gy - 13); // diagonal position: light from the top-left
-  return d < -8 ? 't' : d > 10 ? 'e' : 'T';
-};
+// FB-0025 addendum (2026-09-21): like canopyQuadrant above, but instead of a hand-picked palette
+// tone, samples the recolored pack tree's own pixels -- shapeFn (still ours, unchanged) decides the
+// silhouette and the 1px outline exactly as before, so the "walk behind the canopy" depth cue and
+// the FB-0019 seam fix are untouched; only the *fill* now comes from Sprout Lands' art instead of a
+// flat 3-tone hand-picked ramp. `rect` is a SPROUT source rect (a crop containing ONLY the tree's
+// canopy, no trunk pixels -- see SPROUT.treeCanopy's comment) nearest-neighbor-mapped from the
+// canopy's 32x32 virtual space onto the crop's own (possibly different) size.
+function canopyQuadrantFromAtlas(img, x, y, qx, qy, shapeFn, rect, remap) {
+  const atlas = loadAtlas(rect.atlas);
+  forEachPixel((xx, yy) => {
+    const gx = qx * TILE + xx;
+    const gy = qy * TILE + yy;
+    if (!shapeFn(gx, gy)) return;
+    const edge = !shapeFn(gx - 1, gy) || !shapeFn(gx + 1, gy) || !shapeFn(gx, gy - 1) || !shapeFn(gx, gy + 1);
+    if (edge) {
+      img.set(x + xx, y + yy, 'K');
+      return;
+    }
+    const sx = rect.sx + Math.min(rect.sw - 1, Math.floor((gx * rect.sw) / 32));
+    const sy = rect.sy + Math.min(rect.sh - 1, Math.floor((gy * rect.sh) / 32));
+    const si = (sy * atlas.width + sx) * 4;
+    let [r, g, b, a] = [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2], atlas.data[si + 3]];
+    if (a === 0) return; // shouldn't happen inside a canopy-only crop, but stay transparent if it does
+    [r, g, b, a] = remap(r, g, b, a);
+    img.setRGBA(x + xx, y + yy, r, g, b, 255);
+  });
+}
 
 function palmCanopyShape(gx, gy) {
   // FB-0019: a short solid "neck" from the crown straight down to the tile edge, over the columns
@@ -1246,20 +1418,36 @@ function otherRoofEdge(img, x, y, edges) {
   outline(img, x, y, edges);
 }
 
-// Glass entrance under a salmon arch, 2 tiles wide.
-function bitsEntrance(img, x, y, isLeft) {
+// Glass entrance, 2 tiles wide, with light stone steps at its base (FB-0025 addendum: "steps" from
+// the BITS building kit brief). `grand` is the Main Block's own real-photo look ("glass front under
+// a red arch", docs/research/bits-dubai-campus.md "Look (from photos)") -- a taller, genuinely red
+// lintel band instead of the ordinary buildings' thin salmon trim, which is too close to the wall's
+// own body color to read as "an arch" on its own. Two tile names use this (bitsEntranceGrandL/R),
+// so an ordinary building's front doesn't get the grand look by accident.
+function bitsEntrance(img, x, y, isLeft, grand) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 3, '&');
-  img.fill(x + (isLeft ? 3 : 0), y + 3, 13, 11, '*');
-  img.set(x + (isLeft ? 5 : 10), y + 6, 'W');
-  img.fill(x, y + 14, TILE, 2, '%');
+  img.fill(x, y, TILE, 1, 'K');
+  const glassTop = grand ? 7 : 4;
+  if (grand) {
+    img.fill(x, y + 1, TILE, 5, 'archRed');
+    img.fill(x, y + 6, TILE, 1, '&'); // soft shadow where the arch meets the glass below
+  } else {
+    img.fill(x, y + 1, TILE, 3, '&');
+  }
+  img.fill(x + (isLeft ? 3 : 0), y + glassTop, 13, 13 - glassTop, '*');
+  img.set(x + (isLeft ? 5 : 10), y + glassTop + 2, 'W');
+  img.fill(x, y + 13, TILE, 1, '%'); // shadow line above the steps
+  img.fill(x, y + 14, TILE, 1, '-'); // step tread, lit
+  img.fill(x, y + 15, TILE, 1, 'O'); // step riser, in shadow
 }
 
 function bitsPillar(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 2, '&');
-  img.box(x + 5, y + 1, 6, 15, '%');
-  img.fill(x + 6, y + 2, 4, 13, '&');
+  img.fill(x, y, TILE, 1, 'K');
+  img.fill(x, y + 1, TILE, 2, '&');
+  img.box(x + 5, y + 3, 6, 11, '%');
+  img.fill(x + 6, y + 4, 4, 9, '&');
+  img.fill(x, y + 15, TILE, 1, 'baseCool');
 }
 
 function fenceH(img, x, y) {

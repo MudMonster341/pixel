@@ -258,7 +258,7 @@
       "name": "bitsWall",
       "solid": true,
       "overhead": false,
-      "color": "#cca988"
+      "color": "#bda288"
     },
     {
       "name": "bitsDoor",
@@ -366,25 +366,25 @@
       "name": "lawn2",
       "solid": false,
       "overhead": false,
-      "color": "#5ab351"
+      "color": "#57ab4d"
     },
     {
       "name": "hedge",
       "solid": true,
       "overhead": false,
-      "color": "#347b39"
+      "color": "#508035"
     },
     {
       "name": "bush",
       "solid": true,
       "overhead": false,
-      "color": "#50a34b"
+      "color": "#4f8337"
     },
     {
       "name": "flowerbed",
       "solid": true,
       "overhead": false,
-      "color": "#7e6856"
+      "color": "#786656"
     },
     {
       "name": "treeTrunk",
@@ -396,25 +396,25 @@
       "name": "treeCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#3e8641"
+      "color": "#619643"
     },
     {
       "name": "treeCanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#2c6c37"
+      "color": "#5f9342"
     },
     {
       "name": "treeCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#2c6a37"
+      "color": "#3d5d2a"
     },
     {
       "name": "treeCanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#21512b"
+      "color": "#3f602b"
     },
     {
       "name": "palmTrunk",
@@ -426,19 +426,19 @@
       "name": "palmCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#50703f"
+      "color": "#507246"
     },
     {
       "name": "palmCanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#315735"
+      "color": "#315737"
     },
     {
       "name": "palmCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#377038"
+      "color": "#377039"
     },
     {
       "name": "palmCanopyBR",
@@ -498,19 +498,19 @@
       "name": "bitsWallPlain",
       "solid": true,
       "overhead": false,
-      "color": "#dfbe98"
+      "color": "#d0b798"
     },
     {
       "name": "bitsWallEndL",
       "solid": true,
       "overhead": false,
-      "color": "#dbba94"
+      "color": "#cfb493"
     },
     {
       "name": "bitsWallEndR",
       "solid": true,
       "overhead": false,
-      "color": "#dbba94"
+      "color": "#cfb493"
     },
     {
       "name": "bitsRoofT",
@@ -546,19 +546,19 @@
       "name": "bitsEntranceL",
       "solid": false,
       "overhead": false,
-      "color": "#796b61"
+      "color": "#7b6a62"
     },
     {
       "name": "bitsEntranceR",
       "solid": false,
       "overhead": false,
-      "color": "#796b61"
+      "color": "#7b6a62"
     },
     {
       "name": "bitsPillar",
       "solid": true,
       "overhead": false,
-      "color": "#c19d81"
+      "color": "#b4957d"
     },
     {
       "name": "otherWallPlain",
@@ -768,7 +768,7 @@
       "name": "intWhiteboardWall",
       "solid": true,
       "overhead": false,
-      "color": "#c3ac97"
+      "color": "#b4a798"
     },
     {
       "name": "intBench",
@@ -889,6 +889,90 @@
       "solid": true,
       "overhead": false,
       "color": "#78ba95"
+    },
+    {
+      "name": "bitsEntranceGrandL",
+      "solid": false,
+      "overhead": false,
+      "color": "#835b51"
+    },
+    {
+      "name": "bitsEntranceGrandR",
+      "solid": false,
+      "overhead": false,
+      "color": "#835b51"
+    },
+    {
+      "name": "bitsFacadeCap",
+      "solid": true,
+      "overhead": false,
+      "color": "#dec3a2"
+    },
+    {
+      "name": "bitsFacadeCapEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#dabe9c"
+    },
+    {
+      "name": "bitsFacadeCapEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#dabf9c"
+    },
+    {
+      "name": "bitsFacadeWindow",
+      "solid": true,
+      "overhead": false,
+      "color": "#8e7c6e"
+    },
+    {
+      "name": "bitsFacadeWindowEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#89796b"
+    },
+    {
+      "name": "bitsFacadeWindowEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8a7a6b"
+    },
+    {
+      "name": "bitsFacadeBody",
+      "solid": true,
+      "overhead": false,
+      "color": "#e5c9a2"
+    },
+    {
+      "name": "bitsFacadeBodyEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#dfc39c"
+    },
+    {
+      "name": "bitsFacadeBodyEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#e0c39c"
+    },
+    {
+      "name": "bitsFacadeBase",
+      "solid": true,
+      "overhead": false,
+      "color": "#d7bc98"
+    },
+    {
+      "name": "bitsFacadeBaseEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#d4b994"
+    },
+    {
+      "name": "bitsFacadeBaseEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#d5b995"
     }
   ]
 }

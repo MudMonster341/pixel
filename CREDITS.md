@@ -15,23 +15,28 @@ require. The raw packs are not in this repository; download them again if you ne
 
 - **Modern Interiors (Free v2.2, 16×16)** by **LimeZu** --
   [limezu.itch.io/moderninteriors](https://limezu.itch.io/moderninteriors).
-  Interior floors, walls, doors, furniture, and the character sprite sheets.
+  Interior floors, walls, doors, furniture, and the character sprite sheets. Also studied (2026-09-21,
+  not blitted -- its wall art turned out to be flat color bands with no fine texture to copy
+  pixel-for-pixel) as the reference for how the BITS building exteriors are constructed: see
+  docs/STYLE_GUIDE.md "How our buildings are built".
   Free-version licence: use and editing allowed in **non-commercial** projects; no reselling.
 - **Sprout Lands - Basic pack** by **Cup Nooble** --
   [cupnooble.itch.io/sprout-lands-asset-pack](https://cupnooble.itch.io/sprout-lands-asset-pack).
-  Outdoor greenery: trees, bushes, flowers, grass detail.
+  Outdoor greenery: trees, bushes, flowers, grass detail. **In use** (wired in 2026-09-21): the
+  `treeCanopyTL/TR/BL/BR` fill (a complete plain round tree, canopy only), `hedge`, `bush`,
+  `flowerbed`'s three flowers, and `lawn2`'s grass-tuft speckle -- all recolored onto a new, more
+  muted "dry campus greenery" ramp (`remapDryLeaves` in `tools/make-assets.js`) instead of the
+  pack's own bright farm-green, per docs/STYLE_GUIDE.md "Green campus". The flat `lawn`/`lawn2`/
+  `grass`/`grass2` ground fill itself stays Kenney's (below), matching the roads/kerbs around it.
   Licence: non-commercial, editing allowed, **credit required**, the pack itself must not be
   redistributed. *Assets - From: Sprout Lands - By: Cup Nooble.*
 - **Roguelike Modern City pack** and **Pixel Vehicle Pack** by **Kenney** ([kenney.nl](https://kenney.nl),
   `assets/vendor/kenney-roguelike-modern-city/` and `assets/vendor/kenney-pixel-vehicle-pack/`) --
   CC0 1.0 (public domain). **In use**: `walkway`, all 8 kerb tiles, `asphalt`, `roadLineH`/
   `roadLineV`, `crossingH`/`crossingV`, `parking` (asphalt only -- see docs/STYLE_GUIDE.md for why
-  the stall lines stay hand-drawn), and the parked cars (`carSedan`,
-  `carSedanBlue`, `carSuv`, `carVan`) -- see `tools/make-assets.js`'s `PACK` table and
-  docs/STYLE_GUIDE.md's "Campus kit" for exactly which tile uses which source rect. `lawn`/`lawn2`/
-  `grass`/`grass2`/`bush` also currently use this pack's flat grass/shrub tiles as an interim step
-  (this table above assigns outdoor greenery to Sprout Lands instead; that swap hasn't happened yet,
-  so these five tile names are Kenney art for now, recolored onto the existing Grass/Leaves ramps).
+  the stall lines stay hand-drawn), `lawn`/`lawn2`/`grass`/`grass2`'s flat ground fill, and the
+  parked cars (`carSedan`, `carSedanBlue`, `carSuv`, `carVan`) -- see `tools/make-assets.js`'s `PACK`
+  table and docs/STYLE_GUIDE.md's "Campus kit" for exactly which tile uses which source rect.
   Kenney's Pixel UI Pack (`assets/vendor/kenney-pixel-ui-pack/`) was surveyed but **not used** --
   worse fit than the existing hand-drawn dialog box.
 - **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0

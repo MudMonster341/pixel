@@ -204,12 +204,12 @@ class WorldScene extends Phaser.Scene {
       });
   }
 
-  update(time) {
+  update(time, delta) {
     if (this.transitioning) return;
 
     const ui = this.scene.get('ui');
     const blocked = !ui.tutorial || ui.isBlocking();
-    this.movePlayer(blocked, time);
+    this.movePlayer(blocked, time, delta);
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
@@ -238,7 +238,7 @@ class WorldScene extends Phaser.Scene {
     else if (!ui.isBlocking()) this.interact();
   }
 
-  movePlayer(blocked, time) {
+  movePlayer(blocked, time, delta) {
     const k = this.keys;
     const p = this.player;
     let dx = 0;
@@ -282,7 +282,7 @@ class WorldScene extends Phaser.Scene {
       p.anims.play(`walk-${this.facing}`, true);
     }
 
-    this.updateHeldItem(time, moving);
+    this.updateHeldItem(time, moving, velocity, delta);
   }
 
   // Every warp trigger point on this map, in one shape: text-map `warps` entries (already
@@ -319,7 +319,7 @@ class WorldScene extends Phaser.Scene {
 
   // Shows the selected hotbar item in the character's hand, in front of or behind the body
   // depending on facing, with a small bob while walking (FB-0002).
-  updateHeldItem(time, moving) {
+  updateHeldItem(time, moving, velocity, delta) {
     const slot = GameState.inventory.selectedSlot;
     if (!slot) {
       this.heldItem.setVisible(false);
@@ -331,10 +331,19 @@ class WorldScene extends Phaser.Scene {
     // (not player.flipX, which only mirrors the body's own art) decides which side it sits on.
     const offset = HELD_OFFSET[this.facing];
     const bob = moving ? Math.round(Math.sin(time / 100)) : 0;
+    // p.x/p.y here are last frame's position: this runs from movePlayer, which sets this frame's
+    // velocity but reads back in before Arcade Physics' own step integrates it, so an unadjusted
+    // p.x/p.y trails the player by a full frame's travel (~1.3px at walk speed) on top of the bob
+    // above (tests/e2e/held-item.spec.js's "FB-0025" test caught this: up to 2.3px combined, over
+    // its own 2px tolerance). Extrapolating by this frame's own velocity*delta predicts where the
+    // physics step is about to put the player, cancelling that lag instead of loosening the test.
+    const dt = (delta || 0) / 1000;
+    const x = p.x + velocity.x * dt;
+    const y = p.y + velocity.y * dt;
     this.heldItem
       .setFrame(ITEMS[slot.item].frame)
       .setFlipX(p.flipX)
-      .setPosition(p.x + offset.x, p.y + offset.y + bob)
+      .setPosition(x + offset.x, y + offset.y + bob)
       .setDepth(p.depth + (offset.front ? 1 : -1))
       .setVisible(true);
   }

@@ -55,12 +55,25 @@ module.exports = {
   // hand-picked walkway network below (FB-0007), not from raw OpenStreetMap geometry.
   roadWidths: { primary: 12, secondary: 10, tertiary: 9, residential: 7, unclassified: 7, service: 5, living_street: 5, pedestrian: 4, footway: 3, path: 3, steps: 3, cycleway: 3 },
 
-  // BITS buildings by OSM way id. wallTiles = height of the front wall(s) in tiles (kept modest,
-  // per the owner's "not bloated" note). `door: true` buildings get an entrance + a `door` object
-  // with `to`, for a future interior map (ADR 0009 step 5); the game must not crash if that map
-  // doesn't exist yet (checked in src/scenes/world.js -- warps aren't wired up here).
+  // BITS buildings by OSM way id. wallTiles = height, in tiles, of every wall run *except* the front
+  // -- kept at 2 (unchanged from the original "not bloated" note) so side/back wings of an L-shaped
+  // building don't reach any deeper into the gap to a close neighbour than they always did. The
+  // south-facing FRONT run specifically is drawn 4 tiles deep regardless of this number
+  // (FRONT_WALL_TILES in build-campus.js's drawBuilding, coordinator review 2026-09-21: at zoom 3 a
+  // 2-tile wall next to a 20+ tile roof read as a flat texture, not a building) -- one dedicated
+  // tile per band (cap/window/body/base, tools/make-assets.js's bitsFacade* functions) instead of
+  // every row repeating the same squished mini-facade. Scoping the extra depth to just the one wall
+  // the player actually stands in front of, instead of every wall run, keeps the existing building
+  // spacing/clearances (real BITS buildings are sometimes only a few metres apart) intact rather
+  // than needing them all re-spaced. `door: true` buildings get an entrance + a `door` object with
+  // `to`, for a future interior map (ADR 0009 step 5); the game must not crash if that map doesn't
+  // exist yet (checked in src/scenes/world.js -- warps aren't wired up here). `grand: true`: only
+  // the Main Block gets the taller red arch entrance tiles (bitsEntranceGrandL/R) instead of the
+  // ordinary salmon-trim ones -- it's the building the story actually enters, and the one
+  // photo-confirmed as "glass front under a red arch" (docs/research/bits-dubai-campus.md "Look
+  // (from photos)").
   buildings: {
-    224330149: { name: 'Main Block', style: 'bits', wallTiles: 2, door: true, to: 'main-block-g' },
+    224330149: { name: 'Main Block', style: 'bits', wallTiles: 2, door: true, to: 'main-block-g', grand: true },
     224330155: { name: 'Library Block', style: 'bits', wallTiles: 2, door: true, to: 'library-block-g' },
     224330151: { name: 'Mechanical Block', style: 'bits', wallTiles: 2, door: true, to: 'mechanical-block-g' },
     // Hostel letters are best guesses from Google labels and the Wikimedia map (unverified, ADR 0007).

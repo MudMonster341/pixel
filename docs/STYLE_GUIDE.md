@@ -196,36 +196,65 @@ to wire into an above-player layer.
   those ramps, so the pack art doesn't sit next to the hand-drawn buildings looking like a different
   game's tileset. No new palette colors were needed.
 
-### Green campus (FB-0015, grass/bush art replaced by FB-0025)
+### Green campus (FB-0015, grass/bush art replaced by FB-0025, greenery re-sourced to Sprout Lands 2026-09-21)
 
-**Note (found while doing this pass):** [ADR 0012](../decisions/0012-third-party-asset-packs.md),
-accepted the same day as this pass, assigns outdoor greenery (trees, bushes, flowers, grass detail)
-to the Sprout Lands pack instead of Kenney's. That swap hasn't happened yet -- Sprout Lands isn't in
-`assets/vendor/` at the time of writing -- so `lawn`/`lawn2`/`grass`/`grass2`/`bush` below are Kenney
-art for now, as an interim improvement over the old hand-drawn version. Revisit these five once
-Sprout Lands is actually wired in.
+**Ground fill stays Kenney; everything planted on top of it is now Sprout Lands.** ADR 0012's table
+assigns outdoor greenery (trees, bushes, flowers, grass detail) to the Sprout Lands Basic pack
+(`assets/vendor/sprout-lands-basic/`, non-commercial + credit required, credited in `CREDITS.md`).
+That swap is now wired in for the *objects* below; `lawn`/`lawn2`/`grass`/`grass2` (the flat ground
+fill itself, not "outdoor greenery" in the sense of a planted object) stay Kenney's `PACK.grass` --
+they already match the roads/kerbs they sit next to, and re-sourcing a flat fill wasn't what FB-0025
+or the addendum asked for.
 
-- `lawn`, `lawn2`: lush grass variants. **Art source (FB-0025):** the Modern City pack's flat grass
-  fill (`PACK.grass`), recolored onto the existing Grass ramp; `lawn2` (and the base `grass`/`grass2`
-  tiles, which got the same swap) add a few darker procedural tufts on top so they don't look like
-  the exact same stamp repeated. Flatter than the old hand-drawn grass ramp on its own — a small step
-  down in isolation — but it doesn't repeat as an obvious grid next to the pack's own paths/kerbs,
-  which is the specific complaint FB-0025 raised.
-- `hedge`: **kept hand-drawn.** The pack's only shrub art is a round, standalone bush blob (see
-  `bush` below), not a tileable edge-to-edge hedge row; using it for a continuous hedge would leave
-  visible gaps at every tile seam. No pack tile fit, so the existing clipped-hedge art (Leaves ramp,
-  highlight top/left, shadow bottom/right) stays.
-- `bush`: **Art source (FB-0025):** the pack's round clipped bush/shrub (`PACK.bush`, recolored onto
-  the Leaves ramp) over the pack's own grass fill as its base, replacing the procedurally-drawn
-  circle — same base-then-blob composition as before, just with pack art in both layers.
-- `flowerbed`: **kept hand-drawn.** The pack's closest equivalent is a plain planter box with no
-  flowers visible; the existing brick-edged planter with three flowers already matches this file's
-  own description better than the pack art would after a recolor.
+**A new, more muted recolor ramp** (`remapDryLeaves` in `tools/make-assets.js`, three stops:
+`#33501f` / `#4f7a30` / `#6fae4a`) replaces the old bright `remapLeaves` ramp (`#1f5227`/`#2f7a3a`/
+`#4fa34a`) for everything below: the owner's brief for this pass asked for "Dubai-dry greens rather
+than lush farm green" specifically because Sprout Lands' own native palette *is* bright farm-green.
+The ramp centers on the campus lawn's own tone (`#6FAE4A`) rather than a saturated highlight, so
+hedges/bushes/tree canopies read as dry, planted campus greenery next to Kenney's flatter roads
+instead of a lush farm dropped onto a university. `outlineBelow` is raised to 95 (not the usual 60)
+because Sprout Lands outlines its own shapes in a dark *purple*-tinted green (~lum 77), not
+near-black -- checked by decoding the sheet directly, not assumed.
+
+- `lawn`, `lawn2`: unchanged from the FB-0025 pass -- Kenney's flat grass fill (`PACK.grass`),
+  recolored onto the existing (brighter) Grass ramp; `lawn2` adds one small Sprout Lands grass-tuft
+  sprite (`SPROUT.tuft`, recolored onto the new dry ramp) at a randomized spot instead of the old
+  loose dark-pixel scatter, so it reads as a little planted tuft instead of a few stray dots.
+- `hedge`: **now Sprout Lands** (`SPROUT.hedge`), replacing the hand-drawn clipped-hedge art. The
+  pack has no purpose-built tileable hedge run, so this crops the *flattest, fullest-height*
+  cross-section of one of its long oval bush sprites (`Basic_Grass_Biom_things.png`, decoded and
+  measured column-by-column for full-height opacity at both edges) -- "extend one piece" per the
+  addendum's own suggested approach, rather than a run of dedicated cap/middle/end pieces. Tested
+  (`campus-tiles.test.js` "hedges tile seamlessly") for no fully-transparent edge column, so a run of
+  `hedge` tiles reads as one continuous row with no gap at the seam between tiles. A Kenney grass
+  undercoat goes down first (same source as `lawn`), matching `bush`'s own base-then-blob composition.
+- `bush`: **now Sprout Lands** (`SPROUT.bush`, the plain -- no-berry -- half of a round double-bush
+  sprite), replacing the Modern City pack's round clipped shrub, over the same Kenney grass undercoat.
+- `flowerbed`: the brick-edged planter frame **stays hand-drawn** (no pack has a matching plain
+  soil/brick box), but its three flowers are now Sprout Lands' own pink rose-on-a-leafy-tuft sprite
+  (`SPROUT.flower`, scaled down 2x, green-only recolored via `remapGreenOnly` so the pink petals keep
+  their own pack color and only the leafy base gets pulled onto the dry ramp) instead of three
+  hand-drawn dots.
 - Trees are split into a solid trunk (ground level, drawn like any other object) and a 2×2 overhead
   canopy above it (drawn on the above-player layer — see `overhead` above):
-  - `treeTrunk` + `treeCanopyTL` / `treeCanopyTR` / `treeCanopyBL` / `treeCanopyBR`: a round shade tree.
+  - `treeTrunk` + `treeCanopyTL` / `treeCanopyTR` / `treeCanopyBL` / `treeCanopyBR`: a round shade
+    tree. **The canopy fill is now Sprout Lands** (`SPROUT.treeCanopy`, a complete, plain, no-fruit
+    round tree found among several in `Basic_Grass_Biom_things.png` and cropped just above where its
+    own trunk begins, so no brown trunk pixel ever enters the green-only recolor) -- `treeTrunk`
+    itself stays the original hand-drawn brown box; only the leafy fill changed. The *shape* (the
+    ellipse-plus-skirt silhouette, the 1px outline, the FB-0019 trunk-touching fix) is completely
+    unchanged -- `canopyQuadrantFromAtlas` (`tools/make-assets.js`) reuses the exact same shape
+    function as before and only swaps where the *fill color* comes from, sampling the recolored pack
+    art through the same silhouette instead of a flat 3-tone hand-picked ramp. This is deliberate:
+    STYLE_GUIDE's own "Trees and palms: kept hand-drawn" section below (unchanged since FB-0025)
+    explains why the pack's own single-tile tree art can't just replace the 2x2 trunk+canopy split --
+    that reasoning still holds, so this pass keeps *our* shape and only recolors *its* fill.
   - `palmTrunk` + `palmCanopyTL` / `palmCanopyTR` / `palmCanopyBL` / `palmCanopyBR`: a date palm,
-    fronds radiating from the crown.
+    fronds radiating from the crown. **Stays hand-drawn** -- Sprout Lands has no date palm, the one
+    tree type it has nothing suitable for -- but its frond palette keys (`:`/`;` in `PALETTE`) were
+    retuned to the same new dry-green ramp above, so a palm standing next to a recolored round tree or
+    hedge doesn't clash (the specific "must match the new style" bar this pass set for anything left
+    hand-drawn).
   - The trunk tile sits directly below the canopy quad. Canopy tiles are transparent outside the
     tree's silhouette, so the ground/trunk show through around the edges.
 
@@ -264,23 +293,116 @@ Arrangement (columns 0–17, rows 0–8; documented as a comment above the tenni
 | Outside that rectangle | run-off (whatever ground the court sits on) plus a hedge one tile further
   out, and a green apron in between (ADR 0009: bare sand around the court read oddly) |
 
-### Buildings (FB-0011)
+### How our buildings are built (BITS building kit addendum, 2026-09-21)
+
+The owner declined LimeZu's paid Modern Exteriors pack: *"we are trying to build the BITS building,
+not those drop-in ones, we would have to edit anyway, so understand how he makes it, copy and
+paste."* This section is that study, written from decoding LimeZu's own **Room Builder** sheet
+(`assets/vendor/limezu-modern-interiors-free/Modern tiles_Free/Interiors_free/16x16/
+Room_Builder_free_16x16.png`, already in use for interiors per ADR 0012) and `free_overview.png`
+pixel-by-pixel, not guessed from a thumbnail.
+
+**What the wall swatches actually are:** every wall colorway on that sheet is a pure horizontal
+band -- there is no per-pixel brick/panel texture at all, just flat color rows, decoded and confirmed
+column-by-column (every column in a given row is identical). The bands, top to bottom:
+
+1. A 1px dark navy outline (`#3a3a50` in the pack) along the tile's top edge and both side edges.
+2. On the **top course** (the wall row that meets the ceiling/roofline): a light "coving" band
+   (about a quarter of the tile's height), then a 1-2px colored trim line, then the body fill.
+3. On a **repeat/lower course**: the body fill, with one or two thin darker "shadow" bands part-way
+   down (a groove line, not a full shade change) breaking up an otherwise flat fill.
+4. At the very **base** (the row that meets the floor): a distinct *cool grey-blue* sliver, not just
+   a darker version of the wall's own warm trim -- a genuinely different hue, a "kick plate".
+
+**Windows** are a separate multi-tile module (`Interiors_free_16x16.png`, decoded separately): a
+warm wood-toned frame post on each side, the glass itself carrying horizontal light/dark banding
+(not a flat fill -- it reads as catching light), and a light sill/valance band where the frame meets
+the wall below it. **Doors** are a single unit: a warm wood panel with a darker recessed inset and a
+small round handle.
+
+**The rules this game's own BITS kit now follows, copied from that method:**
+
+- A wall run's top course gets a light band + trim line before the body (`bitsWallPlain`'s `wallHi`
+  + `&` rows) -- this game already had a cornice line here (FB-0011); this pass makes the light band
+  itself genuinely lighter and adds the coving proportion the pack uses.
+- The base course gets a **cool, different-hue** sliver (`baseCool`, `#6b7280`), not a darker shade
+  of the wall's own trim -- previously the base course reused the same `%` shade tone as everywhere
+  else, which is exactly the "just darker, not a different material" gap the pack's own base doesn't
+  have.
+- Windows get their own frame + fill, kept as two small punched-out windows per tile (FB-0011's own
+  fix for "one big window reads as a band of glass," which still holds and isn't revisited here).
+- A building's front door/entrance gets **steps**: a light stone tread + a shadowed riser at its very
+  base (`bitsEntrance`'s bottom two rows, reusing this game's own paving-bevel highlight/shadow
+  tones so the steps read as the same material as the plaza in front of them, not a new material).
+- Corners stay this game's own existing solution (a uniformly darker side face, `bitsWallEndL/R`) --
+  the pack's own sheet doesn't show a building corner at all (it's an interior kit), so there was
+  nothing to copy there; the 3/4-view "shadowed side face" rule (this file's own "Layering" section)
+  already covers it.
+- The Main Block specifically gets a real **red arch** (`archRed`, `#9c3a28`) across its 2-tile
+  entrance instead of the ordinary thin salmon trim -- the one building confirmed from real photos as
+  "glass front under a red arch" (docs/research/bits-dubai-campus.md "Look (from photos)"). Two
+  dedicated tile names (`bitsEntranceGrandL`/`bitsEntranceGrandR`) carry this so ordinary buildings
+  (Library, Mechanical, hostels) keep the plain entrance look -- `tools/campus/layout.js`'s
+  `grand: true` on the Main Block's own entry picks which one `tools/campus/build-campus.js` uses.
+  **Routing never paints over a wall, and the front reads as a building, not a roof plain
+  (2026-09-21 coordinator review):** the entrance avenue and walkway-network junctions used to be
+  drawn *after* the building (`tools/campus/build-campus.js` sections 11-12) and reached right up to
+  the door, painting asphalt back over a stretch of wall either side of the entrance -- at zoom 3
+  (about 20x11 tiles on screen) a wide roof with a 2-tile door floating in a grey field never read as
+  a building at all. Fixed two ways:
+  - A `wallOwner` ownership grid (parallel to the existing `roofOwner`) now marks every cell a
+    building's wall or entrance occupies, and the avenue/crossing/parking-spur paving (`paveRectFrame`)
+    refuses to paint over it, the same way it already refused to paint over a roof. The pedestrian
+    walkway network (`connectWalkway`) is the one exception (`crossWalls: true`, threaded through
+    `fillRectFrame`/`connectRect`): it's allowed to cross a wall band if that's the only way to keep a
+    building connected, matching how the network already behaved before the wall got deeper.
+  - The player-facing side of a BITS building (its widest wall run with a clear approach, found by
+    `clearSpan`) is now drawn `FRONT_WALL_TILES` (4) tiles deep instead of 2, with one dedicated tile
+    per band -- cap, window, body, base (`tools/make-assets.js`'s `bitsFacade*` tiles) -- so standing
+    at the front shows an actual wall with windows, not a sliver of wall dwarfed by roof texture.
+    Every other wall run of the same building (sides/back) keeps the original, shallower `b.wallTiles`
+    depth: deepening every run started colliding with close neighbours across the whole campus, and
+    the player rarely sees a side wall anyway. A building wedged close enough to a neighbour that
+    *no* run has 6+ clear tiles at depth 4 (found for one of the two OSM rectangles that make up
+    "Hostel C" -- literally flush against its own other wing) falls back to depth 3, the shallowest
+    that still fits a window row, before giving up on a facade for that run entirely.
+
+**What's reused from the pack directly vs. what's our own drawing in the pack's style:** the actual
+wall/window pieces turned out to be near-flat color bands with no fine texture worth blitting
+pixel-for-pixel (confirmed by decoding, above) -- so "copy and paste" here means *the construction
+method and band proportions*, drawn with this game's own palette, rather than literal pixel copies
+that would carry no more information than a flat fill already does. This mirrors how the outdoor
+tile swap in the previous FB-0025 pass worked (blit real pack pixels where the pack has real texture
+to offer, e.g. the kerb/paver tiles; draw our own where a pack turns out to be flat or missing).
+
+### Buildings (FB-0011, entrance/steps/arch extended by the addendum above)
 
 One big window per tile made every row of a building read as a solid band of glass. Walls now have
 two small windows per tile instead, plus the pieces needed to build a proper front with a parapet
 roof, corners and an entrance:
 
-- `bitsWallPlain` / `bitsWall` (existing name, redrawn): plain wall vs. wall with two small windows,
-  both with a salmon cornice line, a panel line, and a dark base course.
+- `bitsWallPlain` / `bitsWall` (redrawn again by the addendum above): plain wall vs. wall with two
+  small windows, now with the full banded ramp -- outline, light cap, trim line, body + panel line,
+  shadow line, cool baseboard -- instead of just a cornice + one dark base band.
 - `bitsWallEndL` / `bitsWallEndR`: the wall turning a corner (a darker side face, in shadow).
 - `bitsRoof` (existing, unchanged fill) plus `bitsRoofT` / `bitsRoofL` / `bitsRoofR` / `bitsRoofTL` /
   `bitsRoofTR`: parapet edge pieces, so a roof reads as having a raised edge instead of a flat tint.
-- `bitsEntranceL` / `bitsEntranceR`: a 2-tile-wide glass entrance under the salmon arch (`bitsDoor`,
-  the existing single-tile door, keeps working for the current generator's one-tile doors).
-- `bitsPillar`: a decorative column for a colonnade entrance.
+- `bitsEntranceL` / `bitsEntranceR`: a 2-tile-wide glass entrance with light stone steps at its base
+  (`bitsDoor`, the existing single-tile door, keeps working for the current generator's one-tile
+  doors). `bitsEntranceGrandL` / `bitsEntranceGrandR`: the Main Block's own red-arch variant, see
+  the addendum above.
+- `bitsPillar`: a decorative column for a colonnade entrance, redrawn with the same outline/trim/base
+  banding as the wall.
 - `otherWallPlain` / `otherWall` (existing, redrawn to match), `otherWallEndL` / `otherWallEndR`,
   `otherRoof` (existing) plus `otherRoofT` / `otherRoofL` / `otherRoofR` / `otherRoofTL` /
-  `otherRoofTR`: the same kit in the other-buildings' grey/white palette.
+  `otherRoofTR`: the same kit in the other-buildings' grey/white palette -- **not** touched by this
+  addendum (it's used only by non-BITS neighbours, not the Main/Library/Mechanical Blocks or hostels).
+- Every BITS-style building's front run now gets the full entrance treatment (glass + steps, flanked
+  by pillars and a signboard) in `tools/campus/build-campus.js`'s `drawBuilding` -- previously gated
+  on a building having a working interior door (`b.door`), so hostels (no interior yet) fell through
+  to a plain wall/window run where a real front door should read. The *interactive* door trigger
+  stays exclusive to buildings with a real interior to link to (Main/Library/Mechanical); hostels get
+  the entrance *look* only, not a working door with nowhere to send the player.
 
 ### Fence kit
 
@@ -304,7 +426,7 @@ enough to cover the trunk's columns regardless of the ellipse's curve) and givin
 positions changed, only what's drawn inside `treeCanopyBL`/`palmCanopyBL` (and their TL/TR/BR
 counterparts, which share the same shape function).
 
-### Trees and palms: kept hand-drawn (FB-0025)
+### Trees and palms: the *shape* stays hand-drawn (FB-0025; the *fill* moved to Sprout Lands 2026-09-21)
 
 FB-0025 asked for trees to be replaced from a pack too, and the Roguelike Modern City pack does have
 round tree art -- but it's a single 16x16 tile (a top-down canopy with its own trunk baked into the

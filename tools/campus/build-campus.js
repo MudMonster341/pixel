@@ -14,6 +14,12 @@ const { encodePNG } = require('../lib/png');
 const ROOT = path.join(__dirname, '..', '..');
 const TILE_PX = 16;
 const MPT = layout.metersPerTile;
+// A BITS building's front run (the one wall the player actually stands in front of) is drawn this
+// many tiles deep -- see drawBuilding's own comment (section 9) for why only the front run goes this
+// deep instead of every wall run. Declared here (not local to drawBuilding) because several other
+// things need to know it too: approxDoorAnchor/the 'zone' map object (both estimate where a door's
+// plaza actually starts) and BITS_FOOTPRINTS' routing obstacles.
+const FRONT_WALL_TILES = 4;
 
 const outFlag = process.argv.indexOf('--out');
 const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : null;
@@ -29,7 +35,7 @@ const REQUIRED_TILES = [
   'asphalt', 'paving', 'parking', 'track', 'turf', 'walkway',
   'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
   'court', 'courtLineH', 'courtLineV', 'courtCornerTL', 'courtCornerTR', 'courtCornerBL', 'courtCornerBR', 'courtCenterMark', 'courtNet', 'courtNetPostT', 'courtNetPostB',
-  'bitsRoof', 'bitsRoofT', 'bitsRoofL', 'bitsRoofR', 'bitsRoofTL', 'bitsRoofTR', 'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR', 'bitsEntranceL', 'bitsEntranceR', 'bitsPillar', 'bitsDoor',
+  'bitsRoof', 'bitsRoofT', 'bitsRoofL', 'bitsRoofR', 'bitsRoofTL', 'bitsRoofTR', 'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR', 'bitsEntranceL', 'bitsEntranceR', 'bitsEntranceGrandL', 'bitsEntranceGrandR', 'bitsPillar', 'bitsDoor',
   'otherRoof', 'otherRoofT', 'otherRoofL', 'otherRoofR', 'otherRoofTL', 'otherRoofTR', 'otherWallPlain', 'otherWall', 'otherWallEndL', 'otherWallEndR',
   'fenceH', 'fenceV', 'fenceCornerTL', 'fenceCornerTR', 'fenceCornerBL', 'fenceCornerBR', 'fenceGate',
 ];
@@ -318,6 +324,7 @@ for (const w of ways) {
     style: meta?.style || 'other',
     wallTiles: meta?.wallTiles ?? layout.otherBuildingWallTiles,
     door: Boolean(meta?.door),
+    grand: Boolean(meta?.grand),
     to: meta?.to || null,
     unverified: Boolean(meta?.unverified),
     isBits: Boolean(meta),
@@ -406,9 +413,23 @@ if (!mainBlock || !libraryBlock || !mechanicalBlock) throw new Error('Main Block
 // wall past the roof edge. Only used to place Gate 2 before any tiles are drawn; the walkway
 // network (section 12) instead uses each building's real drawn door cell (section 9), which can
 // differ slightly when a real neighbour blocks the bbox-predicted side (see drawBuilding).
+// FRONT_WALL_TILES (4), not b.wallTiles (2): a BITS building's front wall (where its door/plaza
+// actually is) is drawn FRONT_WALL_TILES deep, so a shallower estimate here landed this anchor
+// partway *inside* the now-deeper wall band instead of past it -- a connector aimed at that point
+// then pokes into solid wall instead of reaching the open plaza, stranding a stub of walkway
+// (found for a hostel with no real door object, so it relies on this estimate).
 function approxDoorAnchor(b) {
+  // Prefer the exact front-run anchor drawBuilding recorded in b.frontBand, once building tiles
+  // exist: the same doorX0/doorY its visual entrance is (or would be, for a hostel with no interior
+  // yet) carved at, already accounting for any neighbour that trimmed the front run's clear span or
+  // forced a shallower depth. The plain bbox-centre estimate below can't see either of those -- it
+  // once sent a hostel walkway spur straight into a dead pocket squeezed between that hostel's own
+  // wall (which only reaches full depth over PART of its width, near a close neighbour) and the
+  // neighbour's roof, because the bbox centre landed on the shallow part.
+  if (b.frontBand) return frameOfCell(b.frontBand.doorX0, b.frontBand.y1);
   const box = buildingBBox(b);
-  return [(box.u0 + box.u1) / 2, box.v1 + b.wallTiles * MPT];
+  const depth = b.style === 'bits' ? FRONT_WALL_TILES : b.wallTiles;
+  return [(box.u0 + box.u1) / 2, box.v1 + depth * MPT];
 }
 const approxMainDoor = approxDoorAnchor(mainBlock);
 
@@ -464,6 +485,15 @@ const ground = new Int32Array(W * H).fill(TILE.sand);
 const structures = new Int32Array(W * H).fill(-1);
 const overhead = new Int32Array(W * H).fill(-1);
 const roofOwner = new Int32Array(W * H).fill(-1);
+// roofOwner only covers a building's raw OSM footprint (the roof/parapet cells); the wall/window/
+// entrance rows drawBuilding paints below that footprint (section 9) are NOT in it. wallOwner is the
+// same idea for those rows, set by drawBuilding and checked by every paving helper below -- a
+// road/walkway corridor that reaches this far south must never paint over a building's own wall
+// (BITS building kit addendum, 2026-09-21: the entrance avenue used to paint straight over the Main
+// Block's front wall, entrance included). Routing itself avoids this zone too (BITS_FOOTPRINTS,
+// padded with each building's wall depth, below) so a connector detours around it instead of just
+// leaving a gap where it would have crossed.
+const wallOwner = new Int32Array(W * H).fill(-1);
 
 function forRectFrame(u0, v0, u1, v1, fn) {
   const x0 = Math.max(0, gx(Math.min(u0, u1)));
@@ -496,7 +526,9 @@ function footprintCells(b, fn) {
 }
 const isLawn = (x, y) => inGrid(x, y) && (ground[y * W + x] === TILE.lawn || ground[y * W + x] === TILE.lawn2) && structures[y * W + x] === -1;
 function structOnLawn(x, y, tile) {
-  if (isLawn(x, y)) structures[y * W + x] = tile;
+  if (!isLawn(x, y)) return false;
+  structures[y * W + x] = tile;
+  return true;
 }
 const frameOfCell = (x, y) => [minU + (x + 0.5) * MPT, minV + (y + 0.5) * MPT];
 console.log(`campus frame: fence ${((fenceFrame.u1 - fenceFrame.u0)).toFixed(0)}x${(fenceFrame.v1 - fenceFrame.v0).toFixed(0)} m; map ${W}x${H} tiles`);
@@ -533,6 +565,27 @@ function drawBuilding(b, index) {
   const wallWindow = bits ? TILE.bitsWall : TILE.otherWall;
   const wallEndL = bits ? TILE.bitsWallEndL : TILE.otherWallEndL;
   const wallEndR = bits ? TILE.bitsWallEndR : TILE.otherWallEndR;
+  // BITS building kit addendum (2026-09-21, coordinator review): the *front* run only -- the one
+  // wall the player actually stands in front of -- gets a 4-row-tall facade, one dedicated tile per
+  // band (cap/window/body/base, tools/make-assets.js's bitsFacade* functions) instead of every wall
+  // row repeating the same squished mini-facade (at zoom 3 a 1-2 tile wall next to a 20+ tile roof
+  // read as a flat texture, not a building). Every *other* wall run (the sides/back of an L-shaped
+  // building) keeps the original `b.wallTiles` depth and the original bitsWallPlain/bitsWall system
+  // completely unchanged -- deepening every run of every building started colliding with close
+  // neighbours all over campus (Main Block/Mechanical Block/Library Block all broke in different
+  // ways before this was scoped down to just the front), and the player rarely sees a side wall
+  // anyway. 'other' (non-enterable neighbours) are untouched either way. Module-level (not local to
+  // this function) because section 17's building/zone objects also need to know how deep the front
+  // run actually was drawn, not just b.wallTiles.
+  const FACADE_PLAIN = { cap: TILE.bitsFacadeCap, window: TILE.bitsFacadeWindow, body: TILE.bitsFacadeBody, base: TILE.bitsFacadeBase };
+  const FACADE_END_L = { cap: TILE.bitsFacadeCapEndL, window: TILE.bitsFacadeWindowEndL, body: TILE.bitsFacadeBodyEndL, base: TILE.bitsFacadeBaseEndL };
+  const FACADE_END_R = { cap: TILE.bitsFacadeCapEndR, window: TILE.bitsFacadeWindowEndR, body: TILE.bitsFacadeBodyEndR, base: TILE.bitsFacadeBaseEndR };
+  function facadeRowKind(k, depth) {
+    if (k === depth) return 'base'; // ground row -- the entrance is carved out of this one
+    if (k === 1) return 'cap'; // top row, meets the roof
+    if (depth >= 3 && k === 2) return 'window'; // second row down: a real window band
+    return 'body'; // any rows left in between
+  }
 
   const cells = [];
   footprintCells(b, (x, y) => cells.push([x, y]));
@@ -573,50 +626,137 @@ function drawBuilding(b, index) {
     }
   }
   // The front (door) run: the one facing the entrance approach (largest y = furthest south), widest
-  // first, but only among runs whose wall area isn't blocked by a real neighbouring building close
-  // enough that the two footprints' walls would otherwise collide (real BITS buildings are
-  // sometimes only a few metres apart, e.g. Mechanical Block and Hostel H).
-  const isRunOpen = (run) => {
-    for (let k = 1; k <= b.wallTiles; k++) {
-      const wy = run.y + k;
-      for (let x = run.x0; x <= run.x1; x++) {
-        if (!inGrid(x, wy) || roofOwner[wy * W + x] !== -1) return false;
+  // first, but checked at the depth it will *actually* be drawn at (FRONT_WALL_TILES for a BITS
+  // building, since that's deeper than the original b.wallTiles) -- a real neighbouring building can
+  // be close enough (Mechanical Block and Hostel H, a few metres apart) that its own roof intrudes
+  // on part of a run's wall depth without blocking the whole run, so `clearSpan` finds the longest
+  // contiguous clear sub-range within a run instead of an all-or-nothing check, but `doorCandidates`
+  // still only accepts a run whose *entire* width is clear -- the sub-range search is purely a
+  // fallback for when nothing is fully clear (matches the original isRunOpen's own priority: prefer
+  // a fully open run; only settle for a trimmed one if every run has some intrusion).
+  function clearSpan(run, depth) {
+    const blockedAt = (x) => {
+      for (let k = 1; k <= depth; k++) {
+        const wy = run.y + k;
+        if (!inGrid(x, wy) || roofOwner[wy * W + x] !== -1) return true;
+        if (wallOwner[wy * W + x] !== -1 && wallOwner[wy * W + x] !== index) return true;
+      }
+      return false;
+    };
+    let best = null;
+    let runStart = null;
+    for (let x = run.x0; x <= run.x1 + 1; x++) {
+      const blocked = x > run.x1 || blockedAt(x);
+      if (!blocked) {
+        if (runStart === null) runStart = x;
+      } else if (runStart !== null) {
+        if (!best || x - 1 - runStart > best.x1 - best.x0) best = { x0: runStart, x1: x - 1 };
+        runStart = null;
       }
     }
-    return true;
-  };
-  const doorCandidates = runs.filter((r) => r.x1 > r.x0 && isRunOpen(r));
-  const frontRun = (doorCandidates.length ? doorCandidates : runs).sort((a, b2) => b2.y - a.y || b2.x1 - b2.x0 - (a.x1 - a.x0))[0];
+    return best;
+  }
+  // Prefer the tallest facade (FRONT_WALL_TILES), but a building wedged close enough to a neighbour
+  // (Hostel C next to Hostel D/B, the same kind of tight gap that hit Mechanical Block) can have EVERY
+  // run's clear span shrink below MIN_FRONT_WIDTH at that depth even though a shallower depth still
+  // has plenty of room -- the extra 1-2 rows are exactly the rows a close neighbour's roof intrudes on
+  // first. Falling back to depth 3 (never below it -- the coordinator's "3-4 tiles tall" floor, and
+  // facadeRowKind still gets a window row at depth 3) gives the building an honest facade+entrance
+  // instead of silently dropping to the plain, faceless wall system.
+  let candidateDepth = bits ? FRONT_WALL_TILES : b.wallTiles;
+  if (bits) {
+    for (const depth of [FRONT_WALL_TILES, 3]) {
+      candidateDepth = depth;
+      if (runs.some((r) => { const span = clearSpan(r, depth); return span && span.x1 - span.x0 >= 6; })) break;
+    }
+  }
+  for (const run of runs) run.clear = clearSpan(run, candidateDepth);
+  // Minimum width 6 (not just "more than a bare door"): a narrow clear sub-range squeezed between
+  // two close neighbours can still pass the "wide enough for a door" bar while being enclosed on
+  // both sides by roof, boxing in whatever walkway happens to reach it (found this way for a hostel
+  // wedged next to Mechanical Block -- its widest, correct front run got rejected by the deeper
+  // FRONT_WALL_TILES check, and a leftover sliver of a *different*, narrow run took its place
+  // instead). Rejecting anything narrower than this falls back to the plain, unenriched wall system
+  // for that run (still solid, still a wall, just not a facade/entrance/pillars/signboard sitting in
+  // a pocket with no way out).
+  const MIN_FRONT_WIDTH = 6;
+  const wideEnough = (r) => r.clear && r.clear.x1 - r.clear.x0 >= MIN_FRONT_WIDTH;
+  const fullyOpen = runs.filter((r) => wideEnough(r) && r.clear.x0 === r.x0 && r.clear.x1 === r.x1);
+  const partiallyOpen = runs.filter(wideEnough);
+  const doorCandidates = fullyOpen.length ? fullyOpen : partiallyOpen;
+  const widthOf = (r) => (r.clear ? r.clear.x1 - r.clear.x0 : r.x1 - r.x0);
+  const frontRun = (doorCandidates.length ? doorCandidates : runs).sort((a, b2) => b2.y - a.y || widthOf(b2) - widthOf(a))[0];
 
+  // BITS building kit addendum (2026-09-21): every BITS-style building's front run gets a proper
+  // entrance look (glass + steps, flanked by pillars and a signboard) -- previously gated on
+  // `b.door`, so hostels (no interior yet, `b.door` unset) fell through to a plain wall/window run
+  // where a real front door should read. The *interactive* door trigger (b.doorCell, used below to
+  // emit the `door` map object) stays exclusive to buildings with a real interior to link to; giving
+  // a hostel a working door with no interior to send the player to would be worse than no door.
+  const entranceL = b.grand ? TILE.bitsEntranceGrandL : TILE.bitsEntranceL;
+  const entranceR = b.grand ? TILE.bitsEntranceGrandR : TILE.bitsEntranceR;
   for (const run of runs) {
-    const doorX0 = Math.round((run.x0 + run.x1) / 2);
+    const doorBasis = run.clear || run; // the door only ever goes in the clear part of the run (see clearSpan above)
+    // Clamped to doorBasis.x1 - 1 so doorX1 (= doorX0 + 1) never lands one past the clear span's own
+    // right edge -- Math.round can tip the midpoint of a 2-wide span onto its rightmost column.
+    const doorX0 = Math.min(Math.round((doorBasis.x0 + doorBasis.x1) / 2), doorBasis.x1 - 1);
     const doorX1 = doorX0 + 1;
-    const isFront = bits && b.door && run === frontRun && run.x1 > run.x0;
-    for (let k = 1; k <= b.wallTiles; k++) {
+    const isFrontVisual = bits && run === frontRun && wideEnough(run);
+    const isFront = isFrontVisual && b.door;
+    // Only the chosen front run is drawn deep (candidateDepth: FRONT_WALL_TILES, or 3 if a close
+    // neighbour forced the fallback above); every other run keeps the original, shallower b.wallTiles
+    // (see FRONT_WALL_TILES's own comment above).
+    const depth = isFrontVisual ? candidateDepth : b.wallTiles;
+    for (let k = 1; k <= depth; k++) {
       const wy = run.y + k;
       if (!inGrid(run.x0, wy)) break;
-      const isBottomRow = k === b.wallTiles;
+      const isBottomRow = k === depth;
+      const kind = isFrontVisual ? facadeRowKind(k, depth) : null;
       for (let x = run.x0; x <= run.x1; x++) {
-        if (!inGrid(x, wy) || roofOwner[wy * W + x] !== -1) continue;
+        // roofOwner: never draw a wall over another building's roof. wallOwner: never draw a wall
+        // over another building's *already-drawn* wall either -- two buildings close enough that
+        // their footprints don't overlap can still have wall bands that do, now that the front wall
+        // is 4 tiles deep instead of 2 (coordinator review, 2026-09-21) -- discovered because
+        // Mechanical Block's entrance was silently overwritten by a neighbour's own wall drawn after
+        // it in building order.
+        if (!inGrid(x, wy) || roofOwner[wy * W + x] !== -1 || (wallOwner[wy * W + x] !== -1 && wallOwner[wy * W + x] !== index)) continue;
         let tile;
-        if (x === run.x0) tile = wallEndL;
+        if (isFrontVisual) {
+          if (x === run.x0) tile = FACADE_END_L[kind];
+          else if (x === run.x1) tile = FACADE_END_R[kind];
+          else tile = FACADE_PLAIN[kind];
+        } else if (x === run.x0) tile = wallEndL;
         else if (x === run.x1) tile = wallEndR;
         else tile = (x - run.x0) % 4 === 2 ? wallWindow : wallPlain;
-        if (isFront && isBottomRow && (x === doorX0 || x === doorX1)) tile = x === doorX0 ? TILE.bitsEntranceL : TILE.bitsEntranceR;
+        if (isFrontVisual && isBottomRow && (x === doorX0 || x === doorX1)) tile = x === doorX0 ? entranceL : entranceR;
         structures[wy * W + x] = tile;
+        // wallOwner (declared with roofOwner, section 8): every road/walkway paving helper below
+        // refuses to paint over a cell owned here, and the routing that picks a path in the first
+        // place (BITS_FOOTPRINTS, padded with each building's own wall depth, just below) treats
+        // this whole band as part of the building too -- so a connector detours around it instead
+        // of painting through it and leaving a gap.
+        wallOwner[wy * W + x] = index;
       }
     }
-    if (isFront) {
-      const doorY = run.y + b.wallTiles;
-      structOnLawn(doorX0 - 2, doorY, TILE.bitsPillar);
-      structOnLawn(doorX1 + 2, doorY, TILE.bitsPillar);
-      structOnLawn(doorX0 - 1, doorY + 1, TILE.signboard);
-      b.doorCell = [doorX0, doorY];
+    if (isFrontVisual) {
+      const doorY = run.y + depth;
+      if (structOnLawn(doorX0 - 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX0 - 2)] = index;
+      if (structOnLawn(doorX1 + 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX1 + 2)] = index;
+      if (structOnLawn(doorX0 - 1, doorY + 1, TILE.signboard)) wallOwner[(doorY + 1) * W + (doorX0 - 1)] = index;
+      if (isFront) b.doorCell = [doorX0, doorY];
+      // Remembered (in tile coordinates) so BITS_FOOTPRINTS (built once all buildings are drawn,
+      // just below) can add this front wall band as a routing obstacle -- the door's own 2 columns
+      // excluded, so a connector can still approach the door directly without being treated as
+      // starting "inside" the building. Without this, a road/walkway corridor whose straight path
+      // happens to graze this band (now 4 tiles deep instead of 2) doesn't know to detour around it
+      // the way it already does for a building's roof -- wallOwner stops the paint, but leaves a gap
+      // instead of a route, which is what broke several buildings' reachability while this was being
+      // built (2026-09-21).
+      b.frontBand = { y0: run.y + 1, y1: doorY, x0: run.x0, x1: run.x1, doorX0, doorX1, entranceL, entranceR };
     }
   }
 }
 buildingList.forEach(drawBuilding);
-
 // Real door positions (falls back to the bbox estimate for buildings without a drawn door, e.g.
 // hostels), used to route the walkway network in section 12 so the last few metres always connect.
 const realAnchor = (b) => (b.doorCell ? frameOfCell(b.doorCell[0], b.doorCell[1]) : approxDoorAnchor(b));
@@ -761,10 +901,10 @@ function paveRectFrame(u0, v0, u1, v1, fillName, laneAxis) {
   forRectFrame(u0, v0, u1, v1, (x, y) => {
     // FB-0022 (QA): never let a road/kerb overwrite a building's own footprint (roof, parapet or
     // wall) -- a rectangle routed close to a building used to erase a strip of its roof and paint
-    // pavement over it. roofOwner (section 9) is fully populated for every building before any
-    // road/walkway code runs, so this is a safe, cheap guard regardless of the two rectangles' exact
-    // relative geometry.
-    if (roofOwner[y * W + x] !== -1) return;
+    // pavement over it. roofOwner and wallOwner (section 9) are fully populated for every building
+    // before any road/walkway code runs, so this is a safe, cheap guard regardless of the two
+    // rectangles' exact relative geometry.
+    if (roofOwner[y * W + x] !== -1 || wallOwner[y * W + x] !== -1) return;
     const side = kerbSide(x, y);
     if (side) {
       structures[y * W + x] = -1;
@@ -780,12 +920,25 @@ function paveRectFrame(u0, v0, u1, v1, fillName, laneAxis) {
 // A plain fill with no kerb border, for pedestrian walkways (their own tile art carries a border,
 // STYLE_GUIDE "Campus kit") and for short road spurs that merge into an existing kerbed road --
 // giving a merging spur its own kerb ring would cut a seam right where two roads are meant to join.
-function fillRectFrame(u0, v0, u1, v1, tileName, skipInsideFence) {
+// `crossWalls`: lets this fill paint over a cell wallOwner claims (still never over a roof) -- used
+// only by the pedestrian walkway network (connectWalkway) for the two connections that start
+// exactly at a door, which sits in the notch of its own building's front wall band. The general
+// bend/detour logic below (BITS_FOOTPRINTS/bendIsClear/findClearColumn) assumes a path's starting
+// point already has a clear escape route in its own row/column, which isn't true for a point that's
+// literally a gap in a wall -- so the first leg of an automatic detour can still try to leave along
+// the wall's own row and get stuck. A real fix means either giving connectWalkway an escape hatch
+// aware of "start inside a notch" or reworking its detour geometry; both are a bigger change than
+// this pass should make to the routing algorithm itself. Direct avenue/crossing/parking fills (which
+// are *meant* to terminate at a door, not pass through it) keep the strict guard, so a wide shot of
+// the entrance still shows paving stopping cleanly at the wall on every side that isn't this narrow,
+// necessary exception.
+function fillRectFrame(u0, v0, u1, v1, tileName, skipInsideFence, crossWalls) {
   forRectFrame(u0, v0, u1, v1, (x, y) => {
     const u = minU + (x + 0.5) * MPT;
     const v = minV + (y + 0.5) * MPT;
     if (skipInsideFence && insideFence(u, v)) return;
-    if (roofOwner[y * W + x] !== -1) return; // FB-0022: never draw a walkway/connector over a building
+    if (roofOwner[y * W + x] !== -1) return; // FB-0022: never draw a walkway/connector over a building's roof
+    if (!crossWalls && wallOwner[y * W + x] !== -1) return; // ...or its wall, unless explicitly allowed
     structures[y * W + x] = -1;
     ground[y * W + x] = TILE[tileName];
   });
@@ -795,18 +948,36 @@ function fillRectFrame(u0, v0, u1, v1, tileName, skipInsideFence) {
 // walkways/roads). `bend` picks which segment goes first. `avoidFence`: for connectors meant to stay
 // entirely outside the campus fence (e.g. linking Gate 2's or D54's dead end into the wider road
 // network) -- skips any cell that would otherwise land inside the fence, so a segment routed close
-// along one side of it can never clip through a solid fence wall that isn't a gate.
-function connectRect(p0, p1, widthMeters, tileName, bend = 'h', avoidFence = false) {
+// along one side of it can never clip through a solid fence wall that isn't a gate. `crossWalls`:
+// see fillRectFrame's own comment.
+function connectRect(p0, p1, widthMeters, tileName, bend = 'h', avoidFence = false, crossWalls = false) {
   const corner = bend === 'h' ? [p1[0], p0[1]] : [p0[0], p1[1]];
   const r = widthMeters / 2;
-  fillRectFrame(p0[0] - r, p0[1] - r, corner[0] + r, corner[1] + r, tileName, avoidFence);
-  fillRectFrame(corner[0] - r, corner[1] - r, p1[0] + r, p1[1] + r, tileName, avoidFence);
+  fillRectFrame(p0[0] - r, p0[1] - r, corner[0] + r, corner[1] + r, tileName, avoidFence, crossWalls);
+  fillRectFrame(corner[0] - r, corner[1] - r, p1[0] + r, p1[1] + r, tileName, avoidFence, crossWalls);
 }
 // FB-0022 (QA): a plain 2-segment bend can clip straight through a building that sits between the
 // two points -- the academic complex's real footprints are large and L-shaped (Main Block wraps
 // around part of the courtyard), so a door on one side of it isn't always reachable by a bend that
 // only tries the two obvious corners. Every BITS building's own real footprint rectangles (the same
 // ones drawn in section 9), used to check a candidate path before it's painted, not after.
+// BITS building kit addendum (2026-09-21): also each BITS building's own front wall band
+// (`b.frontBand`, set in drawBuilding above) as two more obstacle rects, split around the door's own
+// 2 columns so a path can still terminate directly at the door without being treated as already
+// "inside" the building. Front walls are now 4 tiles deep instead of 2 (the readable-facade
+// addendum), which put that band in the way of more than one existing road/walkway route; without
+// this, those routes only found out they were blocked by wallOwner *after* committing to a straight
+// path through it, leaving a gap instead of detouring the way they already do around a roof.
+const tileRectToMeters = (x0, y0, x1, y1) => ({ u0: minU + x0 * MPT, v0: minV + y0 * MPT, u1: minU + (x1 + 1) * MPT, v1: minV + (y1 + 1) * MPT });
+const FRONT_BAND_FOOTPRINTS = buildingList
+  .filter((b) => b.isBits && b.frontBand)
+  .flatMap((b) => {
+    const { y0, y1, x0, x1, doorX0, doorX1 } = b.frontBand;
+    const rects = [];
+    if (doorX0 - 1 >= x0) rects.push(tileRectToMeters(x0, y0, doorX0 - 1, y1));
+    if (doorX1 + 1 <= x1) rects.push(tileRectToMeters(doorX1 + 1, y0, x1, y1));
+    return rects;
+  });
 const BITS_FOOTPRINTS = buildingList.filter((b) => b.isBits).flatMap((b) => b.rects || [bbox(b.poly)]);
 function segmentHitsFootprint(a, b, r, rect) {
   const lo = { u: Math.min(a[0], b[0]) - r, v: Math.min(a[1], b[1]) - r };
@@ -839,14 +1010,23 @@ function connectWalkway(p0, p1, bend = 'h') {
   const cornerV = [p0[0], p1[1]];
   const preferredCorner = bend === 'h' ? cornerH : cornerV;
   const otherCorner = bend === 'h' ? cornerV : cornerH;
-  if (bendIsClear(p0, preferredCorner, p1, r)) return connectRect(p0, p1, width, 'walkway', bend);
-  if (bendIsClear(p0, otherCorner, p1, r)) return connectRect(p0, p1, width, 'walkway', bend === 'h' ? 'v' : 'h');
+  // crossWalls: true -- see fillRectFrame's own comment. A pedestrian walkway connects two doors, so
+  // its endpoints sit exactly in the notch of their own building's front wall band; the general
+  // bend/detour logic (BITS_FOOTPRINTS/bendIsClear/findClearColumn) assumes a path can always find a
+  // clear escape from where it starts, which isn't true there, so this stays a straight, wall-aware
+  // (never a roof) but not wall-*proof* connector rather than risk a broken detour path.
+  if (bendIsClear(p0, preferredCorner, p1, r)) {
+    return connectRect(p0, p1, width, 'walkway', bend, false, true);
+  }
+  if (bendIsClear(p0, otherCorner, p1, r)) {
+    return connectRect(p0, p1, width, 'walkway', bend === 'h' ? 'v' : 'h', false, true);
+  }
   // Both direct bends cross a building: detour around it via a third waypoint, a column clear of
   // every building for the whole vertical run between the two points.
   const bypassU = findClearColumn(p1[0], p0[1], p1[1], r);
-  connectRect(p0, [bypassU, p0[1]], width, 'walkway', 'h');
-  connectRect([bypassU, p0[1]], [bypassU, p1[1]], width, 'walkway', 'v');
-  connectRect([bypassU, p1[1]], p1, width, 'walkway', 'h');
+  connectRect(p0, [bypassU, p0[1]], width, 'walkway', 'h', false, true);
+  connectRect([bypassU, p0[1]], [bypassU, p1[1]], width, 'walkway', 'v', false, true);
+  connectRect([bypassU, p1[1]], p1, width, 'walkway', 'h', false, true);
 }
 
 const AVENUE_W = layout.gate2.approachWidthMeters;
@@ -884,7 +1064,9 @@ if (d54Box && gate2NetworkPoint) {
   connectRect(d54Anchor, gate2NetworkPoint, 9, 'asphalt', 'h', true);
 }
 // Inside the fence: the straight entrance avenue up to the Main Block door (kerbed like a road, per
-// ADR 0008's "straight approach", straight because gate2U === mainDoor's u by construction).
+// ADR 0008's "straight approach", straight because gate2U === mainDoor's u by construction). Told to
+// start right at mainDoor's own row -- wallOwner (section 9) refuses to let this actually paint over
+// the building's wall/entrance, so in practice it stops cleanly at the wall's south face.
 paveRectFrame(gate2U - AVENUE_W / 2, mainDoor[1], gate2U + AVENUE_W / 2, fenceFrame.v1, 'asphalt', 'v');
 
 // ================= 12. internal walkway network: a small set of constant-width orthogonal paths =================
@@ -1101,7 +1283,7 @@ function hasTreeClearance(cx, topY) {
   for (let y = topY - 1; y <= topY + 3; y++) {
     for (let x = cx - 1; x <= cx + 2; x++) {
       if (!inGrid(x, y)) continue;
-      if (roofOwner[y * W + x] !== -1) return false; // a building's own footprint (roof/wall/door)
+      if (roofOwner[y * W + x] !== -1 || wallOwner[y * W + x] !== -1) return false; // a building's own footprint (roof/wall/door)
       const groundName = tileInfo.tiles[ground[y * W + x]].name;
       if (TREE_CLEARANCE_TILES.has(groundName)) return false;
     }
@@ -1184,6 +1366,18 @@ for (let y = 0; y < H; y++) {
       structures[y * W + x] = -1;
     }
   }
+}
+
+
+// Re-stamp every building's entrance tiles now that all road/walkway/parking painting above has
+// finished: the entrance avenue and the walkway network both terminate right at a door, and a
+// straight paveRectFrame/connectRect segment aimed at that exact point can still paint over the
+// entrance tile itself in passing. Deliberately narrow -- just these 2 cells per building.
+for (const b of buildingList) {
+  if (!b.frontBand) continue;
+  const { doorX0, doorX1, y1: doorY, entranceL, entranceR } = b.frontBand;
+  if (inGrid(doorX0, doorY)) structures[doorY * W + doorX0] = entranceL;
+  if (inGrid(doorX1, doorY)) structures[doorY * W + doorX1] = entranceR;
 }
 
 // ================= 17. objects: spawn, gates, doors, cutscene, buildings, areas, signboards =================
@@ -1303,9 +1497,12 @@ for (const b of buildingList) {
       // southmost row" -- on an L-shaped building the door's own run isn't always the one that
       // reaches furthest south (Library Block: its door sits on a shorter run than a wing beside
       // it), so anchoring on the geometric maxRow could extend the wrong piece and leave the door's
-      // own approach uncovered.
-      const doorOnThisRun = b.doorCell && b.doorCell[0] >= run.x0 && b.doorCell[0] <= run.x1 && b.doorCell[1] >= y && b.doorCell[1] <= y1 + b.wallTiles + 1;
-      const zoneY1 = doorOnThisRun ? b.doorCell[1] + 2 : y1 === maxRow ? y1 + b.wallTiles + 2 : y1;
+      // own approach uncovered. Bounded by FRONT_WALL_TILES, not b.wallTiles: the front run (which
+      // is where a real door always ends up) is drawn FRONT_WALL_TILES deep, not b.wallTiles --
+      // using the shallower number here under-counted how far the door actually sits below the run
+      // and missed it entirely for Library Block (BITS building kit addendum, 2026-09-21).
+      const doorOnThisRun = b.doorCell && b.doorCell[0] >= run.x0 && b.doorCell[0] <= run.x1 && b.doorCell[1] >= y && b.doorCell[1] <= y1 + FRONT_WALL_TILES + 1;
+      const zoneY1 = doorOnThisRun ? b.doorCell[1] + 2 : y1 === maxRow ? y1 + FRONT_WALL_TILES + 2 : y1;
       rectObjectGrid('zone', b.name, run.x0, y, run.x1, zoneY1, [
         { name: 'style', type: 'string', value: b.style },
         { name: 'unverified', type: 'bool', value: Boolean(b.unverified) },

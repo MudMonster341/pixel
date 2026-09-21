@@ -249,6 +249,75 @@ test('every enterable BITS building has a door object with a `to` map key', () =
   }
 });
 
+// ---------- BITS building kit addendum (2026-09-21): the Main Block's grand entrance ----------
+
+test('the Main Block entrance tile exists, is the grand (red-arch) variant, and is walkable from the plaza', () => {
+  const door = objects.find((o) => o.type === 'door' && o.props.building === 'Main Block');
+  assert.ok(door, 'missing Main Block door object');
+  const x = Math.floor(door.x);
+  const y = Math.floor(door.y);
+  const doorTileName = structNameAt(x, y);
+  assert.ok(
+    doorTileName === 'bitsEntranceGrandL' || doorTileName === 'bitsEntranceGrandR',
+    `Main Block's door tile should be the grand entrance (got "${doorTileName}")`,
+  );
+  assert.ok(walkable(x, y), 'the Main Block entrance tile itself should be walkable');
+  // The plaza immediately south of the door (where the player approaches from) must also be
+  // walkable, same "first walkable tile going south" search the existing door-resolution test uses.
+  let py = y;
+  let steps = 0;
+  while (steps < 6 && !walkable(x, py)) {
+    py += 1;
+    steps += 1;
+  }
+  assert.ok(walkable(x, py), 'no walkable plaza tile found south of the Main Block entrance');
+});
+
+test('hostels get a proper BITS entrance front (glass entrance tiles), not a flat wall, even without a working interior door', () => {
+  const hostelBuildings = objects.filter((o) => o.type === 'building' && o.props.style === 'bits' && /^Hostel /.test(o.name));
+  assert.ok(hostelBuildings.length >= 3, `expected several hostel buildings, found ${hostelBuildings.length}`);
+  const entranceNames = new Set(['bitsEntranceL', 'bitsEntranceR', 'bitsEntranceGrandL', 'bitsEntranceGrandR']);
+  let sawAnyEntrance = false;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (entranceNames.has(structNameAt(x, y))) sawAnyEntrance = true;
+    }
+  }
+  assert.ok(sawAnyEntrance, 'expected at least one entrance tile on the map (Main/Library/Mechanical already guarantee this)');
+  // Hostels have no `door` object (no interior to link to yet), so check their visual front directly:
+  // scan each hostel's own footprint bounding box for an entrance tile just past its southern wall.
+  // Some hostel names (e.g. "Hostel C") are mapped in OSM as two adjacent rectangles rather than one
+  // -- two separate wings of the same physical building, stacked back-to-back with zero gap. The wall
+  // generator only ever gives a building a front on the edge whose south neighbour is open ground, so
+  // the *northern* wing of such a pair has its whole southern band flush against the other wing's own
+  // roof (confirmed by dumping wallOwner/roofOwner for it: every column blocked, at every depth down
+  // to 3) -- that's an interior party wall between the two wings, not a real exterior face, and can
+  // never grow an entrance no matter how the front-run selection is tuned. Group by name and require
+  // one entrance per physical hostel (found on any of its wings) rather than one per OSM rectangle.
+  const byName = new Map();
+  for (const hostel of hostelBuildings) {
+    if (!byName.has(hostel.name)) byName.set(hostel.name, []);
+    byName.get(hostel.name).push(hostel);
+  }
+  for (const [name, wings] of byName) {
+    let found = false;
+    for (const hostel of wings) {
+      const x0 = Math.floor(hostel.x);
+      const x1 = Math.floor(hostel.x + hostel.width);
+      const y1 = Math.floor(hostel.y + hostel.height);
+      // The front run is drawn FRONT_WALL_TILES (4) deep, not the building's own wallTiles (2), so the
+      // entrance can sit up to a few rows further below the footprint's bottom edge than a shallow
+      // wall would put it -- widen the search rather than assume the old, shallower depth.
+      for (let y = Math.max(0, y1 - 6); y < Math.min(H, y1 + 5) && !found; y++) {
+        for (let x = Math.max(0, x0 - 2); x < Math.min(W, x1 + 2) && !found; x++) {
+          if (entranceNames.has(structNameAt(x, y))) found = true;
+        }
+      }
+    }
+    assert.ok(found, `${name} has no entrance-look tile near any of its wings' front walls`);
+  }
+});
+
 // ---------- A cutscene trigger sits just inside Gate 2, spanning the avenue ----------
 
 test('a "gate2" cutscene trigger sits just inside Gate 2, spanning the avenue width', () => {

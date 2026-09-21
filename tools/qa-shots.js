@@ -131,9 +131,14 @@ async function shootOutdoors(browser) {
       const dy = Math.floor(door.y);
       let best = null;
       let bestDist = Infinity;
-      for (let oy = 0; oy <= 6; oy++) {
+      // oy starts at 1, not 0: this is meant to find a tile *south* of the door (see the comment
+      // above), but oy=0 (beside the door, same row) used to be included too and could tie on
+      // squared distance with a true south tile -- since ties don't overwrite, whichever one the
+      // loop order reached first silently won, occasionally landing the shot awkwardly beside the
+      // door instead of in front of it (found via the Main Block front screenshot, BITS building
+      // kit addendum 2026-09-21).
+      for (let oy = 1; oy <= 6; oy++) {
         for (let ox = -4; ox <= 4; ox++) {
-          if (ox === 0 && oy === 0) continue; // the door tile itself: skip, it would re-trigger the warp
           const x = dx + ox;
           const y = dy + oy;
           if (!isWalkableTile(world.tileData, world.tileInfo, x, y)) continue;

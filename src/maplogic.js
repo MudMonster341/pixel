@@ -92,6 +92,15 @@ function cutscenesEnabled(search) {
   return qs.get('cutscene') !== '0';
 }
 
+// `?title=0` skips the title screen and its loading screen, landing straight on the world/ui scenes
+// exactly like every build before FB-0023/0024 did (docs/GAME_FEEL.md). Most e2e specs want this --
+// tests/e2e/helpers.js openGame() sets it by default -- only the title-flow specs themselves turn
+// the title screen back on. `search` is injectable, same pattern as the helpers above.
+function titleEnabled(search) {
+  const qs = new URLSearchParams(search ?? (typeof location === 'undefined' ? '' : location.search));
+  return qs.get('title') !== '0';
+}
+
 // The smallest object (by tile area) among a Tiled map's objects whose type is one of `types` and
 // whose rectangle contains the point (x, y) — all in tile units, as tiledObjects() returns them.
 // Smallest-first so a specific area (e.g. "Athletics Track") wins over a bigger one it sits inside

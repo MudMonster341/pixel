@@ -1,0 +1,24 @@
+Pack:      Pixel UI Pack
+Author:    Kenney (www.kenney.nl)
+URL:       https://kenney.nl/assets/pixel-ui-pack
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as LICENSE.txt in this folder. Credit appreciated,
+           not mandatory.
+Downloaded: 2026-09-20
+Downloaded by: research task for FB-0025 (asset-pack survey)
+Original zip: kenney_pixel-ui-pack.zip from
+  https://kenney.nl/media/pages/assets/pixel-ui-pack/821e760f21-1677661508/kenney_pixel-ui-pack.zip
+Original zip sha256: b76f2f60f2be76eb8e66511038fa4d48faec11e638316fa37d06084878cdf0c7
+Format: 48x48 px "9-slice" panel textures (a handful of border/fill styles x
+  several colorways) plus a combined spritesheet of buttons/icons/cursors.
+  Version 1.0, released 2015 -- an old, simple pack, not the newer "UI Pack: RPG
+  Expansion" (which itch.io currently sells as part of a bundle; this Pixel UI
+  Pack is the free CC0 original and is what's downloaded here).
+Covers: bordered dialog/panel backgrounds (usable as a stand-in for the game's
+  dialog box and minimap/quest-tracker frames after recoloring), plus generic
+  buttons and cursors.
+Does not cover: a bitmap font (the game keeps "Press Start 2P" regardless), or
+  anything close to the game's current cream-border-on-navy pixel-corner look --
+  this pack's panels have flat colors and rounded corners, a different visual
+  language that would need real rework, not just recoloring, to fit.

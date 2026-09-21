@@ -66,15 +66,15 @@ async function shoot(page, name) {
   log(`saved ${path.relative(ROOT, file)}`);
 }
 
-// Presses Enter on the intro controls card, which shows once per fresh page load on every map.
-async function dismissCard(page) {
+// FB-0023: there's no more blocking "controls card" to dismiss -- the player can move (and be
+// teleported around for a screenshot) the instant world/ui are up. Kept as its own function so the
+// three call sites below don't need to know that changed.
+async function waitReady(page) {
   await page.waitForFunction(() => {
     const world = window.game?.scene.getScene('world');
     const ui = window.game?.scene.getScene('ui');
     return Boolean(world?.player?.active && ui?.tutorial);
   });
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => !game.scene.getScene('ui').tutorial.cardOpen);
 }
 
 async function mapObjects(page) {
@@ -104,8 +104,8 @@ async function teleport(page, x, y) {
 
 async function shootOutdoors(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0`);
-  await dismissCard(page);
+  await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0`);
+  await waitReady(page);
   const objects = await mapObjects(page);
 
   const find = (type, matcher) => objects.find((o) => o.type === type && matcher(o));
@@ -234,8 +234,8 @@ async function shootOutdoors(browser) {
 async function shootIndoors(browser) {
   for (const mapKey of INTERIOR_MAPS) {
     const page = await browser.newPage({ viewport: VIEWPORT });
-    await page.goto(`${BASE_URL}/?dev=0&map=${mapKey}&cutscene=0`);
-    await dismissCard(page);
+    await page.goto(`${BASE_URL}/?dev=0&map=${mapKey}&cutscene=0&title=0`);
+    await waitReady(page);
     await shoot(page, `indoor-${mapKey}-entrance`);
 
     const rooms = (await mapObjects(page)).filter((o) => o.type === 'area');
@@ -255,8 +255,8 @@ async function shootIndoors(browser) {
 async function shootCutscene(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
   // Cutscenes are on by default; only tests that don't want one pass ?cutscene=0.
-  await page.goto(`${BASE_URL}/?dev=0&map=campus`);
-  await dismissCard(page);
+  await page.goto(`${BASE_URL}/?dev=0&map=campus&title=0`);
+  await waitReady(page);
 
   // The location banner shows itself on arrival, before the player has moved into the cutscene
   // trigger -- catch that first, separately from the cutscene's own dialog box further down.
@@ -302,6 +302,34 @@ async function shootCutscene(browser) {
   await page.close();
 }
 
+// ---------- title screen, loading screen, pause menu and the controls panel (FB-0023/0024) ----------
+
+async function shootTitleAndPause(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  // Title left on (no ?title=0): this is the one flow that actually wants to see it.
+  await page.goto(`${BASE_URL}/?dev=0&map=campus`);
+  await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
+  await page.waitForTimeout(200); // let the background pan/blink settle into a representative frame
+  await shoot(page, 'title-screen');
+
+  await page.keyboard.press('Enter'); // "Play" is the default highlighted item
+  // The branded loading screen (src/main.js BootScene): catch it before the world takes over.
+  await page.waitForFunction(() => game.scene.isActive('boot')).catch(() => {});
+  await shoot(page, 'loading-screen');
+  await waitReady(page);
+
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => game.scene.getScene('ui').pause.visible);
+  await shoot(page, 'pause-menu');
+
+  await page.keyboard.press('ArrowDown'); // Resume -> Controls
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => game.scene.getScene('ui').pause.controls.visible);
+  await shoot(page, 'pause-controls-panel');
+
+  await page.close();
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   for (const file of fs.readdirSync(OUT_DIR)) fs.rmSync(path.join(OUT_DIR, file));
@@ -320,6 +348,7 @@ async function main() {
     await shootOutdoors(browser);
     await shootIndoors(browser);
     await shootCutscene(browser);
+    await shootTitleAndPause(browser);
 
     log(`done: ${shotCount} screenshots in ${path.relative(ROOT, OUT_DIR)}/`);
   } finally {

@@ -38,6 +38,14 @@ class Inventory extends Phaser.Events.EventEmitter {
   }
 }
 
+// Fresh-game defaults, kept in one place so both the initial GameState literal below and
+// resetGameState() (Title screen "Play", GAME_FEEL.md) agree on what "brand new" means.
+const DEFAULT_FLAGS = { tomasGaveSword: false, tomasChats: 0 };
+const defaultQuest = () => ({
+  stage: 'arrival', // 'arrival' -> 'briefed' -> 'hunting' -> 'done'
+  keys: { physicsLab: false, icvl: false, room195: false },
+});
+
 const GameState = {
   // Where the player is, kept current every frame by WorldScene (src/scenes/world.js) so a save
   // taken at any moment reflects the real position, not just the spot she last warped through.
@@ -50,14 +58,14 @@ const GameState = {
   // Dialog entries already shown at least once, keyed "npcId:entryId" (src/dialog.js
   // dialogEntryKey()). Drives the "!" vs "E" interaction bubble and any `when: { seen }` condition.
   seenDialog: new Set(),
-  flags: { tomasGaveSword: false, tomasChats: 0 },
+  // In-fiction hint ids already shown once ("move", "talk", "run", "map" -- see src/scenes/ui.js
+  // HintBanner and docs/GAME_FEEL.md). Replaces the old blocking controls card (FB-0023/0024).
+  seenHints: new Set(),
+  flags: { ...DEFAULT_FLAGS },
   // The treasure hunt (docs/STORY.md): what part of it she's reached, and which of the 3 keys are
   // found. Set by dialog actions (`{ stage: ... }`/`{ key: ... }`, src/dialog.js), saved and
   // restored like everything else.
-  quest: {
-    stage: 'arrival', // 'arrival' -> 'briefed' -> 'hunting' -> 'done'
-    keys: { physicsLab: false, icvl: false, room195: false },
-  },
+  quest: defaultQuest(),
 };
 
 // Call after changing GameState.flags or GameState.quest so autosave (src/save.js) saves soon.
@@ -65,4 +73,24 @@ const GameState = {
 // unit tests never create it at all), so this is a no-op until the game has actually booted.
 function notifyStateChanged() {
   if (typeof window !== 'undefined' && window.game) window.game.events.emit('state-changed');
+}
+
+// Title screen "Play" (new game, docs/GAME_FEEL.md): puts every persisted field back to its
+// just-booted default. Keeps the existing Inventory instance (and everything already listening to
+// it -- the hotbar, the tutorial checklist) instead of replacing it, the same reasoning src/save.js
+// applyState() uses for the same reason. Doesn't touch localStorage: an old save is only overwritten
+// once the new game actually autosaves, same as "New Game" in most save-file games.
+function resetGameState(state = GameState) {
+  state.map = null;
+  state.position = null;
+  state.facing = 'down';
+  state.inventory.slots = state.inventory.slots.map(() => null);
+  state.inventory.selected = 0;
+  state.inventory.emit('changed');
+  state.collected = new Set();
+  state.seenCutscenes = new Set();
+  state.seenDialog = new Set();
+  state.seenHints = new Set();
+  state.flags = { ...DEFAULT_FLAGS };
+  state.quest = defaultQuest();
 }

@@ -1,33 +1,22 @@
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame, holdKey, pressUntil } = require('./helpers');
 
-test('boots on the meadow with the controls card and no errors', async ({ page }) => {
+test('boots on the meadow ready to play immediately, with no errors', async ({ page }) => {
   const { errors } = await openGame(page);
   const s = await state(page);
   expect(s.map).toBe('meadow');
-  expect(s.tutorial).toMatchObject({ stage: 'intro', cardOpen: true });
+  // FB-0023: no more blocking "controls card" -- the meadow's own tutorial checklist starts
+  // straight in 'steps', and the player can already move (see the next test).
+  expect(s.tutorial.stage).toBe('steps');
   await page.waitForTimeout(500);
   expect(errors).toEqual([]);
 });
 
-test('the player cannot move until the controls card is closed', async ({ page }) => {
+test('FB-0023: the player can move immediately, with no card to dismiss first', async ({ page }) => {
   await openGame(page);
   const before = await state(page);
   await holdKey(page, 'd', 400);
-  expect((await state(page)).x).toBe(before.x);
-
-  await startGame(page);
-  expect((await state(page)).tutorial.stage).toBe('steps');
-});
-
-test('H reopens the controls card and Enter closes it again', async ({ page }) => {
-  await openGame(page);
-  await startGame(page);
-  await page.keyboard.press('h');
-  await expect.poll(async () => (await state(page)).tutorial.cardOpen).toBe(true);
-  await page.keyboard.press('Enter');
-  await expect.poll(async () => (await state(page)).tutorial.cardOpen).toBe(false);
-  expect((await state(page)).tutorial.stage).toBe('steps');
+  expect((await state(page)).x).toBeGreaterThan(before.x);
 });
 
 test('M hides and shows the minimap', async ({ page }) => {

@@ -71,6 +71,13 @@ class WorldScene extends Phaser.Scene {
     // "map-entered" one below announces the map by name.
     this.currentAreaName = this.areaHere()?.name || null;
     this.game.events.emit('map-entered', this);
+
+    // In-fiction hints (FB-0023/0024, docs/GAME_FEEL.md): "WASD to move" the moment she's placed
+    // into a controllable world, "Shift to run" the moment she's somewhere running is even possible.
+    // ui.js's HintBanner is what actually remembers "already shown" (GameState.seenHints), so firing
+    // these on every map load (not just the very first) is harmless -- they only ever display once.
+    this.game.events.emit('hint', 'move');
+    if (!this.def.indoors) this.game.events.emit('hint', 'run');
   }
 
   buildMap() {
@@ -365,6 +372,7 @@ class WorldScene extends Phaser.Scene {
     const npc = blocked ? null : this.nearestNpc();
     this.prompt.setVisible(Boolean(npc));
     if (!npc) return;
+    this.game.events.emit('hint', 'talk'); // "E to talk", the first time anyone is ever in range
     const isNew = hasNewDialog(npc.def, GameState);
     this.prompt.setFrame(isNew ? 1 : 0);
     const bob = Math.round(Math.sin(time / 200));
@@ -416,7 +424,10 @@ class WorldScene extends Phaser.Scene {
     const name = this.areaHere()?.name || null;
     if (name === this.currentAreaName) return;
     this.currentAreaName = name;
-    if (name) this.game.events.emit('area-entered', name);
+    if (name) {
+      this.game.events.emit('area-entered', name);
+      this.game.events.emit('hint', 'map'); // "M for the map", the first time she leaves her start area
+    }
   }
 
   // Gate 2 welcome cutscene (P4): a Tiled rectangle object, `type: 'cutscene'` with a `cutscene`

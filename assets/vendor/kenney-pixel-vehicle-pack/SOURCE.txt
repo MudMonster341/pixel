@@ -1,0 +1,20 @@
+Pack:      Pixel Vehicle Pack ("Pixel Car Pack")
+Author:    Kenney (www.kenney.nl)
+URL:       https://kenney.nl/assets/pixel-vehicle-pack
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as LICENSE.txt in this folder. Credit ("Kenney" or
+           "www.kenney.nl") appreciated but not mandatory.
+Downloaded: 2026-09-20
+Downloaded by: research task for FB-0025 (asset-pack survey)
+Original zip: kenney_pixel-vehicle-pack.zip from
+  https://kenney.nl/media/pages/assets/pixel-vehicle-pack/570a4c9051-1677578609/kenney_pixel-vehicle-pack.zip
+Original zip sha256: b582163a0f366d8d24821eb763892ac29ff780a011e9b7b42baf86d1f051803f
+Tile size: irregular small sprites, mostly under 32x16 px, top-down/slightly
+  angled cars, vans, trucks, a bus, bikes and a scooter -- about 45 vehicles.
+Covers: parked/decorative cars for parking lots and the campus road (FB-0025
+  explicitly asked for "parked cars"). More color/model variety than the cars
+  built into the Roguelike Modern City pack above.
+Does not cover: driving animation frames (these are static top-down sprites,
+  not spritesheets with rotation frames) -- fine for parked cars, not for a
+  moving-traffic feature if one is ever added.

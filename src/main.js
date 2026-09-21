@@ -1,4 +1,14 @@
-// Loads the assets, then starts the world and the UI on top of it.
+// The branded loading screen (docs/GAME_FEEL.md): loads the assets behind a progress bar driven by
+// Phaser's own loader (never a guessed duration), then hands off to the world. Reached either
+// straight from index.html (test/`?title=0` fast path) or after Title's Play/Continue (real players).
+
+const LOADING_BAR_W = 300;
+const LOADING_BAR_H = 14;
+// A real player reaching this scene from the title screen sees it for at least this long, even
+// when everything's already cached and loads instantly -- otherwise it can flash by in a single
+// frame, which reads as a glitch rather than a loading screen (docs/GAME_FEEL.md). The `?title=0`
+// fast path every other test uses skips this (see create() below): it's for the title flow only.
+const MIN_LOADING_MS = 400;
 
 class BootScene extends Phaser.Scene {
   constructor() {
@@ -6,7 +16,20 @@ class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'LOADING...', { fontFamily: FONT, fontSize: '16px', color: '#f4f4f4' }).setOrigin(0.5);
+    this.loadStartedAt = Date.now();
+    uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 'PIXEL QUEST', 16, COLORS.highlight).setOrigin(0.5);
+    uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, 'LOADING...', 8, COLORS.dim).setOrigin(0.5);
+
+    const barX = (GAME_WIDTH - LOADING_BAR_W) / 2;
+    const barY = GAME_HEIGHT / 2 + 12;
+    const track = this.add.graphics();
+    track.fillStyle(0x000000, 0.4).fillRect(barX, barY, LOADING_BAR_W, LOADING_BAR_H);
+    track.lineStyle(2, COLORS.border, 1).strokeRect(barX, barY, LOADING_BAR_W, LOADING_BAR_H);
+    const fill = this.add.graphics();
+    this.load.on('progress', (value) => {
+      fill.clear().fillStyle(COLORS.gold, 1).fillRect(barX + 2, barY + 2, (LOADING_BAR_W - 4) * value, LOADING_BAR_H - 4);
+    });
+
     const sheet = { frameWidth: TILE, frameHeight: TILE };
     this.load.image('tiles', 'assets/tiles.png');
     this.load.json('tileinfo', 'assets/tiles.json');
@@ -21,8 +44,17 @@ class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.launch('ui');
-    this.scene.start('world', continueSpawnData());
+    // No separate fade-out needed here: WorldScene's own create() fades its camera in from black
+    // (docs/GAME_FEEL.md "no flash of an empty canvas") -- that black overlay covers the switch
+    // between scenes on the very first frame, so this loading screen simply hands off instantly.
+    const finish = () => {
+      this.scene.launch('ui');
+      this.scene.start('world', continueSpawnData());
+    };
+    if (!titleEnabled()) { finish(); return; } // the fast test/dev path: no manufactured delay
+    const remaining = MIN_LOADING_MS - (Date.now() - this.loadStartedAt);
+    if (remaining > 0) this.time.delayedCall(remaining, finish);
+    else finish();
   }
 }
 
@@ -36,8 +68,20 @@ function continueSpawnData() {
   return { map: GameState.map, spawn: { x: GameState.position.x, y: GameState.position.y, facing: GameState.facing } };
 }
 
+// Only the first scene in Phaser's `scene` array auto-starts (every other scene here is launched
+// explicitly: BootScene launches 'ui' and starts 'world', PauseMenu/TitleScene start/stop 'title').
+// `?title=0` (tests/e2e/helpers.js openGame() default) skips the title/loading screens entirely and
+// boots exactly like every build before FB-0023/0024 did: load the save (if any) up front, then
+// start straight on BootScene, which resolves continueSpawnData() itself.
+// With the title screen on (the real player's path), loading a save is deferred to whichever menu
+// choice the player actually makes (TitleScene startPlay()), so "Play" can start a clean game
+// without disturbing an existing save until the new game actually writes over it.
 function startGame() {
-  if (saveEnabled()) loadGame(currentProfile()); // ?save=0 boots fresh without touching the stored save
+  const titleOn = titleEnabled();
+  if (!titleOn && saveEnabled()) loadGame(currentProfile());
+
+  const first = titleOn ? TitleScene : BootScene;
+  const rest = [TitleScene, BootScene].filter((scene) => scene !== first);
   // Exposed on window so you can poke at it from the browser console (e.g. game.scene.getScene('world').player).
   window.game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -49,7 +93,7 @@ function startGame() {
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: [BootScene, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
+    scene: [first, ...rest, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
   });
   if (saveEnabled()) initAutosave(window.game, currentProfile());
 }

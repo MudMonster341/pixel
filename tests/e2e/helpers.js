@@ -11,7 +11,10 @@ const { FEEDBACK_DIR } = require('./paths');
 // Saving defaults off (`?save=0`, src/save.js): most tests reload/re-navigate within a test and must
 // not continue from whatever autosave a previous step wrote, or start from a leftover save at all.
 // tests/e2e/save.spec.js passes `save: true` to opt back in, and `profile` to pick a save slot.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile } = {}) {
+// Title defaults off (`?title=0`, FB-0023/0024, src/scenes/title.js): almost every spec here plays
+// the world/UI directly and has no reason to sit through the title/loading screens first; only
+// tests/e2e/title.spec.js passes `title: true` to exercise that flow itself.
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -22,6 +25,7 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (!cutscene) params.set('cutscene', '0');
   if (!save) params.set('save', '0');
   if (profile) params.set('profile', profile);
+  if (!title) params.set('title', '0');
   await page.goto(`/?${params.toString()}`);
   await waitForBoot(page);
   return { errors };
@@ -52,7 +56,9 @@ function state(page) {
       selected: GameState.inventory.selected,
       flags: GameState.flags,
       quest: GameState.quest,
-      tutorial: { stage: ui.tutorial.stage, completed: [...ui.tutorial.completed], cardOpen: ui.tutorial.cardOpen },
+      tutorial: { stage: ui.tutorial.stage, completed: [...ui.tutorial.completed] },
+      seenHints: [...GameState.seenHints],
+      pause: { visible: ui.pause.visible, view: ui.pause.view, controlsVisible: ui.pause.controls.visible },
       dialogOpen: ui.dialog.isOpen,
       // `choices` is set only while a choice list is on screen (src/scenes/ui.js DialogBox); each
       // entry's own `text`, and the currently highlighted index (up/down or W/S move it).
@@ -76,10 +82,13 @@ function state(page) {
   });
 }
 
-// Presses Enter on the controls card so the player can move.
+// FB-0023: the old blocking "controls card" is gone -- movement is available the instant the
+// world/ui scenes are ready, which openGame()'s waitForBoot() already confirmed. Kept as a named
+// step (most specs read "open the game, then start playing, then act") even though there's nothing
+// left to press; it also doubles as a sanity check that the tutorial state machine actually moved
+// off its old 'intro' stage (removed entirely -- see src/scenes/ui.js Tutorial).
 async function startGame(page) {
-  await page.keyboard.press('Enter');
-  await expect.poll(async () => (await state(page)).tutorial.cardOpen).toBe(false);
+  await expect.poll(async () => (await state(page)).tutorial.stage).not.toBe('intro');
 }
 
 // Presses a key and waits for `check()` to become true, re-pressing (like an impatient player
@@ -143,7 +152,51 @@ function feedbackCli(args) {
   });
 }
 
+// ---------- title screen (FB-0023/0024, tests/e2e/title.spec.js) ----------
+
+// Like openGame(), but leaves the title screen ON (openGame() defaults it off with `?title=0` for
+// every other spec) and waits for the title scene itself instead of the world/ui scenes, which
+// don't exist yet at this point -- they're only started once Play/Continue is chosen.
+async function openTitle(page, { map, save = false, profile } = {}) {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  const params = new URLSearchParams({ dev: '0', cutscene: '0' });
+  if (map) params.set('map', map);
+  if (!save) params.set('save', '0');
+  if (profile) params.set('profile', profile);
+  await page.goto(`/?${params.toString()}`);
+  await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
+  return { errors };
+}
+
+function titleState(page) {
+  return page.evaluate(() => {
+    const t = game.scene.getScene('title');
+    return {
+      menuItems: t.menuItems.map((item) => item.id),
+      menuIndex: t.menuIndex,
+      controlsVisible: t.controls.visible,
+      creditsVisible: t.credits.visible,
+    };
+  });
+}
+
+// Moves the highlight to the given menu item with real ArrowDown presses (keyboard-driven, per
+// docs/GAME_FEEL.md), then presses Enter to confirm it.
+async function chooseTitleMenu(page, id) {
+  for (let i = 0; i < 10; i++) {
+    const { menuItems, menuIndex } = await titleState(page);
+    if (menuItems[menuIndex] === id) break;
+    await page.keyboard.press('ArrowDown');
+  }
+  expect((await titleState(page)).menuItems[(await titleState(page)).menuIndex]).toBe(id);
+  await page.keyboard.press('Enter');
+}
+
 module.exports = {
   openGame, waitForBoot, state, startGame, holdKey, holdKeys, pressUntil, teleport, waitForMap, finishDialog,
-  countItem, feedbackCli,
+  countItem, feedbackCli, openTitle, titleState, chooseTitleMenu,
 };

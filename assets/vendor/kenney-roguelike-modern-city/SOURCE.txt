@@ -1,0 +1,29 @@
+Pack:      Roguelike Modern City pack
+Author:    Kenney Vleugels, for Kenney (www.kenney.nl)
+URL:       https://opengameart.org/content/roguelike-modern-city-pack
+           (mirrors the original https://kenney.nl asset; OpenGameArt hosts a
+           direct zip download, kenney.nl's own page for this exact pack has
+           since been folded into the broader "Roguelike" asset line)
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as LICENSE.txt in this folder (Kenney's own
+           license file from the zip). Attribution ("Kenney" or
+           "www.kenney.nl") is requested but not required.
+Downloaded: 2026-09-20
+Downloaded by: research task for FB-0025 (asset-pack survey)
+Original zip: "Roguelike Modern City pack.zip" from
+  https://opengameart.org/sites/default/files/Roguelike%20Modern%20City%20pack.zip
+Original zip sha256: ed45d3c0de24e821d71048fd665e3e238ccb49748c5cc520b43c751b39be93a5
+Tile size: 16x16 px, 1px margin between tiles (see Spritesheet/spritesheetInfo.txt)
+Contents kept here: Preview.png, Sample.png (mockup scenes from the author),
+  Spritesheet/roguelikeCity_magenta.png (has a real alpha channel despite the
+  filename -- use this one for compositing), Spritesheet/roguelikeCity_transparent.png
+  (opaque RGB with a magenta background despite ITS filename -- the two files'
+  names are swapped from what you'd expect; verified by decoding both PNGs'
+  color type and alpha values during this research).
+Covers: roads (multiple lane-marking styles), crosswalks, kerbs/sidewalks in three
+  materials, parking-lot markings, traffic lights and signs, streetlamps, benches,
+  planters, small building facades with windows/awnings, round trees and hedges/
+  bushes (top-down canopy tiles), and a handful of top-down cars.
+Does not cover: full 3/4-view buildings (these are pure top-down roof tiles, not
+  a wall+roof view like this game's BITS buildings), interiors, or characters.

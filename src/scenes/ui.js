@@ -41,6 +41,8 @@ class UIScene extends Phaser.Scene {
     this.dialog = new DialogBox(this);
     this.toast = new Toast(this);
     this.tutorial = new Tutorial(this);
+    this.hints = new HintBanner(this);
+    this.pause = new PauseMenu(this);
 
     this.game.events.on('map-entered', (world) => {
       this.minimap.setMap(world);
@@ -48,6 +50,11 @@ class UIScene extends Phaser.Scene {
     });
     this.game.events.on('area-entered', (name) => this.locationBanner.show(name));
     this.game.events.on('toast', (message) => this.toast.show(message));
+    // In-fiction hints (FB-0023/0024, docs/GAME_FEEL.md): world.js emits these the first moment
+    // each one is relevant ("hint:move" as soon as she can walk, "hint:talk" the first time an NPC
+    // is in range, ...). HintBanner itself is what actually remembers "already shown" (GameState.
+    // seenHints), so emitting one more than once is harmless.
+    this.game.events.on('hint', (id) => this.hints.trigger(id));
     // A dialog `{ cutscene: 'key' }` action (src/dialog.js) fires this; handled here (a persistent
     // scene, never restarted) rather than in world.js itself, so it always reaches whichever
     // WorldScene instance is current even if a map change happened in between.
@@ -66,34 +73,35 @@ class UIScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-N', (event) => {
       if (!event.repeat) this.toggleFullMap();
     });
+    // Esc: closing the full-screen map always wins (it has its own long-standing meaning), then the
+    // pause menu owns Esc the rest of the time -- opening it, or backing out of its Controls page,
+    // or closing it again (docs/GAME_FEEL.md). Not while a conversation owns the screen.
     this.input.keyboard.on('keydown-ESC', (event) => {
-      if (!event.repeat && this.fullMap.visible) this.fullMap.close();
-    });
-    this.input.keyboard.on('keydown-H', (event) => {
-      if (!event.repeat && !this.dialog.isOpen) this.tutorial.toggleCard();
+      if (event.repeat) return;
+      if (this.fullMap.visible) this.fullMap.close();
+      else if (!this.dialog.isOpen) this.pause.onEscape();
     });
   }
 
   // FB-0018: click the minimap or press N to see the whole current map, full screen. Blocked while
-  // dialog/tutorial own the screen, or while the world is paused for a cutscene (P4).
+  // dialog/pause own the screen, or while the world is paused for a cutscene (P4).
   toggleFullMap() {
     const world = this.scene.get('world');
     if (this.fullMap.visible) {
       this.fullMap.close();
       return;
     }
-    if (this.dialog.isOpen || this.tutorial.cardOpen || !world.sys.isActive()) return;
+    if (this.dialog.isOpen || this.pause.visible || !world.sys.isActive()) return;
     this.fullMap.open(world);
   }
 
   // True while the player shouldn't be able to walk around.
   isBlocking() {
-    return this.tutorial.cardOpen || this.dialog.isOpen || this.fullMap.visible;
+    return this.dialog.isOpen || this.fullMap.visible || this.pause.visible;
   }
 
   update(time, delta) {
     this.dialog.update(time, delta);
-    this.tutorial.update(time);
     this.hotbar.setVisible(!this.dialog.isOpen);
     if (this.fullMap.visible) this.fullMap.update(time);
 
@@ -646,7 +654,251 @@ class Toast {
   }
 }
 
-// ---------- tutorial: controls card, then an objectives checklist ----------
+// ---------- controls panel: reused by the pause menu here and by the title screen ----------
+// FB-0023: replaces the old full-screen "controls card" that blocked the game at boot and
+// overflowed its own box (feedback/screenshots/FB-0023.jpg). Nothing about this panel is
+// hard-coded to a fixed height: it measures its own row count and sizes the box to fit, so it
+// cannot overflow regardless of how many rows DEV_MODE adds (docs/GAME_FEEL.md "no fixed sleeps for
+// outcomes" sibling rule for layout: never guess a size, measure it).
+
+const CONTROLS = [
+  ['WASD / ARROWS', 'Move'],
+  ['SHIFT', 'Run'],
+  ['E / SPACE', 'Talk, next line'],
+  ['1-5 / WHEEL', 'Choose item slot'],
+  ['M', 'Show/hide minimap'],
+  ['N / CLICK MAP', 'Full-screen map'],
+  ['ESC', 'Pause'],
+];
+
+class ControlsPanel {
+  constructor(scene) {
+    this.scene = scene;
+    this.visible = false;
+    const rows = typeof DEV_MODE !== 'undefined' && DEV_MODE ? [...CONTROLS, ['O', 'Give feedback (dev)']] : CONTROLS;
+    this.rows = rows;
+
+    const w = 480;
+    const rowH = 26;
+    const headerH = 74; // title + top margin
+    const footerH = 36; // "ESC / ENTER TO CLOSE" + bottom margin
+    const h = headerH + rows.length * rowH + footerH;
+    const x = Math.round((GAME_WIDTH - w) / 2);
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+    this.box = { x, y, w, h };
+
+    this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
+    this.panel = scene.add.graphics();
+    drawPanel(this.panel, x, y, w, h);
+    this.title = uiText(scene, x + w / 2, y + 30, 'CONTROLS', 16, COLORS.highlight).setOrigin(0.5);
+    this.rowTexts = rows.flatMap(([key, action], i) => {
+      const rowY = y + headerH + i * rowH;
+      return [
+        uiText(scene, x + 32, rowY, key, 8, COLORS.highlight),
+        uiText(scene, x + 232, rowY, action, 8, COLORS.text),
+      ];
+    });
+    this.footer = uiText(scene, x + w / 2, y + h - 22, 'ESC / ENTER TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
+    this.parts = [this.dim, this.panel, this.title, ...this.rowTexts, this.footer];
+    this.parts.forEach((part) => part.setDepth(115).setVisible(false));
+  }
+
+  open() {
+    this.visible = true;
+    this.parts.forEach((part) => part.setVisible(true));
+  }
+
+  close() {
+    this.visible = false;
+    this.parts.forEach((part) => part.setVisible(false));
+  }
+
+  toggle() {
+    if (this.visible) this.close();
+    else this.open();
+  }
+}
+
+// ---------- pause menu (Esc): Resume / Controls / Save / Quit to title ----------
+
+const PAUSE_ITEMS = [
+  { id: 'resume', label: 'Resume' },
+  { id: 'controls', label: 'Controls' },
+  { id: 'save', label: 'Save' },
+  { id: 'quit', label: 'Quit to Title' },
+];
+
+class PauseMenu {
+  constructor(scene) {
+    this.scene = scene;
+    this.visible = false;
+    this.view = 'menu'; // 'menu' | 'controls'
+    this.index = 0;
+
+    const w = 300;
+    const rowH = 32;
+    const h = 70 + PAUSE_ITEMS.length * rowH + 20;
+    const x = Math.round((GAME_WIDTH - w) / 2);
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+    this.box = { x, y, w, h };
+
+    this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
+    this.panel = scene.add.graphics();
+    drawPanel(this.panel, x, y, w, h);
+    this.title = uiText(scene, x + w / 2, y + 32, 'PAUSED', 16, COLORS.highlight).setOrigin(0.5);
+    this.itemTexts = PAUSE_ITEMS.map((item, i) => {
+      const text = uiText(scene, x + 40, y + 66 + i * rowH, item.label, 12, COLORS.text);
+      text.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => { this.index = i; this.refresh(); })
+        .on('pointerdown', () => { this.index = i; this.confirm(); });
+      return text;
+    });
+    this.parts = [this.dim, this.panel, this.title, ...this.itemTexts];
+    this.parts.forEach((part) => part.setDepth(110).setVisible(false));
+
+    this.controls = new ControlsPanel(scene);
+
+    for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'menu') this.move(-1); });
+    for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'menu') this.move(1); });
+    for (const key of ['ENTER', 'SPACE']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.confirm(); });
+    }
+  }
+
+  open() {
+    this.visible = true;
+    this.view = 'menu';
+    this.index = 0;
+    this.parts.forEach((part) => part.setVisible(true));
+    this.refresh();
+  }
+
+  close() {
+    this.visible = false;
+    this.view = 'menu';
+    this.controls.close();
+    this.parts.forEach((part) => part.setVisible(false));
+  }
+
+  move(direction) {
+    this.index = (this.index + direction + PAUSE_ITEMS.length) % PAUSE_ITEMS.length;
+    this.refresh();
+  }
+
+  refresh() {
+    this.itemTexts.forEach((text, i) => {
+      const current = i === this.index;
+      text.setText(`${current ? '> ' : '  '}${PAUSE_ITEMS[i].label}`).setColor(current ? COLORS.highlight : COLORS.text);
+    });
+  }
+
+  confirm() {
+    if (this.view === 'controls') {
+      this.backToMenu();
+      return;
+    }
+    const item = PAUSE_ITEMS[this.index];
+    if (item.id === 'resume') this.close();
+    else if (item.id === 'controls') this.showControls();
+    else if (item.id === 'save') this.doSave();
+    else if (item.id === 'quit') this.quitToTitle();
+  }
+
+  showControls() {
+    this.view = 'controls';
+    this.parts.forEach((part) => part.setVisible(false));
+    this.controls.open();
+  }
+
+  backToMenu() {
+    this.view = 'menu';
+    this.controls.close();
+    this.parts.forEach((part) => part.setVisible(true));
+  }
+
+  doSave() {
+    if (typeof saveEnabled === 'function' && !saveEnabled()) {
+      this.scene.toast.show('Saving is off (?save=0)');
+      return;
+    }
+    saveGame(currentProfile());
+    this.scene.toast.show('Game saved!');
+  }
+
+  quitToTitle() {
+    this.close();
+    const sceneManager = this.scene.scene;
+    sceneManager.stop('world');
+    sceneManager.stop('ui');
+    if (sceneManager.isActive('cutscene')) sceneManager.stop('cutscene');
+    sceneManager.start('title');
+  }
+
+  // Delegated from UIScene's own Esc handler (fullMap already took priority there).
+  onEscape() {
+    if (!this.visible) this.open();
+    else if (this.view === 'controls') this.backToMenu();
+    else this.close();
+  }
+}
+
+// ---------- in-fiction hints: shown once each, when they first matter (FB-0023/0024) ----------
+// Replaces the old "read a card of every control before you can move" onboarding. Each hint is
+// queued by an event from world.js the moment it becomes relevant and shown at most once ever
+// (GameState.seenHints, saved like everything else) -- see docs/GAME_FEEL.md.
+
+const HINTS = {
+  move: 'WASD / ARROWS TO MOVE',
+  talk: 'PRESS E TO TALK',
+  run: 'HOLD SHIFT TO RUN',
+  map: 'PRESS M FOR THE MAP',
+};
+const HINT_Y = 64; // below the location banner (y 12-52), clear of the tutorial checklist (x >= 644)
+const HINT_W = 320; // 320..640 horizontally: stays clear of the checklist panel at x >= 644
+const HINT_H = 36;
+const HINT_FADE_MS = 300;
+const HINT_HOLD_MS = 2600;
+
+class HintBanner {
+  constructor(scene) {
+    this.scene = scene;
+    this.queue = [];
+    this.showing = null;
+    const x = Math.round((GAME_WIDTH - HINT_W) / 2);
+    this.panel = scene.add.graphics().setDepth(70);
+    drawPanel(this.panel, x, HINT_Y, HINT_W, HINT_H);
+    this.text = uiText(scene, GAME_WIDTH / 2, HINT_Y + HINT_H / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(71);
+    this.parts = [this.panel, this.text];
+    this.parts.forEach((part) => part.setAlpha(0));
+  }
+
+  // Called for every hint id, every time it could apply (world.js doesn't bother checking "have I
+  // shown this before" itself); a no-op once GameState.seenHints already has it.
+  trigger(id) {
+    if (!HINTS[id] || GameState.seenHints.has(id)) return;
+    GameState.seenHints.add(id);
+    notifyStateChanged(); // src/save.js autosaves soon after, so a reload never re-shows it
+    this.queue.push(id);
+    this.pump();
+  }
+
+  pump() {
+    if (this.showing || !this.queue.length) return;
+    this.showing = this.queue.shift();
+    this.text.setText(HINTS[this.showing]);
+    this.scene.tweens.add({ targets: this.parts, alpha: 1, duration: HINT_FADE_MS });
+    this.scene.time.delayedCall(HINT_FADE_MS + HINT_HOLD_MS, () => {
+      this.scene.tweens.add({
+        targets: this.parts, alpha: 0, duration: HINT_FADE_MS,
+        onComplete: () => { this.showing = null; this.pump(); },
+      });
+    });
+  }
+}
+
+// ---------- tutorial: an objectives checklist for maps that define one (the meadow test map) ----------
+// FB-0023: used to also gate movement behind a blocking "press enter to start" card; that's gone
+// (see ControlsPanel/HintBanner above and docs/GAME_FEEL.md) -- this class is just the checklist now.
 
 const TUTORIAL_STEPS = [
   { id: 'move', text: 'Walk around' },
@@ -656,29 +908,16 @@ const TUTORIAL_STEPS = [
   { id: 'talk', text: 'Talk to Tomas (E)' },
 ];
 
-const CONTROLS = [
-  ['WASD / ARROWS', 'Move'],
-  ['SHIFT', 'Run'],
-  ['E / SPACE', 'Talk, next line'],
-  ['1-5 / WHEEL', 'Choose item slot'],
-  ['M', 'Show/hide minimap'],
-  ['N / CLICK MAP', 'Full-screen map'],
-  ['H', 'Show these controls'],
-];
-
 class Tutorial {
   constructor(scene) {
     this.scene = scene;
-    this.stage = 'intro'; // intro -> steps -> done
+    // No blocking intro anymore: a map that defines one starts straight in its checklist, anything
+    // else is simply "done" (nothing to track) from the very first frame.
+    this.stage = MAPS[initialMapKey()].tutorial ? 'steps' : 'done';
     this.completed = new Set();
     this.walked = 0;
-    this.buildCard();
     this.buildChecklist();
-    for (const key of ['ENTER', 'SPACE', 'ESC']) {
-      scene.input.keyboard.on(`keydown-${key}`, (event) => {
-        if (!event.repeat) this.onKey(key);
-      });
-    }
+    if (this.stage === 'steps') this.checklist.setVisible(true);
 
     const events = scene.game.events;
     events.on('player-moved', (distance) => {
@@ -689,38 +928,6 @@ class Tutorial {
     events.on('npc-talked', (id) => id === 'tomas' && this.complete('talk'));
     GameState.inventory.on('added', () => this.complete('pickup'));
     GameState.inventory.on('selected', () => this.complete('select'));
-  }
-
-  buildCard() {
-    const { scene } = this;
-    const w = 600;
-    const h = 380;
-    const x = (GAME_WIDTH - w) / 2;
-    const y = (GAME_HEIGHT - h) / 2;
-
-    const dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
-    const panel = scene.add.graphics();
-    drawPanel(panel, x, y, w, h);
-    const parts = [
-      dim,
-      panel,
-      uiText(scene, GAME_WIDTH / 2, y + 44, 'PIXEL QUEST', 24, COLORS.highlight).setOrigin(0.5),
-      uiText(scene, GAME_WIDTH / 2, y + 86, 'Explore the BITS Dubai campus\nand meet the people there.', 8, COLORS.dim)
-        .setOrigin(0.5).setAlign('center'),
-      uiText(scene, x + 48, y + 124, 'CONTROLS', 12, COLORS.text),
-    ];
-    const controls = typeof DEV_MODE !== 'undefined' && DEV_MODE ? [...CONTROLS, ['O', 'Give feedback (dev)']] : CONTROLS;
-    controls.forEach(([key, action], i) => {
-      const rowY = y + 160 + i * 30;
-      parts.push(uiText(scene, x + 48, rowY, key, 12, COLORS.highlight));
-      parts.push(uiText(scene, x + 290, rowY, action, 12, COLORS.text));
-    });
-    this.cardPrompt = uiText(scene, GAME_WIDTH / 2, y + h - 36, '', 12, COLORS.text).setOrigin(0.5);
-    parts.push(this.cardPrompt);
-
-    this.cardParts = parts;
-    parts.forEach((part) => part.setDepth(90));
-    this.setCardOpen(true);
   }
 
   buildChecklist() {
@@ -734,34 +941,11 @@ class Tutorial {
     drawPanel(panel, x, y, w, h);
     const title = uiText(scene, x + 18, y + 20, 'TUTORIAL', 12, COLORS.highlight);
     this.stepTexts = TUTORIAL_STEPS.map((step, i) => uiText(scene, x + 18, y + 52 + i * 24, '', 8));
-    const footer = uiText(scene, x + 18, y + h - 26, 'ESC: skip   H: controls', 8, COLORS.dim);
+    const footer = uiText(scene, x + 18, y + h - 26, 'ESC: pause', 8, COLORS.dim);
 
     this.checklistParts = [panel, title, footer, ...this.stepTexts];
     this.checklist = scene.add.container(0, 0, this.checklistParts).setVisible(false);
     this.refreshChecklist();
-  }
-
-  setCardOpen(open) {
-    this.cardOpen = open;
-    this.cardParts.forEach((part) => part.setVisible(open));
-    this.cardPrompt.setText(this.stage === 'intro' ? 'PRESS ENTER TO START' : 'PRESS ENTER TO CLOSE');
-  }
-
-  toggleCard() {
-    if (this.cardOpen) this.closeCard();
-    else this.setCardOpen(true);
-  }
-
-  closeCard() {
-    this.setCardOpen(false);
-    if (this.stage !== 'intro') return;
-    // The objectives checklist belongs to maps that define a tutorial (the meadow test map).
-    if (MAPS[initialMapKey()].tutorial) {
-      this.stage = 'steps';
-      this.checklist.setVisible(true);
-    } else {
-      this.stage = 'done';
-    }
   }
 
   complete(id) {
@@ -795,15 +979,5 @@ class Tutorial {
       });
     };
     announce();
-  }
-
-  // Enter / Space / Esc close the controls card. Esc during the checklist skips the tutorial.
-  onKey(key) {
-    if (this.cardOpen) this.closeCard();
-    else if (key === 'ESC' && this.stage === 'steps') this.finish('Tutorial skipped');
-  }
-
-  update(time) {
-    if (this.cardOpen) this.cardPrompt.setAlpha(Math.floor(time / 500) % 2 ? 0.4 : 1);
   }
 }

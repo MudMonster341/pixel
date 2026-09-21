@@ -21,10 +21,13 @@ test('completing every step finishes the tutorial', async ({ page }) => {
   await expect.poll(async () => (await state(page)).toast, { timeout: 8000 }).toBe('Tutorial complete!');
 });
 
-test('Escape skips the tutorial', async ({ page }) => {
+// FB-0023: Escape used to skip the tutorial checklist directly; it now opens the pause menu instead
+// (tests/e2e/title.spec.js covers pause itself), so the checklist just keeps running in the
+// background until its own steps are completed or the map changes away from it.
+test('Escape opens the pause menu instead of skipping the tutorial', async ({ page }) => {
   await openGame(page);
   await startGame(page);
   await page.keyboard.press('Escape');
-  await expect.poll(async () => (await state(page)).tutorial.stage).toBe('done');
-  await expect.poll(async () => (await state(page)).toast, { timeout: 8000 }).toBe('Tutorial skipped');
+  await expect.poll(async () => (await state(page)).pause.visible).toBe(true);
+  expect((await state(page)).tutorial.stage).toBe('steps');
 });

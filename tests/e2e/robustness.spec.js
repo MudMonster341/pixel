@@ -50,7 +50,8 @@ test.describe('rapid key mashing does not soft-lock', () => {
   });
 
   // Every UI/interact key a bored/impatient player might hammer during a fade or cutscene: run,
-  // interact, minimap, full map, controls card and Esc. Deliberately *not* the movement keys here --
+  // interact, minimap, full map, the (retired) controls hotkey and Esc/pause. Deliberately *not* the
+  // movement keys here --
   // mashing those at a door threshold would just legitimately walk the player back and forth through
   // it, which is a test-design artifact (repeated real warps), not the soft-lock this checks for.
   // The Gate 2 cutscene test below does mash movement too, safely, because the cutscene fully pauses
@@ -73,12 +74,12 @@ test.describe('rapid key mashing does not soft-lock', () => {
     await waitForMap(page, 'house');
 
     await expect.poll(async () => (await state(page)).ready).toBe(true);
-    // Not soft-locked: any toggle key mashing left open (tutorial card, full map) is closed first,
+    // Not soft-locked: any toggle key mashing left open (pause menu, full map) is closed first,
     // exactly as a player recovering from a panic-mash would do, then ordinary movement must work.
     for (const key of ['Escape', 'Enter']) await page.keyboard.press(key);
     await expect.poll(async () => {
       const s = await state(page);
-      return !s.tutorial.cardOpen && !s.fullMapVisible && !s.dialogOpen;
+      return !s.pause.visible && !s.fullMapVisible && !s.dialogOpen;
     }).toBe(true);
     const before = await state(page);
     await holdKey(page, 's', 400);
@@ -104,6 +105,15 @@ test.describe('rapid key mashing does not soft-lock', () => {
     const after = await state(page);
     expect(after.worldActive).toBe(true);
     expect(after.cutsceneDialogOpen).toBe(false);
+
+    // Whether the mash happened to leave the pause menu open (and on which of its own pages)
+    // depends on exactly when mid-mash the cutscene ended (Escape's meaning flips once the world
+    // becomes active again and 'n' can open the full-screen map ahead of it) -- not a soft-lock
+    // either way, just recoverable state, same as the tutorial-card mash test above. This test's
+    // job is "no soft-lock", not "which exact key closes the pause menu" (title.spec.js covers
+    // that), so close it directly rather than guessing how many Escapes its current page needs.
+    await page.evaluate(() => game.scene.getScene('ui').pause.close());
+    expect((await state(page)).pause.visible).toBe(false);
 
     // And the world responds to input normally afterward.
     const before = await state(page);

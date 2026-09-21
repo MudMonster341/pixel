@@ -40,6 +40,7 @@ function snapshotState(state) {
     collected: [...state.collected],
     seenCutscenes: [...state.seenCutscenes],
     seenDialog: [...state.seenDialog],
+    seenHints: [...state.seenHints],
   };
 }
 
@@ -69,6 +70,7 @@ function applyState(state, saved) {
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
   state.seenDialog = new Set(saved.seenDialog || []);
+  state.seenHints = new Set(saved.seenHints || []);
 }
 
 function saveGame(profile = currentProfile(), state = GameState) {
@@ -120,6 +122,31 @@ function migrate(payload) {
   if (!payload || typeof payload !== 'object' || !payload.state) return null;
   if (payload.version === SAVE_VERSION) return payload;
   return null; // an older version we've never shipped, or a newer one this build predates
+}
+
+// Read-only peek at a profile's saved state, without applying it to any GameState (the title
+// screen's "Continue" needs to know a save exists, and roughly where it left off, before the
+// player has chosen to load it -- see src/scenes/title.js). Never throws; returns null for
+// anything missing, corrupt, or a version this build can't read, same as loadGame().
+function peekSave(profile = currentProfile()) {
+  let raw;
+  try {
+    raw = localStorage.getItem(saveKey(profile));
+  } catch (error) {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw);
+    const migrated = migrate(payload);
+    return migrated ? migrated.state || null : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function hasSaveFile(profile = currentProfile()) {
+  return Boolean(peekSave(profile));
 }
 
 function listProfiles() {

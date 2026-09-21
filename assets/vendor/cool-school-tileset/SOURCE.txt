@@ -1,0 +1,29 @@
+Pack:      Cool School Tileset
+Author:    NettySvit
+URL:       https://opengameart.org/content/cool-school-tileset
+License:   CC0 1.0 Universal (Creative Commons Zero / public domain dedication)
+           https://creativecommons.org/publicdomain/zero/1.0/
+           Full text bundled as LICENSE.txt in this folder (OpenGameArt's own
+           CC0 file, originally named 0_license_CC0.txt in the zip).
+Downloaded: 2026-09-20
+Downloaded by: research task for FB-0025 (asset-pack survey)
+Original zip: coolschool_tileset_48px.zip from
+  https://opengameart.org/sites/default/files/coolschool_tileset_48px.zip
+Original zip sha256: fc01a936f8794b1a43a830c4f28309941f52a336456aed577f7f93c5211368dc
+Tile size: 48x48 px, no margin -- downscales cleanly to this game's 16x16 grid
+  at exactly 1/3.
+Covers: school/office interior furniture -- teacher desk, student desks
+  (autotile strip), bookshelves, lockers (2-tall diamond-front cabinets),
+  office chairs, a whiteboard/screen, a colorful stained-glass-style window,
+  computers/laptops/monitors, books, a phone. Two source files bundled:
+  CoolSchool_tileset.png (a loose sheet, mixed layout) and
+  CoolSchool_for_MV_MZ/coolschool_B.png (RPG Maker MV/MZ "B" sheet, a clean
+  48px grid, no gaps -- easier to slice; the tiles used in this research's
+  interior mockup all come from that file). A2/A4 files in the same folder are
+  RPG Maker autotile sheets (floor/wall patterns) and need RPG Maker's autotile
+  un-scrambling logic to use directly; not used for the mockup.
+Does not cover: any floor or wall tile drawn as a simple, non-autotile 48x48
+  square -- the game would still need its own floor/wall tiles behind this
+  pack's furniture. Palette is pastel pink/purple/orange, a clear clash with
+  this game's sand/salmon/teal campus palette (see the interior mockup); every
+  piece would need recoloring per docs/STYLE_GUIDE.md before use.

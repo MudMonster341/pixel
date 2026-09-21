@@ -31,7 +31,7 @@ What creates the 3D feel (every asset must respect these):
 | Thing | Size | Notes |
 |---|---|---|
 | Map tile | 16×16 | Everything aligns to it |
-| Character | 16×16 | Owner decision 2026-09-13: keep for now. 16×24 is an option later for more expressive faces |
+| Character | 16×24 | [ADR 0013](../decisions/0013-characters-are-16x24-from-the-pack.md), 2026-09-21: moved from 16×16 (the 2026-09-13 decision noted this as an option later) so the vendor pack's characters (below) don't need their hair cropped. `CHAR_HEIGHT` in `src/state.js`. |
 | Item icon | 16×16 | Shown at 3× in the UI |
 | Building | multiples of 16 | Roof overhangs the walls by one tile-row |
 | World camera | zoom 3 | 320×180 world pixels visible |
@@ -68,15 +68,38 @@ per sprite. If a new color is really needed, add it to the palette and to this t
 
 ## Characters
 
-- Sheet layout: one row per direction, **down, up, left** (right = mirrored left). Columns are
-  animation frames.
-- Walk cycle: 4 frames at 8 fps (currently 3 poses).
-- Big readable head (about 40% of height), 2px-wide eyes, a distinct hair/clothing color per NPC
-  so each is recognisable on the minimap and in a crowd.
-- **The player is the female lead** (owner decision 2026-09-13): black shoulder-length hair, fair
-  skin, a hot pink top and a lighter pink skirt. Built in `tools/make-assets.js` (`LEAD_COLORS`,
-  `LEAD_HAIR`). No other character wears the same pink.
-- NPCs get an idle animation (blink or bob) so they don't look frozen.
+Rewritten 2026-09-21 ([ADR 0013](../decisions/0013-characters-are-16x24-from-the-pack.md), FB-0025):
+the player and the campus NPCs are now recolored crops of LimeZu's Modern Interiors Free character
+pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per ADR 0012), built by
+`tools/make-assets.js`'s "characters" section, never a hand-edited PNG.
+
+- **Frame:** 16×24 (was 16×16). Sheet layout: one row per direction, **down, up, left** (right =
+  mirrored left, unchanged convention). Columns: **idle, 6 walk frames, 1 idle-anim frame** (8 total
+  per row) -- `CHAR_COLS` in both `tools/make-assets.js` and `src/scenes/world.js`.
+- **Walk cycle:** 6 real motion frames at 12fps, taken directly from the vendor pack's own run sheet
+  (leg stride and arm swing, not a hand-drawn 3-pose bounce).
+- **Idle animation:** alternates the static idle frame with one frame from the pack's `idle_anim`
+  sheet, 2fps, so the player blinks/breathes instead of freezing on a single frame -- the "gentle
+  life" rule below, now actually implemented for the player.
+- Big readable head, a distinct hair/clothing color per character so each is recognisable on the
+  minimap and in a crowd (the whole reason each NPC below got its own recolor, not a shared one).
+- **The player is the female lead** (owner decision 2026-09-13, palette unchanged): a recolored
+  Amelia -- black hair `#2a1c14`, fair skin `#f4c9a0`/`#d49a6a`, a hot pink top `#ff6fb1`/`#d94b8f`
+  and a lighter pink skirt `#ff7eb6`. Built in `tools/make-assets.js` (`AMELIA_RECOLOR`,
+  `buildCharacter`). No other character wears the same pink.
+- **Campus NPCs** (new, FB-0025): recolors of the pack's other three named characters, same frame
+  layout as the player, selected per-NPC by a `character` field in the NPC's map data
+  (`src/maps.js`, resolved to a texture in `src/scenes/world.js` `createNpcs()`):
+  - **LUG volunteer** (Adam): teal polo (`#2f9e8f`/`#4fc2ae`), his own hair/skin untouched.
+  - **Background student A** (Alex): plain blue shirt (reuses `PALETTE.B`), his own hair/vest untouched.
+  - **Background student B** (Bob): mustard/gold blazer (this file's own Accent gold ramp, below),
+    his own hair/skin untouched.
+  - Demonstrated today as fixtures on the meadow test map (plain placeholder chat); real campus
+    placement is a follow-up task.
+- **Tomas** (the meadow/house test-map NPC) keeps his original hand-drawn art, unchanged --
+  ADR 0013 scoped this pass to the lead and the campus NPCs. His sprite is just bottom-aligned into
+  the new 16×24 canvas so every character shares one frame size.
+- NPCs get an idle animation (blink or bob) so they don't look frozen -- see above.
 
 ## Speech bubbles and interaction
 

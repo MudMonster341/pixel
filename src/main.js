@@ -31,10 +31,17 @@ class BootScene extends Phaser.Scene {
     });
 
     const sheet = { frameWidth: TILE, frameHeight: TILE };
+    // Characters are taller than a tile (ADR 0013): 16 wide, CHAR_HEIGHT tall.
+    const charSheet = { frameWidth: TILE, frameHeight: CHAR_HEIGHT };
     this.load.image('tiles', 'assets/tiles.png');
     this.load.json('tileinfo', 'assets/tiles.json');
-    this.load.spritesheet('player', 'assets/player.png', sheet);
-    this.load.spritesheet('npc', 'assets/npc.png', sheet);
+    this.load.spritesheet('player', 'assets/player.png', charSheet);
+    this.load.spritesheet('npc', 'assets/npc.png', charSheet);
+    // Campus NPCs (FB-0025): recolored pack characters, same sheet layout as the player, used by
+    // NPC defs with a `character` field (src/maps.js, src/scenes/world.js createNpcs()).
+    this.load.spritesheet('npc-volunteer', 'assets/npc-volunteer.png', charSheet);
+    this.load.spritesheet('npc-student-a', 'assets/npc-student-a.png', charSheet);
+    this.load.spritesheet('npc-student-b', 'assets/npc-student-b.png', charSheet);
     this.load.spritesheet('items', 'assets/items.png', sheet);
     // 2 frames: 0 = "E" (talk), 1 = "!" (something new to say, see src/dialog.js hasNewDialog()).
     this.load.spritesheet('prompt', 'assets/prompt.png', sheet);

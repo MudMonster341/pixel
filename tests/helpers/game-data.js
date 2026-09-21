@@ -69,6 +69,7 @@ function loadGameData() {
     STRUCTURES: get('STRUCTURES'),
     START_MAP: get('START_MAP'),
     TILE: get('TILE'),
+    CHAR_HEIGHT: get('CHAR_HEIGHT'),
     CUTSCENES: get('CUTSCENES'),
     Inventory: get('Inventory'),
     GameState: get('GameState'),

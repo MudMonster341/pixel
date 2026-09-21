@@ -57,6 +57,8 @@ Research only -- none of these are wired into the game yet (`src/` and `tools/` 
   CC BY 4.0. 300+ 16x16/32x32/48x48 item icons with outlines already drawn; includes several key
   designs and closed/open treasure-chest icons, a strong content match for the 3-key/reward-box
   treasure hunt in docs/STORY.md. Not wired in yet.
-- **LimeZu Modern Interiors Free's characters** (already in `assets/vendor/limezu-modern-interiors-free/`,
-  same licence as above) were surveyed as the female-lead candidate: see
-  docs/research/asset-packs.md's 2026-09-21 addendum for the recolor mockup and verdict.
+- **LimeZu Modern Interiors Free's characters** (`assets/vendor/limezu-modern-interiors-free/`, same
+  licence as above): **wired in** ([decisions/0013-characters-are-16x24-from-the-pack.md](decisions/0013-characters-are-16x24-from-the-pack.md),
+  FB-0025) -- recolored crops of Amelia (the lead), Adam (the LUG volunteer), Alex and Bob
+  (background students), built by `tools/make-assets.js`. The original survey/mockup that led to
+  this is still at docs/research/asset-packs.md's 2026-09-21 addendum.

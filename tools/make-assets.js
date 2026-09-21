@@ -2,14 +2,21 @@
 // Run:  node tools/make-assets.js
 // Output (in assets/):
 //   tiles.png + tiles.json  every map tile (8 per row), with name, solid flag and minimap color
-//   player.png              3x3 frames: down / up / left, each [idle, step1, step2]
-//   npc.png                 3 frames: down / up / left
+//   player.png              the lead, recolored from a vendor pack (ADR 0013): 3 rows (down/up/
+//                           left, right = mirrored left) x 8 cols (idle, 6 walk frames, idle-anim),
+//                           each frame 16x24
+//   npc.png                 Tomas (hand-drawn, unchanged): 3 frames (down/up/left), 16x24
+//   npc-volunteer.png, npc-student-a.png, npc-student-b.png
+//                           campus NPCs, recolored from the same vendor pack, same 16x24/8-col
+//                           layout as player.png (ADR 0013, FB-0025)
 //   items.png               item icons, in the order of src/items.js
 //   held-items.png          tiny 8x8 versions shown in the character's hand, same order/frames
 //   prompt.png              interaction bubble, 2 frames: "E" (talk) and "!" (something new to say)
 //
-// Hand-drawn sprites are text: one character = one pixel, "." = transparent.
-// Change a character, re-run the script, refresh the browser.
+// Most sprites are still hand-drawn as text: one character = one pixel, "." = transparent. The
+// player and campus NPCs are the exception (ADR 0013): recolored crops of a vendor pack, blitted and
+// recolored by the "characters" section below instead of drawn pixel-by-pixel -- edit the recolor
+// tables there, not a PNG.
 
 const fs = require('fs');
 const path = require('path');
@@ -1479,7 +1486,145 @@ function intMachine(img, x, y) {
   img.box(x + 6, y + 7, 4, 4, 'o');
 }
 
-// ---------- player (facing down / up / left; right = mirrored left) ----------
+// ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------
+// The player and the new campus NPCs are recolors of LimeZu's free "Characters_free" pack
+// (assets/vendor/limezu-modern-interiors-free/, free-tier licence: non-commercial use and *edits*
+// allowed -- decisions/0012, docs/research/asset-packs.md's 2026-09-21 addendum). Tomas (the
+// meadow/house test-map NPC, see below) is unchanged hand-drawn art -- FB-0025 and this pass only
+// covers the lead and the campus-population NPCs the owner asked for.
+//
+// Each named character (Amelia/Adam/Alex/Bob) ships three 16-wide sheets, decoded and measured
+// directly rather than trusted from the file names (see MEMORY.md for the method):
+//   - `<name>_idle_16x16.png`: 64x32, four 16x32 frames, one static pose per direction.
+//   - `<name>_run_16x16.png` / `<name>_idle_anim_16x16.png`: 384x32, 24 columns = four 6-frame
+//     blocks (one block per direction), with genuine per-frame motion (verified by diffing columns).
+// In both layouts, the four directions sit in the same order: column/block 0 is a side profile,
+// 1 is up (back of the head, no face), 2 is the *other* side profile (a mirror of 0 -- unused here,
+// since docs/STYLE_GUIDE.md already mirrors "left" for "right"), 3 is down (facing the camera).
+// Every frame's actual figure occupies only the bottom ~22-24 rows of the 32-tall canvas (rows
+// 8-31) -- confirmed with a bounding-box scan, not assumed -- so building a 16x24 frame (ADR 0013)
+// means cropping that bottom 24px band, not the whole 32px canvas.
+const CHAR_LIB = 'limezu-modern-interiors-free/Modern tiles_Free/Characters_free';
+const CHAR_W = TILE; // 16
+const CHAR_H = 24; // ADR 0013: characters are 16x24 now, was 16x16
+const CHAR_WALK_FRAMES = 6; // one full stride cycle, taken straight from the pack's run sheet
+const CHAR_IDLE_ANIM_FRAME = 3; // mid-block idle_anim frame -- reads as the clearest blink/breathe pose
+const CHAR_ROWS = ['down', 'up', 'left']; // sheet row order (docs/STYLE_GUIDE.md "Characters")
+// Column in idle_16x16 *and* block index (of 6) in run/idle_anim -- both sheets share the same
+// four-direction order, so one table serves both lookups.
+const CHAR_DIR_INDEX = { left: 0, up: 1, down: 3 };
+
+function charSheet(name, suffix) {
+  return loadAtlas(path.join(CHAR_LIB, `${name}_${suffix}_16x16.png`));
+}
+
+// Crops the bottom CHAR_H rows of a 16x32 source frame at (sx, 0) into `img` at (dx, dy), recoloring
+// as it's copied (see the *_RECOLOR tables below).
+function blitCharFrame(img, dx, dy, atlas, sx, remap) {
+  blitAtlas(img, dx, dy, atlas, sx, 32 - CHAR_H, CHAR_W, CHAR_H, { remap });
+}
+
+// One character's full sheet: 3 rows (down/up/left; right is flipX-mirrored left everywhere this
+// game draws a character) x (1 idle frame, CHAR_WALK_FRAMES walk frames, 1 idle-anim frame) --
+// CHAR_COLS wide. `recolorMap` is an exact-RGB swap table (see AMELIA_RECOLOR etc.), built by
+// decoding the source PNGs and sampling every distinct color they actually use -- the method
+// docs/research/asset-packs.md's character addendum already proved out. Anything not in the map
+// passes through unchanged, so a character can keep its own hair/skin and only have its clothes
+// recolored (see the NPCs below).
+function buildCharacter(name, recolorMap) {
+  const idle = charSheet(name, 'idle');
+  const run = charSheet(name, 'run');
+  const idleAnim = charSheet(name, 'idle_anim');
+  const remap = remapExact(recolorMap);
+  const img = new Img(CHAR_COLS * CHAR_W, CHAR_ROWS.length * CHAR_H);
+  CHAR_ROWS.forEach((dir, row) => {
+    const y = row * CHAR_H;
+    const dirIndex = CHAR_DIR_INDEX[dir];
+    blitCharFrame(img, 0, y, idle, dirIndex * CHAR_W, remap);
+    const block = dirIndex * CHAR_WALK_FRAMES;
+    for (let f = 0; f < CHAR_WALK_FRAMES; f++) {
+      blitCharFrame(img, (1 + f) * CHAR_W, y, run, (block + f) * CHAR_W, remap);
+    }
+    blitCharFrame(img, (1 + CHAR_WALK_FRAMES) * CHAR_W, y, idleAnim, (block + CHAR_IDLE_ANIM_FRAME) * CHAR_W, remap);
+  });
+  return img;
+}
+const CHAR_COLS = 2 + CHAR_WALK_FRAMES; // idle, CHAR_WALK_FRAMES walk frames, 1 idle-anim frame
+
+// Exact-RGB recolor (as opposed to remapShaded's luminance bucketing above): looks up each sampled
+// pixel's hex in `map` and swaps it verbatim, leaving anything not listed untouched. Right for
+// character art because LimeZu's soft-shaded sprites use a small, consistent set of exact colors per
+// character (~18-23 total per character, decoded and counted -- see MEMORY.md) rather than the wide
+// anti-aliased gradients a luminance bucket would be needed for.
+function remapExact(map) {
+  const table = new Map(Object.entries(map).map(([src, dst]) => [src, hexToRgb(dst)]));
+  return (r, g, b, a) => {
+    const key = `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    const rgb = table.get(key);
+    return rgb ? [rgb[0], rgb[1], rgb[2], a] : [r, g, b, a];
+  };
+}
+
+// The lead (Amelia): every color the pack's idle/run/idle_anim sheets use for her (21 total,
+// decoded and counted), bucketed by eye into hair/skin/top/pants/outline and mapped onto the owner's
+// brief -- black hair, fair skin, hot pink top, light pink skirt (docs/STYLE_GUIDE.md "Characters")
+// -- reusing the exact hex already in PALETTE (q/S/s/M/c/P) so the lead matches wherever else those
+// colors appear.
+const HAIR_HI = '#4a3527'; // a lift on PALETTE.q for a hint of sheen -- still reads as black hair
+const AMELIA_RECOLOR = {
+  '#ba8d5e': HAIR_HI, // hair highlight
+  '#957350': PALETTE.q, // hair base
+  '#8d7051': PALETTE.q, // hair base (secondary tone)
+  '#8a6552': PALETTE.q, // hair shadow
+  '#bf8b78': PALETTE.S, // skin highlight
+  '#a77a67': PALETTE.s, // skin mid
+  '#b57972': PALETTE.s, // cheek blush
+  '#aa5e56': PALETTE.s, // cheek blush (shadow)
+  '#b58472': PALETTE.s, // skin (rare blend)
+  '#b2736d': PALETTE.s, // skin (rare blend)
+  '#a85377': PALETTE.c, // top base/shadow
+  '#b95d72': PALETTE.M, // top highlight / center stripe
+  '#c78c59': PALETTE.P, // skirt base
+  '#b35e3f': PALETTE.P, // skirt shadow
+  '#674d49': PALETTE.K, // eyes + warm outline near hair
+  '#ab4a36': PALETTE.K, // shoes
+  '#3a3a50': PALETTE.K, // outline
+  '#46465e': PALETTE.K, // outline
+  '#565972': PALETTE.K, // outline
+  '#6c5981': PALETTE.K, // outline (rare blend)
+  '#787d93': PALETTE.K, // outline (rare blend)
+};
+
+// LUG volunteer (Adam, otherwise unrecolored -- his own olive hair and skin already look nothing
+// like the lead): a teal polo, a small nod to the club without inventing a mascot.
+const LUG_TEAL = '#2f9e8f';
+const LUG_TEAL_HI = '#4fc2ae';
+const ADAM_RECOLOR = { '#805e8e': LUG_TEAL, '#9f74a8': LUG_TEAL_HI };
+
+// Background student A (Alex): the red plaid shirt becomes plain blue (reusing PALETTE.B, the
+// existing pants blue) so he doesn't read as a smaller copy of the volunteer or the lead. His own
+// brown hair and grey vest are untouched.
+const STUDENT_A_RECOLOR = {
+  '#5a444a': '#28408f', // shirt shadow
+  '#6f494d': '#28408f', // shirt shadow (secondary tone)
+  '#a2394b': PALETTE.B, // shirt base
+  '#ae4a52': '#5f86e6', // shirt highlight
+};
+
+// Background student B (Bob): the near-black blazer becomes mustard/gold (STYLE_GUIDE's existing
+// Accent gold ramp) instead of the dark tone the pack ships -- his hair is already dark, and a
+// second black-haired, dark-shirted NPC standing next to the lead would read as reused art.
+const STUDENT_B_RECOLOR = {
+  '#5d585f': '#a8812a', // blazer shadow (Accent gold "deep")
+  '#555157': '#a8812a', // blazer shadow (secondary tone)
+  '#716b6e': '#e0b84f', // blazer base (Accent gold "shadow", used here as the base tone)
+  '#6c6e85': '#ffd23f', // collar/shirt highlight (Accent gold "base")
+};
+
+// ---------- Tomas + old player art (hand-drawn, DOWN_TOP/UP_TOP/SIDE_TOP/legs below): Tomas keeps
+// this unchanged art (see the big comment above -- FB-0025 only covers the lead and the new campus
+// NPCs), just bottom-aligned into the new 16x24 canvas like every other character (ADR 0013). The
+// player no longer uses this art -- see AMELIA_RECOLOR/buildCharacter above. ----------
 
 const DOWN_TOP = [
   '................',
@@ -1536,32 +1681,26 @@ const SIDE_LEGS = {
   step2: ['.....KBKKBK.....', '......KKKK......'],
 };
 
-// Sheet layout (frame index = row * 3 + column):
-//   row 0: down  [idle, step1, step2]
-//   row 1: up    [idle, step1, step2]
-//   row 2: left  [idle, step1, step2]
-const PLAYER_ROWS = [
-  [DOWN_TOP, FRONT_LEGS],
-  [UP_TOP, FRONT_LEGS],
-  [SIDE_TOP, SIDE_LEGS],
-];
-
 // ---------- npc: Tomas, an old villager (player body, recolored, with a beard) ----------
 
 const recolor = (rows, map) => rows.map((row) => [...row].map((ch) => map[ch] || ch).join(''));
 const replaceRows = (rows, replacements) => rows.map((row, i) => replacements[i] || row);
 const TOMAS_COLORS = { H: 'A', R: 'J', r: 'h', B: 'a' };
+// This hand-drawn art is still a flat 16 tall; pad it to CHAR_H with transparent rows on *top* so it
+// sits bottom-aligned in the frame, exactly like the pack characters' own 16x24 crop (ADR 0013) --
+// Tomas's feet land on the same row of the frame as everyone else's.
+const growToCharHeight = (rows) => Array(CHAR_H - rows.length).fill('.'.repeat(CHAR_W)).concat(rows);
 
 const NPC_FRAMES = [
-  replaceRows(recolor([...DOWN_TOP, ...FRONT_LEGS.idle], TOMAS_COLORS), {
+  growToCharHeight(replaceRows(recolor([...DOWN_TOP, ...FRONT_LEGS.idle], TOMAS_COLORS), {
     7: '...KSAAAAAASK...',
     8: '....KAAAAAAK....',
-  }),
-  recolor([...UP_TOP, ...FRONT_LEGS.idle], TOMAS_COLORS),
-  replaceRows(recolor([...SIDE_TOP, ...SIDE_LEGS.idle], TOMAS_COLORS), {
+  })),
+  growToCharHeight(recolor([...UP_TOP, ...FRONT_LEGS.idle], TOMAS_COLORS)),
+  growToCharHeight(replaceRows(recolor([...SIDE_TOP, ...SIDE_LEGS.idle], TOMAS_COLORS), {
     7: '..KSAAAAAAAK....',
     8: '...KAAAAAAK.....',
-  }),
+  })),
 ];
 
 // ---------- items (same order as the `frame` numbers in src/items.js) ----------
@@ -1868,25 +2007,23 @@ fs.writeFileSync(
   JSON.stringify({ tileSize: TILE, columns: TILESET_COLUMNS, tiles: tileInfo }, null, 2) + '\n',
 );
 
-// The player is the female lead: black shoulder-length hair, pink top, lighter pink skirt.
-const LEAD_COLORS = { H: 'q', R: 'M', r: 'c', B: 'P' };
-const LEAD_HAIR = [
-  { 7: '...KHSSSSSSHK...', 8: '...KHKSSSSKHK...' }, // down: hair falls beside the face
-  { 8: '...KHHHHHHHHK...', 9: '...KHRRRRRRHK...' }, // up: hair down the back
-  { 8: '...KSSSSHHHK....', 9: '....KRRRRHHK....' }, // left: hair behind the shoulder
-];
-const player = new Img(3 * TILE, 3 * TILE);
-PLAYER_ROWS.forEach(([top, legs], row) => {
-  const leadTop = recolor(replaceRows(top, LEAD_HAIR[row]), LEAD_COLORS);
-  ['idle', 'step1', 'step2'].forEach((pose, col) => {
-    const frame = sprite(`player row ${row} ${pose}`, [...leadTop, ...recolor(legs[pose], LEAD_COLORS)]);
-    player.draw(frame, col * TILE, row * TILE);
-  });
-});
-write('player.png', player);
+// The player is the female lead: a recolored LimeZu Amelia (ADR 0013, FB-0025) -- black
+// shoulder-length hair, fair skin, pink top, lighter pink skirt, 16x24, idle + 6-frame walk + an
+// idle-anim blink/breathe frame per direction. See AMELIA_RECOLOR/buildCharacter above.
+write('player.png', buildCharacter('Amelia', AMELIA_RECOLOR));
 
-const npc = new Img(NPC_FRAMES.length * TILE, TILE);
-NPC_FRAMES.forEach((frame, i) => npc.draw(sprite(`npc frame ${i}`, frame), i * TILE, 0));
+// Campus NPCs (FB-0025): recolors of the pack's other three named characters, same 16x24/
+// idle+walk+idle-anim layout as the player, so they're ready for the campus to be populated with
+// them later (docs/research/asset-packs.md). Placed today only as fixtures on the meadow test map
+// (src/maps.js) to prove the pipeline end to end; real campus placement is a follow-up task.
+write('npc-volunteer.png', buildCharacter('Adam', ADAM_RECOLOR)); // the LUG volunteer
+write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
+write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
+
+// Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
+// 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.
+const npc = new Img(NPC_FRAMES.length * CHAR_W, CHAR_H);
+NPC_FRAMES.forEach((frame, i) => npc.draw(sprite(`npc frame ${i}`, frame, CHAR_W, CHAR_H), i * CHAR_W, 0));
 write('npc.png', npc);
 
 const items = new Img(ITEM_ICONS.length * TILE, TILE);

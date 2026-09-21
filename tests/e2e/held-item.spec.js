@@ -54,3 +54,27 @@ test('FB-0002: the held item follows the player while walking in all 4 direction
     await page.keyboard.up(key);
   }
 });
+
+// FB-0025 (ADR 0013): the frame grew from 16x16 to 16x24, which moved the sprite's origin and made
+// every HELD_OFFSET number change (see src/scenes/world.js's comment on HELD_OFFSET). This checks
+// the *exact* constant the game actually uses, in all 4 directions, rather than the loose "somewhere
+// near the player" bound above -- a wrong offset for one direction would still pass that bound.
+test('FB-0025: the held item sits at the hand position for the new 16x24 frame, in all 4 directions', async ({ page }) => {
+  await page.evaluate(() => GameState.inventory.add('sword'));
+  await page.keyboard.press('1');
+  await pollVisible(page, true);
+
+  for (const [key, facing] of [['d', 'right'], ['a', 'left'], ['w', 'up'], ['s', 'down']]) {
+    await page.keyboard.down(key);
+    await expect.poll(() => page.evaluate(() => game.scene.getScene('world').facing)).toBe(facing);
+    const held = await heldItem(page);
+    const expected = await page.evaluate((f) => HELD_OFFSET[f], facing);
+    // updateHeldItem() computes the held sprite's position from the player's position as of the
+    // *previous* physics step (it runs before that frame's physics integration), so while moving it
+    // trails the player by up to one frame's worth of travel (~1.3px at walk speed) on top of its
+    // own 1px walking bob on y -- a small, expected lag, not a wrong offset.
+    expect(Math.abs(held.x - held.playerX - expected.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(held.y - held.playerY - expected.y)).toBeLessThanOrEqual(2);
+    await page.keyboard.up(key);
+  }
+});

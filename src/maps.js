@@ -111,6 +111,34 @@ const MAPS = {
           },
         ],
       }],
+    }, {
+      // FB-0025/ADR 0013: fixtures proving the new recolored-pack NPC pipeline end to end (the
+      // `character` field picks a texture -- see world.js createNpcs()), the same way Guide above is
+      // an engine fixture rather than story content. Real campus placement is a follow-up task; for
+      // now these three just need somewhere walkable to stand and something to say.
+      id: 'lug-volunteer-demo',
+      name: 'LUG Volunteer',
+      character: 'volunteer',
+      x: 6,
+      y: 5,
+      facing: 'down',
+      dialog: [{ id: 'chat', lines: ["Looking for the LUG treasure hunt? It kicks off on campus."] }],
+    }, {
+      id: 'campus-student-a-demo',
+      name: 'Student',
+      character: 'student-a',
+      x: 30,
+      y: 9,
+      facing: 'down',
+      dialog: [{ id: 'chat', lines: ["Ugh, I still haven't finished my assignment."] }],
+    }, {
+      id: 'campus-student-b-demo',
+      name: 'Student',
+      character: 'student-b',
+      x: 10,
+      y: 27,
+      facing: 'down',
+      dialog: [{ id: 'chat', lines: ['Nice weather for a walk, isn\'t it?'] }],
     }],
   },
 

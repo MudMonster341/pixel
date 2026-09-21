@@ -110,7 +110,9 @@ SECRET DOOR
 - 🔲 Secret door sequence: camera pans to the door, shake, door-opening animation, new path
 
 ### Look and feel (style guide)
-- 🔲 4-frame walks and idle animation (characters stay 16×16)
+- ✅ Real walk cycles and idle animation for the player, recolored from a vendor pack; characters
+  moved to 16×24 to fit it ([decisions/0013-characters-are-16x24-from-the-pack.md](../decisions/0013-characters-are-16x24-from-the-pack.md),
+  FB-0025). NPCs have the same sheets ready but don't walk yet (no patrol AI).
 - 🔲 Drop shadows under characters, items and props
 - 🔲 Overhead layer: walk behind treetops and roof edges
 - 🔲 Animated tiles (water, flowers), tall grass that rustles

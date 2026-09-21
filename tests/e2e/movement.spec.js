@@ -39,6 +39,18 @@ test('water blocks the player', async ({ page }) => {
   expect((await state(page)).y).toBeLessThan(19 * 16);
 });
 
+test('FB-0025: the lead\'s physics body still only covers her feet on the taller 16x24 frame', async ({ page }) => {
+  const body = await page.evaluate(() => {
+    const { player } = game.scene.getScene('world');
+    return { width: player.body.width, height: player.body.height, offsetY: player.body.offset.y, frameHeight: player.height };
+  });
+  expect(body.frameHeight).toBe(24);
+  // A small box (feet only), sitting in the lower part of the 24-tall frame -- the head and torso
+  // above it don't collide (docs/STYLE_GUIDE.md, "only the feet collide" in world.js createPlayer()).
+  expect(body.height).toBeLessThanOrEqual(8);
+  expect(body.offsetY).toBeGreaterThan(body.frameHeight / 2);
+});
+
 test('moving diagonally is not faster than straight', async ({ page }) => {
   await page.keyboard.down('d');
   await page.keyboard.down('s');

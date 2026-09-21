@@ -10,20 +10,29 @@ const OVERHEAD_DEPTH = 1_000_000;
 const INTERACT_RANGE = 24;
 const PICKUP_RANGE = 10;
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
-const PLAYER_IDLE = { down: 0, up: 3, left: 6, right: 6 };
+// Frame layout (ADR 0013): 3 rows (down/up/left; right = mirrored left) x 8 columns (idle, 6 walk
+// frames, 1 idle-anim frame) -- see tools/make-assets.js CHAR_COLS/buildCharacter. Frame index =
+// row * 8 + column, so each direction's idle frame is a multiple of 8.
+const CHAR_COLS = 8;
+const PLAYER_IDLE = { down: 0, up: CHAR_COLS, left: 2 * CHAR_COLS, right: 2 * CHAR_COLS };
+// Legacy 3-frame sheet (Tomas/Guide's 'npc' texture, unchanged hand-drawn art, no walk cycle): one
+// static idle frame per direction, same numbering it always had.
 const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
 // A door/stairs object's `facing` property is the direction the player faces once they arrive AT
 // that object (see docs/INTERIORS_PLAN.md "door object format"). Spawning one tile further along
 // that direction lands the player just past the threshold, not standing on the trigger tile itself.
 const DIRECTION_OFFSET = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-// Where the held item sits relative to the player's center, per facing (FB-0002).
+// Where the held item sits relative to the player's center, per facing (FB-0002). Y values carry a
+// +4 shift from their old 16x16-frame numbers (ADR 0013): the sprite's origin moved from (8,8) to
+// (8,12) when the frame grew to 16x24, and the art itself just got taller underneath it, so a point
+// at the same *visual* spot on the body sits 4px further from the new, lower-down center.
 // `front: true` draws it over the player; `front: false` draws it behind (partly hidden).
 const HELD_OFFSET = {
-  down: { x: 5, y: 3, front: true },
-  up: { x: 6, y: -2, front: false },
-  left: { x: -5, y: 2, front: true },
-  right: { x: 5, y: 2, front: true },
+  down: { x: 5, y: 7, front: true },
+  up: { x: 6, y: 2, front: false },
+  left: { x: -5, y: 6, front: true },
+  right: { x: 5, y: 6, front: true },
 };
 
 class WorldScene extends Phaser.Scene {
@@ -118,18 +127,37 @@ class WorldScene extends Phaser.Scene {
   }
 
   createAnimations() {
-    const walks = { down: [1, 0, 2, 0], up: [4, 3, 5, 3], side: [7, 6, 8, 6] };
+    // Walk cycle (ADR 0013): 6 real motion frames straight from the vendor pack's run sheet, not
+    // the old 3-pose idle/step1/step2/idle bounce -- columns 1-6 of each row (column 0 is the
+    // static idle pose, column 7 the idle-anim pose, see tools/make-assets.js CHAR_COLS).
+    const walks = { down: [1, 2, 3, 4, 5, 6], up: [9, 10, 11, 12, 13, 14], side: [17, 18, 19, 20, 21, 22] };
     for (const [dir, frames] of Object.entries(walks)) {
       if (this.anims.exists(`walk-${dir}`)) continue;
-      this.anims.create({ key: `walk-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 8, repeat: -1 });
+      this.anims.create({ key: `walk-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 12, repeat: -1 });
+    }
+    // Idle animation (ADR 0013, the pack's idle_anim sheet): a slow alternation between the static
+    // idle pose and its idle-anim variant -- STYLE_GUIDE's "gentle life" rule (blink/bob when idle).
+    const idles = { down: [0, 7], up: [8, 15], side: [16, 23] };
+    for (const [dir, frames] of Object.entries(idles)) {
+      if (this.anims.exists(`idle-${dir}`)) continue;
+      this.anims.create({ key: `idle-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 2, yoyo: true, repeat: -1 });
     }
   }
 
   createPlayer() {
     this.facing = this.spawn.facing || 'down';
     this.player = this.physics.add.sprite(toPixel(this.spawn.x), toPixel(this.spawn.y), 'player', PLAYER_IDLE[this.facing]);
-    // Only the feet collide, so the head can overlap things a little (feels nicer).
-    this.player.body.setSize(10, 6).setOffset(3, 10);
+    // Only the feet collide, so the head can overlap things a little (feels nicer). ADR 0013: the
+    // body's bottom edge stays at (origin + 8) regardless of frame height -- that's what every
+    // spawn point, door and warp trigger in every map was authored against (they place the sprite's
+    // *origin* at a tile center via toPixel(), and expect the feet to land on that tile's bottom
+    // edge, exactly 8px below). The frame grew from 16 to 24 tall, which moved the origin from the
+    // middle of a 16px frame to the middle of a 24px one -- offsetY has to grow to compensate
+    // (8 + newHalf - height = 8 + 12 - 6 = 14) or the feet end up 4px further down the map than the
+    // spawn point intended, which is enough to land inside the next tile row (this broke the house
+    // door: arriving at its spawn point re-triggered the exit warp immediately -- caught by
+    // tests/e2e/house.spec.js, not by eye).
+    this.player.body.setSize(10, 6).setOffset(3, 14);
     this.player.setCollideWorldBounds(true).setFlipX(this.facing === 'right');
     this.physics.add.collider(this.player, this.solidLayers);
     this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
@@ -139,10 +167,21 @@ class WorldScene extends Phaser.Scene {
 
   createNpcs() {
     this.npcs = (this.def.npcs || []).map((def) => {
-      const npc = this.physics.add.sprite(toPixel(def.x), toPixel(def.y), 'npc', NPC_FRAME[def.facing || 'down']);
-      npc.body.setSize(12, 8).setOffset(2, 8).setImmovable(true);
+      // `character` (FB-0025, ADR 0013) picks one of the recolored pack NPCs (texture
+      // 'npc-<character>', same 8-column layout as the player); no `character` keeps the legacy
+      // 'npc' texture (Tomas/Guide's unchanged hand-drawn art, 3 static frames, no walk cycle).
+      const textureKey = def.character ? `npc-${def.character}` : 'npc';
+      const idleFrames = def.character ? PLAYER_IDLE : NPC_FRAME;
+      const npc = this.physics.add.sprite(toPixel(def.x), toPixel(def.y), textureKey, idleFrames[def.facing || 'down']);
+      // Same feet-only body as the player for the new-style sheets, and the same (origin + 8)
+      // bottom-edge invariant (see createPlayer's comment) for the legacy sheet, just recomputed for
+      // its own body height: 8 + 12 - 8 = 12.
+      if (def.character) npc.body.setSize(10, 6).setOffset(3, 14);
+      else npc.body.setSize(12, 8).setOffset(2, 12);
+      npc.setImmovable(true);
       npc.setDepth(npc.y);
       npc.def = def;
+      npc.idleFrames = idleFrames;
       this.physics.add.collider(this.player, npc);
       return npc;
     });
@@ -229,8 +268,10 @@ class WorldScene extends Phaser.Scene {
 
     const moving = dx !== 0 || dy !== 0;
     if (!moving) {
-      p.anims.stop();
-      p.setFrame(PLAYER_IDLE[this.facing]);
+      // Idle animation (ADR 0013), not a hard stop-on-a-frame: a slow blink/bob, STYLE_GUIDE's
+      // "gentle life" rule for a character that's just standing there.
+      const idleDir = this.facing === 'left' || this.facing === 'right' ? 'side' : this.facing;
+      p.anims.play(`idle-${idleDir}`, true);
     } else if (dx !== 0) {
       this.facing = dx < 0 ? 'left' : 'right';
       p.setFlipX(dx > 0); // side art faces left; mirror it for right
@@ -318,8 +359,8 @@ class WorldScene extends Phaser.Scene {
     // Turn the NPC to face the player.
     const dx = this.player.x - npc.x;
     const dy = this.player.y - npc.y;
-    if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(NPC_FRAME.left).setFlipX(dx > 0);
-    else npc.setFrame(dy < 0 ? NPC_FRAME.up : NPC_FRAME.down).setFlipX(false);
+    if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(npc.idleFrames.left).setFlipX(dx > 0);
+    else npc.setFrame(dy < 0 ? npc.idleFrames.up : npc.idleFrames.down).setFlipX(false);
 
     const picked = pickDialogEntry(npc.def, GameState);
     if (!picked) return; // no dialog data at all -- shouldn't happen for a real NPC

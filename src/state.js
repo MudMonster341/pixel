@@ -1,6 +1,10 @@
 // Shared constants, plus the game state that survives moving between maps.
 
 const TILE = 16;
+// Characters (player + NPCs) are 16 wide x CHAR_HEIGHT tall (ADR 0013) -- taller than a map tile
+// because the vendor character pack's figures need more vertical room than this game's tiles do.
+// Tiles themselves stay TILE x TILE.
+const CHAR_HEIGHT = 24;
 const ZOOM = 3; // world pixels are drawn 3x; the UI draws at full resolution for crisp text
 const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;

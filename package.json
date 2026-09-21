@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "feedback": "node tools/feedback.js",
     "qa:shots": "node tools/qa-shots.js",
+    "qa:shots:intro": "node tools/qa-shots-intro.js",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {

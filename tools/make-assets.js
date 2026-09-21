@@ -5,6 +5,8 @@
 //   player.png              the lead, recolored from a vendor pack (ADR 0013): 3 rows (down/up/
 //                           left, right = mirrored left) x 8 cols (idle, 6 walk frames, idle-anim),
 //                           each frame 16x24
+//   player-<swatch>.png     one full sheet per clothes-color customisation swatch (M3a, see
+//                           "character customisation" section below); player-pink.png === player.png
 //   npc.png                 Tomas (hand-drawn, unchanged): 3 frames (down/up/left), 16x24
 //   npc-volunteer.png, npc-student-a.png, npc-student-b.png
 //                           campus NPCs, recolored from the same vendor pack, same 16x24/8-col
@@ -1621,6 +1623,43 @@ const STUDENT_B_RECOLOR = {
   '#6c6e85': '#ffd23f', // collar/shirt highlight (Accent gold "base")
 };
 
+// ---------- character customisation (M3a, docs/STORY.md "Opening" step 3) ----------
+//
+// The owner's brief asks for clothes-colour swatches (hair/skin "too if the recolour pipeline makes
+// it cheap"). Approach chosen, and why: buildCharacter() already recolors from an exact-RGB swap
+// table, so a second clothes palette is just a different table -- no runtime recolor code needed.
+// One full sheet is generated per swatch at build time (this section), and the game loads only the
+// one the player actually picked (src/main.js BootScene, keyed off GameState.customization.clothes)
+// -- "generate one sheet per palette option", not a runtime Phaser pipeline/texture copy, because
+// this project has no build step and already treats art as data baked by tools/make-assets.js, never
+// computed in the browser. Hair/skin swatches are NOT included in this pass: every extra axis
+// multiplies the sheet count (5 clothes x 3 hair x 2 skin = 30 sheets to draw, decode and commit),
+// and the only place that needs a *live* preview of several of them at once is the customisation
+// screen itself, which would then need to preload all 30 just to show swatches -- not "cheap" once
+// actually costed out, unlike the single clothes axis. Clothes-only satisfies the brief's "at
+// minimum" and leaves hair/skin as a follow-up if the owner asks for it after seeing this.
+const CLOTHES_SWATCHES = {
+  // pink is the default/original look (owner's 2026-09-13 brief) -- unchanged from AMELIA_RECOLOR.
+  pink: { top: PALETTE.c, topHi: PALETTE.M, skirt: PALETTE.P },
+  sky: { top: '#3b7dd8', topHi: '#9fd3ff', skirt: '#2a5aa8' },
+  mint: { top: '#3d8a3f', topHi: '#8fd46a', skirt: '#2b6b30' },
+  lavender: { top: '#7a5ad9', topHi: '#b9a6f2', skirt: '#5a3fae' },
+  sunset: { top: '#e0803a', topHi: '#ffc27a', skirt: '#a85e22' },
+};
+
+// Overrides just the 4 source colors AMELIA_RECOLOR maps to top/skirt tones (see the table above),
+// keeping every other entry (hair, skin, outline) exactly as the owner's original brief specified --
+// only clothes change between swatches.
+function ameliaClothesRecolor(swatch) {
+  return {
+    ...AMELIA_RECOLOR,
+    '#a85377': swatch.top, // top base/shadow
+    '#b95d72': swatch.topHi, // top highlight / center stripe
+    '#c78c59': swatch.skirt, // skirt base
+    '#b35e3f': swatch.skirt, // skirt shadow
+  };
+}
+
 // ---------- Tomas + old player art (hand-drawn, DOWN_TOP/UP_TOP/SIDE_TOP/legs below): Tomas keeps
 // this unchanged art (see the big comment above -- FB-0025 only covers the lead and the new campus
 // NPCs), just bottom-aligned into the new 16x24 canvas like every other character (ADR 0013). The
@@ -2012,6 +2051,15 @@ fs.writeFileSync(
 // idle-anim blink/breathe frame per direction. See AMELIA_RECOLOR/buildCharacter above.
 write('player.png', buildCharacter('Amelia', AMELIA_RECOLOR));
 
+// Clothes-color customisation (M3a): one full sheet per swatch, `player-<id>.png` -- see
+// ameliaClothesRecolor() above for why this is generated at build time instead of recolored live.
+// `player-pink.png` is identical to `player.png` (the default look), committed anyway so
+// src/main.js's BootScene can always load `assets/player-${clothes}.png` uniformly, with no special
+// case for the default.
+for (const [id, swatch] of Object.entries(CLOTHES_SWATCHES)) {
+  write(`player-${id}.png`, buildCharacter('Amelia', ameliaClothesRecolor(swatch)));
+}
+
 // Campus NPCs (FB-0025): recolors of the pack's other three named characters, same 16x24/
 // idle+walk+idle-anim layout as the player, so they're ready for the campus to be populated with
 // them later (docs/research/asset-packs.md). Placed today only as fixtures on the meadow test map
@@ -2041,4 +2089,4 @@ prompt.draw(PROMPT_E, 0, 0);
 prompt.draw(PROMPT_BANG, TILE, 0);
 write('prompt.png', prompt);
 
-console.log(`Wrote ${TILES.length} tiles, player, npc, ${ITEM_ICONS.length} items and prompt to assets/`);
+console.log(`Wrote ${TILES.length} tiles, player (+${Object.keys(CLOTHES_SWATCHES).length} swatches), npc, ${ITEM_ICONS.length} items and prompt to assets/`);

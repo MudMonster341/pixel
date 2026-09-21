@@ -50,6 +50,18 @@ const defaultQuest = () => ({
   keys: { physicsLab: false, icvl: false, room195: false },
 });
 
+// M3a opening (docs/STORY.md "Opening", src/scenes/intro-*.js): the lead's chosen name and look,
+// picked once at the start of a new game (name entry + customisation) and used everywhere the game
+// refers to her from then on -- Mustafa's own follow-up line, the title screen's "Continue" label,
+// and (once M1's tracker exists) the quest tracker. A sensible default so both screens can be
+// skipped outright: "Aisha" reads as a real name for a new student, well inside the 10-char cap.
+const DEFAULT_PLAYER_NAME = 'Aisha';
+// `clothes` is one of the swatch ids tools/make-assets.js generates a `player-<id>.png` sheet for
+// (CLOTHES_SWATCHES there): 'pink' is the original 2026-09-13 look, kept as the default so a game
+// that never sees the customisation screen (an old save, `?intro=0` in tests) looks exactly as it
+// always has.
+const defaultCustomization = () => ({ clothes: 'pink' });
+
 const GameState = {
   // Where the player is, kept current every frame by WorldScene (src/scenes/world.js) so a save
   // taken at any moment reflects the real position, not just the spot she last warped through.
@@ -70,6 +82,10 @@ const GameState = {
   // found. Set by dialog actions (`{ stage: ... }`/`{ key: ... }`, src/dialog.js), saved and
   // restored like everything else.
   quest: defaultQuest(),
+  // M3a opening: her chosen name and look (see the defaults above). Set by src/scenes/intro-name.js
+  // and src/scenes/intro-customize.js, saved and restored like everything else.
+  playerName: DEFAULT_PLAYER_NAME,
+  customization: defaultCustomization(),
 };
 
 // Call after changing GameState.flags or GameState.quest so autosave (src/save.js) saves soon.
@@ -97,4 +113,9 @@ function resetGameState(state = GameState) {
   state.seenHints = new Set();
   state.flags = { ...DEFAULT_FLAGS };
   state.quest = defaultQuest();
+  // Play (new game) also replays the whole opening (title.js startPlay()), which sets these fresh
+  // itself -- reset here too so a game that skips the opening entirely (?intro=0) still starts from
+  // the documented defaults rather than whatever the previous game happened to leave behind.
+  state.playerName = DEFAULT_PLAYER_NAME;
+  state.customization = defaultCustomization();
 }

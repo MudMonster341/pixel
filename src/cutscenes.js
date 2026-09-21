@@ -14,4 +14,15 @@ const CUTSCENES = {
     ],
     speaker: null,
   },
+  // M3a (docs/STORY.md "Opening" step 5 / beat 3): plays the first time she reaches the Main Block
+  // entrance -- triggered by a map object the same way gate2 is (tools/campus/build-campus.js
+  // section 17), not anything special to the intro scenes.
+  entrance: {
+    image: 'cutscene-entrance',
+    lines: [
+      'The Main Block: steps, pillars, and a glass front under a red arch.',
+      'Somewhere inside, the LUG treasure hunt is waiting.',
+    ],
+    speaker: null,
+  },
 };

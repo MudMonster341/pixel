@@ -306,8 +306,11 @@ async function shootCutscene(browser) {
 
 async function shootTitleAndPause(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  // Title left on (no ?title=0): this is the one flow that actually wants to see it.
-  await page.goto(`${BASE_URL}/?dev=0&map=campus`);
+  // Title left on (no ?title=0): this is the one flow that actually wants to see it. The M3a opening
+  // (Mustafa's greeting/name entry/customisation/bus arrival, src/scenes/intro-*.js) is its own flow
+  // with its own screenshots in tools/qa-shots-intro.js -- skipped here (`intro=0`) so this function's
+  // shots (loading screen, pause menu) keep working exactly as before that opening existed.
+  await page.goto(`${BASE_URL}/?dev=0&map=campus&intro=0`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   await page.waitForTimeout(200); // let the background pan/blink settle into a representative frame
   await shoot(page, 'title-screen'); // intro stage: logo + blinking "PRESS ENTER", no menu yet
@@ -336,7 +339,10 @@ async function shootTitleAndPause(browser) {
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  for (const file of fs.readdirSync(OUT_DIR)) fs.rmSync(path.join(OUT_DIR, file));
+  // { recursive: true } so a leftover qa-shots/intro/ (tools/qa-shots-intro.js's own output
+  // directory, nested inside this same gitignored qa-shots/ folder) doesn't crash this cleanup --
+  // this script never writes there itself, but doesn't need to preserve it across a run either.
+  for (const file of fs.readdirSync(OUT_DIR)) fs.rmSync(path.join(OUT_DIR, file), { recursive: true, force: true });
 
   log(`starting server.js on port ${PORT} (feedback dir: ${FEEDBACK_DIR})`);
   const server = spawn(process.execPath, [path.join(ROOT, 'server.js')], {

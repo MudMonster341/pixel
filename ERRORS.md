@@ -136,3 +136,31 @@ relaunch it (a title screen, a "return to menu", anything beyond the usual map-c
 audit every one of its components for subscriptions on something that outlives the scene itself
 (a module-level singleton, `game.events`, `localStorage` polling) and add matching teardown, not
 just for this scene but for anything else built on the same "it's never restarted" assumption.
+
+## ERR-0005 — Typing her own name could silently move an on-screen keyboard's focus off "OK" (2026-09-21)
+
+**Symptom:** Building the M3a name-entry screen (`src/scenes/intro-name.js`), an e2e test that typed
+"Nadia" letter-by-letter then pressed Enter to confirm sometimes deleted a character instead of
+moving to the customisation screen -- and once a fix made it deterministic, it did it *every time*:
+Enter kept re-triggering `DEL`, never `OK`.
+
+**Context:** The on-screen keyboard grid supports both arrow-key navigation (with focus starting on
+`OK`, so a bare Enter skips the whole screen) and real physical typing of any letter, at the same
+time, on the same scene, per the owner's brief. Every other menu in this game aliases `WASD` to the
+arrow keys for keyboard navigation (docs/GAME_FEEL.md rule 7), so this screen initially did too.
+
+**Root cause:** `WASD` are also letters a real name can contain. Typing "Nadia" fires physical
+keydowns for `n`, `a`, `d`, `i`, `a` -- and this screen had `A`/`D` bound to `moveFocus(-1/+1, 0)`
+*as well as* the catch-all "add this letter" handler. Both fired for every `a`/`d` in her own name,
+silently walking the on-screen keyboard's focus off `OK` and onto neighbouring keys (`DEL`, in this
+case) as a side effect of the very letters she was typing -- with no visual feedback pointing at the
+cause, since the focus ring is small and the name field itself looked correct the whole time.
+
+**Fix:** This screen's on-screen-keyboard navigation binds only the literal arrow keys (`UP`/`DOWN`/
+`LEFT`/`RIGHT`), not the `WASD` aliases every other menu accepts -- which also matches the owner's
+own brief for this screen more literally ("arrow keys + Enter"). Real typing (the generic `keydown`
+catch-all filtering single a-z characters) is unaffected letter-for-letter now.
+
+**Recognise it next time:** a screen that combines free-form text entry with an arrow-key-navigated
+grid of options → any alias between "a navigation key" and "a character that can legally be typed"
+is a bug, not a convenience; only alias direction keys that can never also be valid input.

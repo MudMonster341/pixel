@@ -56,13 +56,13 @@ source asset packages... change all the trees, pavements, everything."
 ## M3 — The story slice (the actual game)
 
 ### M3a — The opening (owner brief, 2026-09-21; see [STORY.md](STORY.md) "Opening")
-- [ ] Title screen redesigned properly: big drawn buttons with depth, shaded panels, animated background
-- [ ] Mustafa's greeting: a character portrait and dialog that introduces the lead and the day
-- [ ] Name entry (typed + on-screen keyboard, default name, saved)
-- [ ] Character customisation: clothes colour (and hair/skin if cheap), previewed live, saved, used everywhere
-- [ ] Bus arrival animation at the main gate: bus drives in, stops, she steps off, bus leaves, then the gate cutscene
-- [ ] Entrance cutscene at the Main Block: steps, pillars, glass front under the red arch
-- [ ] "A little 3D": depth pass on UI and cutscene art (bevels, shadows, perspective, eased motion)
+- [x] Title screen redesigned properly: big drawn buttons with depth, shaded panels, animated background (2026-09-21, src/scenes/title.js, src/scenes/ui.js Button/drawButtonState)
+- [x] Mustafa's greeting: a character portrait and dialog that introduces the lead and the day (2026-09-21, src/scenes/intro-greeting.js)
+- [x] Name entry (typed + on-screen keyboard, default name, saved) (2026-09-21, src/scenes/intro-name.js)
+- [x] Character customisation: clothes colour previewed live, saved, used everywhere (2026-09-21, src/scenes/intro-customize.js; hair/skin not included -- see tools/make-assets.js CLOTHES_SWATCHES comment for why)
+- [x] Bus arrival animation at the main gate: bus drives in, stops, she steps off, bus leaves, then the gate cutscene (2026-09-21, src/scenes/intro-bus.js)
+- [x] Entrance cutscene at the Main Block: steps, pillars, glass front under the red arch (2026-09-21, assets/cutscenes/entrance.png, tools/campus/build-campus.js)
+- [x] "A little 3D": depth pass on UI and cutscene art (bevels, shadows, perspective, eased motion) (2026-09-21, docs/GAME_FEEL.md "A little 3D")
 
 
 - [ ] Entrance cutscene: the Main Block steps, pillars and red arch, drawn from photos as reference

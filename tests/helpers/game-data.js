@@ -79,6 +79,7 @@ function loadGameData() {
     tiledObjects: get('tiledObjects'),
     cutscenesEnabled: get('cutscenesEnabled'),
     titleEnabled: get('titleEnabled'),
+    introEnabled: get('introEnabled'),
     objectAt: get('objectAt'),
     notSeenCutscene: get('notSeenCutscene'),
     notifyStateChanged: get('notifyStateChanged'),

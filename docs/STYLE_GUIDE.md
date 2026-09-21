@@ -101,6 +101,31 @@ pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per
   the new 16×24 canvas so every character shares one frame size.
 - NPCs get an idle animation (blink or bob) so they don't look frozen -- see above.
 
+## M3a opening art (owner brief, 2026-09-21, docs/STORY.md "Opening")
+
+- **Clothes-color customisation:** `tools/make-assets.js` `CLOTHES_SWATCHES` -- one full recolored
+  character sheet per swatch (`player-<id>.png`: pink [default, unchanged from the 2026-09-13 brief],
+  sky, mint, lavender, sunset), built the same exact-RGB-swap way as the campus NPC recolors, just
+  swapping the top/skirt colors instead of leaving them alone. Hair and skin are not customisable yet
+  (see the code comment by `CLOTHES_SWATCHES` for the cost/benefit judgment call). Picked on the
+  `customize` intro scene, saved in `GameState.customization.clothes`, loaded as the game's real
+  `player` texture by `src/main.js` BootScene.
+- **Mustafa's portrait:** `tools/make-cutscenes.js` `buildPortrait()` → `assets/cutscenes/mustafa.png`,
+  96x128. A friendly, generic young man (brown hair, a blue collared shirt) -- original art, not a
+  likeness of anyone, per CLAUDE.md's "no real people" rule.
+  Shown beside the game's own dialog box on the `greeting` and `name-entry` intro scenes.
+- **The arrival bus:** `tools/make-cutscenes.js` `buildBus()` → `assets/cutscenes/bus.png`, 96x48, a
+  side-view coach with a distinct door panel (its own outlined section, so the `bus-arrival` intro
+  scene has a real spot to animate "the door opens" over).
+- **Title screen parallax foreground:** `tools/make-cutscenes.js` `buildTitleForeground()` →
+  `assets/cutscenes/title-fg.png`, 480x64, a tileable palm/fence silhouette strip scrolled behind the
+  title menu at its own speed (docs/GAME_FEEL.md "a little 3D" rule 3).
+- **The Main Block entrance cutscene:** `tools/make-cutscenes.js` `buildEntrance()` →
+  `assets/cutscenes/entrance.png`, 320x240, a closer view than the Gate 2 illustration -- steps,
+  corner pillars, the glass front under the red arch -- with the same forced-perspective road/step
+  technique the gate scene already used. Triggered by a map object exactly like Gate 2's own trigger
+  (tools/campus/build-campus.js section 17), the first time she reaches the Main Block's real door.
+
 ## Speech bubbles and interaction
 
 | Bubble | When | Look |

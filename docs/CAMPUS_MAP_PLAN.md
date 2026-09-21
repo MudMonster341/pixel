@@ -1,6 +1,15 @@
 # BITS Pilani Dubai campus map: plan
 
-**Status (2026-09-17): C2, an OpenStreetMap-based campus, straightened and cleaned up**
+**Status (2026-09-22): C2.1, the owner's layout correction to the outdoor campus** -- a roundabout
+just inside Gate 2, parking either side of the road past it, and a loop road around the academic core,
+replacing C2's single straight avenue from the gate to the Main Block door. (Numbered C2.1, not C3:
+C3-C6 below are the *interior* build order, already under way, and this is a revision of the C2
+outdoor map, not the next interior step.) See "Orientation, as built" below and
+[research/bits-dubai-campus.md](research/bits-dubai-campus.md)'s "Campus v3: measured rebuild" section
+for the measurements. Everything else from C2 (real positions/shapes, the hostel row, DIAC Park/ring,
+the tile kit, the Side Gate) is unchanged.
+
+**Previous status (2026-09-17): C2, an OpenStreetMap-based campus, straightened and cleaned up**
 ([ADR 0009](../decisions/0009-campus-from-osm-straightened-and-cleaned.md), supersedes 0008). The
 owner rejected C1.5's hand-drawn schematic (FB-0021: "nothing like the normal one... the previous
 one followed the BITS map and was more intuitive") and chose to rebuild from real OpenStreetMap data
@@ -94,27 +103,35 @@ student and the **LUG treasure hunt**) is added after the base map is done.
   Block, the fence is a closed loop broken only by the two gates, buildings are separate and
   walkable-between, walkways are constant-width, and the campus is mostly lawn with plenty of trees.
 
-### Orientation, as built (C2, ADR 0009)
+### Orientation, as built (C2.1, the owner's layout correction)
 
-- **Gate 2 is at the bottom (south).** You walk up into campus on a dead-straight entrance avenue,
-  and the Main Block's entrance faces the viewer, matching ADR 0007's original convention. It's
-  centred on the Main Block for a straight gameplay approach, not on the real (unnamed, assumed)
-  gate position, which sits a little off to one side of the building group in the raw data.
-  Restored from ADR 0007: the academic complex (Main Block, Library Block, Mechanical Block) is
-  rotated as one group onto the grid, since it runs off-grid from the rest of the real campus by
-  about 44 degrees. Every outline is then cleaned into a rectilinear polygon (ADR 0009): OpenStreetMap
-  digitisation noise and small chamfers are removed, but real wings/L-shapes stay -- the Main Block
-  in particular has several setbacks that are real, not staircase artifacts.
+- **Gate 2 is at the bottom (south), offset towards the east/right** (`layout.js`'s `gate2.uFraction`,
+  0.82 of the way from the fence's west edge to its east edge) rather than centred on the Main Block --
+  the owner's screenshot has the real entrance on the lower-right, off the DIAC ring side, not up the
+  middle. From the gate: a short straight avenue to a small roundabout just inside it (a square paved
+  junction with a lawn/hedge island -- kept rectilinear, ADR 0009 rules out a true circle's diagonal
+  tiles), then the avenue continues with a parking lot flanking each side ("parking on the left and
+  right"), then a loop road -- a rectangular ring around the Main/Library/Mechanical Block group --
+  replacing C2's single straight avenue all the way to the door. The academic complex itself (Main
+  Block, Library Block, Mechanical Block) is still rotated as one group onto the grid and cleaned into
+  rectilinear polygons exactly as C2 left it (ADR 0007/0009) -- only the road network around it changed.
 - The **Side Gate** (second entrance) is on the west fence, near the boys' hostel row. No source
   confirms a name for it (see "Entrances" in the research doc), so it isn't called "Gate 1".
-- D54, the road to Gate 2, the DIAC ring and the roundabout keep their real (curved/diagonal, outside
-  the fence only) OpenStreetMap routes, drawn at a constant width; inside the fence, every path is
-  the hand-picked orthogonal network from `build-campus.js`, not raw OpenStreetMap footways.
+- D54, the road to Gate 2, the DIAC ring and the roundabout *outside* the fence keep their real
+  (curved/diagonal) OpenStreetMap routes, drawn at a constant width; inside the fence, every path is
+  the hand-picked orthogonal network from `build-campus.js` (the entrance avenue, the Gate 2
+  roundabout, the loop road, and the walkways connecting doors/hostels/sports), not raw OpenStreetMap
+  footways.
 
 Known rough spots: hostel letters are still unverified guesses (ADR 0007); the DIAC ring's "other
 campus" neighbours (University of Birmingham Dubai, student apartments) are squared up individually
 but not surveyed exactly; a handful of tiny/stray OpenStreetMap building tags near the fence's edge
-are dropped rather than drawn (FB-0003's rule, applied a little conservatively).
+are dropped rather than drawn (FB-0003's rule, applied a little conservatively). New for C2.1: the
+loop road's north side is interrupted where it would run through the Main Block's own back wall (the
+complex sits genuinely close to the north fence), and its east side is interrupted near Hostel H
+(Girls), which leaves no room for a loop strip beyond it -- both are the generator correctly declining
+to route a road through a building, not a bug; the west/south sides and the gate-to-loop spine (what a
+player actually walks) are fully continuous. See the research doc's "Campus v3" section for the numbers.
 
 ## Build order
 
@@ -123,6 +140,7 @@ are dropped rather than drawn (FB-0003's rule, applied a little conservatively).
 | C1 | Walkable test version of the outdoor campus + DIAC Park from OpenStreetMap | ✅ built, superseded |
 | C1.5 | Rebuild the outdoor campus as a hand-designed straight schematic; the campus tile kit (kerbs, walkways, lawns, hedges, fence, tennis court, 2-tile walls) | ✅ built (ADR 0008), layout rejected by the owner (FB-0021) |
 | C2 | Rebuild again from OpenStreetMap, straightened and cleaned up: real positions/shapes, a rectilinear fence and buildings, a hand-picked walkway network, doors with a `to` key, a Gate 2 cutscene trigger, signboards, tree/palm and tennis-net art fixes | ✅ built (ADR 0009) |
+| C2.1 | Owner's layout correction to C2's road network: Gate 2 moved off the Main Block's centreline towards the lower-right, a roundabout just inside it, parking either side of the road past it, and a loop road around the academic core instead of one straight avenue | ✅ built |
 | C3 | Main Block ground floor (1 m per tile): foyer atrium, with stairs to the 1st-floor mezzanine | Next |
 | C4 | Auditorium, library, canteen, a lab corridor (empty rooms) | |
 | C5 | Remaining main campus rooms and upper floors (empty), DIAC Park detail | |

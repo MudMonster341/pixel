@@ -189,3 +189,56 @@ screenshot, reference only, never shipped in the game). What it shows:
 come in from the lower right, pass the roundabout, with **parking on both sides**, and the loop road
 takes you round to the Main Block. Rebuild `tools/campus/layout.js` against satellite imagery in this
 orientation, keeping everything axis-aligned in the game ([ADR 0009](../../decisions/0009-campus-from-osm-straightened-and-cleaned.md)).
+
+## Campus v3: measured rebuild (2026-09-21/22)
+
+Checked against Google Maps satellite over 25.1314 N, 55.4201 E (the built-in browser, zoomed on the
+gate/roundabout/parking area and panned across the whole plot) and cross-referenced with
+`tools/campus/diac.osm`'s exact building outlines, in addition to the owner's own rotated screenshot
+above. Confirmed: the gate sits off the DIAC ring on the lower-right, with a small roundabout
+immediately inside it, parking either side of the road just past the roundabout, and an internal loop
+road around the academic buildings rather than one straight avenue up the middle -- exactly the
+owner's correction. The sports field stays at the west end, the hostel row and DIAC Park/ring keep
+their existing (already-correct) positions from ADR 0009.
+
+**Positions below are the generated map's own numbers** (tools/campus/build-campus.js, 2 m/tile,
+frame: u = east along D54, v = south away from D54, fence origin top-left), not hand-authored -- the
+generator derives them from the real building footprints and the gate-to-core depth that leaves, so
+they move slightly if the OSM extract or a size in `layout.js` changes. As generated for this pass:
+
+| Feature | Tile position (x, y, w, h) | Real size |
+|---|---|---|
+| Campus fence | 77, 48, 206, 110 | 412 x 220 m |
+| Gate 2 (main entrance) | 245, 157 (point, south fence edge) | -- |
+| Gate 2 Roundabout | 240, 142, 11, 10 | 22 x 20 m (paved ring + lawn/hedge island) |
+| Gate Parking (West) | 222, 134, 17, 8 | 34 x 16 m |
+| Gate Parking (East) | 251, 134, 17, 8 | 34 x 16 m |
+| Academic Core Loop Road | 197, 53, 70, 80 | 140 x 160 m (bounding box of the ring) |
+| Main Block | 211, 73, 55, 54 | 110 x 108 m |
+| Athletics Track (west end) | 110, 82, 67, 32 | 134 x 64 m |
+| Student Parking (existing lot, near the track) | 124, 112, 50, 8 | 100 x 16 m |
+| Side Gate | 77, 61 (point, west fence edge) | -- |
+
+**How the pieces fit together, gate to core** (see `tools/campus/build-campus.js` section 11b for the
+exact budget): Gate 2 sits at `fenceFrame.u0 + (fenceFrame.u1-fenceFrame.u0) * 0.82` on the south fence
+edge (`layout.js`'s `gate2.uFraction`) -- east of the campus's own u-midpoint (towards the DIAC ring,
+matching "lower-right"), but not so far east that the parking lots either side run out of room. From
+the gate: a short straight avenue north to the roundabout; the roundabout itself (a square paved
+junction with a lawn/hedge island, kept rectilinear per ADR 0009 rather than a true circle); the
+avenue continues north with a parking lot flanking each side; then the loop road, a rectangular ring
+around the Main/Library/Mechanical Block group, connected to the pedestrian network that already links
+the three doors to each other and to the hostels/sports.
+
+**Known rough spots** (see also ADR 0009's own list, still true): the roundabout is a square junction,
+not a circle -- a deliberate trade against ADR 0009's "no diagonal tiles inside the fence" rule, not a
+miss. The loop road's north side is interrupted where it would otherwise run straight through the Main
+Block's own back wall (the academic complex is genuinely that close to the north fence in the real
+layout); its east side is interrupted near Hostel H (Girls), which sits close enough to the complex's
+own east wall that there's no room for a loop strip beyond it there. Both are `tools/campus/
+build-campus.js`'s own routing correctly refusing to draw a road through a building rather than a
+generator bug -- the west and south sides of the ring, and the gate-to-roundabout-to-loop spine, are
+fully continuous and are what a player actually walks. The gate-to-core depth (about 117 m here) is
+tight enough that the roundabout, both parking lots and the loop's own clearance from the Main Block
+all had to be budgeted rather than given fixed sizes (about 59 m of real gate-to-Main-Block depth was
+available here); a much shallower or deeper campus would need `layout.js`'s
+`roundabout`/`entranceParking`/`loopRoad` numbers revisited.

@@ -97,11 +97,29 @@ module.exports = {
     parking: { name: 'Student Parking', rect: [-205.3, -17.9, 97.4, 14.5] },
   },
 
-  // Gate 2 (main entrance): assumed position, see docs/research/bits-dubai-campus.md "Entrances".
-  // Placed on the south fence edge, centred on the Main Block so the straight approach lines up
-  // with its entrance (the real gate-booth way sits nearby but off-centre; ADR 0009 keeps the
-  // gameplay-driven centring from ADR 0008 rather than the exact OSM point).
-  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40 },
+  // Gate 2 (main entrance): still on the south fence edge (ADR 0009), but the owner's layout
+  // correction (2026-09-21, docs/research/bits-dubai-campus.md "Layout correction from the owner")
+  // rejected centring it on the Main Block: their reference screenshot has the real entrance on the
+  // lower-RIGHT of the campus, off the DIAC ring side. `uFraction` places it that fraction of the
+  // way from the fence's west edge (0) to its east edge (1) instead of on the Main Block's own
+  // centreline -- 0.82 clears enough room on both sides of the entrance road for the parking lots
+  // below while still sitting well east of the campus's own u-midpoint (biased towards the DIAC ring,
+  // which this file places just east of the fence -- see RING_GAP_METERS in build-campus.js).
+  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40, uFraction: 0.82 },
+  // A small roundabout just inside Gate 2 (owner: "as soon as you get in there's a roundabout"),
+  // kept axis-aligned per ADR 0009 (a true circular kerb would need diagonal tiles) -- a paved square
+  // junction with a lawn-and-hedge traffic island in the middle. `outerHalfMeters`/`islandHalfMeters`
+  // are upper bounds: build-campus.js shrinks them if the real gate-to-Main-Block depth is tight.
+  roundabout: { avenueToRoundaboutMeters: 12, outerHalfMeters: 10, islandHalfMeters: 4 },
+  // Parking either side of the entrance road, just past the roundabout (owner: "parking on the left
+  // and right"). Depth is derived at build time from whatever depth is left after the roundabout and
+  // the loop road's own clearance from the Main Block are reserved (see build-campus.js section 11).
+  entranceParking: { widthMeters: 32, gapMeters: 6 },
+  // The loop road around the academic core (owner: "internal roads form a loop... rather than one
+  // straight avenue"), replacing the old single straight avenue all the way to the Main Block door.
+  // Constant width, axis-aligned rectangle (ADR 0009); margin is generous on the sides with room
+  // (west/east/back of the core) and clamped by build-campus.js everywhere it isn't.
+  loopRoad: { widthMeters: 8, marginMeters: 20 },
   // Side Gate (second entrance, FB-0012): west fence, near the hostel/Library side (no source names
   // it "Gate 1" -- see the research doc).
   sideGate: { spanMeters: 8 },

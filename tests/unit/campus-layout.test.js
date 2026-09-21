@@ -181,17 +181,25 @@ test('FB-0005/FB-0007: internal walkways are a constant-width brick path, not ra
   assert.ok(sampledRuns >= 3, `found only ${sampledRuns} straight walkway runs long enough to check their width`);
 });
 
-// ---------- FB-0008/FB-0010: Gate 2, a straight approach, and a reachable Main Block entrance ----------
+// ---------- FB-0008/FB-0010: Gate 2, a straight approach to the roundabout, and a reachable Main Block ----------
+// Rewritten for the owner's layout correction (2026-09-21, docs/research/bits-dubai-campus.md
+// "Layout correction from the owner"): the straight avenue no longer runs all the way to the Main
+// Block door -- it hands off to a roundabout just inside the gate, then a loop road (FB-0026 below).
+// The property this test protects (a dead-straight, constant-width entrance, Main Block reachable) is
+// the same; only how far the straight part runs has changed.
 
-test('FB-0008/FB-0010: Gate 2 exists, a straight avenue leads to it, and the Main Block entrance is reachable', () => {
+test('FB-0008/FB-0010: Gate 2 exists, a straight avenue leads to the roundabout just inside it, and the Main Block entrance is reachable', () => {
   const gate2 = gates.find((g) => /Gate 2/.test(g.name));
   assert.ok(gate2, 'no Gate 2 object');
   assert.equal(gate2.props.main, true, 'Gate 2 should be flagged as the main entrance');
 
-  // The entrance avenue is one constant-width, dead-straight (single x) corridor from the gate to
-  // the Main Block: sample a few rows and check the paved band's x-range (found from its kerb
-  // columns) never moves sideways.
-  const gateXCenter = Math.floor(gates.find((g) => /Gate 2/.test(g.name)).x);
+  const roundabout = objects.find((o) => o.type === 'area' && o.name === 'Gate 2 Roundabout');
+  assert.ok(roundabout, 'no Gate 2 Roundabout area object');
+
+  // The entrance avenue is one constant-width, dead-straight (single x) corridor from the gate to the
+  // roundabout's own south edge: sample a row near each end and check the paved band's x-range
+  // (found from its kerb columns) never moves sideways.
+  const gateXCenter = Math.floor(gate2.x);
   const findRoadSpan = (y) => {
     let x0 = null;
     let x1 = null;
@@ -207,14 +215,12 @@ test('FB-0008/FB-0010: Gate 2 exists, a straight avenue leads to it, and the Mai
     return x0 === null ? null : [x0, x1];
   };
   const gateY = Math.floor(gate2.y);
-  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
-  assert.ok(mainDoor, 'no Main Block door');
-  // Two rows solidly inside the straight run between the gate and the Main Block, clear of the gate
-  // itself and of the crossing where the avenue meets the Main Block/Library walkway.
-  // Close to each end of the avenue (not the middle), clear of any perpendicular service spur
-  // (e.g. parking's connector) that might cross the avenue's row somewhere in between.
-  const span = gateY - Math.floor(mainDoor.y);
-  const rows = [gateY - Math.max(3, Math.round(span * 0.08)), Math.floor(mainDoor.y) + Math.max(3, Math.round(span * 0.08))];
+  const roundaboutSouthY = Math.round(roundabout.y + roundabout.height);
+  const span = gateY - roundaboutSouthY;
+  assert.ok(span > 2, 'the roundabout should sit a real distance inside the gate, not right on top of it');
+  // Close to each end of the avenue (not the middle), clear of the roundabout's own kerb and of any
+  // perpendicular service spur (e.g. a parking connector) that might cross the avenue's row.
+  const rows = [gateY - Math.max(2, Math.round(span * 0.15)), roundaboutSouthY + Math.max(2, Math.round(span * 0.15))];
   const spans = rows.map((y) => findRoadSpan(y)).filter(Boolean);
   assert.ok(spans.length >= 2, 'could not find the entrance avenue at multiple rows');
   const [first] = spans;
@@ -222,7 +228,131 @@ test('FB-0008/FB-0010: Gate 2 exists, a straight avenue leads to it, and the Mai
     assert.ok(Math.abs(span[0] - first[0]) <= 1 && Math.abs(span[1] - first[1]) <= 1, `entrance avenue is not straight: ${JSON.stringify(spans)}`);
   }
 
+  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
+  assert.ok(mainDoor, 'no Main Block door');
   assert.ok(reachableFromSpawn(Math.floor(mainDoor.x), Math.floor(mainDoor.y)), 'Main Block entrance is not reachable from the Gate 2 spawn');
+});
+
+// ---------- FB-0026: the owner's layout correction (roundabout, parking either side, loop road) ----------
+
+test('FB-0026: a roundabout sits just inside the main gate', () => {
+  const gate2 = gates.find((g) => /Gate 2/.test(g.name));
+  const roundabout = objects.find((o) => o.type === 'area' && o.name === 'Gate 2 Roundabout');
+  assert.ok(roundabout, 'no Gate 2 Roundabout area object');
+  assert.ok(roundabout.y + roundabout.height <= gate2.y, 'the roundabout should be north of (inside from) the gate');
+  const gapToGate = gate2.y - (roundabout.y + roundabout.height);
+  assert.ok(gapToGate >= 0 && gapToGate < 15, `the roundabout is ${gapToGate.toFixed(1)} tiles from the gate, expected it just inside`);
+  assert.ok(Math.abs(roundabout.x + roundabout.width / 2 - gate2.x) <= 2, 'the roundabout is not centred on the entrance avenue');
+
+  // A paved (asphalt) ring around a walkable lawn island in the middle -- kept axis-aligned/square
+  // rather than a true circle (ADR 0009 rules out diagonal tiles), but still reads as a roundabout:
+  // asphalt at the edges of its own row, lawn at the centre.
+  const cy = Math.floor(roundabout.y + roundabout.height / 2);
+  const cx = Math.floor(roundabout.x + roundabout.width / 2);
+  assert.ok(walkable(cx, cy), 'the roundabout island (its centre) should be walkable');
+  let sawAsphalt = false;
+  let sawLawn = false;
+  for (let x = Math.floor(roundabout.x); x < roundabout.x + roundabout.width; x++) {
+    const n = groundNameAt(x, cy);
+    if (n === 'asphalt') sawAsphalt = true;
+    if (n === 'lawn' || n === 'lawn2') sawLawn = true;
+  }
+  assert.ok(sawAsphalt, 'the roundabout has no paved (asphalt) ring');
+  assert.ok(sawLawn, 'the roundabout has no lawn island in the middle');
+});
+
+test('FB-0026: parking areas lie on both sides of the entrance road', () => {
+  const gate2 = gates.find((g) => /Gate 2/.test(g.name));
+  const west = objects.find((o) => o.type === 'area' && o.name === 'Gate Parking (West)');
+  const east = objects.find((o) => o.type === 'area' && o.name === 'Gate Parking (East)');
+  assert.ok(west, 'no Gate Parking (West) area object');
+  assert.ok(east, 'no Gate Parking (East) area object');
+  assert.ok(west.x + west.width < gate2.x, 'the west parking lot should be west of the entrance road');
+  assert.ok(east.x > gate2.x, 'the east parking lot should be east of the entrance road');
+  for (const lot of [west, east]) {
+    let parkingTiles = 0;
+    for (let y = Math.floor(lot.y); y < lot.y + lot.height; y++) {
+      for (let x = Math.floor(lot.x); x < lot.x + lot.width; x++) {
+        if (groundNameAt(x, y) === 'parking') parkingTiles++;
+      }
+    }
+    assert.ok(parkingTiles > 20, `${lot.name} has only ${parkingTiles} parking tiles`);
+  }
+});
+
+test('FB-0026: a loop road encircles the academic core and connects back to the gate', () => {
+  const loop = objects.find((o) => o.type === 'area' && o.name === 'Academic Core Loop Road');
+  assert.ok(loop, 'no Academic Core Loop Road area object');
+  const mainBlockObj = objects.find((o) => o.type === 'building' && o.name === 'Main Block');
+  assert.ok(mainBlockObj, 'no Main Block building object');
+  // West, north and south: the loop reaches clear around the core on these sides. East is not
+  // required to clear the Main Block too -- Hostel H (Girls) sits close enough to the complex's own
+  // east wall (a real, close BITS neighbour, ADR 0009) that there's no room left for a loop strip
+  // beyond it there, a known rough spot rather than a generator bug (see the research doc).
+  assert.ok(loop.x < mainBlockObj.x, 'the loop does not reach west of the Main Block');
+  assert.ok(loop.y <= mainBlockObj.y, 'the loop does not reach north of the Main Block');
+  assert.ok(loop.y + loop.height > mainBlockObj.y + mainBlockObj.height, 'the loop does not reach south of the Main Block');
+
+  const x0 = Math.floor(loop.x);
+  const y0 = Math.floor(loop.y);
+  const x1 = Math.floor(loop.x + loop.width) - 1;
+  const y1 = Math.floor(loop.y + loop.height) - 1;
+  const isRoad = (x, y) => {
+    const n = groundNameAt(x, y);
+    return n === 'asphalt' || (n !== null && n.startsWith('kerb'));
+  };
+  // The west and south strips run the loop's full constant width, gaplessly, the whole way round --
+  // real BITS buildings (a hostel on the east side) are close enough to interrupt the other two sides
+  // in places, which ADR 0009's "buildings stay separate" rule takes priority over a perfect ring.
+  for (let y = y0; y <= y1; y++) assert.ok(isRoad(x0, y) || isRoad(x0 + 1, y), `the loop's west strip has a gap at row ${y}`);
+  for (let x = x0; x <= x1; x++) assert.ok(isRoad(x, y1) || isRoad(x, y1 - 1), `the loop's south strip has a gap at column ${x}`);
+
+  // The ring connects, on foot, all the way back down the avenue to the gate.
+  assert.ok(reachableFromSpawn(x0 + 1, Math.floor((y0 + y1) / 2)), "the loop road's west strip is not reachable from the Gate 2 spawn");
+});
+
+test('FB-0026: the walk from spawn to the Main Block door follows roads and walkways only', () => {
+  const HARDSCAPE = new Set([
+    'walkway', 'paving', 'asphalt', 'parking',
+    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+    'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
+  ]);
+  const isHardscape = (x, y) => {
+    const n = groundNameAt(x, y);
+    return Boolean(n && HARDSCAPE.has(n)) && walkable(x, y);
+  };
+  const startX = Math.floor(spawn.x);
+  const startY = Math.floor(spawn.y);
+  assert.ok(isHardscape(startX, startY), 'the spawn point itself is not on a road/walkway tile');
+
+  const seen = new Uint8Array(json.width * json.height);
+  const queue = [{ x: startX, y: startY }];
+  seen[startY * json.width + startX] = 1;
+  for (let i = 0; i < queue.length; i++) {
+    const { x, y } = queue[i];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= json.width || ny >= json.height) continue;
+      if (seen[ny * json.width + nx] || !isHardscape(nx, ny)) continue;
+      seen[ny * json.width + nx] = 1;
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  const mainDoor = doors.find((d) => d.props.building === 'Main Block');
+  assert.ok(mainDoor, 'no Main Block door');
+  // The door's own threshold is a building structure tile, not "ground" hardscape -- walk a few tiles
+  // south (matching its `facing: down`) to the first hardscape tile in front of it, the same pattern
+  // tests/unit/campus-osm.test.js already uses for "the tile in front of each building door".
+  let py = Math.floor(mainDoor.y);
+  let steps = 0;
+  while (steps < 6 && !isHardscape(Math.floor(mainDoor.x), py)) {
+    py += 1;
+    steps += 1;
+  }
+  assert.ok(isHardscape(Math.floor(mainDoor.x), py), 'no hardscape (road/walkway) tile found in front of the Main Block door');
+  assert.equal(seen[py * json.width + Math.floor(mainDoor.x)], 1, 'no all-hardscape walk from spawn to the Main Block door plaza');
 });
 
 // ---------- FB-0011: separate, walkable-between buildings ----------

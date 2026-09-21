@@ -455,13 +455,21 @@ class FullMap {
     // (`Building <osm id>`, tools/campus/build-campus.js): dozens of small neighbouring structures
     // get one of these each, and unlike a real name it's not useful to a player -- labelling them
     // anyway used to bury Main Block/Gate 2/etc. under a wall of "Building 519043987"-style text.
+    // Also skips road/roundabout infrastructure areas (the loop road around the academic core, the
+    // roundabout just inside Gate 2, and its own flanking "Gate Parking (West/East)" lots -- FB-0026,
+    // tools/campus/build-campus.js): they're large enough, and centred close enough to Gate 2/the Main
+    // Block, that labelling them ate the declutter slot the real landmark needed -- a player doesn't
+    // need "Academic Core Loop Road" or "Gate Parking (West)" pointed out the way they need "Main
+    // Block" or "Gate 2" itself. The older, standalone "Student Parking" lot (near the track) keeps
+    // its label; it isn't fighting any other name for the same spot on the map.
     // Biggest/most important first, then a simple greedy declutter: skip a label whose position
     // would land right on top of one already placed (real buildings can sit close together).
     this.labels.removeAll(true);
     const totalArea = cols * rows;
     const isPlaceholderName = (name) => /^Building \d+$/.test(name);
+    const isInfrastructureArea = (o) => o.type === 'area' && (o.props?.kind === 'road' || o.props?.kind === 'roundabout' || /^Gate Parking \(/.test(o.name));
     const named = (world.mapObjects || [])
-      .filter((o) => ['area', 'building'].includes(o.type) && o.name && !isPlaceholderName(o.name) && o.width * o.height < totalArea * 0.3)
+      .filter((o) => ['area', 'building'].includes(o.type) && o.name && !isPlaceholderName(o.name) && !isInfrastructureArea(o) && o.width * o.height < totalArea * 0.3)
       .sort((a, b) => b.width * b.height - a.width * a.height);
     const placed = [];
     const MIN_GAP = 26; // px: bigger than one label's height, so crowded clusters thin out to a few names

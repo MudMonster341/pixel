@@ -672,7 +672,11 @@ const CHARS_PER_SECOND = 45;
 // typing, instead of closing, the box shows a selectable list (up/down or W/S move the highlight,
 // Enter/E/Space picks). Keyboard only, same box, no new art.
 class DialogBox {
-  constructor(scene) {
+  // `box`, if given, overrides the default bottom-of-screen position/size -- src/scenes/card.js uses
+  // this to fit a smaller message box inside its own card panel, under the photo frame, instead of
+  // the ordinary full-width box every other conversation in the game uses. Every existing caller
+  // (UIScene's own dialog, src/scenes/cutscene.js) passes nothing and gets the original box.
+  constructor(scene, box) {
     this.scene = scene;
     this.isOpen = false;
     this.choices = null; // the list currently shown, or null while plain lines are typing/showing
@@ -680,7 +684,7 @@ class DialogBox {
     this.choiceTexts = null;
     this.choiceIndex = 0;
     this.selectedChoice = null; // the choice the player picked, passed to onClose() at the very end
-    this.box = { x: 100, y: 382, w: 760, h: 138 };
+    this.box = box || { x: 100, y: 382, w: 760, h: 138 };
     const { x, y, w, h } = this.box;
 
     this.panel = scene.add.graphics();

@@ -228,27 +228,79 @@ function buildFrame() {
   return img;
 }
 
-// ---------- placeholder photo (shown until the owner drops real files into assets/card/photos/) ----------
+// ---------- a tiny 5x7 font, just the letters "YOUR PHOTO HERE" needs (coordinator review,
+// 2026-09-22: the placeholder photo must be obviously a placeholder, not just a pretty filler
+// image) -- same glyph style as tools/make-cutscenes.js's own GLYPHS, but that file is a different
+// generator with its own letters; duplicated here rather than shared, the same way each tools/make-
+// *.js file already keeps its own Img class (see this file's header comment). ----------
+
+const PLACEHOLDER_GLYPHS = {
+  E: ['#####', '#....', '#....', '###..', '#....', '#....', '#####'],
+  H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
+  R: ['####.', '#...#', '#...#', '####.', '#..#.', '#...#', '#...#'],
+  T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+  U: ['#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  Y: ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'],
+  ' ': ['.....', '.....', '.....', '.....', '.....', '.....', '.....'],
+};
+
+function placeholderText(img, text, x, y, hex, scale) {
+  let cx = x;
+  for (const ch of text) {
+    const glyph = PLACEHOLDER_GLYPHS[ch] || PLACEHOLDER_GLYPHS[' '];
+    glyph.forEach((row, ry) => {
+      [...row].forEach((bit, rx) => {
+        if (bit === '#') img.rect(cx + rx * scale, y + ry * scale, cx + rx * scale + scale - 1, y + ry * scale + scale - 1, hex);
+      });
+    });
+    cx += (5 + 1) * scale;
+  }
+  return cx - scale;
+}
+
+function placeholderTextWidth(text, scale) {
+  return text.length * (5 + 1) * scale - scale;
+}
+
+// ---------- placeholder photo (shown until the owner drops real files into assets/card/photos/):
+// a camera icon and "YOUR PHOTO HERE", unmistakably an empty slot rather than a pretty filler image
+// the owner might mistake for finished content ----------
 
 function buildPlaceholderPhoto() {
   const w = FRAME_WINDOW.x1 - FRAME_WINDOW.x0 + 1;
   const h = FRAME_WINDOW.y1 - FRAME_WINDOW.y0 + 1;
   const img = new Img(w, h);
-  // A soft warm gradient background (not a blank gray box -- this should still feel like a gift).
-  for (let y = 0; y < h; y++) {
-    const t = y / h;
-    const hex = t < 0.5 ? C.pinkLight : C.paper;
-    img.rect(0, y, w - 1, y, hex, 0.5);
-  }
-  img.rect(0, 0, w - 1, h - 1, C.paperShade, 0.25);
-  img.heart(w / 2, h / 2 - 6, 26, C.pink);
-  img.heart(w / 2, h / 2 - 6, 26, C.outline, 0.15);
-  // A few small stars scattered around the heart.
-  const stars = [[24, 20], [w - 28, 24], [26, h - 22], [w - 24, h - 26], [w / 2 - 40, h / 2 + 30]];
-  for (const [sx, sy] of stars) {
-    img.rect(sx - 1, sy - 4, sx + 1, sy + 4, C.gold);
-    img.rect(sx - 4, sy - 1, sx + 4, sy + 1, C.gold);
-  }
+
+  // A neutral, slightly cool gray-cream fill (deliberately plainer than a real photo would be) with
+  // a dashed border -- the familiar "empty upload slot" convention, pixel-styled.
+  img.rect(0, 0, w - 1, h - 1, '#d8d2c4');
+  const dash = (x0, y0, x1, y1) => {
+    for (let x = x0; x <= x1; x += 6) img.rect(x, y0, Math.min(x + 3, x1), y0, C.outline, 0.4);
+    for (let x = x0; x <= x1; x += 6) img.rect(x, y1, Math.min(x + 3, x1), y1, C.outline, 0.4);
+    for (let y = y0; y <= y1; y += 6) img.rect(x0, y, x0, Math.min(y + 3, y1), C.outline, 0.4);
+    for (let y = y0; y <= y1; y += 6) img.rect(x1, y, x1, Math.min(y + 3, y1), C.outline, 0.4);
+  };
+  dash(4, 4, w - 5, h - 5);
+
+  // A simple pixel camera: body, a raised viewfinder bump, a lens (two rings) and a small flash.
+  const camCx = w / 2;
+  const camCy = h / 2 - 12;
+  const bodyW = 56, bodyH = 38;
+  img.rect(camCx - bodyW / 2, camCy - bodyH / 2, camCx + bodyW / 2, camCy + bodyH / 2, '#8a93a0');
+  img.rect(camCx - bodyW / 2, camCy - bodyH / 2, camCx + bodyW / 2, camCy - bodyH / 2 + 6, '#aab2bd'); // top highlight band
+  img.rect(camCx - 14, camCy - bodyH / 2 - 8, camCx + 14, camCy - bodyH / 2, '#8a93a0'); // viewfinder bump
+  img.outlineRect(camCx - bodyW / 2, camCy - bodyH / 2 - 8, camCx + bodyW / 2, camCy + bodyH / 2, C.outline);
+  img.ellipse(camCx, camCy + 3, 13, 13, C.outline);
+  img.ellipse(camCx, camCy + 3, 10, 10, '#3b4a5a');
+  img.ellipse(camCx - 3, camCy, 4, 4, '#7fa8d0', 0.7); // a lens glint
+  img.rect(camCx + bodyW / 2 - 12, camCy - bodyH / 2 + 2, camCx + bodyW / 2 - 4, camCy - bodyH / 2 + 8, '#f5ead0'); // flash
+
+  const label = 'YOUR PHOTO HERE';
+  const scale = 1;
+  placeholderText(img, label, camCx - placeholderTextWidth(label, scale) / 2, h - 26, '#5a6270', scale);
+
   return img;
 }
 

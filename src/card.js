@@ -30,10 +30,16 @@
 // Shown until the owner writes their own card.json -- warm, generic, and honest about being a
 // placeholder, so an unfinished setup still plays as a complete (if plain) little card rather than
 // looking broken.
+// Kept short on purpose -- src/scenes/card.js's own message box sits inside the card itself, sized
+// for about two lines per page (coordinator review, 2026-09-22), not the game's ordinary full-width
+// dialog box.
 const DEFAULT_CARD_MESSAGES = [
   'Happy Birthday, {name}!',
-  'You made it through the whole hunt -- every key, every room, right to the end.',
-  'This little game is just the wrapping. The real gift is wishing you a wonderful day.',
+  'You made it through the whole hunt --',
+  'every key, every room, right to the end.',
+  'This little game is just the wrapping.',
+  'The real gift is wishing you',
+  'a wonderful day.',
   'Have the best year yet.',
 ];
 

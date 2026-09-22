@@ -468,14 +468,18 @@ async function shootEnding(browser) {
   await shoot(page, 'ending-03-box-light');
 
   await page.waitForFunction(() => game.scene.isActive('card'), { timeout: 15_000 });
-  await page.waitForTimeout(150);
+  // Long enough for the cover's own 400ms fade-in (src/scenes/card.js showCover()) to finish, so
+  // this shot shows the cover cleanly instead of blended mid-fade with the interior behind it.
+  await page.waitForTimeout(500);
   await shoot(page, 'ending-04-card-cover');
 
   await page.keyboard.press('Enter'); // open the cover
-  await page.waitForFunction(() => {
-    const s = game.scene.getScene('card');
-    return s.frameParts && s.frameParts[2].visible;
-  });
+  // Wait for the cover to actually be gone (destroyed by openCover()'s own tween, src/scenes/
+  // card.js), not just for the frame to be "visible" -- frameParts are visible from the moment
+  // buildInterior() creates them (behind the still-closing cover), so that used to catch this shot
+  // mid-transition, with both the cover and the interior on screen at once (a real visual bug the
+  // fixes above this comment addressed; this was this script's own timing bug on top of it).
+  await page.waitForFunction(() => !game.scene.getScene('card').cover);
   await page.waitForTimeout(200);
   await shoot(page, 'ending-05-card-photo');
 

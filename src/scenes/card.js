@@ -16,17 +16,43 @@
 // that Node build tool into the browser -- see FRAME_WINDOW/CAKE_CANDLE_LOCAL_* below.
 
 const FRAME_WINDOW = { x0: 10, y0: 10, x1: 209, y1: 149 }; // inside card-frame.png, 200x140
-const FRAME_SCALE = 1.3;
-const CAKE_SCALE = 2.6;
-// The cake and photo frame's shared vertical center. Chosen so the frame's own display height
-// (card-frame.png is 160 tall, so 160*FRAME_SCALE/2 = 104px above and below this line) plus its
-// caption both stay clear of the dialog box's fixed top edge (DialogBox's own `box.y`, src/scenes/
-// ui.js: y=382) -- a lower value here used to let the frame's bottom border visibly overlap the
-// dialog box (found via tools/qa-shots.js's "card-message" shot: the frame's cream border was
-// drawing right through the dialog panel's own top edge).
-const INTERIOR_ROW_Y = 225;
+const FRAME_SCALE = 1.5;
+const CAKE_SCALE = 1.3;
 const CAKE_CANDLE_LOCAL_X = [18, 28, 38]; // local px inside card-cake.png's 56-wide canvas
 const CAKE_CANDLE_LOCAL_TOP_Y = 4; // just above where the candle sticks start (local y 6)
+
+// ---------- the card's own layout (coordinator review, 2026-09-22): ONE centered card, everything
+// else lives inside it -- a photo frame in its upper area, the caption under the frame, the typed
+// message under that, and decoration (hearts, a small cake motif) tucked into its own corners rather
+// than floating loose in the empty space around a smaller panel (the first version's actual bug: a
+// crowded left half, an empty right half, and the photo frame's own left edge crossing the panel's
+// border). Every number below is this card's own interior geometry, in scene coordinates, so moving
+// the card later (CARD_X/Y/W/H) only means changing those four numbers, not re-deriving the rest. ----------
+const CARD_X = 50;
+const CARD_Y = 35;
+const CARD_W = 860;
+const CARD_H = 470;
+const CARD_CENTER_X = CARD_X + CARD_W / 2; // 480, screen-center too -- the card is centered on screen
+const CARD_RIGHT = CARD_X + CARD_W;
+const CARD_BOTTOM = CARD_Y + CARD_H;
+
+const TITLE_Y = CARD_Y + 34;
+const FRAME_CENTER_Y = 215; // frame spans FRAME_CENTER_Y +/- (160*FRAME_SCALE/2) = 95..335
+const CAPTION_Y = FRAME_CENTER_Y + (160 * FRAME_SCALE) / 2 + 16; // just under the frame's own border
+// The typed message: centered under the caption, sized for 2 lines at DialogBox's own font/wrap
+// rules (src/scenes/ui.js) -- narrower than the game's ordinary full-width dialog box on purpose, so
+// it reads as "inside this card", not as the game's usual bottom-of-screen textbox transplanted here.
+const MESSAGE_BOX = { x: CARD_CENTER_X - 300, y: 368, w: 600, h: 104 };
+// Corner decoration -- three hearts and a small cake motif, one per corner, so both halves of the
+// card balance each other instead of one side crowded and the other bare (the original bug this
+// redesign fixes). Hearts sit just inside the card's own border; the cake sits in the bottom-right,
+// clear of MESSAGE_BOX's own right edge (780) and the card's bottom border.
+const HEART_SPOTS = [
+  [CARD_X + 40, CARD_Y + 60],
+  [CARD_RIGHT - 40, CARD_Y + 60],
+  [CARD_X + 40, CARD_BOTTOM - 40],
+];
+const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
@@ -99,8 +125,16 @@ class CardScene extends Phaser.Scene {
 
   showCover() {
     this.coverOpening = false;
-    const scale = 1.7;
-    this.cover = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'card-cover').setOrigin(0.5).setScale(scale).setDepth(200).setAlpha(0);
+    // Scaled to fully cover the interior card (CARD_W x CARD_H) that sits behind it, not just fill
+    // most of the screen -- a smaller cover left the redesigned interior's own corner hearts/cake
+    // motif visibly peeking out around its edges before it had even opened (found via tools/
+    // qa-shots.js's "card-cover" shot). One uniform scale factor (not stretched to match width and
+    // height separately, which would distort card-cover.png's own art), picked so both dimensions
+    // cover the card -- whichever axis needs the bigger factor wins, and the other axis simply
+    // overscans a little, same idea as a CSS `background-size: cover`.
+    const coverScale = Math.max(CARD_W / 400, CARD_H / 260);
+    this.cover = this.add.image(CARD_CENTER_X, GAME_HEIGHT / 2, 'card-cover').setOrigin(0.5)
+      .setScale(coverScale).setDepth(200).setAlpha(0);
     this.coverTitle = uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `HAPPY BIRTHDAY,\n${this.config.recipient.toUpperCase()}!`, 16, COLORS.highlight)
       .setOrigin(0.5).setAlign('center').setStroke('#1a1c2c', 5).setLineSpacing(10).setDepth(201).setAlpha(0);
     this.coverHint = uiText(this, GAME_WIDTH / 2, GAME_HEIGHT - 46, 'PRESS ENTER TO OPEN', 8, COLORS.dim).setOrigin(0.5).setDepth(201).setAlpha(0);
@@ -132,35 +166,43 @@ class CardScene extends Phaser.Scene {
         this.cover.destroy();
         this.coverTitle.destroy();
         this.coverHint.destroy();
+        this.cover = null; // tools/qa-shots.js's own "is the cover really gone" check relies on this
         this.runInterior();
       },
     });
   }
 
-  // ---------- the interior scene: confetti, cake, hearts, the photo slideshow and the panel that
-  // holds them all -- built once, up front, behind the cover, then revealed by openCover() ----------
+  // ---------- the interior scene: ONE centered card (coordinator review, see the layout comment up
+  // top) holding the title, the photo frame + caption, the typed message, and corner decoration --
+  // built once, up front, behind the cover, then revealed by openCover() ----------
 
   buildInterior() {
-    const x = 20, y = 20, w = GAME_WIDTH - 40, h = GAME_HEIGHT - 40;
     this.panel = this.add.graphics().setDepth(1);
-    drawPanel(this.panel, x, y, w, h);
-    this.title = uiText(this, GAME_WIDTH / 2, y + 32, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, COLORS.highlight)
-      .setOrigin(0.5).setStroke('#1a1c2c', 4).setDepth(2);
+    drawCardPanel(this.panel, CARD_X, CARD_Y, CARD_W, CARD_H);
+    // A deep pink, not the game's usual gold highlight -- gold reads poorly against this card's own
+    // cream paper interior (too close in tone); the outline's own player-pink palette pops instead.
+    this.title = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#d94b8f')
+      .setOrigin(0.5).setDepth(2);
 
-    this.buildCake();
     this.buildFrame();
+    this.buildCake();
     this.buildHearts();
 
-    this.dialog = new DialogBox(this);
+    // A smaller message box than the game's ordinary bottom-of-screen dialog, sized to sit under the
+    // caption inside the card itself (docs/GAME_FEEL.md rule 1 still applies: DialogBox measures its
+    // own content, this just gives it a different box to measure into -- src/scenes/ui.js).
+    this.dialog = new DialogBox(this, MESSAGE_BOX);
     this.interiorParts = [this.panel, this.title, this.cakeParts, this.frameParts, this.heartParts].flat();
   }
 
+  // A small corner motif (coordinator review: was a large, lone centerpiece with nothing balancing
+  // it on the card's other side) -- tucked into the card's bottom-right corner, clear of the message
+  // box (MESSAGE_BOX's own right edge, 780) and the card's own border.
   buildCake() {
-    const cx = 700, cy = INTERIOR_ROW_Y;
-    const cake = this.add.image(cx, cy, 'card-cake').setScale(CAKE_SCALE).setDepth(2);
+    const cake = this.add.image(CAKE_SPOT.x, CAKE_SPOT.y, 'card-cake').setScale(CAKE_SCALE).setDepth(2);
     const flames = CAKE_CANDLE_LOCAL_X.map((localX) => {
       const p = imageLocalPoint(cake, localX, CAKE_CANDLE_LOCAL_TOP_Y);
-      const flame = this.add.ellipse(p.x, p.y, 5, 7, 0xffd23f).setDepth(3);
+      const flame = this.add.ellipse(p.x, p.y, 4, 5, 0xffd23f).setDepth(3);
       this.tweens.add({
         targets: flame, scaleX: { from: 0.75, to: 1.2 }, scaleY: { from: 0.85, to: 1.25 },
         duration: Phaser.Math.Between(180, 260), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -170,8 +212,10 @@ class CardScene extends Phaser.Scene {
     this.cakeParts = [cake, ...flames];
   }
 
+  // Centred in the card's own upper area (coordinator review: was off-center, its own left edge
+  // crossing the card's border) -- the caption sits directly under it, nothing overlapping either.
   buildFrame() {
-    const cx = 250, cy = INTERIOR_ROW_Y;
+    const cx = CARD_CENTER_X, cy = FRAME_CENTER_Y;
     const windowCenter = { x: (FRAME_WINDOW.x0 + FRAME_WINDOW.x1) / 2, y: (FRAME_WINDOW.y0 + FRAME_WINDOW.y1) / 2 };
     const windowSize = { w: FRAME_WINDOW.x1 - FRAME_WINDOW.x0, h: FRAME_WINDOW.y1 - FRAME_WINDOW.y0 };
 
@@ -186,11 +230,10 @@ class CardScene extends Phaser.Scene {
     this.fitPhoto(this.photoA, windowSize);
     this.fitPhoto(this.photoB, windowSize);
     const frame = this.add.image(cx, cy, 'card-frame').setScale(FRAME_SCALE).setDepth(3);
-    // Below the FRAME's own full display height (card-frame.png is 160 tall -- taller than just its
-    // window), not the window alone, or the caption starts inside the frame's own bottom border.
-    const frameBottom = cy + (160 * FRAME_SCALE) / 2;
-    this.caption = uiText(this, cx, frameBottom + 18, this.slides[0].caption, 8, COLORS.dim)
-      .setOrigin(0.5).setWordWrapWidth(280).setAlign('center').setDepth(2);
+    // A warm brown, not COLORS.dim's cool gray -- COLORS.dim is tuned for the game's own dark navy
+    // panels and reads washed-out against this card's cream paper interior.
+    this.caption = uiText(this, cx, CAPTION_Y, this.slides[0].caption, 8, '#7a5a33')
+      .setOrigin(0.5).setWordWrapWidth(320).setAlign('center').setDepth(2);
 
     this.frameParts = [this.photoA, this.photoB, frame, this.caption];
 
@@ -237,9 +280,10 @@ class CardScene extends Phaser.Scene {
     this.caption.setText(slide.caption);
   }
 
+  // Three of the card's four corners (the fourth holds the cake motif, CAKE_SPOT) -- accents, not
+  // the empty-space filler the first version's scattered five ended up as.
   buildHearts() {
-    const spots = [[80, 90], [880, 90], [80, 460], [880, 460], [480, 60]];
-    this.heartParts = spots.map(([x, y], i) => {
+    this.heartParts = HEART_SPOTS.map(([x, y], i) => {
       const heart = this.add.image(x, y, 'card-heart').setScale(2).setDepth(2).setAlpha(0.9);
       this.tweens.add({
         targets: heart, y: y - 8, duration: 1300 + i * 120, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -250,7 +294,10 @@ class CardScene extends Phaser.Scene {
 
   spawnConfettiPiece() {
     const x = Phaser.Math.Between(20, GAME_WIDTH - 20);
-    const colors = [0xff6fb1, 0xffd23f, 0x3b7dd8, 0xffffff, 0x8fd46a];
+    // No white: confetti drifts over both the dark background and the card's own cream interior
+    // (coordinator review, "confetti drifting over the whole screen"), and white nearly vanishes
+    // against cream paper.
+    const colors = [0xff6fb1, 0xffd23f, 0x3b7dd8, 0xd94b8f, 0x8fd46a];
     const piece = this.add.rectangle(x, -10, 5, 9, Phaser.Utils.Array.GetRandom(colors)).setDepth(90);
     const drift = Phaser.Math.Between(-40, 40);
     const duration = Phaser.Math.Between(2200, 3200);
@@ -372,4 +419,21 @@ function imageLocalPoint(image, localX, localY) {
     x: image.x + (localX - image.originX * image.width) * image.scaleX,
     y: image.y + (localY - image.originY * image.height) * image.scaleY,
   };
+}
+
+// The card's own panel -- a warm paper interior with a gold border and a soft drop shadow, deliberately
+// NOT src/scenes/ui.js's drawPanel() (dark navy, this game's usual UI chrome): a birthday card reads
+// as paper, not as another dark menu box, and the redesign this function is part of (coordinator
+// review, 2026-09-22) is specifically about the card reading as one warm, deliberate object rather
+// than UI furniture with decoration scattered around it. Same bevel/shadow technique as drawPanel
+// (src/scenes/ui.js) -- a lighter tone along the top/left inside edge, a darker one bottom/right --
+// so it still reads as "a little 3D" (docs/STYLE_GUIDE.md), just in this card's own palette.
+function drawCardPanel(g, x, y, w, h) {
+  g.fillStyle(0x000000, 0.35).fillRect(x + 6, y + 8, w, h);
+  g.fillStyle(0xf5ead0, 1).fillRect(x, y, w, h);
+  g.fillStyle(0xeadbb8, 1).fillRect(x, y, w, 10); // a faint header band, echoes card-cover.png's own
+  g.lineStyle(6, 0xffd23f, 1).strokeRect(x + 3, y + 3, w - 6, h - 6);
+  g.lineStyle(1, 0xffffff, 0.5).lineBetween(x + 9, y + 9, x + w - 9, y + 9).lineBetween(x + 9, y + 9, x + 9, y + h - 9);
+  g.lineStyle(1, 0x9c845c, 0.5).lineBetween(x + 9, y + h - 9, x + w - 9, y + h - 9).lineBetween(x + w - 9, y + 9, x + w - 9, y + h - 9);
+  g.lineStyle(2, 0x1a1c2c, 1).strokeRect(x, y, w, h);
 }

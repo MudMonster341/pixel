@@ -84,42 +84,85 @@ put in real photos, messages and a video, drop them into `assets/card/` (never c
 
 For playtesting and development, keep using `npm start` (the web build) -- it needs Node and a
 browser, same as always. To send the finished game to someone as a file that just opens, with no
-install and no server to run, build the portable Windows app ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)):
+install and no server to run, build a Windows app
+([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)). There are **two ways to build
+one** -- pick whichever works on the machine you're building on:
+
+| | `npm run dist` | `npm run pack:win` |
+|---|---|---|
+| Tool | electron-builder | @electron/packager |
+| Output | **one** `.exe` file | a folder, zipped |
+| Size | ~100-120 MB (one file) | ~270 MB folder / ~110 MB zipped |
+| Needs on this machine | Developer Mode **or** admin terminal (see below) | nothing extra -- works everywhere |
+| Send the receiver | the single `.exe` | the `.zip`; they unzip it, then run the `.exe` inside |
+
+Both produce the exact same game -- same `index.html`/`src/`, same `server.js`, same
+`electron/main.js` window -- just packaged differently. Prefer `npm run dist`'s single file when you
+can build it (nicer to send); use `npm run pack:win` when you can't turn on Developer Mode or don't
+have an admin terminal handy.
 
 ```bash
-npm run dist
+npm run dist       # single PixelQuest-portable.exe (needs Developer Mode/admin, see below)
+npm run pack:win    # dist/PixelQuest-win32-x64.zip (works everywhere, no setting to change)
 ```
 
 - **If the card is for someone specific**, drop their photos, messages and video into
   `assets/card/` *first* (see "The birthday card" above and [docs/STORY.md](docs/STORY.md)) -- then
-  run `npm run dist`. The folder is gitignored, never committed, and the build works fine even if
-  it's empty (the card falls back to its placeholders).
-- **Output:** `dist\PixelQuest-portable.exe` -- a single portable executable, about 100-120 MB
-  (bundles Chromium/Electron; the game's own assets are a few MB of that). No installer, no admin
-  rights, nothing else to send -- just that one file. `dist/` itself is gitignored; it's rebuilt
-  from source each time, never committed.
-- **Sending it:** the receiver double-clicks the `.exe`. Nothing to install; it needs no internet
-  (Phaser and the font are vendored locally, see `vendor/README.md`) and no other files alongside
-  it. Their progress (`localStorage`, [src/save.js](src/save.js)) is saved inside the app and
-  survives closing and reopening it, completely separate from any save made playing the web build.
+  build. The folder is gitignored, never committed, and either build works fine even if it's empty
+  (the card falls back to its placeholders).
+- **`npm run dist` output:** `dist\PixelQuest-portable.exe` -- a single portable executable. No
+  installer, no admin rights *to run it*, nothing else to send -- just that one file.
+- **`npm run pack:win` output:** `dist\PixelQuest-win32-x64\` (containing `PixelQuest.exe` plus
+  Chromium's supporting files) and `dist\PixelQuest-win32-x64.zip` -- send the `.zip`; the receiver
+  unzips it anywhere and runs `PixelQuest.exe` from inside the unzipped folder (moving just the
+  `.exe` out on its own won't work -- it needs the files alongside it).
+  `dist/` itself is gitignored either way; it's rebuilt from source each time, never committed.
+- **Sending it:** however it was built, the receiver needs no internet to run it (Phaser and the
+  font are vendored locally, see `vendor/README.md`) and no account/install step. Their progress
+  (`localStorage`, [src/save.js](src/save.js)) is saved inside the app and survives closing and
+  reopening it, completely separate from any save made playing the web build.
 - **What's inside:** the same `index.html`/`src/` the web build serves, run through the same
-  `server.js` on a fixed local port inside the app ([electron/main.js](electron/main.js)) -- no game
-  code is different between the two builds. The dev feedback overlay and anything gated on
-  `DEV_MODE` never ship: the packaged app always loads with `?dev=0` forced, regardless of the
-  hostname-based default `src/main.js` uses for the web build.
-- **F11** toggles fullscreen in the packaged app. DevTools are compiled out entirely unless it's
-  started with `--devtools` (`npm run electron -- --devtools`), which `npm run dist` never passes.
-- **First build on a new machine:** `npm run dist` downloads Electron and electron-builder's helper
-  tools the first time (needs internet just for that one-time setup, same as any `npm install`);
-  the produced `.exe` itself needs no internet to run. Windows may need
-  [Developer Mode](ms-settings:developers) switched on (or the terminal run as Administrator) the
-  very first time electron-builder needs to unpack one of its own helper archives, which involves
-  creating a symbolic link -- a one-off, machine-specific hiccup, not something `npm run dist` itself
-  needs on every run afterwards.
+  `server.js` on a local port inside the app ([electron/main.js](electron/main.js)) -- no game code
+  is different between either packaged build and the web build. The dev feedback overlay and
+  anything gated on `DEV_MODE` never ship: the packaged app always loads with `?dev=0` forced,
+  regardless of the hostname-based default `src/main.js` uses for the web build.
+- **The internal port** (M6.6): the app tries a short list of ports (starting at 51973) and uses
+  whichever is free, instead of failing outright if something else happens to be using the first
+  one. Whichever port it lands on, the window always loads a fixed `pixelquest://app/` address
+  ([electron/main.js](electron/main.js) `registerAppProtocol()`), never the raw
+  `http://127.0.0.1:<port>` address directly -- browsers key `localStorage` by the exact address a
+  page loaded from, so if the window's address changed with the port, a save made on one launch
+  could look like it had vanished on the next, the moment the app ever had to fall back to a
+  different port. The fixed address forwards every request through to the real port underneath, so
+  the save (`localStorage`) is keyed identically no matter which port the server actually used.
+- **F11** toggles fullscreen in either packaged build. DevTools are compiled out entirely unless it's
+  started with `--devtools` (`npm run electron -- --devtools`), which neither `npm run dist` nor
+  `npm run pack:win` ever passes.
+- **First build on a new machine:** either script downloads Electron the first time (needs internet
+  just for that one-time setup, same as any `npm install`); the produced app itself needs no
+  internet to run.
+  - **`npm run dist`** additionally needs electron-builder's own helper tools, which on Windows
+    includes an archive (`winCodeSign`) containing macOS files with symbolic links inside it.
+    Extracting a symlink needs `SeCreateSymbolicLinkPrivilege`, which a normal (non-admin, non-
+    Developer-Mode) Windows account doesn't have -- without it, the build fails partway through
+    with exactly this error:
+    ```
+    ERROR: Cannot create symbolic link : A required privilege is not held by the client :
+    ...\electron-builder\Cache\winCodeSign\...\darwin\...\lib\libcrypto.dylib
+    ```
+    Fix it once, machine-wide, either way (a one-off hiccup, not something the build needs on every
+    run afterwards):
+    - Turn on [Developer Mode](ms-settings:developers) (Settings -> System -> For developers ->
+      Developer Mode), **or**
+    - Run the build from an elevated ("Run as administrator") terminal.
+  - **`npm run pack:win`** never downloads or extracts that archive (`@electron/packager` doesn't use
+    electron-builder's code-signing tooling at all), so it needs no privilege change on any machine --
+    that's the whole reason it exists as a second option.
 - **Regenerating the icon:** `npm run icon` rebuilds `build/icon.ico` from
   [tools/make-icon.js](tools/make-icon.js) (a small drawn BITS gate/arch motif, the same style as
-  every other sprite in the game) -- `npm run dist` always runs it first, so the committed
-  `build/icon.ico` only needs regenerating by hand if you're editing the icon's own art.
+  every other sprite in the game) -- both `npm run dist` and `npm run pack:win` always run it first,
+  so the committed `build/icon.ico` only needs regenerating by hand if you're editing the icon's own
+  art.
 
 ## Giving feedback while playing (dev mode)
 

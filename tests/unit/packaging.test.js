@@ -42,15 +42,87 @@ test('server.js serves .woff2 with a real font content-type, not octet-stream', 
 
 test('electron/main.js forces ?dev=0 when it loads the game -- packaged dev tools would otherwise turn back on', () => {
   const src = fs.readFileSync(path.join(ROOT, 'electron', 'main.js'), 'utf8');
-  // src/main.js's DEV_MODE defaults ON for 127.0.0.1/localhost, which is exactly what the packaged
-  // app's own internal server is -- this explicit override is the only thing stopping DEV_MODE
-  // (and therefore the feedback overlay) from shipping in every build.
-  assert.match(src, /loadURL\(`http:\/\/127\.0\.0\.1:\$\{PORT\}\/\?dev=0`\)/);
+  // src/main.js's DEV_MODE defaults ON for 127.0.0.1/localhost -- this explicit override is what
+  // stops DEV_MODE (and therefore the feedback overlay) from shipping in every build, regardless of
+  // whether the window's own origin would otherwise have tripped that hostname check.
+  assert.match(src, /loadURL\(`\$\{APP_SCHEME\}:\/\/app\/\?dev=0`\)/);
   // DevTools must be opt-in, not on by default.
   assert.match(src, /process\.argv\.includes\('--devtools'\)/);
   assert.match(src, /devTools:\s*DEVTOOLS/);
   // No menu bar (a stray "View > Toggle Developer Tools" menu item would be another way in).
   assert.match(src, /Menu\.setApplicationMenu\(null\)/);
+});
+
+test('electron/main.js (M6.6): tries a short list of candidate ports instead of one hardcoded port', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'electron', 'main.js'), 'utf8');
+  const match = src.match(/const PORTS = (\[[^\]]+\]);/);
+  assert.ok(match, 'expected a PORTS candidate-port list in electron/main.js');
+  const ports = JSON.parse(match[1]);
+  assert.ok(ports.length >= 2, 'a single port is not a fallback list');
+  assert.ok(ports.every(Number.isInteger));
+  assert.ok(!ports.includes(8080), 'must not collide with the owner\'s own dev/play server (CLAUDE.md)');
+  assert.ok(!ports.includes(4173), 'must not collide with the default e2e test port (tests/e2e/paths.js)');
+  // Falling back to the next port on EADDRINUSE, not crashing the app.
+  assert.match(src, /err\.code !== 'EADDRINUSE'/);
+});
+
+test('electron/main.js (M6.6): the window always loads a fixed custom-scheme origin, not the raw http port directly', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'electron', 'main.js'), 'utf8');
+  // If the window loaded `http://127.0.0.1:<port>` directly, a port fallback would move the player to
+  // a different localStorage origin (Chromium scopes storage per scheme+host+port) and their save
+  // (src/save.js) would look to have vanished. Loading a fixed scheme instead, proxied through to
+  // whichever port the server actually bound to, keeps the origin -- and so the save -- identical
+  // across launches no matter which candidate port ended up free.
+  assert.match(src, /registerSchemesAsPrivileged/);
+  assert.match(src, /protocol\.handle\(APP_SCHEME/);
+  assert.doesNotMatch(src, /loadURL\(`http:\/\/127\.0\.0\.1:\$\{port\}/i, 'the window must not load the raw per-run port directly');
+});
+
+test('save.js keys storage by a fixed prefix and profile, never by location/origin -- the piece that actually makes cross-port persistence possible', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'src', 'save.js'), 'utf8');
+  assert.match(src, /SAVE_KEY_PREFIX = 'pixelquest\.save\.v1\.'/);
+  assert.doesNotMatch(src, /location\.(origin|port|host)/, 'the save key must stay explicit, never derived from the page origin/port');
+});
+
+test('server.js exports its http.Server instance so electron/main.js can retry another port on EADDRINUSE', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  assert.match(src, /module\.exports = server;/);
+});
+
+test('tools/pack-win.js (the @electron/packager path) ships the same runtime files as npm run dist (electron-builder)', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const builderFiles = pkg.build.files;
+  const src = fs.readFileSync(path.join(ROOT, 'tools', 'pack-win.js'), 'utf8');
+
+  const includeMatch = src.match(/const INCLUDE = (\[[\s\S]*?\]);/);
+  assert.ok(includeMatch, 'expected an INCLUDE array in tools/pack-win.js');
+  const include = JSON.parse(includeMatch[1].replace(/'/g, '"').replace(/,\s*\]/, ']'));
+
+  for (const entry of builderFiles) {
+    if (entry.startsWith('!')) continue; // exclusions checked separately below
+    assert.ok(include.includes(entry), `tools/pack-win.js INCLUDE is missing "${entry}" from package.json build.files`);
+  }
+  // electron/main.js loads build/icon.ico at runtime (BrowserWindow icon) -- not in electron-builder's
+  // own `files` list (it embeds that icon straight from disk via `win.icon` instead), but pack-win.js
+  // must still ship it since it has no separate "exe resource icon" step of its own.
+  assert.ok(include.includes('build/icon.ico'));
+
+  const excludeMatch = src.match(/const EXCLUDE_PREFIXES = (\[[\s\S]*?\]);/);
+  assert.ok(excludeMatch, 'expected an EXCLUDE_PREFIXES array in tools/pack-win.js');
+  const excludePrefixes = JSON.parse(excludeMatch[1].replace(/'/g, '"').replace(/,\s*\]/, ']'));
+  for (const entry of builderFiles) {
+    if (!entry.startsWith('!')) continue;
+    const dir = entry.slice(1).replace(/\/\*\*$/, '/');
+    assert.ok(excludePrefixes.includes(dir), `tools/pack-win.js EXCLUDE_PREFIXES is missing "${dir}" (from "${entry}")`);
+  }
+});
+
+test('package.json: pack:win script exists, and appId/productName/author are set to real values, not placeholders', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts['pack:win'], 'node tools/pack-win.js');
+  assert.equal(pkg.build.productName, 'BITS Dubai - The LUG Treasure Hunt');
+  assert.match(pkg.build.appId, /^[a-z0-9.-]+$/i);
+  assert.ok(pkg.author, 'package.json should name an author');
 });
 
 test('package.json: electron/electron-builder are devDependencies, not runtime dependencies (ADR 0003 still holds for the game itself)', () => {

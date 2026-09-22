@@ -33,3 +33,7 @@ assets/card/*
 assets/External Tilesets/
 assets/vendor/limezu-modern-interiors-free/
 assets/vendor/sprout-lands-basic/
+
+# build output
+dist/
+dist2/

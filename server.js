@@ -119,7 +119,7 @@ function serveStatic(res, urlPath) {
   });
 }
 
-http
+const server = http
   .createServer(async (req, res) => {
     let urlPath;
     try {
@@ -138,3 +138,9 @@ http
     }
   })
   .listen(PORT, HOST, () => console.log(`Game running at http://localhost:${PORT}`));
+
+// Exported so electron/main.js can attach 'error'/'listening' listeners and try another port if
+// this one is taken (M6.6) -- plain `npm start`/`node server.js` never reads this export, so nothing
+// changes for that path: an unhandled 'error' event (e.g. the port already in use) still crashes the
+// process with Node's default message, exactly as before.
+module.exports = server;

@@ -58,6 +58,7 @@ source asset packages... change all the trees, pavements, everything."
 
 ### M3a — The opening (owner brief, 2026-09-21; see [STORY.md](STORY.md) "Opening")
 - [x] Title screen redesigned properly: big drawn buttons with depth, shaded panels, animated background (2026-09-21, src/scenes/title.js, src/scenes/ui.js Button/drawButtonState)
+- [ ] Video cutscenes: play owner-supplied pixel clips for the gate arrival and the Main Block entrance, drawn stills as fallback (prompts: research/cutscene-video-prompts.md)
 - [x] Mustafa's greeting: a character portrait and dialog that introduces the lead and the day (2026-09-21, src/scenes/intro-greeting.js)
 - [x] Name entry (typed + on-screen keyboard, default name, saved) (2026-09-21, src/scenes/intro-name.js)
 - [x] Character customisation: clothes colour previewed live, saved, used everywhere (2026-09-21, src/scenes/intro-customize.js; hair/skin not included -- see tools/make-assets.js CLOTHES_SWATCHES comment for why)

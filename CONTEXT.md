@@ -1,6 +1,6 @@
 # Pixel Quest — context
 
-**Last updated:** 2026-09-20 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-22 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -38,16 +38,28 @@ explain the story once the base map is done.
 - **Not yet:** ES modules, flags/scripts, saving, backpack, dialog choices, the story (the owner explains it after the base map).
 - **Next:** the owner verifies FB-0018 to FB-0022, then entrance position, interior polish from feedback, then the Foundation phase of GAME_PLAN.md.
 
-## Where this is going (2026-09-20)
-The owner told the full story and set the finish line: a sendable **Windows .exe** of the LUG
-treasure hunt, ending in an animated **birthday card**, within 2-4 weeks.
-- **What to build:** [docs/STORY.md](docs/STORY.md) (the script) and [docs/ROADMAP.md](docs/ROADMAP.md)
-  (M1 story engine → M2 art overhaul → M3 story slice → M4 mini-games → M5 feel → M6 ship → M7 QA).
-- **How the work runs:** a scheduled loop every 3 hours does one roadmap task, feedback first
-  ([ADR 0011](decisions/0011-autonomous-roadmap-loop.md)).
-- **Delivery:** Electron portable .exe, web build kept for dev ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
-- **Art:** the 16 px grid stays; everything gets redrawn to a much higher standard.
-- **Map:** the current campus is the keeper, minor enhancements only.
+## Where this is going (updated 2026-09-22)
+The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in an animated
+**birthday card** ([STORY.md](docs/STORY.md)), target 2-4 weeks from 2026-09-20.
+- **What to build:** [docs/ROADMAP.md](docs/ROADMAP.md) (M1 story engine, M2 art from packs,
+  M3 story slice, M4 mini-games, M5 feel, M6 ship, M7 QA).
+- **How the work runs:** a scheduled loop every 3 hours does one roadmap task, owner feedback first
+  ([ADR 0011](decisions/0011-autonomous-roadmap-loop.md)). Sonnet agents write the code; the
+  coordinator briefs, reviews, tests, documents and commits.
+- **Art comes from free third-party packs** ([ADR 0012](decisions/0012-third-party-asset-packs.md)):
+  Kenney (CC0) outdoors, LimeZu free and Sprout Lands (non-commercial, credited) for interiors,
+  greenery and characters. The BITS buildings are built by us in the packs' style. **The game is a
+  gift and must never be sold.** Raw packs are gitignored; generated art ships.
+- **Characters are 16x24** ([ADR 0013](decisions/0013-characters-are-16x24-from-the-pack.md)); the
+  clothes-colour choice bakes one sheet per colour ([ADR 0014](decisions/0014-opening-customisation-recolor-sheets.md)).
+- **Delivery:** an Electron portable .exe, with the web build for development
+  ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
+- **Built so far:** the opening (title, Mustafa's greeting, name entry, customisation, bus arrival),
+  campus v3 from satellite (gate on the lower right, roundabout, parking both sides, loop road),
+  8 interior floors with warps, saving, and data-driven dialog with choices and the E/! bubble.
+- **Owner-supplied media:** pixel video clips for the big cutscenes
+  ([prompts](docs/research/cutscene-video-prompts.md)) and the birthday card's photos and video in
+  `assets/card/`. Drawn fallbacks mean the game never breaks without them.
 
 ## How to run it
 ```

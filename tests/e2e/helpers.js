@@ -20,7 +20,13 @@ const { FEEDBACK_DIR } = require('./paths');
 // set once, here, at the very first page.goto() -- is what every later scene transition still reads,
 // since none of them reload the page. Defaulting it off here too means "Play" from a
 // runtime-reached title screen behaves the same as everywhere else in this file: straight to 'boot'.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false } = {}) {
+// Mini-games (docs/ROADMAP.md M4) default off (`?minigames=0`, src/maplogic.js minigamesEnabled()),
+// the same way cutscenes/title/intro do: a `minigame` dialog action resolves straight to 'won'
+// without ever launching the real Phaser scene, so most specs (the LUG-hunt playthrough, dialog and
+// save tests, ...) see a key change hands the instant she wins it, without having to actually play a
+// platformer/flyer/Tetris session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
+// turn the real thing back on.
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -33,6 +39,7 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (profile) params.set('profile', profile);
   if (!title) params.set('title', '0');
   if (!intro) params.set('intro', '0');
+  if (!minigames) params.set('minigames', '0');
   await page.goto(`/?${params.toString()}`);
   await waitForBoot(page);
   return { errors };
@@ -169,7 +176,7 @@ function feedbackCli(args) {
 // do: most title-flow specs want Play to land straight on 'boot', same as before the M3a opening
 // (Mustafa's greeting/name entry/customisation/bus arrival) existed. tests/e2e/intro.spec.js passes
 // `intro: true` to exercise that chain of scenes itself.
-async function openTitle(page, { map, save = false, profile, intro = false } = {}) {
+async function openTitle(page, { map, save = false, profile, intro = false, minigames = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -180,6 +187,7 @@ async function openTitle(page, { map, save = false, profile, intro = false } = {
   if (!save) params.set('save', '0');
   if (profile) params.set('profile', profile);
   if (!intro) params.set('intro', '0');
+  if (!minigames) params.set('minigames', '0');
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   return { errors };

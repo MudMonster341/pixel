@@ -186,12 +186,26 @@ class UIScene extends Phaser.Scene {
       if (!CUTSCENES[key]) { console.warn(`dialog action requested unknown cutscene "${key}"`); return; }
       if (world.sys.isActive() && !world.transitioning) world.playCutscene(key);
     };
+    // A dialog `{ minigame: 'id' }` action (src/dialog.js) fires this; handled here for the same
+    // reason as cutscenes above (a persistent scene, always reaching whichever WorldScene instance is
+    // current). `?minigames=0` (tests/e2e/helpers.js, src/maplogic.js minigamesEnabled()) bypasses the
+    // real mini-game scene entirely and resolves straight to 'won', so most specs (the quest, saves,
+    // dialog...) don't need to actually play one headlessly just to see a key change hands.
+    this.onMinigameRequested = (payload) => {
+      if (!minigamesEnabled()) { payload.onResult('won'); return; }
+      const def = MINIGAMES[payload.id];
+      const world = this.scene.get('world');
+      if (!def) { console.warn(`dialog action requested unknown mini-game "${payload.id}"`); payload.onResult('quit'); return; }
+      if (!world.sys.isActive() || world.transitioning) { payload.onResult('quit'); return; }
+      world.launchMinigame(payload.id, payload.onResult);
+    };
     this.game.events.on('map-entered', this.onMapEntered);
     this.game.events.on('area-entered', this.onAreaEntered);
     this.game.events.on('toast', this.onToast);
     this.game.events.on('hint', this.onHint);
     this.game.events.on('state-changed', this.onQuestStateChanged);
     this.game.events.on('cutscene:requested', this.onCutsceneRequested);
+    this.game.events.on('minigame:requested', this.onMinigameRequested);
     this.events.once('shutdown', () => this.teardown());
 
     const world = this.scene.get('world');
@@ -234,6 +248,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.off('hint', this.onHint);
     this.game.events.off('state-changed', this.onQuestStateChanged);
     this.game.events.off('cutscene:requested', this.onCutsceneRequested);
+    this.game.events.off('minigame:requested', this.onMinigameRequested);
     this.hotbar.teardown();
     this.tutorial.teardown();
   }

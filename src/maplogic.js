@@ -111,6 +111,17 @@ function introEnabled(search) {
   return qs.get('intro') !== '0';
 }
 
+// `?minigames=0` bypasses the real mini-game scenes (src/minigames/): a `minigame` dialog action
+// resolves straight to 'won', the same way `?cutscene=0` skips a cutscene trigger -- most specs (the
+// full LUG-hunt playthrough, dialog/save tests, ...) care about the *quest* reacting correctly to a
+// key being won, not about actually playing a platformer/flyer/Tetris session headlessly every time.
+// tests/e2e/helpers.js defaults this off; tests/e2e/minigames.spec.js turns it back on to test the
+// mini-games themselves. `search` is injectable, same pattern as the helpers above.
+function minigamesEnabled(search) {
+  const qs = new URLSearchParams(search ?? (typeof location === 'undefined' ? '' : location.search));
+  return qs.get('minigames') !== '0';
+}
+
 // The smallest object (by tile area) among a Tiled map's objects whose type is one of `types` and
 // whose rectangle contains the point (x, y) — all in tile units, as tiledObjects() returns them.
 // Smallest-first so a specific area (e.g. "Athletics Track") wins over a bigger one it sits inside

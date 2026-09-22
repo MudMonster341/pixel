@@ -226,6 +226,37 @@ and bounds, not pixels).
    blinking "PRESS ENTER", the dialog arrow, and a selected menu row's highlight all sit well under
    that (2-2.5 Hz).
 
+## Mini-games (roadmap M4)
+
+Each of the 3 key mini-games (docs/STORY.md, `src/minigames/`) is its own little game, but it has to
+read as *this* game's UI wrapped around it, not a different one bolted on. Rules this pass settled on:
+
+- **The shared shell reuses this game's own furniture, not new art.** The intro/game-over/win cards
+  (`src/minigames/framework-scene.js` `MinigameCard`) are built from `drawPanel()`/`uiText()`/`COLORS`
+  (`src/scenes/ui.js`) -- the exact same panel a dialog box or the pause menu uses, sized from its own
+  content (rule 1 below, unchanged). A player shouldn't be able to tell a mini-game's cards were built
+  by different code than the rest of the UI.
+- **A mini-game's own "hero" is a simple shape in the lead's own colors** (`drawMiniHero()`,
+  `src/minigames/framework-scene.js`): the same pink top/fair skin/black hair STYLE_GUIDE.md gives the
+  real player sprite, just as flat shapes instead of a full walk-cycle sheet -- a full sprite sheet
+  isn't worth building for a one-off mini-game avatar, but the *colors* still have to match, or it
+  reads as someone else's character dropped into this game.
+- **Retrying is exactly one keypress, never a menu to navigate into first.** The game-over card's item
+  list always starts with Retry highlighted (`MinigameCard.show()`'s `index = 0`), so ENTER alone
+  retries -- rule 7 below (keyboard first) plus this task's own brief. Skipping to another item
+  (Quit, or the skip gift) still only takes an arrow press or two, never more.
+- **The skip offer is a gift, not a defeat screen.** After 3 losses, "SKIP -- TAKE THE KEY ANYWAY"
+  appears on that same game-over card (docs/STORY.md "nobody may be locked out") -- it's an addition
+  to the existing Retry/Quit list, not a different, harsher screen replacing them, and its own win
+  card still says "KEY GIFTED!" rather than reusing the real win's "YOU GOT IT!" text, so it's
+  honestly a different, still-celebratory outcome, not a hidden downgrade.
+- **Esc always quits back to the game, from anywhere in a mini-game** (the intro, mid-play, or a
+  card) -- consistent with this file's existing "every screen reachable by keyboard alone" and
+  "nothing modal traps you" rules; it never asks for confirmation, the same as skipping a cutscene.
+- **A mini-game never eats the world's own fade.** `MinigameBaseScene.finish()` fades out/in exactly
+  like `src/scenes/cutscene.js`'s `outro()` does (250ms, `Cubic`-free plain fade, matching "map change:
+  250ms fade to black and back") -- launching and returning never look like a hard cut.
+
 ## What to check before calling a new screen "done"
 
 Beyond `npm test` green and a look with `npm run qa:shots` (docs/TESTING.md, docs/QA_PLAN.md):

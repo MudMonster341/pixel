@@ -23,8 +23,19 @@
   <script src="src/state.js"></script>
   <script src="src/save.js"></script>
   <script src="src/dialog.js"></script>
+  <!-- Mini-games (docs/ROADMAP.md M4): the pure data/logic files first (framework-data.js's MINIGAMES
+       registry is read by world.js/ui.js below), then the Phaser scene shell and each game, which
+       need drawPanel/uiText/COLORS/GAME_WIDTH -- loaded after ui.js. -->
+  <script src="src/minigames/framework-data.js"></script>
+  <script src="src/minigames/tetris-logic.js"></script>
+  <script src="src/minigames/flappy-logic.js"></script>
+  <script src="src/minigames/platformer-physics.js"></script>
   <script src="src/scenes/world.js"></script>
   <script src="src/scenes/ui.js"></script>
+  <script src="src/minigames/framework-scene.js"></script>
+  <script src="src/minigames/platformer.js"></script>
+  <script src="src/minigames/flappy.js"></script>
+  <script src="src/minigames/tetris.js"></script>
   <script src="src/scenes/cutscene.js"></script>
   <script src="src/scenes/title.js"></script>
   <!-- M3a opening (docs/STORY.md "Opening"): title's "Play" chains through these before 'boot' --

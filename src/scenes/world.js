@@ -471,11 +471,31 @@ class WorldScene extends Phaser.Scene {
     // chose. Either way, only one actions list ever runs: the choice's own, or the entry's own when
     // there was no choice to make.
     this.scene.get('ui').dialog.open(found.label, lines, (choice) => {
-      applyDialogActions((choice || entry).actions, GameState);
-      // A key station's "take" entry just gave the key (docs/STORY.md); make the desk's own icon
-      // disappear the same way a ground pickup does, so it visually matches "you already have it."
-      if (found.kind === 'keyStation' && entry.id === 'take') this.collectKeyStation(found.target);
+      applyDialogActions((choice || entry).actions, GameState, (result) => {
+        // A key station's "take" entry starts with a `minigame` action (src/story.js); the key is
+        // only actually given once that mini-game resolves 'won' and the rest of the list finishes
+        // ('done', src/dialog.js) -- never on 'quit' (she backed out without beating it) or a full
+        // bag. Only then does the desk's own icon disappear, the same way a ground pickup does, so it
+        // visually matches "you already have it" instead of vanishing before she's actually earned it.
+        if (found.kind === 'keyStation' && entry.id === 'take' && result === 'done') {
+          this.collectKeyStation(found.target);
+        }
+      });
     }, choices);
+  }
+
+  // Launches a mini-game (docs/ROADMAP.md M4): pauses 'world' exactly like playCutscene() above
+  // pauses it for a cutscene. The mini-game's own scene (src/minigames/framework-scene.js
+  // MinigameBaseScene, registered under MINIGAMES[id].sceneKey in src/main.js) resumes 'world' itself
+  // once it's done and calls `onResult('won' | 'quit')` -- src/dialog.js's `minigame` action is what
+  // actually cares about that outcome.
+  launchMinigame(id, onResult) {
+    const def = MINIGAMES[id];
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.prompt.setVisible(false);
+    this.scene.pause();
+    this.scene.launch(def.sceneKey, { id, onComplete: onResult, returnTo: 'world' });
   }
 
   // Fades and destroys a key station's floating icon once its key has been given (mirrors

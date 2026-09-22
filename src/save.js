@@ -37,6 +37,10 @@ function snapshotState(state) {
     inventory: { slots: state.inventory.slots, selected: state.inventory.selected },
     flags: { ...state.flags },
     quest: { stage: state.quest.stage, keys: { ...state.quest.keys } },
+    // Mini-game progress (docs/ROADMAP.md M4): plain per-id records already ({ attempts, bestScore,
+    // won, skipped }, src/minigames/framework-data.js), so a shallow copy is enough -- no Sets/class
+    // instances inside it, same reasoning as `flags` above.
+    minigames: { ...state.minigames },
     journal: [...state.journal],
     collected: [...state.collected],
     seenCutscenes: [...state.seenCutscenes],
@@ -73,6 +77,9 @@ function applyState(state, saved) {
     keys: { ...state.quest.keys, ...(saved.quest?.keys || {}) },
   };
   state.journal = Array.isArray(saved.journal) ? [...saved.journal] : state.journal;
+  // A save from before M4 simply has no `minigames` field -- falls back to whatever GameState already
+  // had (an empty object, fresh from resetGameState()/the initial literal), same as playerName above.
+  state.minigames = saved.minigames && typeof saved.minigames === 'object' ? { ...saved.minigames } : state.minigames;
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
   state.seenDialog = new Set(saved.seenDialog || []);

@@ -103,20 +103,36 @@ function hasNewDialog(npc, state) {
 //   { toast: 'The volunteer waves you over.' }   a short on-screen message
 //   { cutscene: 'gate2' }       asks to play a cutscene (src/cutscenes.js); src/scenes/ui.js listens
 //                                for the event and hands it to the current WorldScene
-//   { minigame: 'tetris' }      asks to launch a mini-game -- a no-op stub for now (M4), just the
-//                                event, since nothing plays it yet; a key-station action list runs
-//                                this *before* `give`/`key` (docs/STORY.md), so dropping the real
-//                                mini-game in later needs no rewrite of the story data -- it just
-//                                starts blocking on the outcome instead of resolving immediately.
+//   { minigame: 'tetris' }      asks to launch a mini-game (docs/ROADMAP.md M4, src/minigames/) and
+//                                *suspends* the rest of this action list until it's over -- a
+//                                key-station action list runs this before `give`/`key` (docs/STORY.md),
+//                                so `give`/`key`/`journal`/`toast` only fire once the mini-game
+//                                reports 'won' (a real win, or the after-3-losses skip -- both a gift,
+//                                see src/minigames/framework-scene.js); 'quit' stops the list right
+//                                there, same as a full bag already did, and no key is ever handed over
 //   { journal: 'text' }        appends a clue/note to GameState.journal (M1's "journal (J)" leftover,
 //                                src/scenes/ui.js Journal), oldest first, never removed
-function applyDialogActions(actions, state) {
+//
+// `onDone(reason)`, if given, fires exactly once: 'done' if the whole list ran, 'full' if a `give`
+// stopped it early, or whatever the mini-game's own outcome was ('quit') if that's what stopped it.
+// src/scenes/world.js interact() uses this to know whether a key station's key was actually handed
+// over before making its floating icon disappear.
+function applyDialogActions(actions, state, onDone) {
+  runDialogActionsFrom(actions || [], 0, state, onDone);
+}
+
+function runDialogActionsFrom(actions, from, state, onDone) {
   let changed = false;
-  for (const action of actions || []) {
+  for (let i = from; i < actions.length; i++) {
+    const action = actions[i];
     if ('give' in action) {
-      if (state.inventory.add(action.give)) changed = true;
-      else { emitDialogEvent('toast', 'Your bag is full!'); break; }
-    } else if ('setFlag' in action) {
+      if (state.inventory.add(action.give)) { changed = true; continue; }
+      emitDialogEvent('toast', 'Your bag is full!');
+      if (changed) notifyStateChanged();
+      if (onDone) onDone('full');
+      return;
+    }
+    if ('setFlag' in action) {
       if (typeof action.setFlag === 'string') state.flags[action.setFlag] = true;
       else state.flags[action.setFlag.name] = action.setFlag.value;
       changed = true;
@@ -134,10 +150,19 @@ function applyDialogActions(actions, state) {
     } else if ('cutscene' in action) {
       emitDialogEvent('cutscene:requested', action.cutscene);
     } else if ('minigame' in action) {
-      emitDialogEvent('minigame:requested', action.minigame);
+      if (changed) { notifyStateChanged(); changed = false; }
+      emitDialogEvent('minigame:requested', {
+        id: action.minigame,
+        onResult: (outcome) => {
+          if (outcome === 'won') runDialogActionsFrom(actions, i + 1, state, onDone);
+          else if (onDone) onDone(outcome);
+        },
+      });
+      return;
     }
   }
   if (changed) notifyStateChanged();
+  if (onDone) onDone('done');
 }
 
 // ---------- text templating ----------

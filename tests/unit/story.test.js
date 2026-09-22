@@ -169,10 +169,15 @@ test('story: the volunteer\'s welcome and reward lines actually use {name}', () 
 // ---------- a full playthrough of the data, start to finish, never getting stuck ----------
 
 test('story: a full playthrough (talk, find all 3 keys in any order, return) always reaches "rewarded"', () => {
-  const { STORY, keyStationDialog, pickDialogEntry, applyDialogActions } = loadGameData();
+  const { STORY, keyStationDialog, pickDialogEntry, applyDialogActions, gameEvents } = loadGameData();
   const volunteer = { id: 'lug-volunteer', dialog: STORY.volunteer };
   const state = questFixture('arrival');
   state.inventory = { slots: [], add: () => true };
+  // A key station's "take" entry starts with a `minigame` action (src/story.js) that now really
+  // suspends the rest of the list until it resolves (src/dialog.js) -- this test is about the quest
+  // *data* reaching every state correctly, not about playing a mini-game, so it auto-resolves every
+  // one as an immediate win, the same way `?minigames=0` does for most e2e specs (src/scenes/ui.js).
+  gameEvents.on('minigame:requested', (payload) => payload.onResult('won'));
 
   // Talk before being briefed.
   let picked = pickDialogEntry(volunteer, state);

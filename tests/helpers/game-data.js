@@ -5,7 +5,15 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SCRIPTS = ['src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js', 'src/dialog.js'];
+const SCRIPTS = [
+  'src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js',
+  // Mini-game pure data/logic (docs/ROADMAP.md M4): no Phaser scenes here, so these load fine into
+  // this same sandbox -- src/minigames/framework-scene.js and the 3 game scenes need a real browser
+  // and are never loaded by unit tests.
+  'src/minigames/framework-data.js', 'src/minigames/tetris-logic.js', 'src/minigames/flappy-logic.js',
+  'src/minigames/platformer-physics.js',
+  'src/dialog.js',
+];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
 class TinyEmitter {
@@ -85,6 +93,37 @@ function loadGameData() {
     doorLockRule: get('doorLockRule'),
     isDoorLocked: get('isDoorLocked'),
     questObjectiveText: get('questObjectiveText'),
+    minigamesEnabled: get('minigamesEnabled'),
+    MINIGAMES: get('MINIGAMES'),
+    recordAttempt: get('recordAttempt'),
+    minigameProgress: get('minigameProgress'),
+    resetMinigameProgress: get('resetMinigameProgress'),
+    freshMinigameProgress: get('freshMinigameProgress'),
+    // Tetris pure logic
+    TETRIS_COLS: get('TETRIS_COLS'),
+    TETRIS_ROWS: get('TETRIS_ROWS'),
+    TETRIS_ORDER: get('TETRIS_ORDER'),
+    createTetrisBoard: get('createTetrisBoard'),
+    randomBag: get('randomBag'),
+    spawnPiece: get('spawnPiece'),
+    absoluteCells: get('absoluteCells'),
+    fitsBoard: get('fitsBoard'),
+    movePiece: get('movePiece'),
+    rotatePiece: get('rotatePiece'),
+    lockPiece: get('lockPiece'),
+    fallIntervalMs: get('fallIntervalMs'),
+    // Flappy pure logic
+    flappyStep: get('flappyStep'),
+    flappyFlap: get('flappyFlap'),
+    flappyHitsPipe: get('flappyHitsPipe'),
+    flappyHitsGround: get('flappyHitsGround'),
+    flappyHitsCeiling: get('flappyHitsCeiling'),
+    flappyPassedPipe: get('flappyPassedPipe'),
+    // Platformer pure physics helpers
+    integrateGravity: get('integrateGravity'),
+    canCoyoteJump: get('canCoyoteJump'),
+    shouldBufferedJumpFire: get('shouldBufferedJumpFire'),
+    clipJumpRelease: get('clipJumpRelease'),
     notifyStateChanged: get('notifyStateChanged'),
     resetGameState: get('resetGameState'),
     matchesWhen: get('matchesWhen'),

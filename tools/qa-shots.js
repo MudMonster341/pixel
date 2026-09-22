@@ -342,6 +342,66 @@ async function shootTitleAndPause(browser) {
   await page.close();
 }
 
+// ---------- mini-games (docs/ROADMAP.md M4): intro, play and game-over/win for each of the 3 ----------
+// Launched directly through WorldScene.launchMinigame() (the exact method a key station's dialog
+// action reaches in the real game, src/scenes/world.js) rather than walking to a real key station --
+// this is a visual pass over the mini-games themselves, not a re-test of the story wiring (that's
+// tests/e2e/minigames.spec.js's job). Game-over/win are forced through the scene's own `lose()`/
+// `win()` (the same calls real gameplay reaching that outcome would make), the same shortcut that
+// spec uses, rather than scripting a full playthrough of each game just for a screenshot.
+
+async function shootMinigames(browser) {
+  for (const id of ['platformer', 'flappy', 'tetris']) {
+    const page = await browser.newPage({ viewport: VIEWPORT });
+    await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&minigames=1`);
+    await waitReady(page);
+
+    const sceneKey = await page.evaluate((gameId) => {
+      const world = game.scene.getScene('world');
+      world.launchMinigame(gameId, () => {});
+      return MINIGAMES[gameId].sceneKey;
+    }, id);
+    await page.waitForFunction((key) => game.scene.isActive(key), sceneKey);
+    await page.waitForTimeout(150);
+    await shoot(page, `minigame-${id}-01-intro`);
+
+    await page.keyboard.press('Enter'); // START
+    await page.waitForFunction((key) => game.scene.getScene(key).mgState === 'playing', sceneKey);
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Space'); // a flap/jump so the shot shows real motion, not a frozen fall
+    await page.waitForTimeout(250);
+    await shoot(page, `minigame-${id}-02-play`);
+
+    await page.evaluate((key) => game.scene.getScene(key).lose(), sceneKey);
+    await page.waitForFunction((key) => game.scene.getScene(key).mgState === 'gameover', sceneKey);
+    await page.waitForTimeout(100);
+    await shoot(page, `minigame-${id}-03-gameover`);
+
+    // Force 2 more losses to reach the 3-fail skip offer, its own distinct card.
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate((key) => {
+        const s = game.scene.getScene(key);
+        s.beginAttempt();
+        s.lose();
+      }, sceneKey);
+      await page.waitForFunction((key) => game.scene.getScene(key).mgState === 'gameover', sceneKey);
+    }
+    await page.waitForTimeout(100);
+    await shoot(page, `minigame-${id}-04-gameover-skip-offer`);
+
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.beginAttempt();
+      s.win();
+    }, sceneKey);
+    await page.waitForFunction((key) => game.scene.getScene(key).mgState === 'win', sceneKey);
+    await page.waitForTimeout(100);
+    await shoot(page, `minigame-${id}-05-win`);
+
+    await page.close();
+  }
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   // { recursive: true } so a leftover qa-shots/intro/ (tools/qa-shots-intro.js's own output
@@ -364,6 +424,7 @@ async function main() {
     await shootIndoors(browser);
     await shootCutscene(browser);
     await shootTitleAndPause(browser);
+    await shootMinigames(browser);
 
     log(`done: ${shotCount} screenshots in ${path.relative(ROOT, OUT_DIR)}/`);
   } finally {

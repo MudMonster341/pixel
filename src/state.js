@@ -86,6 +86,11 @@ const GameState = {
   // found. Set by dialog actions (`{ stage: ... }`/`{ key: ... }`, src/dialog.js), saved and
   // restored like everything else.
   quest: defaultQuest(),
+  // Mini-game progress (docs/ROADMAP.md M4, src/minigames/framework-data.js): keyed by mini-game id
+  // ('platformer'/'flappy'/'tetris'), each `{ attempts, bestScore, won, skipped }`, created lazily by
+  // recordAttempt() the first time she plays one -- an empty object here is a fresh game with none
+  // played yet, and an old save from before M4 simply has no key for one it never touched.
+  minigames: {},
   // The clues/notes the LUG volunteer and the key rooms have given her so far (docs/STORY.md, M1's
   // "journal (J)" leftover): a plain array of short strings, oldest first, appended by dialog
   // actions (`{ journal: '...' }`, src/dialog.js) and shown by src/scenes/ui.js's Journal panel.
@@ -121,6 +126,7 @@ function resetGameState(state = GameState) {
   state.seenHints = new Set();
   state.flags = { ...DEFAULT_FLAGS };
   state.quest = defaultQuest();
+  state.minigames = {};
   state.journal = [];
   // Play (new game) also replays the whole opening (title.js startPlay()), which sets these fresh
   // itself -- reset here too so a game that skips the opening entirely (?intro=0) still starts from

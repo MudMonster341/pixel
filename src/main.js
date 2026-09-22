@@ -109,7 +109,13 @@ function startGame() {
     // M3a opening (docs/STORY.md "Opening"): title's own "Play" chains through these four scenes
     // (src/scenes/intro-*.js) before ever reaching 'boot' -- see title.js startPlay(). Registered
     // here like every other scene; only the first array entry auto-starts (see the comment above).
-    scene: [first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, BusArrivalScene, WorldScene, UIScene, CutsceneScene], // later scenes draw on top
+    // Mini-game scenes (docs/ROADMAP.md M4, src/minigames/): each id in MINIGAMES maps to one of
+    // these by `sceneKey` (src/scenes/world.js launchMinigame()) -- registering the class here is all
+    // a new one needs beyond its own file and a MINIGAMES entry.
+    scene: [
+      first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, BusArrivalScene, WorldScene, UIScene,
+      CutsceneScene, PlatformerScene, FlappyScene, TetrisScene,
+    ], // later scenes draw on top
   });
   if (saveEnabled()) initAutosave(window.game, currentProfile());
 }

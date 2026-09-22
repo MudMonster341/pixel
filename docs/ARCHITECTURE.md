@@ -137,7 +137,8 @@ shows a selectable list and runs whichever option's own `actions` the player pic
                                            // Journal, opened with J), oldest first, never removed
 { toast: 'The volunteer waves you over.' }
 { cutscene: 'gate2' }                     // plays a cutscene (src/cutscenes.js)
-{ minigame: 'tetris' }                    // M4 stub for now: just the event, nothing plays it yet
+{ minigame: 'tetris' }                    // launches a mini-game (M4, see "Mini-games" below) and
+                                           // *suspends* the rest of this action list until it's over
 ```
 
 Locked doors/stairs (roadmap M1, `src/maplogic.js` `doorLockRule()`/`isDoorLocked()`) use a smaller,
@@ -183,6 +184,48 @@ The interaction bubble above an NPC (`src/scenes/world.js` `updatePrompt()`, art
 `tools/make-assets.js` `PROMPT_E`/`PROMPT_BANG`) shows **"!"** while the entry that would be shown
 next has never been seen before (`hasNewDialog()`), and **"E"** once it has -- `GameState.seenDialog`
 (a set of `"npcId:entryId"` keys, saved like everything else) is what remembers that across a reload.
+
+## Mini-games (roadmap M4)
+
+Each of the treasure hunt's 3 keys (docs/STORY.md) is guarded by a small, self-contained mini-game
+instead of a plain pickup. Following this file's own top rule, the mini-games are **data** (a
+registry) plus a **shared engine shell**, and each game's own play logic is pure functions the shell
+never needs to know about:
+
+- **The registry** (`src/minigames/framework-data.js`, `MINIGAMES`): `{ id, name, sceneKey,
+  instructions, scoreTarget, scoreLabel }` per game -- the id a `{ minigame: 'id' }` dialog action
+  names, the display name and how-to-play lines the intro card shows, the score target the HUD/win
+  condition check against, and the Phaser scene key `src/main.js` registers the game's scene class
+  under. Adding a 4th mini-game later means one more row here plus one new scene file, never touching
+  the dialog/story/save/world code below.
+- **The shell** (`src/minigames/framework-scene.js`, `MinigameBaseScene`): every mini-game scene
+  extends this. It owns the parts all 3 games share -- the intro card (name, instructions, target),
+  the score/target HUD, the game-over card (score, Retry, and "skip and take the key anyway" once 3
+  attempts have failed), the win card, and the pause-the-world handoff (launched by
+  `WorldScene.launchMinigame()` exactly the way `src/scenes/cutscene.js` is launched for a cutscene:
+  `world` is paused first and resumed by this scene when it's done). A subclass only implements
+  `buildScene()` (build the persistent game objects once), `startAttempt()` (reset to a fresh start,
+  called on every attempt including retries) and `playUpdate(time, delta)` (per-frame gameplay), and
+  calls `this.setScore(n)` / `this.win()` / `this.lose()` as the game dictates.
+- **Attempts, skip and score bookkeeping** (`src/minigames/framework-data.js` `recordAttempt()`):
+  pure, no Phaser -- `GameState.minigames[id]` (`{ attempts, bestScore, won, skipped }`, saved and
+  restored like everything else, `src/save.js`) is updated once per finished attempt.
+- **Outcome routing**: a key station's "take" dialog entry (`src/story.js`) runs `{ minigame: id }`
+  *before* `{ give }`/`{ key }` -- and, unlike every other dialog action, `minigame` **suspends** the
+  rest of that entry's action list (`src/dialog.js` `runDialogActionsFrom()`) until the mini-game
+  framework calls back with an outcome. The story only ever sees two outcomes: `'won'` (a real win, or
+  the after-3-losses skip -- both a gift, docs/STORY.md "nobody may be locked out") resumes the list,
+  so the key/journal/toast actions after it finally run; `'quit'` (Esc, or "Quit" from a card, before
+  winning) stops the list right there, the same as a full bag already did -- no key is ever handed
+  over. `'lost'` never reaches the story at all: it's the shell's own internal retry state, since
+  retrying is unlimited until one of those two terminal outcomes.
+- **Each game's own file** under `src/minigames/` (`platformer.js`, `flappy.js`, `tetris.js`) only
+  draws the level and forwards input; the actual rules are pure, Phaser-free modules
+  (`platformer-physics.js`, `flappy-logic.js`, `tetris-logic.js`) unit-tested without a browser.
+- **`?minigames=0`** (`src/maplogic.js` `minigamesEnabled()`) bypasses the real mini-game scene
+  entirely and resolves a `minigame` action straight to `'won'` -- the same idea as `?cutscene=0` for
+  a cutscene trigger. `tests/e2e/helpers.js` defaults every spec to this except
+  `tests/e2e/minigames.spec.js`, which turns the real thing back on to test the framework itself.
 
 ## Entities (things placed on a map)
 

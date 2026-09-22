@@ -213,18 +213,56 @@ test('actions: stage and key', () => {
   assert.equal(GameState.quest.keys.physicsLab, true);
 });
 
-test('actions: toast, cutscene and minigame go out as events and never touch GameState', () => {
+test('actions: toast and cutscene go out as events and never touch GameState', () => {
   const { GameState, applyDialogActions, gameEvents } = loadGameData();
   const events = [];
   gameEvents.on('toast', (payload) => events.push(['toast', payload]));
   gameEvents.on('cutscene:requested', (payload) => events.push(['cutscene:requested', payload]));
-  gameEvents.on('minigame:requested', (payload) => events.push(['minigame:requested', payload]));
   let changed = 0;
   gameEvents.on('state-changed', () => changed++);
 
-  applyDialogActions([{ toast: 'Hi!' }, { cutscene: 'gate2' }, { minigame: 'tetris' }], GameState);
-  assert.deepEqual(events, [['toast', 'Hi!'], ['cutscene:requested', 'gate2'], ['minigame:requested', 'tetris']]);
+  applyDialogActions([{ toast: 'Hi!' }, { cutscene: 'gate2' }], GameState);
+  assert.deepEqual(events, [['toast', 'Hi!'], ['cutscene:requested', 'gate2']]);
   assert.equal(changed, 0, 'none of these change GameState');
+});
+
+// `minigame` is different from every other action (docs/ROADMAP.md M4, src/dialog.js): it *suspends*
+// the rest of the action list until the mini-game framework calls back with an outcome, instead of
+// firing an event and moving straight on -- see src/minigames/framework-scene.js for why the story
+// only ever sees 'won' or 'quit', never 'lost'.
+test('actions: minigame suspends the rest of the list until it resolves', () => {
+  const { GameState, applyDialogActions, gameEvents } = loadGameData();
+  let minigamePayload = null;
+  gameEvents.on('minigame:requested', (payload) => { minigamePayload = payload; });
+  let changed = 0;
+  gameEvents.on('state-changed', () => changed++);
+  let done;
+
+  applyDialogActions([{ minigame: 'tetris' }, { setFlag: 'afterMinigame' }], GameState, (r) => { done = r; });
+
+  assert.equal(minigamePayload.id, 'tetris');
+  assert.equal(typeof minigamePayload.onResult, 'function');
+  assert.equal(GameState.flags.afterMinigame, undefined, 'actions after `minigame` wait for its outcome');
+  assert.equal(done, undefined, 'onDone has not fired yet');
+  assert.equal(changed, 0);
+
+  minigamePayload.onResult('won');
+  assert.equal(GameState.flags.afterMinigame, true);
+  assert.equal(done, 'done');
+  assert.equal(changed, 1);
+});
+
+test('actions: minigame quitting stops the list right there, same as a full bag', () => {
+  const { GameState, applyDialogActions, gameEvents } = loadGameData();
+  let minigamePayload = null;
+  gameEvents.on('minigame:requested', (payload) => { minigamePayload = payload; });
+  let done;
+
+  applyDialogActions([{ minigame: 'flappy' }, { setFlag: 'afterMinigame' }], GameState, (r) => { done = r; });
+  minigamePayload.onResult('quit');
+
+  assert.equal(GameState.flags.afterMinigame, undefined);
+  assert.equal(done, 'quit');
 });
 
 test('actions: an empty or missing action list is a no-op', () => {

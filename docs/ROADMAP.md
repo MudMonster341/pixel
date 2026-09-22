@@ -72,8 +72,8 @@ source asset packages... change all the trees, pavements, everything."
 - [x] The volunteer: full dialog, gives the hunt, reacts to progress, hands over the box (2026-09-22)
 - [ ] The three key rooms get their own cutscenes: Physics Lab (3rd floor), ICVL (1st floor), Room 195
 - [x] Keys as real items, with the tracker and journal updating (2026-09-22)
-- [ ] The reward box: opening animation, then the card
-- [ ] The birthday card: animated pixel card, photo slots from `assets/card/`, the owner's messages, then the video
+- [x] The reward box: opening animation, then the card (2026-09-22)
+- [x] The birthday card: animated pixel card, photo slots from `assets/card/`, the owner's messages, optional video (2026-09-22)
 
 ## M4 — Mini-games
 

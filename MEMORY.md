@@ -530,3 +530,26 @@ and the birthday card, then sound and packaging.
 
 **Owner to confirm:** the real locations of the Physics Lab, the ICVL and Room 195 (rooms were placed
 on plausible floors), and whether keys should leave the bag when handed in.
+
+## 2026-09-22 — Mini-games and the ending
+
+**Did:**
+- **Mini-games (M4):** a framework (intro card, HUD, retry, **skip offered after 3 losses** so the gift
+  can never be blocked, outcomes saved) plus three games behind the three keys: a Physics Lab
+  platformer with coyote time and variable jump, an ICVL server-room flappy, and Room 195 Tetris with
+  a NEXT box and score panel. Art pass gave each a themed backdrop and put her real sprite in as the hero.
+- **The ending (M3):** the reward box opens with sparkles and a wash of light, then a full-screen
+  animated birthday card: one centred card, framed photo slideshow, typed messages, confetti and corner
+  motifs, ending on THE END and back to the title, with "Watch the Card Again" once finished.
+  Owner content goes in `assets/card/` (gitignored): `card.json` + `photos/` + optional `video.mp4`,
+  with placeholders until then. Video paths fall back to drawn art when a file is missing.
+- 291 unit + 89 e2e tests green.
+
+**Why:** with the spine playable, the ending is the point of the whole thing, so it got the care.
+
+**Decisions:** none new · **Failures:** a batch of e2e failures turned out to be machine load from
+running the suite alongside an agent's own run; the specs pass individually and on a quiet machine
+(same family as ERR-0002/0003). Real bugs the agent found: Phaser reports a 404'd video as loaded,
+and server.js served .mp4/.jpeg as octet-stream.
+
+**Next:** packaging as a Windows .exe (M6), then sound and music (M5), then the three key-room cutscenes.

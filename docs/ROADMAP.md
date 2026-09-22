@@ -30,9 +30,9 @@ Tasks are written so one run can finish one. Keep them that size.
 - [x] Data-driven NPC dialog: lines chosen by flags, with an action list (give item, set flag, award key, start mini-game, play cutscene) (2026-09-20, `src/dialog.js`)
 - [x] Dialog choices (yes/no and branches), keyboard-driven (2026-09-20)
 - [x] Interaction bubble: floating **E** above anyone in range, **!** when they have something new (2026-09-20)
-- [ ] Blocked doors: a `locked` reason shown as a toast ("Locked for the event"), driven by map object properties
-- [ ] Quest tracker panel: "Keys: 1 / 3" and the current objective
-- [ ] Journal (J): the clues received so far
+- [x] Blocked doors: a `locked` reason shown as a toast, driven by map-object properties (2026-09-22)
+- [x] Quest tracker panel: "Keys: n / 3" and the current objective (2026-09-22)
+- [x] Journal (J): the clues received so far (2026-09-22)
 
 ## M2 — Art overhaul (Pokémon class)
 
@@ -68,10 +68,10 @@ source asset packages... change all the trees, pavements, everything."
 
 
 - [ ] Entrance cutscene: the Main Block steps, pillars and red arch, drawn from photos as reference
-- [ ] Main Block foyer becomes the story hub: the LUG stall behind the staircase, other exits politely blocked
-- [ ] The volunteer: full dialog, gives the hunt, reacts to progress, and hands over the reward at the end
+- [x] Main Block foyer is the story hub: the LUG stall behind the staircase, other exits politely blocked (2026-09-22)
+- [x] The volunteer: full dialog, gives the hunt, reacts to progress, hands over the box (2026-09-22)
 - [ ] The three key rooms get their own cutscenes: Physics Lab (3rd floor), ICVL (1st floor), Room 195
-- [ ] Keys as real items, with the tracker and journal updating
+- [x] Keys as real items, with the tracker and journal updating (2026-09-22)
 - [ ] The reward box: opening animation, then the card
 - [ ] The birthday card: animated pixel card, photo slots from `assets/card/`, the owner's messages, then the video
 

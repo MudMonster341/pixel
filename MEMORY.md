@@ -505,3 +505,28 @@ fails under load is a bug until proven otherwise, and this one was.
 
 **Next:** interiors from LimeZu (Room Builder walls/floors + furniture), then M3 story content
 (the LUG stall, the three key rooms), then mini-games.
+
+## 2026-09-22 — Interiors from packs, and the game becomes playable end to end
+
+**Did:**
+- **Interiors art:** furniture now comes from free packs (new: a CC-BY seating pack for the auditorium,
+  a CC-BY laboratory tileset for lab kit; plus LimeZu and Cool School already local), recoloured to the
+  campus palette. All 8 floors re-dressed; the Main Block foyer got a reception desk, seating, plants
+  and a staircase with the **LUG stall nook** behind it.
+- **Story spine (M3):** the LUG volunteer greets her by the name the player typed, sets the hunt,
+  hints by how many keys she holds, and hands over the box at the end. Three keys are interactables in
+  the Physics Lab (3rd floor), the ICVL (1st) and Room 195, each routed through a `minigame` action
+  that's a no-op until M4. Doors the story doesn't use are politely locked. Quest tracker and journal (J) added.
+  Story text lives in data (`src/story.js`).
+- 242 unit + 82 e2e tests green.
+
+**Why:** the point of the loop is a finished gift, so the spine had to exist before polish; mini-games
+slot into the existing action without rewriting story data.
+
+**Decisions:** none new · **Failures:** none
+
+**Next:** M4 mini-games (platformer, flappy, Tetris) behind the three keys, then the reward box opening
+and the birthday card, then sound and packaging.
+
+**Owner to confirm:** the real locations of the Physics Lab, the ICVL and Room 195 (rooms were placed
+on plausible floors), and whether keys should leave the bag when handed in.

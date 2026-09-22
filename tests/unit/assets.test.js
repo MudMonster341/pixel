@@ -43,6 +43,32 @@ test('assets/cutscenes/ is up to date with tools/make-cutscenes.js (run `npm run
   }
 });
 
+test('assets/minigames/ is up to date with tools/make-minigame-art.js (run `npm run minigame-art` if this fails)', () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-minigame-art-'));
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'make-minigame-art.js'), '--out', out], { stdio: 'pipe' });
+    const committedDir = path.join(ASSETS, 'minigames');
+    for (const name of fs.readdirSync(out)) {
+      const committed = path.join(committedDir, name);
+      assert.ok(fs.existsSync(committed), `assets/minigames/${name} is missing`);
+      assert.ok(fs.readFileSync(path.join(out, name)).equals(fs.readFileSync(committed)), `assets/minigames/${name} is out of date`);
+    }
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test('every mini-game backdrop is a full 960x540 image', () => {
+  const names = ['platformer-bg.png', 'flappy-bg.png', 'tetris-bg.png'];
+  for (const name of names) {
+    const png = path.join(ASSETS, 'minigames', name);
+    assert.ok(fs.existsSync(png), `assets/minigames/${name} is missing`);
+    const { width, height } = pngSize(png);
+    assert.equal(width, 960, `${png} is ${width} wide, expected 960`);
+    assert.equal(height, 540, `${png} is ${height} tall, expected 540`);
+  }
+});
+
 test('every CUTSCENES image has a matching PNG sized to fill 960 wide and pan (taller than 540/3)', () => {
   const { CUTSCENES } = loadGameData();
   for (const def of Object.values(CUTSCENES)) {

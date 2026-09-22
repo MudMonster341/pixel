@@ -87,9 +87,18 @@ class MinigameBaseScene extends Phaser.Scene {
   }
 
   // ---------- called by a subclass while playing ----------
+  // Coordinator brief (2026-09-22, "juice"): a small score pop every time it goes up -- a quick
+  // scale pulse on the shared HUD text, so collecting a coin/clearing a gap/clearing a line all get
+  // the same little celebration for free, without any of the 3 games drawing their own "+1" popup.
   setScore(score) {
+    const increased = score > this.score;
     this.score = score;
     this.refreshHud();
+    if (increased) {
+      this.tweens.killTweensOf(this.hud.text);
+      this.hud.text.setScale(1);
+      this.tweens.add({ targets: this.hud.text, scale: 1.4, duration: 100, yoyo: true, ease: 'Quad.easeOut' });
+    }
   }
 
   // `skipped`: true when this win came from the game-over card's "skip and take the key anyway"
@@ -108,6 +117,9 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState !== 'playing') return;
     this.mgState = 'gameover';
     this.setHudVisible(false);
+    // A small screen shake (coordinator brief: "small") -- felt, not jarring; the card fades in right
+    // on top of it a moment later.
+    this.cameras.main.shake(160, 0.006);
     const { canSkip } = recordAttempt(GameState, this.gameId, 'lost', this.score);
     this.card.showGameOver(this.def, this.score, canSkip, {
       onRetry: () => this.beginAttempt(),
@@ -185,21 +197,42 @@ class MinigameCard {
   show({ title, paragraphs = [], items }) {
     this.hide();
     const scene = this.scene;
-    const w = 560;
+    const w = 640;
     const lineH = 22;
     const headerH = 56;
-    const paraH = paragraphs.length * lineH + (paragraphs.length ? 14 : 0);
+    const wrapWidth = w - 100;
+
+    // Wrap each paragraph to the panel's own width *before* measuring the panel's height (the same
+    // "measure once, redraw on state change" order docs/GAME_FEEL.md rule 1 requires: "a panel's box
+    // is sized from its content, never the other way around") -- a mini-game's own instructions can
+    // run longer than this card's fixed width, and without this a long line just draws straight past
+    // the panel's own edges instead of wrapping (a real bug this fix replaces, not a hypothetical
+    // one). A throwaway text object gives the exact same wrap Phaser will use for the real one, the
+    // same trick src/scenes/ui.js's DialogBox already uses for its own wrapped typewriter text.
+    const measurer = uiText(scene, 0, 0, '', 12).setWordWrapWidth(wrapWidth).setVisible(false);
+    const lines = [];
+    for (const para of paragraphs) {
+      if (para === '') { lines.push(''); continue; }
+      lines.push(...measurer.getWrappedText(para));
+    }
+    measurer.destroy();
+
+    const paraH = lines.length * lineH + (lines.length ? 14 : 0);
     const itemH = items.length * 30;
     const footerH = 30;
     const h = headerH + paraH + itemH + footerH;
     const x = Math.round((GAME_WIDTH - w) / 2);
     const y = Math.round((GAME_HEIGHT - h) / 2);
+    this.box = { x, y, w, h };
 
-    const dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6).setOrigin(0, 0).setDepth(200);
+    // fillAlpha stays 1 here on purpose: the fade-in below tweens the *GameObject's* alpha (0 -> 0.6)
+    // instead, since Rectangle's constructor alpha argument sets fillAlpha, not the object's own
+    // alpha -- tweening `alpha` on top of a 0.6 fillAlpha would have multiplied down to 0.36.
+    const dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1).setOrigin(0, 0).setDepth(200);
     const panel = scene.add.graphics().setDepth(201);
     drawPanel(panel, x, y, w, h);
     const titleText = uiText(scene, x + w / 2, y + 30, title, 16, COLORS.highlight).setOrigin(0.5).setDepth(202);
-    const paraTexts = paragraphs.map((line, i) =>
+    const paraTexts = lines.map((line, i) =>
       uiText(scene, x + w / 2, y + headerH + i * lineH, line, 12, COLORS.text).setOrigin(0.5).setDepth(202));
 
     this.items = items;
@@ -217,6 +250,15 @@ class MinigameCard {
 
     this.parts = [dim, panel, titleText, ...paraTexts, ...this.itemTexts, footer];
     this.refresh();
+
+    // Eased card transition (docs/GAME_FEEL.md "nothing is a flat instant cut"): everything fades in
+    // together and the content eases up 10px into its resting position -- the dim backdrop fades to
+    // its own, lower, target alpha separately so it doesn't flash to full strength instantly either.
+    const content = [panel, titleText, ...paraTexts, ...this.itemTexts, footer];
+    dim.setAlpha(0);
+    content.forEach((part) => { part.setAlpha(0); part.y += 10; });
+    scene.tweens.add({ targets: dim, alpha: 0.6, duration: 160 });
+    scene.tweens.add({ targets: content, alpha: 1, y: '-=10', duration: 200, ease: 'Cubic.easeOut' });
 
     for (const key of ['UP', 'W']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(-1); });
     for (const key of ['DOWN', 'S']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(1); });
@@ -265,21 +307,84 @@ class MinigameCard {
   showWin(def, skipped, onContinue) {
     this.show({
       title: skipped ? 'KEY GIFTED!' : 'YOU GOT IT!',
-      paragraphs: [skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name} trial!`],
+      // Two blank lines reserve a clear gap under the title for the key icon flourish this.show()
+      // leaves room for (added after show() below, once the panel's real box (x/y/w) is known) --
+      // tall enough (2 * lineH = 44px) that the bounced-in icon (48px, a 16px frame at 3x scale)
+      // never overlaps the message line under it.
+      // `def.name` already reads as a challenge ("Physics Lab Trial", "ICVL Server Dash", "Room 195
+      // Stack-Off") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
+      // ("You beat the Physics Lab Trial trial!").
+      paragraphs: ['', '', skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
       items: [{ label: 'CONTINUE (ENTER)', onSelect: onContinue }],
+    });
+    this.addWinKeyIcon(def);
+  }
+
+  // The win flourish (coordinator brief, "a win flourish with the key icon"): the real key art
+  // already in the pack (ITEMS[def.item], src/items.js -- Kyrise icons, the same ones a key station's
+  // own floating pickup and the hotbar use), bounced in with a little overshoot so it reads as a
+  // reward, not just another line of text.
+  addWinKeyIcon(def) {
+    if (!def.item || !ITEMS[def.item]) return;
+    const scene = this.scene;
+    const cx = GAME_WIDTH / 2;
+    const cy = this.box.y + 78; // centered in the two-blank-line gap show() reserved, above the message
+    const shadow = scene.add.ellipse(cx, cy + 14, 26, 8, 0x000000, 0.3).setDepth(202).setAlpha(0);
+    const icon = scene.add.image(cx, cy, 'items', ITEMS[def.item].frame).setScale(3).setDepth(203).setAlpha(0);
+    this.parts.push(shadow, icon);
+    scene.tweens.add({ targets: shadow, alpha: 1, duration: 200, delay: 120 });
+    scene.tweens.add({
+      targets: icon, alpha: 1, scale: { from: 0.4, to: 3 }, y: { from: cy - 18, to: cy },
+      duration: 380, delay: 120, ease: 'Back.easeOut',
     });
   }
 }
 
-// A tiny stand-in for the real player sprite (STYLE_GUIDE.md palette: pink outfit, fair skin --
-// matching the lead's own colors) since a full walk-cycle sheet isn't worth building for a one-off
-// mini-game avatar (docs/ROADMAP.md M4 "simple shapes with the game's palette... look deliberate").
-// Returns a Container so a caller can position/destroy it as one unit; it has no physics body of its
-// own (src/minigames/platformer.js attaches physics to a separate invisible body and follows it with
-// one of these instead, since Arcade containers are more trouble than they're worth for a one-off).
-function drawMiniHero(scene) {
-  const body = scene.add.rectangle(0, 3, 12, 16, 0xff6fb1).setStrokeStyle(1, 0x1a1c2c);
-  const head = scene.add.circle(0, -9, 6, 0xf4c9a0).setStrokeStyle(1, 0x1a1c2c);
-  const hair = scene.add.arc(0, -12, 6, 200, 340, false, 0x2a1c14);
-  return scene.add.container(0, 0, [body, hair, head]);
+// The hero in the platformer/flyer is the lead herself (coordinator brief, 2026-09-22: "the hero is
+// the lead, not a pink rectangle"), not a stand-in shape -- both src/minigames/platformer.js and
+// flappy.js draw a real `this.add.sprite(x, y, 'player', frame)` using the exact same 'player'
+// texture src/scenes/world.js does. That texture is already the *right* one for whichever clothes
+// colour she picked on the customisation screen (src/main.js BootScene loads it as
+// `assets/player-${GameState.customization.clothes}.png`, always under the texture key 'player') --
+// nothing here needs to know the colour at all, it just uses the texture the game already loaded.
+//
+// The walk/idle animations are global to the whole Phaser game (`scene.anims` is a reference to one
+// shared AnimationManager, not a per-scene one), so WorldScene has always already created 'walk-side'
+// / 'idle-side' by the time a mini-game can possibly launch (it's only reachable from inside a real
+// game session) -- this guard (`anims.exists`) is just defensive, the same pattern world.js's own
+// createAnimations() already uses for itself.
+const HERO_WALK_SIDE_FRAMES = [17, 18, 19, 20, 21, 22];
+const HERO_IDLE_SIDE_FRAMES = [16, 23];
+
+// A small landing puff (coordinator brief, "juice": "a small landing puff in the platformer") --
+// three little dust motes that pop out sideways and fade, cheap enough to spawn on every landing
+// without a texture/particle-emitter setup (STYLE_GUIDE.md palette: a dusty, dry tone, not grey).
+function spawnDustPuff(scene, x, y) {
+  for (const dx of [-5, 0, 5]) {
+    const mote = scene.add.circle(x, y, 2.5, 0xe0c290, 0.8).setDepth(50);
+    scene.tweens.add({
+      targets: mote, x: x + dx * 2.2, y: y - 3, alpha: 0, scale: 0.4,
+      duration: 260, ease: 'Cubic.easeOut', onComplete: () => mote.destroy(),
+    });
+  }
+}
+
+function ensurePlayerAnims(scene) {
+  if (!scene.anims.exists('walk-side')) {
+    scene.anims.create({
+      key: 'walk-side',
+      frames: scene.anims.generateFrameNumbers('player', { frames: HERO_WALK_SIDE_FRAMES }),
+      frameRate: 12,
+      repeat: -1,
+    });
+  }
+  if (!scene.anims.exists('idle-side')) {
+    scene.anims.create({
+      key: 'idle-side',
+      frames: scene.anims.generateFrameNumbers('player', { frames: HERO_IDLE_SIDE_FRAMES }),
+      frameRate: 2,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
 }

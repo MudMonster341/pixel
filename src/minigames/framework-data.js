@@ -16,11 +16,20 @@
 // mini-game's own game-over card offers "skip and take the key anyway".
 const MAX_ATTEMPTS_BEFORE_SKIP = 3;
 
+// `item` names the real key item this mini-game's win hands over (src/items.js), the same id
+// src/story.js's own keyStations table gives that key station -- duplicated here (rather than one
+// file importing the other) because a mini-game is meant to be playable/testable on its own, without
+// pulling in the whole story, but the two are kept in sync deliberately: tests/unit/minigame-
+// framework.test.js asserts every `item` here matches STORY.keyStations' own `item` for the same id,
+// so the two data files drifting apart is a caught regression, not a silent bug. Used only for the
+// win card's key-icon flourish (src/minigames/framework-scene.js `addWinKeyIcon()`) -- awarding the
+// key for real is still entirely src/dialog.js's `minigame` action's job, this is decoration.
 const MINIGAMES = {
   platformer: {
     id: 'platformer',
     name: 'Physics Lab Trial',
     sceneKey: 'minigame-platformer',
+    item: 'keyPhysicsLab',
     instructions: [
       'ARROWS / A-D to run, SPACE / UP / W to jump.',
       'Collect all the charge cells, then reach the door.',
@@ -33,6 +42,7 @@ const MINIGAMES = {
     id: 'flappy',
     name: 'ICVL Server Dash',
     sceneKey: 'minigame-flappy',
+    item: 'keyIcvl',
     instructions: [
       'SPACE / UP / W: flap. Fly through the gaps in the server racks.',
       'One tap at a time -- timing beats mashing.',
@@ -44,6 +54,7 @@ const MINIGAMES = {
     id: 'tetris',
     name: 'Room 195 Stack-Off',
     sceneKey: 'minigame-tetris',
+    item: 'keyRoom195',
     instructions: [
       'ARROWS / A-D to move, UP / W to rotate, DOWN / S to drop faster.',
       'Clear lines before the stack reaches the top.',

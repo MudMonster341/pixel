@@ -1,7 +1,9 @@
 // The Physics Lab key's mini-game (docs/STORY.md): a small side-view run-and-jump level. "Real
 // platforming feel" (docs/ROADMAP.md M4) comes from Arcade Physics' own gravity/collision plus the
 // coyote-time/jump-buffer/variable-height rules in src/minigames/platformer-physics.js -- this file
-// only wires those together and draws the level.
+// only wires those together and draws the level. Art pass (coordinator brief, 2026-09-22): a themed
+// lab backdrop (tools/make-minigame-art.js), platforms built to read as lab furniture rather than
+// green bars, and the lead's own real sprite as the hero instead of a stand-in shape.
 
 const PF_GROUND_Y = 420;
 const PF_KILL_Y = 560; // falling past this = an instant loss (an attempt, not the whole session)
@@ -9,7 +11,7 @@ const PF_LEVEL_WIDTH = 1500;
 
 // Platforms: { x, y, w } rectangles (world pixels, y = top surface). Gaps between them are pits --
 // missing a jump costs the attempt, not a permanent setback (docs/STORY.md "retry as often as you
-// like"). Coins float just above a platform; the flag sits at the very end.
+// like"). Charge cells float just above a platform; the exit door sits at the very end.
 const PF_PLATFORMS = [
   { x: 0, y: PF_GROUND_Y, w: 260 },
   { x: 340, y: PF_GROUND_Y, w: 160 },
@@ -32,37 +34,40 @@ class PlatformerScene extends MinigameBaseScene {
     super('minigame-platformer');
   }
 
+  preload() {
+    if (!this.textures.exists('platformer-bg')) this.load.image('platformer-bg', 'assets/minigames/platformer-bg.png');
+  }
+
   buildScene() {
     this.physics.world.gravity.y = PLATFORMER_GRAVITY;
     this.physics.world.setBounds(0, 0, PF_LEVEL_WIDTH, GAME_HEIGHT + 200);
     this.cameras.main.setBounds(0, 0, PF_LEVEL_WIDTH, GAME_HEIGHT);
 
-    // Platform/ground art: flat shaded blocks in the game's own grass ramp (STYLE_GUIDE.md), a
-    // lighter strip along the top edge for the "one light source, top-left" rule.
+    // The Physics Lab backdrop (tools/make-minigame-art.js): pinned to the camera (scrollFactor 0)
+    // so it always fills the view without needing to tile across the scrolling 1500px level --
+    // benches/shelves/a specimen tank read as the room she's actually in, not a black void.
+    this.add.image(0, 0, 'platformer-bg').setOrigin(0, 0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setScrollFactor(0).setDepth(-10);
+
     this.platformGroup = this.physics.add.staticGroup();
     for (const p of PF_PLATFORMS) this.drawPlatform(p);
 
-    // The player's physics body is a plain rectangle (no texture needed for a hitbox); a small
-    // decorative "hero" container (framework-scene.js drawMiniHero()) is kept glued to it every
-    // frame in playUpdate() instead of being the physics object itself.
-    this.player = this.add.rectangle(60, PF_GROUND_Y - 40, 14, 22, 0xff6fb1, 0).setStrokeStyle(0);
+    // The player's physics body is a plain, invisible rectangle (no texture needed for a hitbox);
+    // her real sprite (ensurePlayerAnims(), framework-scene.js) is kept glued to it every frame in
+    // playUpdate() instead of being the physics object itself.
+    this.player = this.add.rectangle(60, PF_GROUND_Y - 40, 14, 22, 0xff6fb1, 0);
     this.physics.add.existing(this.player);
     this.player.body.setSize(14, 22);
     this.player.body.setCollideWorldBounds(true);
-    this.hero = drawMiniHero(this);
+    ensurePlayerAnims(this);
+    this.hero = this.add.sprite(60, PF_GROUND_Y - 40, 'player', 16).setDepth(20);
     this.physics.add.collider(this.player, this.platformGroup);
 
     this.coinSprites = PF_COINS.map((coin) => this.makeCoin(coin));
-
-    const flagX = PF_LEVEL_WIDTH - 60;
-    this.add.rectangle(flagX, PF_GROUND_Y - 30, 4, 60, 0xeadbb8);
-    this.add.triangle(flagX, PF_GROUND_Y - 56, 0, 0, 22, 7, 0, 14, 0xffd23f).setOrigin(0, 0.5);
-    this.flag = this.add.rectangle(flagX, PF_GROUND_Y - 30, 20, 60, 0x000000, 0);
-    this.physics.add.existing(this.flag, true);
-    this.physics.add.overlap(this.player, this.flag, () => this.tryFinish());
+    this.buildDoor();
 
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
 
+    this.wasGrounded = true;
     this.jumpQueuedAt = null;
     const queueJump = (event) => { if (!event.repeat) this.jumpQueuedAt = this.time.now; };
     const releaseJump = () => {
@@ -76,29 +81,65 @@ class PlatformerScene extends MinigameBaseScene {
     }
   }
 
+  // A platform built to read as lab furniture (coordinator brief: "not green bars") -- a metal-cased
+  // bench/shelf: a light top surface catching the overhead lamps, a darker case body with a panel
+  // seam, and legs at each end so it reads as furniture standing on the floor, not a floating slab.
   drawPlatform(p) {
     const height = 20;
-    const rect = this.add.rectangle(p.x + p.w / 2, p.y + height / 2, p.w, height, 0x5ab552).setStrokeStyle(2, 0x1a1c2c);
-    this.add.rectangle(p.x + p.w / 2, p.y + 3, p.w - 4, 4, 0x8fd46a);
+    const top = p.y;
+    const caseTop = top + 6;
+    const bottom = top + height;
+    this.add.rectangle(p.x + p.w / 2, top, p.w, 6, 0xcfd8cf).setDepth(5); // steel top surface
+    this.add.rectangle(p.x + p.w / 2, top + 1, p.w - 4, 2, 0xeef3ee).setDepth(6); // highlight catching the lamps
+    this.add.rectangle(p.x + p.w / 2, (caseTop + bottom) / 2, p.w, bottom - caseTop, 0x3a4048).setDepth(5); // case body
+    this.add.rectangle(p.x + p.w / 2, caseTop + 2, p.w - 6, 2, 0x4a5560).setDepth(6); // panel seam
+    for (const legX of [p.x + 6, p.x + p.w - 6]) {
+      this.add.rectangle(legX, bottom + 3, 6, 8, 0x232830).setDepth(4); // short support legs
+    }
+    this.add.rectangle(p.x + p.w / 2, top - 0.5, p.w, height + 1, 0x1a1c2c, 0).setStrokeStyle(1, 0x14171c).setDepth(7);
+
+    const rect = this.add.rectangle(p.x + p.w / 2, top + height / 2, p.w, height, 0x000000, 0);
     this.physics.add.existing(rect, true);
     this.platformGroup.add(rect);
   }
 
+  // A "charge cell": a small glowing energy orb (matches the intro card's own "charge cells" flavor
+  // text) rather than an adventure-game gold coin -- a soft outer glow, a bright core and a white
+  // highlight, cyan to read as lab equipment against the warm backdrop.
   makeCoin(coin) {
-    const gfx = this.add.circle(coin.x, coin.y, 6, 0xffd23f).setStrokeStyle(2, 0x1a1c2c);
-    this.tweens.add({ targets: gfx, y: coin.y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.physics.add.existing(gfx, true);
-    gfx.taken = false;
-    this.physics.add.overlap(this.player, gfx, () => this.collectCoin(gfx));
-    return gfx;
+    const glow = this.add.circle(coin.x, coin.y, 9, 0x7fe0ff, 0.25).setDepth(9);
+    const core = this.add.circle(coin.x, coin.y, 5, 0x7fe0ff).setStrokeStyle(1, 0x1a1c2c).setDepth(10);
+    const hi = this.add.circle(coin.x - 1.5, coin.y - 1.5, 1.5, 0xffffff, 0.9).setDepth(11);
+    this.tweens.add({ targets: [glow, core, hi], y: '-=4', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const body = this.add.circle(coin.x, coin.y, 6, 0x000000, 0);
+    this.physics.add.existing(body, true);
+    body.taken = false;
+    body.visualParts = [glow, core, hi];
+    this.physics.add.overlap(this.player, body, () => this.collectCoin(body));
+    return body;
   }
 
   collectCoin(coin) {
     if (coin.taken || this.mgState !== 'playing') return;
     coin.taken = true;
-    coin.setVisible(false);
+    coin.visualParts.forEach((part) => part.setVisible(false));
     coin.body.enable = false;
     this.setScore(this.score + 1);
+  }
+
+  // The exit door (coordinator brief flavor: the intro card already says "reach the door"): a frame,
+  // a panel with a small window, and a glowing "EXIT"-style lamp above it -- a lab door, not a flag.
+  buildDoor() {
+    const dx = PF_LEVEL_WIDTH - 60;
+    const topY = PF_GROUND_Y - 62;
+    this.add.rectangle(dx, PF_GROUND_Y - 31, 34, 62, 0x2a2118).setDepth(5); // frame
+    this.add.rectangle(dx, PF_GROUND_Y - 31, 28, 56, 0x463a28).setDepth(6); // panel
+    this.add.rectangle(dx, PF_GROUND_Y - 48, 16, 12, 0x7fe0ff, 0.7).setDepth(7); // small window
+    const lamp = this.add.ellipse(dx, topY - 10, 26, 14, 0x8fd46a, 0.85).setDepth(7);
+    this.tweens.add({ targets: lamp, alpha: 0.4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.flag = this.add.rectangle(dx, PF_GROUND_Y - 30, 30, 62, 0x000000, 0);
+    this.physics.add.existing(this.flag, true);
+    this.physics.add.overlap(this.player, this.flag, () => this.tryFinish());
   }
 
   tryFinish() {
@@ -110,11 +151,15 @@ class PlatformerScene extends MinigameBaseScene {
     this.player.setPosition(60, PF_GROUND_Y - 40);
     this.player.body.reset(60, PF_GROUND_Y - 40);
     this.groundedTimer = 0;
+    this.wasGrounded = true;
     this.jumpQueuedAt = null;
     this.cameras.main.scrollX = 0;
     this.coinSprites.forEach((coin, i) => {
       coin.taken = false;
-      coin.setVisible(true).setPosition(PF_COINS[i].x, PF_COINS[i].y);
+      coin.visualParts.forEach((part) => part.setVisible(true));
+      const { x, y } = PF_COINS[i];
+      coin.visualParts.forEach((part) => part.setPosition(x, y));
+      coin.body.reset(x, y);
       coin.body.enable = true;
     });
   }
@@ -123,6 +168,12 @@ class PlatformerScene extends MinigameBaseScene {
     const body = this.player.body;
     const grounded = body.blocked.down || body.touching.down;
     this.groundedTimer = grounded ? 0 : this.groundedTimer + delta;
+
+    // A small landing puff the instant she touches down after being airborne (coordinator brief,
+    // "juice") -- framework-scene.js's spawnDustPuff(), shared so every mini-game can use the same
+    // cheap effect.
+    if (grounded && !this.wasGrounded) spawnDustPuff(this, this.player.x, this.player.y + 11);
+    this.wasGrounded = grounded;
 
     const k = this.mgKeys;
     const dx = ((k.RIGHT.isDown || k.D.isDown) ? 1 : 0) - ((k.LEFT.isDown || k.A.isDown) ? 1 : 0);
@@ -139,8 +190,13 @@ class PlatformerScene extends MinigameBaseScene {
       }
     }
 
-    this.hero.setPosition(this.player.x, this.player.y + 11);
-    if (dx !== 0) this.hero.setScale(dx < 0 ? -1 : 1, 1);
+    this.hero.setPosition(this.player.x, this.player.y + 1);
+    if (dx !== 0) {
+      this.hero.setFlipX(dx < 0);
+      this.hero.anims.play('walk-side', true);
+    } else {
+      this.hero.anims.play('idle-side', true);
+    }
 
     if (this.player.y > PF_KILL_Y) this.lose();
   }

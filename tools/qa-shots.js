@@ -368,8 +368,26 @@ async function shootMinigames(browser) {
     await page.keyboard.press('Enter'); // START
     await page.waitForFunction((key) => game.scene.getScene(key).mgState === 'playing', sceneKey);
     await page.waitForTimeout(200);
-    await page.keyboard.press('Space'); // a flap/jump so the shot shows real motion, not a frozen fall
-    await page.waitForTimeout(250);
+    if (id === 'flappy') {
+      // The first server rack spawns just off the right edge and scrolls in at 150px/s -- a couple
+      // of steadying flaps and about a second of flight brings it on screen for the shot, instead of
+      // catching an empty room a moment after launch.
+      for (let i = 0; i < 4; i++) {
+        await page.keyboard.press('Space');
+        await page.waitForTimeout(230);
+      }
+    } else if (id === 'platformer') {
+      // Run a step toward the first gap, then jump, so the shot shows her mid-stride/airborne rather
+      // than standing still at the spawn point.
+      await page.keyboard.down('ArrowRight');
+      await page.waitForTimeout(500);
+      await page.keyboard.up('ArrowRight');
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(200);
+    } else {
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(250);
+    }
     await shoot(page, `minigame-${id}-02-play`);
 
     await page.evaluate((key) => game.scene.getScene(key).lose(), sceneKey);

@@ -87,6 +87,45 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(true);
   });
 
+  // Art pass (coordinator brief, 2026-09-22): "the hero is the lead, not a pink rectangle... her
+  // chosen clothes colour". BootScene loads that colour's own sheet under the single texture key
+  // 'player' (src/main.js), so the regression this guards against is a mini-game quietly drawing its
+  // own stand-in shape or a separately-loaded texture instead of reusing that one real, already-
+  // colour-correct texture -- proven by checking the mini-game's hero is literally the same texture
+  // object the world player uses, not just a same-named one.
+  test('the platformer and flyer heroes use the same real "player" texture as the world (her saved clothes colour)', async ({ page }) => {
+    await openGame(page, { map: 'main-block-3', minigames: true });
+    await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+    // Captured fresh per page load: a texture's blob URL isn't stable across navigations even for
+    // the exact same underlying image file, so each openGame() needs its own reference to compare
+    // the mini-game's hero against, not one captured before the later reload.
+    let worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
+
+    await talkToStation(page, 'physicsLab', 'minigame-platformer');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    const platformerHero = await page.evaluate(() => {
+      const hero = game.scene.getScene('minigame-platformer').hero;
+      return { key: hero.texture.key, src: hero.texture.source[0].image.src };
+    });
+    expect(platformerHero.key).toBe('player');
+    expect(platformerHero.src).toBe(worldTextureSource);
+    await page.keyboard.press('Escape');
+
+    await openGame(page, { map: 'main-block-1', minigames: true });
+    await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+    worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
+    await talkToStation(page, 'icvl', 'minigame-flappy');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
+    const flappyHero = await page.evaluate(() => {
+      const bird = game.scene.getScene('minigame-flappy').bird;
+      return { key: bird.texture.key, src: bird.texture.source[0].image.src };
+    });
+    expect(flappyHero.key).toBe('player');
+    expect(flappyHero.src).toBe(worldTextureSource);
+  });
+
   test('losing the platformer offers a one-keypress retry, and the skip gift appears on the 3rd loss', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });

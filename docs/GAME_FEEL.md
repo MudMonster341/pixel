@@ -236,11 +236,13 @@ read as *this* game's UI wrapped around it, not a different one bolted on. Rules
   (`src/scenes/ui.js`) -- the exact same panel a dialog box or the pause menu uses, sized from its own
   content (rule 1 below, unchanged). A player shouldn't be able to tell a mini-game's cards were built
   by different code than the rest of the UI.
-- **A mini-game's own "hero" is a simple shape in the lead's own colors** (`drawMiniHero()`,
-  `src/minigames/framework-scene.js`): the same pink top/fair skin/black hair STYLE_GUIDE.md gives the
-  real player sprite, just as flat shapes instead of a full walk-cycle sheet -- a full sprite sheet
-  isn't worth building for a one-off mini-game avatar, but the *colors* still have to match, or it
-  reads as someone else's character dropped into this game.
+- **A mini-game's own "hero" is the lead herself** (art pass, coordinator brief 2026-09-22):
+  the platformer and the flyer both draw a real `this.add.sprite(x, y, 'player', frame)`
+  (`ensurePlayerAnims()`, `src/minigames/framework-scene.js`) using the exact texture
+  `src/scenes/world.js` does, walk/idle animations and all -- not a stand-in shape. Because that
+  texture is loaded once, at boot, under whichever clothes-colour swatch she actually picked
+  (`src/main.js` BootScene), a mini-game never needs to know her colour itself: it just reuses the
+  one texture the game already loaded, and gets the right one for free.
 - **Retrying is exactly one keypress, never a menu to navigate into first.** The game-over card's item
   list always starts with Retry highlighted (`MinigameCard.show()`'s `index = 0`), so ENTER alone
   retries -- rule 7 below (keyboard first) plus this task's own brief. Skipping to another item
@@ -256,6 +258,43 @@ read as *this* game's UI wrapped around it, not a different one bolted on. Rules
 - **A mini-game never eats the world's own fade.** `MinigameBaseScene.finish()` fades out/in exactly
   like `src/scenes/cutscene.js`'s `outro()` does (250ms, `Cubic`-free plain fade, matching "map change:
   250ms fade to black and back") -- launching and returning never look like a hard cut.
+
+### The art/juice pass (coordinator brief, 2026-09-22)
+
+The mechanics landed first and read as "flat shapes on black" -- premium needs a room, not just a
+rule set. What changed:
+
+- **Each game gets a themed, generated backdrop**, not black: `tools/make-minigame-art.js` (same
+  technique as `tools/make-cutscenes.js` -- a tiny Img/PNG writer, no dependencies) draws a 960x540
+  illustration per game (the Physics Lab's benches/shelves/a tank under warm lamps, the ICVL server
+  room's racks-and-cable-trays under cold blue light, Room 195 at night with a whiteboard/desks/a
+  skyline window) and each scene loads its own, pinned with `scrollFactor(0)` so it never needs to
+  tile across a scrolling level. `npm run assets` regenerates it; `tests/unit/assets.test.js` checks
+  it's committed and up to date, the same rule every other generated-art file already follows.
+- **Foreground furniture is drawn to match its room**, not left as flat colored bars: the
+  platformer's platforms are metal lab-bench cases with a steel top edge and short legs
+  (`PlatformerScene.drawPlatform()`), its "coins" are cyan charge-cell orbs and its goal is a lab
+  door with a glowing lamp, not a flag; the flyer's obstacles are server racks with a cold highlight
+  edge and small LEDs that blink independently of each other (`applyBlink()`, each LED's own random
+  `invert` flag, well under the 3Hz flash limit below) instead of a flat grey column.
+- **A mini-game card is sized from its *wrapped* content**, not just its paragraph count
+  (`MinigameCard.show()`): a long instruction line is measured and wrapped the same way
+  `src/scenes/ui.js` DialogBox wraps its own typewriter text, *before* the panel's height is
+  computed -- the fix for a real overflow this pass first shipped with (a long instruction line
+  drawing straight past the card's own edges), not a hypothetical rule.
+- **Juice, all added at the framework level** so all 3 games get it for free, none of them draw it
+  themselves: a small scale-pulse on the shared score HUD whenever the score goes up
+  (`MinigameBaseScene.setScore()`), a small camera shake on a loss (`lose()`, `shake(160, 0.006)` --
+  felt, not jarring), a bounced-in real key icon (`ITEMS[def.item]`, the same Kyrise art a key
+  station's own pickup uses) on the win card, and the card's own fade-and-ease-up entrance described
+  above. The platformer adds one effect only it needs -- a landing puff
+  (`spawnDustPuff()`, shared in `framework-scene.js` so a future game can reuse it too).
+- **Tetris got real furniture**: an opaque well (was 35%-alpha, letting the backdrop bleed through
+  the pieces) with faint internal grid lines, a side panel with a NEXT box, LEVEL and SCORE
+  (`TetrisScene.buildSidePanel()`, `drawPanel()` styling like every other panel), and every cell
+  drawn with a highlight face (top/left) and a shadow face (bottom/right) instead of a flat fill
+  (`drawShadedCell()`, STYLE_GUIDE.md "Ramps, not flat fills") -- plus a brief white flash on the
+  rows that are about to clear, held just long enough to read before the stack actually collapses.
 
 ## What to check before calling a new screen "done"
 

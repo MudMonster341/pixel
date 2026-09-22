@@ -32,6 +32,24 @@ test('MINIGAMES: scene keys are unique (no two games would fight over the same P
   assert.deepEqual(keys.length, new Set(keys).size);
 });
 
+// The win card's key-icon flourish (src/minigames/framework-scene.js addWinKeyIcon()) reads
+// MINIGAMES[id].item, duplicated data from STORY.keyStations[id].item rather than an import of one
+// from the other (see the comment above MINIGAMES itself) -- this is the regression test that comment
+// promises: if the two ever drift apart, the win card would show the wrong key art for a real key
+// being awarded, silently, with nothing else to catch it.
+test('MINIGAMES: each item matches the real key STORY.keyStations awards for the same id', () => {
+  const { MINIGAMES, STORY, ITEMS } = loadGameData();
+  // The two are keyed differently (MINIGAMES by mini-game id, STORY.keyStations by key-station id,
+  // e.g. 'physicsLab') and linked by keyStations[...].minigame -- so look up the matching station by
+  // *that* field, not by a shared key.
+  for (const [id, def] of Object.entries(MINIGAMES)) {
+    const station = Object.values(STORY.keyStations).find((ks) => ks.minigame === id);
+    assert.ok(station, `${id}: no STORY.keyStations entry names this as its minigame`);
+    assert.equal(def.item, station.item, `${id}: MINIGAMES.item is out of sync with STORY.keyStations.item`);
+    assert.ok(ITEMS[def.item], `${id}: MINIGAMES.item "${def.item}" is not a real item`);
+  }
+});
+
 // ---------- attempt counting, the 3-fail skip offer, and score persistence ----------
 
 test('recordAttempt: a fresh mini-game starts at zero attempts, no skip offered', () => {

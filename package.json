@@ -5,8 +5,9 @@
   "description": "Small top-down pixel RPG exploration game (Phaser 3)",
   "scripts": {
     "start": "node server.js",
-    "assets": "node tools/make-assets.js && node tools/make-cutscenes.js",
+    "assets": "node tools/make-assets.js && node tools/make-cutscenes.js && node tools/make-minigame-art.js",
     "cutscenes": "node tools/make-cutscenes.js",
+    "minigame-art": "node tools/make-minigame-art.js",
     "campus": "node tools/campus/build-campus.js",
     "interiors": "node tools/interiors/build-interiors.js",
     "test": "npm run test:unit && npm run test:e2e",

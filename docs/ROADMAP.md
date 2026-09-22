@@ -77,11 +77,11 @@ source asset packages... change all the trees, pavements, everything."
 
 ## M4 — Mini-games
 
-- [ ] A mini-game framework: launch from a dialog action, score target, retry, "skip after 3 tries", return the result to the quest
-- [ ] Platformer (Physics Lab)
-- [ ] Flappy-style flyer (ICVL)
-- [ ] Tetris (Room 195)
-- [ ] Each one: its own art, sound-ready hooks, and Playwright tests that play it headlessly
+- [x] Mini-game framework: launched from a dialog action, score target, retry, skip after 3 losses (2026-09-22)
+- [x] Platformer (Physics Lab), lab backdrop, the lead as hero (2026-09-22)
+- [x] Flappy-style flyer (ICVL), server-room backdrop (2026-09-22)
+- [x] Tetris (Room 195), night classroom, NEXT box and score panel (2026-09-22)
+- [x] Each one: its own art and Playwright tests that play it headlessly (2026-09-22)
 
 ## M5 — Feel and polish
 

@@ -106,9 +106,16 @@ const mainBlock1 = {
     floor.connect('spine', 'connectingLobby');
     floor.atriumVoid(48, 58, 65, 73);
 
+    // docs/STORY.md key rooms (2026-09-22, M3 story spine): two of the three key rooms live on this
+    // floor. "ICVL" and "Room 195" don't have a public floor plan (docs/INTERIORS_PLAN.md "rough
+    // spots" -- no source says which floor either is really on), so the two 50-seater classrooms
+    // this row already had were renamed/repurposed rather than growing the building further -- see
+    // docs/STORY.md's "small choices" note. `icvl` becomes a `lab` (computing lab furniture: benches
+    // + computer benches, not desks-and-whiteboard) at the same width/depth as before; `room195`
+    // keeps the plain classroom type, just renamed.
     spineRow(floor, 'top', 46, [
-      { id: 'classroom50a', name: '50 Seater Classroom', type: 'classroom', w: 9 },
-      { id: 'classroom50b', name: '50 Seater Classroom (2)', type: 'classroom', w: 9 },
+      { id: 'icvl', name: 'ICVL', type: 'lab', w: 9 },
+      { id: 'room195', name: 'Room 195', type: 'classroom', w: 9 },
     ]);
     spineRow(floor, 'top', 80, [
       { id: 'classroom50c', name: '50 Seater Classroom (3)', type: 'classroom', w: 9 },
@@ -166,7 +173,7 @@ const mainBlock2 = {
       { id: 'biotechResearch', name: 'Biotechnology-Research Lab (BIOT)', type: 'lab', w: 8 },
       { id: 'microbiology', name: 'Microbiology Lab (BIOT)', type: 'lab', w: 8 },
       { id: 'chemistryGS', name: 'Chemistry Lab (GS)', type: 'lab', w: 8 },
-      { id: 'physicsGS', name: 'Physics Lab (GS)', type: 'lab', w: 8 },
+      // Physics Lab moved to the 3rd floor (docs/STORY.md key room) -- see mainBlock3 below.
       { id: 'soilMechanics', name: 'Soil Mechanics Lab (Civil)', type: 'lab', w: 8 },
       { id: 'transportEng', name: 'Transport Engineering Lab (Civil)', type: 'lab', w: 8 },
       { id: 'thermoFluids', name: 'Thermo-Fluids Lab (Workshop)', type: 'lab', w: 8 },
@@ -193,6 +200,10 @@ const mainBlock3 = {
       { id: 'ieee', name: 'IEEE (Institution Electrical and Electronic Engineers)', type: 'club', w: 7 },
       { id: 'ifor', name: 'IFOR Club (Intelligent Flying Object and Reconnaissance)', type: 'club', w: 7 },
       { id: 'supernova', name: 'Supernova (The Astronomy Club)', type: 'club', w: 7 },
+      // docs/STORY.md key room: "the Physics Lab, 3rd floor" -- moved here from the 2nd floor's
+      // guessed GS row (docs/INTERIORS_PLAN.md: floor was never sourced either way) so the story's
+      // own beat ("she goes up and to the right") is a real, named room instead of a placeholder.
+      { id: 'physicsLab', name: 'Physics Lab', type: 'lab', w: 7 },
     ]);
     spineRow(floor, 'bottom', 4, [
       { id: 'music', name: 'Music Club', type: 'club', w: 7 },

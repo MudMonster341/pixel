@@ -45,8 +45,12 @@ class Inventory extends Phaser.Events.EventEmitter {
 // Fresh-game defaults, kept in one place so both the initial GameState literal below and
 // resetGameState() (Title screen "Play", GAME_FEEL.md) agree on what "brand new" means.
 const DEFAULT_FLAGS = { tomasGaveSword: false, tomasChats: 0 };
+// docs/STORY.md (M3, the LUG treasure hunt): 'arrival' (hasn't met the volunteer yet) -> 'hunting'
+// (given the quest, out looking for the 3 keys) -> 'rewarded' (all 3 keys turned in, small box
+// received -- the box opening and the birthday card itself are a later milestone). Set by the
+// volunteer's own dialog actions (src/maps.js `main-block-g` npcs, `{ stage: ... }`, src/dialog.js).
 const defaultQuest = () => ({
-  stage: 'arrival', // 'arrival' -> 'briefed' -> 'hunting' -> 'done'
+  stage: 'arrival',
   keys: { physicsLab: false, icvl: false, room195: false },
 });
 
@@ -82,6 +86,10 @@ const GameState = {
   // found. Set by dialog actions (`{ stage: ... }`/`{ key: ... }`, src/dialog.js), saved and
   // restored like everything else.
   quest: defaultQuest(),
+  // The clues/notes the LUG volunteer and the key rooms have given her so far (docs/STORY.md, M1's
+  // "journal (J)" leftover): a plain array of short strings, oldest first, appended by dialog
+  // actions (`{ journal: '...' }`, src/dialog.js) and shown by src/scenes/ui.js's Journal panel.
+  journal: [],
   // M3a opening: her chosen name and look (see the defaults above). Set by src/scenes/intro-name.js
   // and src/scenes/intro-customize.js, saved and restored like everything else.
   playerName: DEFAULT_PLAYER_NAME,
@@ -113,6 +121,7 @@ function resetGameState(state = GameState) {
   state.seenHints = new Set();
   state.flags = { ...DEFAULT_FLAGS };
   state.quest = defaultQuest();
+  state.journal = [];
   // Play (new game) also replays the whole opening (title.js startPlay()), which sets these fresh
   // itself -- reset here too so a game that skips the opening entirely (?intro=0) still starts from
   // the documented defaults rather than whatever the previous game happened to leave behind.

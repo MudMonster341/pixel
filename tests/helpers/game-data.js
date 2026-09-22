@@ -5,7 +5,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SCRIPTS = ['src/items.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js', 'src/dialog.js'];
+const SCRIPTS = ['src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js', 'src/dialog.js'];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
 class TinyEmitter {
@@ -82,6 +82,9 @@ function loadGameData() {
     introEnabled: get('introEnabled'),
     objectAt: get('objectAt'),
     notSeenCutscene: get('notSeenCutscene'),
+    doorLockRule: get('doorLockRule'),
+    isDoorLocked: get('isDoorLocked'),
+    questObjectiveText: get('questObjectiveText'),
     notifyStateChanged: get('notifyStateChanged'),
     resetGameState: get('resetGameState'),
     matchesWhen: get('matchesWhen'),
@@ -89,6 +92,10 @@ function loadGameData() {
     hasNewDialog: get('hasNewDialog'),
     applyDialogActions: get('applyDialogActions'),
     dialogEntryKey: get('dialogEntryKey'),
+    renderLine: get('renderLine'),
+    renderLines: get('renderLines'),
+    STORY: get('STORY'),
+    keyStationDialog: get('keyStationDialog'),
     saveGame: get('saveGame'),
     loadGame: get('loadGame'),
     peekSave: get('peekSave'),

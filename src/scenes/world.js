@@ -65,6 +65,7 @@ class WorldScene extends Phaser.Scene {
     this.createPlayer();
     this.createNpcs();
     this.createPickups();
+    this.createKeyStations();
 
     const { widthInPixels: width, heightInPixels: height } = this.map;
     this.physics.world.setBounds(0, 0, width, height);
@@ -212,6 +213,25 @@ class WorldScene extends Phaser.Scene {
       });
   }
 
+  // The 3 LUG treasure hunt keys (docs/STORY.md, M3): a desk/bench interactable, not a floor pickup
+  // (updatePickups() never touches this list) -- pressing E runs its own dialog (src/story.js
+  // keyStationDialog()), through the exact same pickDialogEntry()/applyDialogActions() code path an
+  // NPC uses (docs/ARCHITECTURE.md "content is data"). Already-collected stations (GameState.quest.
+  // keys, restored from a save) are skipped entirely, the same way createPickups() skips an
+  // already-taken pickup.
+  createKeyStations() {
+    this.keyStations = (this.def.keyStations || [])
+      .filter((def) => !GameState.quest.keys[def.id])
+      .map((def) => {
+        const x = toPixel(def.x);
+        const y = toPixel(def.y);
+        const shadow = this.add.ellipse(x, y + 7, 10, 3, 0x000000, 0.25).setDepth(y - 1);
+        const sprite = this.add.image(x, y - 1, 'items', ITEMS[def.item].frame).setDepth(y);
+        this.tweens.add({ targets: sprite, y: y - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        return { def, x, y, sprite, shadow, taken: false };
+      });
+  }
+
   update(time, delta) {
     if (this.transitioning) return;
 
@@ -297,10 +317,21 @@ class WorldScene extends Phaser.Scene {
   // Every warp trigger point on this map, in one shape: text-map `warps` entries (already
   // {x,y,to,spawn}) plus Tiled `door`/`stairs` objects with a `to` property (campus buildings,
   // interior stairs). Used by both doorAssist (below) and checkWarps.
+  // `locked`/`lockedReason` (roadmap M1 "Blocked doors", docs/STORY.md "Rules for the world") come
+  // from the map def's own `doorLocks` (src/maps.js), matched by the object's exact Tiled name --
+  // see src/maplogic.js doorLockRule()/isDoorLocked(). A text-map `warps` entry is never locked
+  // (nothing in this game gates the meadow/house test maps).
   warpPoints() {
     const objectWarps = (this.mapObjects || [])
       .filter((o) => (o.type === 'door' || o.type === 'stairs') && o.props.to)
-      .map((o) => ({ x: Math.floor(o.x), y: Math.floor(o.y), to: o.props.to, spawnAt: o.props.toId, name: o.name }));
+      .map((o) => {
+        const rule = doorLockRule(this.def.doorLocks, o.name);
+        return {
+          x: Math.floor(o.x), y: Math.floor(o.y), to: o.props.to, spawnAt: o.props.toId, name: o.name,
+          locked: isDoorLocked(rule, GameState.quest.stage),
+          lockedReason: (rule && rule.reason) || 'Locked for the event',
+        };
+      });
     return [...(this.def.warps || []), ...objectWarps];
   }
 
@@ -380,30 +411,84 @@ class WorldScene extends Phaser.Scene {
     return nearest;
   }
 
-  interact() {
+  // The nearest key station (docs/STORY.md, M3), within the same INTERACT_RANGE an NPC uses.
+  nearestKeyStation() {
+    let nearest = null;
+    let nearestDistance = INTERACT_RANGE;
+    for (const ks of this.keyStations || []) {
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, ks.x, ks.y);
+      if (distance < nearestDistance) {
+        nearest = ks;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  }
+
+  // Whatever E would interact with right now: an NPC or a key station, whichever is nearer (both use
+  // the same INTERACT_RANGE and the same underlying dialog data, docs/ARCHITECTURE.md "content is
+  // data") -- null if nothing is in range. `def` is what pickDialogEntry()/hasNewDialog() need
+  // ({ id, dialog }); `label` is what the dialog box's name tag shows.
+  nearestInteractable() {
     const npc = this.nearestNpc();
-    if (!npc) return;
+    const npcDistance = npc ? Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y) : Infinity;
+    const ks = this.nearestKeyStation();
+    const ksDistance = ks ? Phaser.Math.Distance.Between(this.player.x, this.player.y, ks.x, ks.y) : Infinity;
+    if (!npc && !ks) return null;
+    if (ksDistance < npcDistance) return { kind: 'keyStation', target: ks, def: ks.def, label: ks.def.name };
+    return { kind: 'npc', target: npc, def: npc.def, label: npc.def.name };
+  }
 
-    // Turn the NPC to face the player.
-    const dx = this.player.x - npc.x;
-    const dy = this.player.y - npc.y;
-    if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(npc.idleFrames.left).setFlipX(dx > 0);
-    else npc.setFrame(dy < 0 ? npc.idleFrames.up : npc.idleFrames.down).setFlipX(false);
+  interact() {
+    const found = this.nearestInteractable();
+    if (!found) return;
 
-    const picked = pickDialogEntry(npc.def, GameState);
-    if (!picked) return; // no dialog data at all -- shouldn't happen for a real NPC
+    if (found.kind === 'npc') {
+      const npc = found.target;
+      // Turn the NPC to face the player.
+      const dx = this.player.x - npc.x;
+      const dy = this.player.y - npc.y;
+      if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(npc.idleFrames.left).setFlipX(dx > 0);
+      else npc.setFrame(dy < 0 ? npc.idleFrames.up : npc.idleFrames.down).setFlipX(false);
+      this.game.events.emit('npc-talked', npc.def.id);
+    }
+
+    const picked = pickDialogEntry(found.def, GameState);
+    if (!picked) return; // no dialog data at all -- shouldn't happen for a real NPC/key station
     const { entry, key } = picked;
     GameState.seenDialog.add(key); // "!" becomes "E" as soon as the line is shown, not after it closes
     notifyStateChanged(); // src/save.js autosaves soon after (seenDialog is part of the save)
 
-    // DialogBox (src/scenes/ui.js) shows `entry.lines`, then either closes (calling back with no
-    // choice) or, if `entry.choices` is set, shows the picked list and calls back with whichever
-    // option the player chose. Either way, only one actions list ever runs: the choice's own, or
-    // the entry's own when there was no choice to make.
-    this.scene.get('ui').dialog.open(npc.def.name, entry.lines || [], (choice) => {
+    // `{name}` in a line is the player's chosen name (src/dialog.js renderLines()) -- both the
+    // intro lines and every choice's own follow-up lines, since DialogBox itself doesn't template.
+    const lines = renderLines(entry.lines, GameState);
+    const choices = entry.choices
+      ? entry.choices.map((choice) => ({ ...choice, lines: renderLines(choice.lines, GameState) }))
+      : null;
+
+    // DialogBox (src/scenes/ui.js) shows `lines`, then either closes (calling back with no choice)
+    // or, if `choices` is set, shows the picked list and calls back with whichever option the player
+    // chose. Either way, only one actions list ever runs: the choice's own, or the entry's own when
+    // there was no choice to make.
+    this.scene.get('ui').dialog.open(found.label, lines, (choice) => {
       applyDialogActions((choice || entry).actions, GameState);
-    }, entry.choices || null);
-    this.game.events.emit('npc-talked', npc.def.id);
+      // A key station's "take" entry just gave the key (docs/STORY.md); make the desk's own icon
+      // disappear the same way a ground pickup does, so it visually matches "you already have it."
+      if (found.kind === 'keyStation' && entry.id === 'take') this.collectKeyStation(found.target);
+    }, choices);
+  }
+
+  // Fades and destroys a key station's floating icon once its key has been given (mirrors
+  // updatePickups()'s own take animation below).
+  collectKeyStation(ks) {
+    if (ks.taken) return;
+    ks.taken = true;
+    ks.shadow.destroy();
+    this.tweens.killTweensOf(ks.sprite);
+    this.tweens.add({
+      targets: ks.sprite, y: ks.sprite.y - 10, alpha: 0, duration: 250,
+      onComplete: () => ks.sprite.destroy(),
+    });
   }
 
   updatePickups() {
@@ -438,14 +523,14 @@ class WorldScene extends Phaser.Scene {
   // scene paused too. It bobs gently either way; the "!" state also gets a soft scale pulse so a
   // player scanning the screen notices new content (docs/STYLE_GUIDE.md).
   updatePrompt(blocked, time) {
-    const npc = blocked ? null : this.nearestNpc();
-    this.prompt.setVisible(Boolean(npc));
-    if (!npc) return;
+    const found = blocked ? null : this.nearestInteractable();
+    this.prompt.setVisible(Boolean(found));
+    if (!found) return;
     this.game.events.emit('hint', 'talk'); // "E to talk", the first time anyone is ever in range
-    const isNew = hasNewDialog(npc.def, GameState);
+    const isNew = hasNewDialog(found.def, GameState);
     this.prompt.setFrame(isNew ? 1 : 0);
     const bob = Math.round(Math.sin(time / 200));
-    this.prompt.setPosition(npc.x, npc.y - 18 + bob);
+    this.prompt.setPosition(found.target.x, found.target.y - 18 + bob);
     this.prompt.setScale(isNew ? 1 + 0.08 * Math.sin(time / 150) : 1);
   }
 
@@ -454,7 +539,22 @@ class WorldScene extends Phaser.Scene {
     const tileX = Math.floor(body.center.x / TILE);
     const tileY = Math.floor((body.bottom - 1) / TILE);
     const warp = this.warpPoints().find((w) => w.x === tileX && w.y === tileY);
-    if (!warp) return;
+    if (!warp) {
+      this.lockedWarned = null;
+      return;
+    }
+
+    // Locked (roadmap M1 "Blocked doors", docs/STORY.md): a toast, not a silent wall -- thrown once
+    // per approach (the same "warned" throttle updatePickups() uses for a full bag), not every frame
+    // she stands on the tile.
+    if (warp.locked) {
+      if (this.lockedWarned !== warp.name) {
+        this.lockedWarned = warp.name;
+        this.game.events.emit('toast', warp.lockedReason);
+      }
+      return;
+    }
+    this.lockedWarned = null;
 
     // A door/stairs object can point at a map that doesn't exist yet (a building not linked up,
     // or built by a parallel worktree not yet merged): warn and toast instead of crashing

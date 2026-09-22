@@ -22,6 +22,10 @@
 //   { stage: 'hunting' }              GameState.quest.stage === 'hunting'
 //   { hasItem: 'sword' }              holding at least one (add `count` for more than one)
 //   { hasKey: 'physicsLab' }          GameState.quest.keys.physicsLab is true
+//   { notHasKey: 'physicsLab' }       GameState.quest.keys.physicsLab is false (a key station's own
+//                                      "come take me" entry, before it's been collected)
+//   { keysCount: 2 }                  exactly N of the 3 treasure-hunt keys are held (docs/STORY.md:
+//                                      the volunteer's hint changes with how many keys she has)
 //   { seen: false }                   this exact entry has never been shown before (or `true` for
 //                                      "has been", e.g. a different line the second time you visit)
 function matchesWhen(when, state, seen) {
@@ -38,12 +42,18 @@ function matchesWhen(when, state, seen) {
   if (when.stage !== undefined && state.quest.stage !== when.stage) return false;
   if (when.hasItem !== undefined && countItemHeld(state, when.hasItem) < (when.count || 1)) return false;
   if (when.hasKey !== undefined && !state.quest.keys[when.hasKey]) return false;
+  if (when.notHasKey !== undefined && state.quest.keys[when.notHasKey]) return false;
+  if (when.keysCount !== undefined && countKeysHeld(state) !== when.keysCount) return false;
   if (when.seen !== undefined && seen !== when.seen) return false;
   return true;
 }
 
 function countItemHeld(state, item) {
   return state.inventory.slots.filter((slot) => slot && slot.item === item).reduce((n, slot) => n + slot.count, 0);
+}
+
+function countKeysHeld(state) {
+  return Object.values(state.quest.keys).filter(Boolean).length;
 }
 
 // A stable key for "has this exact entry been shown before" (GameState.seenDialog): an explicit
@@ -94,7 +104,12 @@ function hasNewDialog(npc, state) {
 //   { cutscene: 'gate2' }       asks to play a cutscene (src/cutscenes.js); src/scenes/ui.js listens
 //                                for the event and hands it to the current WorldScene
 //   { minigame: 'tetris' }      asks to launch a mini-game -- a no-op stub for now (M4), just the
-//                                event, since nothing plays it yet
+//                                event, since nothing plays it yet; a key-station action list runs
+//                                this *before* `give`/`key` (docs/STORY.md), so dropping the real
+//                                mini-game in later needs no rewrite of the story data -- it just
+//                                starts blocking on the outcome instead of resolving immediately.
+//   { journal: 'text' }        appends a clue/note to GameState.journal (M1's "journal (J)" leftover,
+//                                src/scenes/ui.js Journal), oldest first, never removed
 function applyDialogActions(actions, state) {
   let changed = false;
   for (const action of actions || []) {
@@ -111,6 +126,9 @@ function applyDialogActions(actions, state) {
     } else if ('key' in action) {
       state.quest.keys[action.key] = true;
       changed = true;
+    } else if ('journal' in action) {
+      state.journal.push(action.journal);
+      changed = true;
     } else if ('toast' in action) {
       emitDialogEvent('toast', action.toast);
     } else if ('cutscene' in action) {
@@ -120,6 +138,20 @@ function applyDialogActions(actions, state) {
     }
   }
   if (changed) notifyStateChanged();
+}
+
+// ---------- text templating ----------
+
+// Dialog lines can reference `{name}` for the player's chosen name (src/state.js `playerName`, M3a
+// name entry) -- the only piece of runtime data a line needs to interpolate today. world.js's
+// interact() runs every line (and every choice's own follow-up lines) through this before handing
+// them to DialogBox, so DialogBox itself never needs to know templating exists.
+function renderLine(line, state) {
+  return line.replace(/\{name\}/g, state.playerName || '');
+}
+
+function renderLines(lines, state) {
+  return (lines || []).map((line) => renderLine(line, state));
 }
 
 // Same guard as notifyStateChanged() (src/state.js): window.game doesn't exist yet the moment this

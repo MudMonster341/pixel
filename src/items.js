@@ -10,4 +10,11 @@ const ITEMS = {
   notebook: { name: 'Notebook', frame: 5, maxStack: 3 },
   laptop: { name: 'Laptop', frame: 6, maxStack: 1 },
   coffee: { name: 'Coffee', frame: 7, maxStack: 1 },
+  // The LUG treasure hunt (docs/STORY.md, M3): the 3 keys and the reward box. Icons are blitted from
+  // the Kyrise 16x16 RPG Icon Pack (assets/vendor/kyrise-16x16-rpg-icons), not hand-drawn -- see
+  // tools/make-assets.js's VENDOR_ITEM_ICONS section.
+  keyPhysicsLab: { name: 'Physics Lab Key', frame: 8, maxStack: 1 },
+  keyIcvl: { name: 'ICVL Key', frame: 9, maxStack: 1 },
+  keyRoom195: { name: 'Room 195 Key', frame: 10, maxStack: 1 },
+  lugBox: { name: 'Small Box', frame: 11, maxStack: 1 },
 };

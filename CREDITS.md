@@ -81,9 +81,10 @@ Research only -- none of these are wired into the game yet (`src/` and `tools/` 
   `assets/vendor/kyrise-16x16-rpg-icons/`) -- **CC BY 4.0, attribution required**:
   "Kyrise's 16x16 RPG Icon Pack" by Kyrise (https://kyrise.itch.io/), via
   [opengameart.org/content/kyrises-free-16x16-rpg-icon-pack](https://opengameart.org/content/kyrises-free-16x16-rpg-icon-pack),
-  CC BY 4.0. 300+ 16x16/32x32/48x48 item icons with outlines already drawn; includes several key
-  designs and closed/open treasure-chest icons, a strong content match for the 3-key/reward-box
-  treasure hunt in docs/STORY.md. Not wired in yet.
+  CC BY 4.0. 300+ 16x16/32x32/48x48 item icons with outlines already drawn. **Wired in** (M3, the LUG
+  treasure hunt): `tools/make-assets.js`'s `VENDOR_ITEM_ICONS` blits `key_01a`/`key_02a`/`key_01c`
+  (the 3 treasure-hunt key items) and `gift_01a` (the reward box) straight into `assets/items.png`,
+  unmodified -- no recolor was needed, unlike the outdoor/interior tile packs.
 - **LimeZu Modern Interiors Free's characters** (`assets/vendor/limezu-modern-interiors-free/`, same
   licence as above): **wired in** ([decisions/0013-characters-are-16x24-from-the-pack.md](decisions/0013-characters-are-16x24-from-the-pack.md),
   FB-0025) -- recolored crops of Amelia (the lead), Adam (the LUG volunteer), Alex and Bob

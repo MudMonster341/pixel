@@ -37,6 +37,7 @@ function snapshotState(state) {
     inventory: { slots: state.inventory.slots, selected: state.inventory.selected },
     flags: { ...state.flags },
     quest: { stage: state.quest.stage, keys: { ...state.quest.keys } },
+    journal: [...state.journal],
     collected: [...state.collected],
     seenCutscenes: [...state.seenCutscenes],
     seenDialog: [...state.seenDialog],
@@ -71,6 +72,7 @@ function applyState(state, saved) {
     stage: saved.quest?.stage || state.quest.stage,
     keys: { ...state.quest.keys, ...(saved.quest?.keys || {}) },
   };
+  state.journal = Array.isArray(saved.journal) ? [...saved.journal] : state.journal;
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
   state.seenDialog = new Set(saved.seenDialog || []);

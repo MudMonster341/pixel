@@ -156,6 +156,12 @@ class UIScene extends Phaser.Scene {
     this.tutorial = new Tutorial(this);
     this.hints = new HintBanner(this);
     this.pause = new PauseMenu(this);
+    // The LUG treasure hunt (docs/STORY.md, M3 / M1's "quest tracker" + "journal (J)" leftovers):
+    // a small always-on objective panel, top-right (the same corner the tutorial checklist uses --
+    // never shown together in practice, since the checklist only exists on the meadow test map, see
+    // Tutorial's own `stage` above), and a J-toggled journal of the clues she's collected so far.
+    this.questTracker = new QuestTracker(this);
+    this.journal = new JournalPanel(this);
 
     // Named so they can be un-subscribed again in shutdown() below -- see the file-header comment.
     this.onMapEntered = (world) => {
@@ -169,6 +175,9 @@ class UIScene extends Phaser.Scene {
     // is in range, ...). HintBanner itself is what actually remembers "already shown" (GameState.
     // seenHints), so emitting one more than once is harmless.
     this.onHint = (id) => this.hints.trigger(id);
+    // Quest/journal data lives on GameState.quest/GameState.journal (src/dialog.js actions), so the
+    // tracker just re-reads it whenever anything changes -- the same event save.js's autosave uses.
+    this.onQuestStateChanged = () => this.questTracker.refresh();
     // A dialog `{ cutscene: 'key' }` action (src/dialog.js) fires this; handled here (a persistent
     // scene, at least across ordinary map changes) rather than in world.js itself, so it always
     // reaches whichever WorldScene instance is current even if a map change happened in between.
@@ -181,6 +190,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.on('area-entered', this.onAreaEntered);
     this.game.events.on('toast', this.onToast);
     this.game.events.on('hint', this.onHint);
+    this.game.events.on('state-changed', this.onQuestStateChanged);
     this.game.events.on('cutscene:requested', this.onCutsceneRequested);
     this.events.once('shutdown', () => this.teardown());
 
@@ -194,12 +204,21 @@ class UIScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-N', (event) => {
       if (!event.repeat) this.toggleFullMap();
     });
+    // J: the journal (M1 leftover, docs/STORY.md). Like the full-screen map, it only *opens* from a
+    // clean state (not mid-dialog/pause/fullmap -- GAME_FEEL.md rule 6, a modal never opens over
+    // another modal), but always closes, so J can't get "stuck".
+    this.input.keyboard.on('keydown-J', (event) => {
+      if (event.repeat) return;
+      if (this.journal.visible) this.journal.close();
+      else if (!this.dialog.isOpen && !this.pause.visible && !this.fullMap.visible) this.journal.open();
+    });
     // Esc: closing the full-screen map always wins (it has its own long-standing meaning), then the
-    // pause menu owns Esc the rest of the time -- opening it, or backing out of its Controls page,
-    // or closing it again (docs/GAME_FEEL.md). Not while a conversation owns the screen.
+    // journal, then the pause menu owns Esc the rest of the time -- opening it, or backing out of its
+    // Controls page, or closing it again (docs/GAME_FEEL.md). Not while a conversation owns the screen.
     this.input.keyboard.on('keydown-ESC', (event) => {
       if (event.repeat) return;
       if (this.fullMap.visible) this.fullMap.close();
+      else if (this.journal.visible) this.journal.close();
       else if (!this.dialog.isOpen) this.pause.onEscape();
     });
   }
@@ -213,6 +232,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.off('area-entered', this.onAreaEntered);
     this.game.events.off('toast', this.onToast);
     this.game.events.off('hint', this.onHint);
+    this.game.events.off('state-changed', this.onQuestStateChanged);
     this.game.events.off('cutscene:requested', this.onCutsceneRequested);
     this.hotbar.teardown();
     this.tutorial.teardown();
@@ -232,7 +252,7 @@ class UIScene extends Phaser.Scene {
 
   // True while the player shouldn't be able to walk around.
   isBlocking() {
-    return this.dialog.isOpen || this.fullMap.visible || this.pause.visible;
+    return this.dialog.isOpen || this.fullMap.visible || this.pause.visible || this.journal.visible;
   }
 
   update(time, delta) {
@@ -361,6 +381,7 @@ class Minimap {
 
     g.fillStyle(COLORS.gold, 1);
     for (const pickup of world.pickups) if (!pickup.taken) dot(mx(pickup.x), my(pickup.y), 3);
+    for (const ks of world.keyStations || []) if (!ks.taken) dot(mx(ks.x), my(ks.y), 3);
     g.fillStyle(0x7fe0ff, 1);
     for (const npc of world.npcs) dot(mx(npc.x), my(npc.y), 4);
 
@@ -820,6 +841,7 @@ const CONTROLS = [
   ['1-5 / WHEEL', 'Choose item slot'],
   ['M', 'Show/hide minimap'],
   ['N / CLICK MAP', 'Full-screen map'],
+  ['J', 'Journal'],
   ['ESC', 'Pause'],
 ];
 
@@ -1146,5 +1168,109 @@ class Tutorial {
       });
     };
     announce();
+  }
+}
+
+// ---------- quest tracker (top-right): the current objective + "Keys: n / 3" (M1 leftover) ----------
+// Always on (never a modal, never blocks input) once GameState.quest is meaningfully in play -- which
+// is from the very start, since the 'arrival' stage already has an objective ("find the LUG stall").
+// Same top-right corner the tutorial checklist uses (docs/STYLE_GUIDE.md's own "[quest / tutorial]"
+// layout sketch) -- they never actually appear together, since the checklist only exists on the
+// meadow test map (Tutorial's `stage` is 'done' everywhere else, see above).
+
+class QuestTracker {
+  constructor(scene) {
+    this.scene = scene;
+    this.w = 260;
+    this.x = GAME_WIDTH - this.w - 16;
+    this.y = 16;
+
+    this.panel = scene.add.graphics();
+    this.title = uiText(scene, this.x + 14, this.y + 16, 'LUG TREASURE HUNT', 8, COLORS.highlight);
+    this.objective = uiText(scene, this.x + 14, this.y + 34, '', 8).setWordWrapWidth(this.w - 28, true);
+    this.keysText = uiText(scene, this.x + 14, this.y + 34, '', 8, COLORS.done);
+    this.parts = [this.panel, this.title, this.objective, this.keysText];
+    this.refresh();
+  }
+
+  // GAME_FEEL.md rule 1 ("a panel's box is sized from its content"): the objective line can wrap to
+  // more than one row depending on its own text, so the panel's height is measured from the actual
+  // rendered text height after setting it, never assumed to be one line.
+  refresh() {
+    this.objective.setText(questObjectiveText(GameState.quest));
+    const keysY = this.y + 34 + this.objective.height + 8;
+    this.keysText.setPosition(this.x + 14, keysY);
+    const keysHeld = Object.values(GameState.quest.keys).filter(Boolean).length;
+    this.keysText.setText(`Keys: ${keysHeld} / 3`);
+    const h = keysY + this.keysText.height + 14 - this.y;
+    this.panel.clear();
+    drawPanel(this.panel, this.x, this.y, this.w, h);
+  }
+}
+
+// ---------- journal (J): the clues she's been given so far (M1 leftover) ----------
+// A modal overlay, same family as ControlsPanel/PauseMenu (dim background + a centered panel that
+// measures its own height from its content -- GAME_FEEL.md rule 1), listing GameState.journal
+// (src/dialog.js `{ journal: '...' }` actions) oldest first. Rebuilt every time it opens, so it
+// always reflects whatever's been added since it was last shown.
+
+class JournalPanel {
+  constructor(scene) {
+    this.scene = scene;
+    this.visible = false;
+    this.w = 560;
+    this.x = Math.round((GAME_WIDTH - this.w) / 2);
+    this.headerH = 56;
+    this.footerH = 34;
+    this.rowGap = 10;
+
+    this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
+    this.panel = scene.add.graphics();
+    this.title = uiText(scene, GAME_WIDTH / 2, 0, 'JOURNAL', 16, COLORS.highlight).setOrigin(0.5);
+    this.footer = uiText(scene, GAME_WIDTH / 2, 0, 'J / ESC TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
+    this.rowTexts = [];
+    this.parts = [this.dim, this.panel, this.title, this.footer];
+    this.parts.forEach((part) => part.setDepth(115).setVisible(false));
+  }
+
+  open() {
+    this.visible = true;
+    this.build();
+    this.parts.forEach((part) => part.setVisible(true));
+    this.rowTexts.forEach((text) => text.setVisible(true));
+  }
+
+  close() {
+    this.visible = false;
+    this.parts.forEach((part) => part.setVisible(false));
+    this.rowTexts.forEach((text) => text.setVisible(false));
+  }
+
+  toggle() {
+    if (this.visible) this.close();
+    else this.open();
+  }
+
+  build() {
+    this.rowTexts.forEach((text) => text.destroy());
+    const entries = GameState.journal.length ? GameState.journal : ['No clues yet -- go talk to someone.'];
+    const bodyW = this.w - 64;
+    this.rowTexts = entries.map((line) =>
+      uiText(this.scene, this.x + 32, 0, `• ${line}`, 8, COLORS.text).setWordWrapWidth(bodyW).setDepth(116),
+    );
+
+    let rowsH = 0;
+    for (const text of this.rowTexts) rowsH += text.height + this.rowGap;
+    const h = this.headerH + rowsH + this.footerH;
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+
+    drawPanel(this.panel, this.x, y, this.w, h);
+    this.title.setPosition(GAME_WIDTH / 2, y + 26);
+    this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);
+    let rowY = y + this.headerH;
+    for (const text of this.rowTexts) {
+      text.setPosition(this.x + 32, rowY);
+      rowY += text.height + this.rowGap;
+    }
   }
 }

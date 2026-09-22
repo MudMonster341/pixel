@@ -119,6 +119,8 @@ shows a selectable list and runs whichever option's own `actions` the player pic
 { stage: 'hunting' }                      // GameState.quest.stage === 'hunting'
 { hasItem: 'sword' }                      // holding at least one (add `count` for more)
 { hasKey: 'physicsLab' }                  // GameState.quest.keys.physicsLab is true
+{ notHasKey: 'physicsLab' }               // GameState.quest.keys.physicsLab is false
+{ keysCount: 2 }                          // exactly N of the treasure hunt's keys are held
 { seen: false }                           // this exact entry has never been shown before
 ```
 
@@ -131,12 +133,28 @@ shows a selectable list and runs whichever option's own `actions` the player pic
 { setFlag: { name: 'tomasChats', value: 2 } }   // sets a flag to any value
 { stage: 'hunting' }                      // GameState.quest.stage = 'hunting'
 { key: 'physicsLab' }                     // GameState.quest.keys.physicsLab = true
+{ journal: 'Found a clue.' }              // appends a line to GameState.journal (src/scenes/ui.js
+                                           // Journal, opened with J), oldest first, never removed
 { toast: 'The volunteer waves you over.' }
 { cutscene: 'gate2' }                     // plays a cutscene (src/cutscenes.js)
 { minigame: 'tetris' }                    // M4 stub for now: just the event, nothing plays it yet
 ```
 
-**Examples** (`src/maps.js`, the two test-map NPCs -- the LUG volunteer's real script is still M3):
+Locked doors/stairs (roadmap M1, `src/maplogic.js` `doorLockRule()`/`isDoorLocked()`) use a smaller,
+separate condition of their own rather than the `when` vocabulary above: a map def's `doorLocks`
+(`src/maps.js`) is a list of `{ match, stages? }`, matched against a door/stairs object's own Tiled
+`name`. The door is open once `GameState.quest.stage` is one of `stages`; no `stages` at all means
+never -- a route this game's current story doesn't use, not one merely not yet unlocked. `world.js`
+`warpPoints()` resolves this and `checkWarps()` shows `lockedReason` ("Locked for the event" by
+default) as a toast instead of transitioning.
+
+A key station (docs/STORY.md, M3 -- a desk/bench interactable for one of the treasure hunt's 3 keys)
+is plain `keyStations` data on a map def, the same shape idea as `npcs`: `{ id, name, item, x, y,
+dialog }`. `world.js` `createKeyStations()`/`nearestInteractable()` run it through the *exact same*
+`pickDialogEntry()`/`applyDialogActions()` an NPC uses -- it isn't a second dialog system, just
+another kind of thing E can interact with, rendered as a bobbing item icon instead of a character.
+
+**Examples** (`src/maps.js`, the two test-map NPCs and the real LUG volunteer/key stations, M3):
 ```js
 // Tomas (house): a plain entry, first match wins.
 dialog: [

@@ -2410,14 +2410,37 @@ const npc = new Img(NPC_FRAMES.length * CHAR_W, CHAR_H);
 NPC_FRAMES.forEach((frame, i) => npc.draw(sprite(`npc frame ${i}`, frame, CHAR_W, CHAR_H), i * CHAR_W, 0));
 write('npc.png', npc);
 
-const items = new Img(ITEM_ICONS.length * TILE, TILE);
+// The LUG treasure hunt's keys and reward box (docs/STORY.md, M3): blitted straight from the Kyrise
+// 16x16 RPG Icon Pack (assets/vendor/kyrise-16x16-rpg-icons, CREDITS.md) instead of hand-drawn like
+// everything above -- the owner's task brief specifically named this pack's key icons. Each source
+// file is its own already-16x16 PNG (not a shared atlas), so blitAtlas just copies it whole (sx=sy=0,
+// sw=sh=16), no recolor/rotate needed. Appended *after* ITEM_ICONS/HELD_ITEM_ICONS (not spliced in)
+// so every existing item's frame index is unchanged, per src/items.js's own frame numbers.
+const KYRISE_ICON_DIR = "kyrise-16x16-rpg-icons/Kyrise's 16x16 RPG Icon Pack - V1.2/icons/16x16";
+const VENDOR_ITEM_ICONS = [
+  { item: 'keyPhysicsLab', file: 'key_01a.png' },
+  { item: 'keyIcvl', file: 'key_02a.png' },
+  { item: 'keyRoom195', file: 'key_01c.png' },
+  { item: 'lugBox', file: 'gift_01a.png' },
+];
+
+const items = new Img((ITEM_ICONS.length + VENDOR_ITEM_ICONS.length) * TILE, TILE);
 ITEM_ICONS.forEach((icon, i) => items.draw(icon, i * TILE, 0));
+VENDOR_ITEM_ICONS.forEach(({ file }, i) => {
+  const atlas = loadAtlas(`${KYRISE_ICON_DIR}/${file}`);
+  blitAtlas(items, (ITEM_ICONS.length + i) * TILE, 0, atlas, 0, 0, 16, 16);
+});
 write('items.png', items);
 
-// Small in-hand sprites (FB-0002): 8x8 frames, same order/frame numbers as items.png.
+// Small in-hand sprites (FB-0002): 8x8 frames, same order/frame numbers as items.png -- the vendor
+// icons are just downsampled (nearest-neighbor, via blitAtlas's dw/dh) rather than redrawn.
 const HELD_ITEM_SIZE = 8;
-const heldItems = new Img(HELD_ITEM_ICONS.length * HELD_ITEM_SIZE, HELD_ITEM_SIZE);
+const heldItems = new Img((HELD_ITEM_ICONS.length + VENDOR_ITEM_ICONS.length) * HELD_ITEM_SIZE, HELD_ITEM_SIZE);
 HELD_ITEM_ICONS.forEach((icon, i) => heldItems.draw(icon, i * HELD_ITEM_SIZE, 0));
+VENDOR_ITEM_ICONS.forEach(({ file }, i) => {
+  const atlas = loadAtlas(`${KYRISE_ICON_DIR}/${file}`);
+  blitAtlas(heldItems, (HELD_ITEM_ICONS.length + i) * HELD_ITEM_SIZE, 0, atlas, 0, 0, 16, 16, { dw: HELD_ITEM_SIZE, dh: HELD_ITEM_SIZE });
+});
 write('held-items.png', heldItems);
 
 const prompt = new Img(2 * TILE, TILE);
@@ -2425,4 +2448,4 @@ prompt.draw(PROMPT_E, 0, 0);
 prompt.draw(PROMPT_BANG, TILE, 0);
 write('prompt.png', prompt);
 
-console.log(`Wrote ${TILES.length} tiles, player (+${Object.keys(CLOTHES_SWATCHES).length} swatches), npc, ${ITEM_ICONS.length} items and prompt to assets/`);
+console.log(`Wrote ${TILES.length} tiles, player (+${Object.keys(CLOTHES_SWATCHES).length} swatches), npc, ${ITEM_ICONS.length + VENDOR_ITEM_ICONS.length} items and prompt to assets/`);

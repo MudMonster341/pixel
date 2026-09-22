@@ -113,21 +113,46 @@ Incubation Centre. Stairs up + a decorative lift in the stairwell room.
 
 **1st floor** (`main-block-1`): the Connecting Lobby sits directly over the Foyer/Foyer 2 footprint,
 with a railing-bordered atrium void punched into its floor so it visually overlooks the real foyer
-below. Off the spine: three 50-seat + two 60-seat classrooms, the Locker Area, Counselling Centre
-(+ its Group Session and Therapy rooms), International Student Services, a Meeting Room and a Guest
-Meeting Room. Stairs down to G, up to 2nd.
+below. Off the spine: **ICVL** and **Room 195** (docs/STORY.md key rooms, M3 -- renamed 2026-09-22
+from two of what were three plain "50 Seater Classroom" rooms; see "Story rooms" below), one more
+50-seat + two 60-seat classrooms, the Locker Area, Counselling Centre (+ its Group Session and
+Therapy rooms), International Student Services, a Meeting Room and a Guest Meeting Room. Stairs down
+to G, up to 2nd.
 
 **2nd floor** (`main-block-2`): department labs off the spine -- EEE (Analog & Digital, Communication
 Systems, Electrical Machines, Instrumentation, Power Electronics), CHEM (Chemical Engineering,
 Petroleum), CS (Computer Lab, Database Systems, Network & Distributed Systems, Signal Processing),
-BIOT (Advanced Molecular Biology, Biotechnology Research, Microbiology), GS (Chemistry, Physics),
-Civil (Soil Mechanics, Transport Engineering), and Thermo-Fluids -- 19 labs total, the tour doesn't
-say which floor so this is the sensible guess ("linked from Foyer 2, floor unknown"). Stairs down to
-1st, up to 3rd.
+BIOT (Advanced Molecular Biology, Biotechnology Research, Microbiology), GS (Chemistry -- **Physics
+moved to the 3rd floor**, see below), Civil (Soil Mechanics, Transport Engineering), and
+Thermo-Fluids -- 18 labs total, the tour doesn't say which floor so this is the sensible guess
+("linked from Foyer 2, floor unknown"). Stairs down to 1st, up to 3rd.
 
 **3rd floor** (`main-block-3`): the clubs corridor (ACM, ACM-W, GDG, MTC, IEEE, IFOR, Supernova,
-Music, Shades Art, SWE, WIE, Chimera, Student Council), the Vice Chancellor Office, Telepresence
-Conference Room and two guest/meeting rooms. Stairs down to 2nd (top floor, no further stairs).
+Music, Shades Art, SWE, WIE, Chimera, Student Council), the **Physics Lab** (docs/STORY.md key room,
+M3 -- moved here 2026-09-22 from the 2nd floor's GS row, see "Story rooms" below), the Vice
+Chancellor Office, Telepresence Conference Room and two guest/meeting rooms. Stairs down to 2nd (top
+floor, no further stairs).
+
+### Story rooms (M3, 2026-09-22, docs/STORY.md)
+
+The treasure hunt's 3 key rooms had no public floor plan to place them from (docs/STORY.md's own
+"Open questions for the owner" -- still open). Rather than invent new rooms and grow the building
+further, the task made the smallest change that gives each one a real, named, furnished room:
+
+- **Physics Lab**: moved from the 2nd floor's guessed GS (General Studies) row to a new `lab`-type
+  room on the 3rd floor (`tools/interiors/plans.js` `mainBlock3`), matching docs/STORY.md's own "the
+  Physics Lab, 3rd floor" -- the 2nd floor was just as much a guess, so moving it cost nothing real.
+- **ICVL**: one of the 1st floor's three "50 Seater Classroom" rooms, renamed and changed from a
+  `classroom` to a `lab` (bench + computer-bench furniture instead of desks-and-whiteboard) --
+  "ICVL" isn't a real BITS Dubai room name found in research, it's the task's own placeholder for "a
+  computing lab on the 1st floor"; **the owner should confirm or correct this name and location** if
+  the real one is known.
+- **Room 195**: the second of those same three classrooms, renamed only (still a plain classroom) --
+  docs/STORY.md names the room but not its floor; 1st floor (next to ICVL) was chosen for a short,
+  sensible route, not sourced from anything real.
+
+All three key stations (a desk/bench interactable, not a floor pickup) and the LUG volunteer's own
+dialog are data in `src/story.js`/`src/maps.js`, not the interior generator -- see docs/STORY.md.
 
 ## Library Block (2 floors)
 

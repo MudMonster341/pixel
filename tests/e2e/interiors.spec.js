@@ -56,6 +56,11 @@ test('walking into the Main Block leads to the ground floor, up and back down th
   await waitForMap(page, 'main-block-g');
   expect((await state(page)).ready).toBe(true);
 
+  // docs/STORY.md "Rules for the world": the stairs up are locked until the volunteer has actually
+  // given the quest (interiors.spec.js covers the *locked* case) -- simulate having talked to
+  // him already, the same way tests/e2e/story.spec.js's own playthrough does it for real.
+  await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+
   // FB-0017: no running indoors.
   await page.keyboard.down('Shift');
   await page.keyboard.down('d');
@@ -88,16 +93,15 @@ test('walking into the Main Block leads to the ground floor, up and back down th
   expect(back.facing).toBe('down');
 });
 
-test('walking into the Library Block leads to the ground floor and back out to campus', async ({ page }) => {
+// locked doors: docs/STORY.md "Rules for the world" -- the Library Block isn't part of the LUG
+// treasure hunt at all, so it's permanently blocked (src/maps.js campus `doorLocks`), not just
+// gated behind a stage. This replaces the old "walk in and back out" coverage from before the story
+// existed: walking in should now fail, with a toast saying why, and no map change at all.
+test('locked doors: the Library Block entrance is permanently locked, with a toast, not a silent wall', async ({ page }) => {
   const door = await findDoor(page, 'Library Block');
   await teleport(page, door.x, door.y + 2);
   await holdKey(page, 'w', 800);
-  await waitForMap(page, 'library-block-g');
-  expect((await state(page)).ready).toBe(true);
-
-  const exit = await findExit(page);
-  await stepOnto(page, exit);
-  await waitForMap(page, 'campus');
-  const back = await state(page);
-  expect(back.tile).toEqual({ x: door.x, y: door.y + 1 });
+  const after = await state(page);
+  expect(after.map).toBe('campus'); // never actually transitioned
+  expect(after.toast).toBe('Locked for the event');
 });

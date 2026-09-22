@@ -79,3 +79,27 @@ gift can never be blocked by a hard game.
   2026-09-20: official site, prospectus PDF, Wikipedia, 2GIS, Google).
 - Where is the real **main entrance (Gate 2)**? Still assumed (FB-0022).
 - The card's text: names, messages, and how many photos.
+
+## Small choices made building the playable spine (M3, 2026-09-22)
+
+The rooms/entrance above are still open questions, so the story spine (the volunteer, the 3 keys,
+the gating) had to pick *something* real to stand on. Flagging what was decided, so the owner can
+correct any of it once the real answer is known:
+
+- **Room placement**: the Physics Lab moved to the 3rd floor (was a 2nd-floor guess); ICVL and
+  Room 195 are two of the 1st floor's plain "50 Seater Classroom" rooms, renamed (ICVL refurnished
+  as a computing lab, Room 195 left as a classroom) -- see docs/INTERIORS_PLAN.md "Story rooms" for
+  exactly what changed. "ICVL" itself is this task's own placeholder name, not a sourced one.
+- **Quest stages**: `GameState.quest.stage` is `'arrival'` -> `'hunting'` -> `'rewarded'` (the
+  original M1 scaffolding had `'briefed'`/`'done'` placeholders that nothing in this story actually
+  needed as a separate step).
+- **The 3 keys are real inventory items** too (Kyrise icons), not just the `quest.keys` progress
+  flags M1 already had -- so the hotbar visibly fills up as she collects them. "He takes the keys"
+  at the end is narrative only for now: there's no `take`-item dialog action yet, so the 3 key items
+  and the box stay in her bag rather than actually being removed. Easy to add if that bothers you.
+- **The volunteer's hint is keyed to how many keys she's holding, not which ones are still
+  missing** (matching this task's own brief) -- so a player who collects them out of order gets a
+  hint for a key she may already have. The quest tracker (top-right panel) is smarter about this: it
+  always names the first *actually missing* key, in the Physics Lab -> ICVL -> Room 195 order.
+- **The box doesn't visibly open yet** -- receiving it just ends the hunt (`stage: 'rewarded'`); the
+  opening animation and the birthday card itself are explicitly a later milestone.

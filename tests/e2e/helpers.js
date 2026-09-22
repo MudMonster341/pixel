@@ -63,6 +63,7 @@ function state(page) {
       selected: GameState.inventory.selected,
       flags: GameState.flags,
       quest: GameState.quest,
+      journal: [...GameState.journal],
       tutorial: { stage: ui.tutorial.stage, completed: [...ui.tutorial.completed] },
       seenHints: [...GameState.seenHints],
       pause: { visible: ui.pause.visible, view: ui.pause.view, controlsVisible: ui.pause.controls.visible },

@@ -128,3 +128,39 @@ function objectAt(mapObjects, types, x, y) {
 function notSeenCutscene(key, seen) {
   return Boolean(key) && !seen.has(key);
 }
+
+// ---------- locked doors/stairs (roadmap M1 "Blocked doors", docs/STORY.md "Rules for the world") ----------
+// A map def's own `doorLocks` (src/maps.js) is a list of `{ match, stages? }` rules: `match` is a
+// door/stairs object's exact Tiled `name` (world.js warpPoints() checks it against every door/stairs
+// object on the current map, the same objects the warp itself already comes from). The door is open
+// once GameState.quest.stage is one of `stages`; omitting `stages` means "never" -- a route the story
+// doesn't use at all (e.g. a building it never sends her into), not just one she hasn't unlocked yet.
+
+function doorLockRule(doorLocks, name) {
+  return (doorLocks || []).find((rule) => rule.match === name) || null;
+}
+
+function isDoorLocked(rule, stage) {
+  if (!rule) return false;
+  return !(rule.stages && rule.stages.includes(stage));
+}
+
+// ---------- quest tracker text (M1 leftover, docs/STORY.md) ----------
+// The single line src/scenes/ui.js's QuestTracker shows under "Keys: n / 3" -- pure so it can be
+// unit-tested directly against every stage/key combination without booting a scene.
+//
+// Unlike the volunteer's own spoken hint (src/story.js, keyed to how many keys she's holding, per
+// the task brief's literal wording), the tracker checks which *specific* key is still missing, in
+// docs/STORY.md's own room order (Physics Lab -> ICVL -> Room 195) -- so it never tells her to go
+// find a key she's already carrying just because she happened to collect them out of order.
+function questObjectiveText(quest) {
+  if (quest.stage === 'arrival') return 'Find the LUG stall behind the Main Block staircase.';
+  if (quest.stage === 'hunting') {
+    if (!quest.keys.physicsLab) return 'Find the first key: the Physics Lab, 3rd floor.';
+    if (!quest.keys.icvl) return 'Find the next key: the ICVL, 1st floor.';
+    if (!quest.keys.room195) return 'Find the last key: Room 195.';
+    return 'Bring all 3 keys back to the LUG stall.';
+  }
+  if (quest.stage === 'rewarded') return 'Treasure hunt complete! You got the small box.';
+  return '';
+}

@@ -14,6 +14,11 @@ feedback/items/*.tmp
 # P5 QA visual walkthrough screenshots (npm run qa:shots) -- regenerate, don't commit
 qa-shots/
 
+# The birthday card's own media (docs/STORY.md "How to put your photos and messages in"): the
+# owner's real photos, video and card.json live here and are NEVER committed. Placeholder art
+# (tools/make-card-art.js -> assets/cutscenes/card-*.png) ships instead, so the card always works.
+assets/card/
+
 # Third-party asset packs: licensed for use in this project, NOT for redistribution.
 # The game ships their art baked into assets/tiles.png etc.; the raw packs stay local.
 # (See decisions/0012-third-party-asset-packs.md and CREDITS.md for how to get them.)

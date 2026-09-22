@@ -18,6 +18,15 @@ const TYPES = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  // The birthday card's own owner-supplied media (docs/STORY.md "How to put your photos and
+  // messages in"): without a real Content-Type here, the fallback below serves them as
+  // application/octet-stream, which Chromium's <video>/<img> handling can refuse to play/decode
+  // even though the bytes are fine -- these formats are the ones that doc promises work.
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
 };
 
 const store = new FeedbackStore(process.env.FEEDBACK_DIR || path.join(ROOT, 'feedback'));

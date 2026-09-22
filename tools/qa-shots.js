@@ -420,6 +420,82 @@ async function shootMinigames(browser) {
   }
 }
 
+// ---------- the ending (docs/STORY.md "the box opens...", docs/ROADMAP.md M3): the box-opening
+// sequence and the birthday card. Reaches the reward the same shortcut tests/e2e/ending.spec.js
+// uses (setting GameState.quest directly and talking to the volunteer) rather than replaying the
+// whole 3-key hunt just for a screenshot. ----------
+
+async function shootEnding(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  await page.goto(`${BASE_URL}/?dev=0&map=main-block-g&cutscene=0&title=0`);
+  await waitReady(page);
+  await page.evaluate(() => {
+    GameState.playerName = 'Zara';
+    GameState.quest.stage = 'hunting';
+    GameState.quest.keys = { physicsLab: true, icvl: true, room195: true };
+  });
+
+  const volunteer = await page.evaluate(() => {
+    const npc = game.scene.getScene('world').npcs.find((n) => n.def.id === 'lug-volunteer');
+    return { x: Math.floor(npc.x / 16), y: Math.floor(npc.y / 16) };
+  });
+  await teleport(page, volunteer.x, volunteer.y + 1);
+  await page.keyboard.press('e');
+  await page.waitForFunction(() => game.scene.getScene('ui').dialog.isOpen);
+  for (let i = 0; i < 20 && !(await page.evaluate(() => game.scene.isActive('box-opening'))); i++) {
+    await page.keyboard.press('e');
+    await page.waitForTimeout(120);
+  }
+  await page.waitForFunction(() => game.scene.isActive('box-opening'));
+
+  // Frame 1: the box has just appeared, still closed.
+  await page.waitForFunction(() => {
+    const s = game.scene.getScene('box-opening');
+    return s.box && s.box.alpha >= 1;
+  });
+  await shoot(page, 'ending-01-box-closed');
+
+  // Frame 2: mid-creak, the lid partway open.
+  await page.waitForFunction(() => {
+    const s = game.scene.getScene('box-opening');
+    return s.lid && s.lid.angle < -8;
+  });
+  await shoot(page, 'ending-02-box-opening');
+
+  // Frame 3: the light has risen and is filling the screen.
+  await page.waitForFunction(() => game.scene.getScene('box-opening').canSkip);
+  await page.waitForTimeout(400);
+  await shoot(page, 'ending-03-box-light');
+
+  await page.waitForFunction(() => game.scene.isActive('card'), { timeout: 15_000 });
+  await page.waitForTimeout(150);
+  await shoot(page, 'ending-04-card-cover');
+
+  await page.keyboard.press('Enter'); // open the cover
+  await page.waitForFunction(() => {
+    const s = game.scene.getScene('card');
+    return s.frameParts && s.frameParts[2].visible;
+  });
+  await page.waitForTimeout(200);
+  await shoot(page, 'ending-05-card-photo');
+
+  await page.waitForFunction(() => game.scene.getScene('card').dialog.isOpen);
+  await page.waitForTimeout(300);
+  await shoot(page, 'ending-06-card-message');
+
+  // Skip straight to "THE END" rather than waiting out every message + the (missing, in this
+  // checkout) closing video -- this is a visual QA pass, not a timing test.
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => {
+    const s = game.scene.getScene('card');
+    return s.ended;
+  });
+  await page.waitForTimeout(300);
+  await shoot(page, 'ending-07-the-end');
+
+  await page.close();
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   // { recursive: true } so a leftover qa-shots/intro/ (tools/qa-shots-intro.js's own output
@@ -443,6 +519,7 @@ async function main() {
     await shootCutscene(browser);
     await shootTitleAndPause(browser);
     await shootMinigames(browser);
+    await shootEnding(browser);
 
     log(`done: ${shotCount} screenshots in ${path.relative(ROOT, OUT_DIR)}/`);
   } finally {

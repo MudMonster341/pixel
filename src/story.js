@@ -16,7 +16,8 @@ const STORY = {
   // ties the hint to the *count*, so the order the owner listed the rooms in (Physics Lab -> ICVL ->
   // Room 195) is also the order the hints come in, regardless of which key she actually found first.
   // With all 3 he calls her the first to finish and hands over the small box; the box itself opening
-  // into the birthday card is a later milestone (docs/STORY.md "the box opens... comes later").
+  // into the birthday card (docs/STORY.md "the box opens...") is the reward entry's own last action,
+  // `{ boxOpening: true }`, below.
   volunteer: [
     {
       id: 'welcome',
@@ -62,6 +63,9 @@ const STORY = {
         { stage: 'rewarded' },
         { journal: 'I found all 3 keys and gave them to the volunteer — I was the first to finish! He gave me a small box.' },
         { toast: 'You got the Small Box!' },
+        // The ending (docs/STORY.md "the box opens..."): the box-opening sequence, then the
+        // birthday card, then back to the title screen -- src/dialog.js's `boxOpening` action.
+        { boxOpening: true },
       ],
     },
     {

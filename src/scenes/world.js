@@ -643,6 +643,24 @@ class WorldScene extends Phaser.Scene {
     this.scene.pause();
     this.scene.launch('cutscene', { key });
   }
+
+  // The ending (docs/STORY.md "the box opens..."): unlike playCutscene()/launchMinigame() above,
+  // nothing ever resumes 'world' or 'ui' afterwards -- src/scenes/box-opening.js hands off straight
+  // to src/scenes/card.js, which ends on the title screen (docs/ROADMAP.md M3 "returns to the title
+  // screen, keeping the save"), the same way PauseMenu.quitToTitle() (src/scenes/ui.js) stops both
+  // scenes on its way there. Stopping 'ui' here (not just pausing 'world') also avoids a real bug a
+  // pause would leave behind: 'ui' would keep listening for Esc the whole time box-opening/card own
+  // the screen, and -- since its own dialog is closed by this point -- would open the pause menu
+  // right underneath them. Triggered by the volunteer's 'reward' dialog entry's last action
+  // (src/story.js, `{ boxOpening: true }`).
+  playBoxOpening() {
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.prompt.setVisible(false);
+    this.scene.stop('ui');
+    this.scene.pause();
+    this.scene.launch('box-opening');
+  }
 }
 
 // Tile coordinate -> pixel at the center of that tile

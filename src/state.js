@@ -47,8 +47,9 @@ class Inventory extends Phaser.Events.EventEmitter {
 const DEFAULT_FLAGS = { tomasGaveSword: false, tomasChats: 0 };
 // docs/STORY.md (M3, the LUG treasure hunt): 'arrival' (hasn't met the volunteer yet) -> 'hunting'
 // (given the quest, out looking for the 3 keys) -> 'rewarded' (all 3 keys turned in, small box
-// received -- the box opening and the birthday card itself are a later milestone). Set by the
-// volunteer's own dialog actions (src/maps.js `main-block-g` npcs, `{ stage: ... }`, src/dialog.js).
+// received -- which immediately plays the box-opening sequence and the birthday card, docs/STORY.md
+// "the box opens...", src/scenes/box-opening.js / src/scenes/card.js). Set by the volunteer's own
+// dialog actions (src/maps.js `main-block-g` npcs, `{ stage: ... }`, src/dialog.js).
 const defaultQuest = () => ({
   stage: 'arrival',
   keys: { physicsLab: false, icvl: false, room195: false },

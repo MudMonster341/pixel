@@ -170,6 +170,21 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   expect(tracker.objective).toContain('Bring all 3 keys');
   expect(tracker.keys).toBe('Keys: 3 / 3');
 
+  // ---------- the journal (J) lists every clue given so far, up to this point ----------
+  // Checked here, before the reward conversation below, because handing over the box immediately
+  // starts the ending (docs/STORY.md "the box opens..."), which takes the 'ui' scene down with it
+  // (tests/e2e/ending.spec.js covers that sequence itself) -- there's no "back in the world with the
+  // journal open" moment after the reward for this test to reach anymore.
+  await page.keyboard.press('j');
+  await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(true);
+  expect(await page.evaluate(() => game.scene.getScene('ui').isBlocking())).toBe(true); // movement blocked while it's open
+  const journalRows = await page.evaluate(() => game.scene.getScene('ui').journal.rowTexts.map((t) => t.text));
+  // One journal line for the quest start, one per key found -- the reward's own line comes later.
+  expect(journalRows.length).toBe(4);
+  expect(journalRows[0]).toContain('3 keys hidden around campus');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(false);
+
   // ---------- back down to the ground floor and the stall, for the reward ----------
   const down3 = await findStairsNamed(page, 'Main Block Stairs 3 (down)');
   await stepOnto(page, down3);
@@ -191,16 +206,8 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   // One journal line for the quest start, one per key found, one for the reward.
   expect(s.journal.length).toBe(5);
   expect(s.journal[s.journal.length - 1]).toMatch(/first to finish/);
-  tracker = await questTrackerText(page);
-  expect(tracker.objective).toMatch(/complete/i);
 
-  // ---------- the journal (J) lists every clue given so far ----------
-  await page.keyboard.press('j');
-  await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(true);
-  expect(await page.evaluate(() => game.scene.getScene('ui').isBlocking())).toBe(true); // movement blocked while it's open
-  const journalRows = await page.evaluate(() => game.scene.getScene('ui').journal.rowTexts.map((t) => t.text));
-  expect(journalRows.length).toBe(5);
-  expect(journalRows[0]).toContain('3 keys hidden around campus');
-  await page.keyboard.press('Escape');
-  await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(false);
+  // Receiving the box immediately starts the ending (docs/STORY.md "the box opens..."); the sequence
+  // itself, and returning to the title with the save kept, is tests/e2e/ending.spec.js's job.
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('box-opening')), { timeout: 10_000 }).toBe(true);
 });

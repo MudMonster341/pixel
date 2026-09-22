@@ -13,6 +13,9 @@ const SCRIPTS = [
   'src/minigames/framework-data.js', 'src/minigames/tetris-logic.js', 'src/minigames/flappy-logic.js',
   'src/minigames/platformer-physics.js',
   'src/dialog.js',
+  // The ending's card content (docs/STORY.md "the ending"): pure data/validation, no Phaser -- see
+  // src/card.js's own header comment for why this needs to tolerate a missing/malformed card.json.
+  'src/card.js',
 ];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
@@ -144,6 +147,9 @@ function loadGameData() {
     initAutosave: get('initAutosave'),
     currentProfile: get('currentProfile'),
     saveEnabled: get('saveEnabled'),
+    buildCardConfig: get('buildCardConfig'),
+    renderCardText: get('renderCardText'),
+    DEFAULT_CARD_MESSAGES: get('DEFAULT_CARD_MESSAGES'),
     localStorage,
     tileInfo: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8')),
   };

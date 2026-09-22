@@ -115,6 +115,10 @@ function startGame() {
     scene: [
       first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, BusArrivalScene, WorldScene, UIScene,
       CutsceneScene, PlatformerScene, FlappyScene, TetrisScene,
+      // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off straight to
+      // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see
+      // src/scenes/world.js playBoxOpening()).
+      BoxOpeningScene, CardScene,
     ], // later scenes draw on top
   });
   if (saveEnabled()) initAutosave(window.game, currentProfile());

@@ -112,6 +112,13 @@ function hasNewDialog(npc, state) {
 //                                there, same as a full bag already did, and no key is ever handed over
 //   { journal: 'text' }        appends a clue/note to GameState.journal (M1's "journal (J)" leftover,
 //                                src/scenes/ui.js Journal), oldest first, never removed
+//   { boxOpening: true }       the ending (docs/STORY.md "the box opens..."): asks to play the reward
+//                                box's opening sequence, then the birthday card, then return to the
+//                                title screen. Like `minigame`, this *suspends* the action list --
+//                                the volunteer's own 'reward' entry (src/story.js) puts it last, after
+//                                `give`/`stage`/`journal`/`toast` already ran, so unlike `minigame` it
+//                                never needs to resume anything afterwards: the game is over from here,
+//                                so this action never calls back and the list simply ends
 //
 // `onDone(reason)`, if given, fires exactly once: 'done' if the whole list ran, 'full' if a `give`
 // stopped it early, or whatever the mini-game's own outcome was ('quit') if that's what stopped it.
@@ -159,6 +166,10 @@ function runDialogActionsFrom(actions, from, state, onDone) {
         },
       });
       return;
+    } else if ('boxOpening' in action) {
+      if (changed) { notifyStateChanged(); changed = false; }
+      emitDialogEvent('box-opening:requested', {});
+      return; // terminal: the ending takes over from here (see the vocabulary comment above)
     }
   }
   if (changed) notifyStateChanged();

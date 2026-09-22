@@ -19,6 +19,7 @@
   <script src="src/story.js"></script>
   <script src="src/maps.js"></script>
   <script src="src/cutscenes.js"></script>
+  <script src="src/card.js"></script>
   <script src="src/maplogic.js"></script>
   <script src="src/state.js"></script>
   <script src="src/save.js"></script>
@@ -37,6 +38,11 @@
   <script src="src/minigames/flappy.js"></script>
   <script src="src/minigames/tetris.js"></script>
   <script src="src/scenes/cutscene.js"></script>
+  <!-- The ending (docs/STORY.md "the box opens..."): box-opening.js/card.js both use
+       DialogBox/drawPanel/uiText/COLORS/GAME_WIDTH from ui.js (above) and CARD_CONFIG_URL/
+       CARD_PHOTOS_DIR/CARD_VIDEO_URL/BOX_VIDEO_URL/buildCardConfig from src/card.js (above). -->
+  <script src="src/scenes/box-opening.js"></script>
+  <script src="src/scenes/card.js"></script>
   <script src="src/scenes/title.js"></script>
   <!-- M3a opening (docs/STORY.md "Opening"): title's "Play" chains through these before 'boot' --
        all four use DialogBox/drawPanel/uiText/Button/COLORS from ui.js, loaded above. -->

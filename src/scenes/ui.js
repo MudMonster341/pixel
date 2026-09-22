@@ -199,6 +199,12 @@ class UIScene extends Phaser.Scene {
       if (!world.sys.isActive() || world.transitioning) { payload.onResult('quit'); return; }
       world.launchMinigame(payload.id, payload.onResult);
     };
+    // A dialog `{ boxOpening: true }` action (src/dialog.js) fires this; handled here for the same
+    // reason as cutscenes/mini-games above (docs/STORY.md "the box opens...").
+    this.onBoxOpeningRequested = () => {
+      const world = this.scene.get('world');
+      if (world.sys.isActive() && !world.transitioning) world.playBoxOpening();
+    };
     this.game.events.on('map-entered', this.onMapEntered);
     this.game.events.on('area-entered', this.onAreaEntered);
     this.game.events.on('toast', this.onToast);
@@ -206,6 +212,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.on('state-changed', this.onQuestStateChanged);
     this.game.events.on('cutscene:requested', this.onCutsceneRequested);
     this.game.events.on('minigame:requested', this.onMinigameRequested);
+    this.game.events.on('box-opening:requested', this.onBoxOpeningRequested);
     this.events.once('shutdown', () => this.teardown());
 
     const world = this.scene.get('world');
@@ -249,6 +256,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.off('state-changed', this.onQuestStateChanged);
     this.game.events.off('cutscene:requested', this.onCutsceneRequested);
     this.game.events.off('minigame:requested', this.onMinigameRequested);
+    this.game.events.off('box-opening:requested', this.onBoxOpeningRequested);
     this.hotbar.teardown();
     this.tutorial.teardown();
   }

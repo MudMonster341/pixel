@@ -132,6 +132,9 @@ class TitleScene extends Phaser.Scene {
   // Continue only shows up when a save actually exists (docs/GAME_FEEL.md); its own label says
   // roughly where it left off and who's playing (M3a: her chosen name, src/state.js playerName),
   // the same idea as a Pokemon save slot showing play time and location.
+  // "Watch the Card Again" (docs/ROADMAP.md M3, the ending) only shows up once a save has actually
+  // reached it (`quest.stage === 'rewarded'`, set the instant the volunteer hands over the box,
+  // src/story.js) -- so it can't appear as a confusing option before there's a card to watch.
   buildMenuItems() {
     const items = [...TITLE_MENU_BASE];
     if (saveEnabled() && hasSaveFile(currentProfile())) {
@@ -139,6 +142,9 @@ class TitleScene extends Phaser.Scene {
       const place = saved && saved.map && MAPS[saved.map] ? MAPS[saved.map].name : 'your last spot';
       const name = saved && saved.playerName ? saved.playerName : null;
       items.splice(1, 0, { id: 'continue', label: name ? `Continue (${name} · ${place})` : `Continue (${place})` });
+      if (saved && saved.quest && saved.quest.stage === 'rewarded') {
+        items.splice(2, 0, { id: 'watch-card', label: 'Watch the Card Again' });
+      }
     }
     return items;
   }
@@ -209,8 +215,18 @@ class TitleScene extends Phaser.Scene {
     const item = this.menuItems[this.menuIndex];
     if (item.id === 'play') this.startPlay(false);
     else if (item.id === 'continue') this.startPlay(true);
+    else if (item.id === 'watch-card') this.watchCardAgain();
     else if (item.id === 'controls') this.controls.open();
     else if (item.id === 'credits') this.openCredits();
+  }
+
+  // Loads the save (for her name/customisation/the config's own recipient fallback, src/card.js)
+  // then jumps straight to the card scene -- skipping the box-opening sequence and the world
+  // entirely, since she's not replaying the hunt, just watching the card again (docs/ROADMAP.md M3).
+  watchCardAgain() {
+    loadGame(currentProfile());
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('card'));
   }
 
   // Play = new game: state reset, then the M3a opening (Mustafa's greeting -> name entry ->

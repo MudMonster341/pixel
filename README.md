@@ -73,6 +73,13 @@ npm test
 The first command is only needed once. `npm test` runs unit tests plus browser tests that play the game in Chromium. The same suite runs
 automatically before every `git push` and on GitHub Actions. Details: [docs/TESTING.md](docs/TESTING.md).
 
+## The birthday card (the ending)
+
+The game ends on a full-screen animated birthday card. It plays on placeholders out of the box; to
+put in real photos, messages and a video, drop them into `assets/card/` (never committed -- see
+`.gitignore`). Full details, including the exact `card.json` shape: [docs/STORY.md](docs/STORY.md)
+"How to put your photos and messages in".
+
 ## Giving feedback while playing (dev mode)
 
 With `npm start` running, press **O** or click the yellow **Feedback** button in the corner. The game

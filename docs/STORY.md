@@ -66,11 +66,68 @@ gift can never be blocked by a hard game.
 | 2 | ICVL (1st floor) | Flappy-bird style flyer |
 | 3 | Room 195 | Tetris |
 
-## The birthday card (the ending)
+## The box and the birthday card (the ending, built 2026-09-22)
 
-- Full-screen, animated, in the game's own style: pixel confetti, cake, and typed messages.
-- **Photos and a video the owner supplies**, dropped into `assets/card/` (gitignored, not committed),
-  with names and messages in a small config file. The game runs with placeholders until then.
+When she turns in all 3 keys, the volunteer hands over a small box (`GameState.quest.stage` becomes
+`'rewarded'`). That immediately plays two things back to back, then returns to the title screen:
+
+1. **The box opens** (`src/scenes/box-opening.js`): it appears, the lid creaks open, golden light
+   and pixel sparkles rise, and the screen fills with light. Skippable with Esc, but only *after* the
+   lid has fully opened -- a stray keypress right as the volunteer's last line closes can't rob the
+   moment. If `assets/cutscenes/video/box-opening.mp4` exists, it plays that instead of the drawn
+   version (see `docs/research/cutscene-video-prompts.md` "Prompt 3").
+2. **The birthday card** (`src/scenes/card.js`): a full-screen pixel card that opens, with confetti,
+   a cake with candles, floating hearts, a photo slideshow and the messages below, typed out one at a
+   time. It ends on a gentle "THE END" and returns to the title screen -- the save is kept, so
+   **"Continue"** picks up exactly where she was, and a new **"Watch the Card Again"** option (only
+   shown once a save has actually reached this point) jumps straight back to the card without
+   replaying the box or the hunt.
+
+The game runs on placeholders (a generic message, a soft placeholder illustration in the photo frame)
+until the owner supplies real content -- nothing here can be "unfinished" in a way that breaks it.
+
+### How to put your photos and messages in
+
+Everything below goes in **`assets/card/`**, a folder the game never commits (see `.gitignore`) --
+so this is safe to edit directly on the machine that will actually send the finished game, without
+it ever ending up in git history.
+
+| What | Where | Notes |
+|---|---|---|
+| The messages, names and photo captions | `assets/card/card.json` | See the shape below. Missing or left out entirely -> a short set of placeholder messages plays instead. |
+| Photos | `assets/card/photos/<file>` | Any image format a browser can show (`.jpg`/`.jpeg`/`.png`/`.webp`/`.gif`). Any size or aspect ratio -- each one is scaled to fit inside the card's picture frame. A landscape photo (roughly 3:2 or 4:3) looks best; a very tall portrait photo will end up small inside the frame. Each file must also be **listed** in `card.json`'s `photos` array (below) -- dropping a file into the folder alone doesn't add it, since a browser can't list a folder's contents on its own. |
+| The closing video (optional) | `assets/card/video.mp4` | Plays after the last message, before "THE END". If it's missing, the card just finishes on the last message instead -- nothing breaks either way. |
+| The box-opening video (optional) | `assets/cutscenes/video/box-opening.mp4` | See `docs/research/cutscene-video-prompts.md` for the exact clip spec (16:9, 4-8 seconds, silent, pixel-art style). If missing, the drawn box-opening sequence plays instead. |
+
+**`assets/card/card.json`** (every field optional -- a half-written file degrades gracefully, it
+never breaks the card):
+
+```json
+{
+  "recipient": "Her Name",
+  "messages": [
+    "Happy Birthday, {name}!",
+    "Here's a photo from that time...",
+    "Have the best year yet."
+  ],
+  "photos": [
+    { "file": "1.jpg", "caption": "Caption for the first photo" },
+    { "file": "2.jpg", "caption": "Caption for the second photo" }
+  ]
+}
+```
+
+- `recipient`: her real name, used everywhere `{name}` appears in a message. Left out entirely, it
+  falls back to whatever name was actually typed on the game's own name-entry screen -- set this
+  explicitly if you want the card to always say the same real name regardless of what a player types
+  when playing the game itself.
+- `messages`: shown one at a time, typed out, advanced with E/Space/Enter -- the same textbox every
+  conversation in the game already uses. `{name}` anywhere in a line is replaced with `recipient`.
+- `photos`: **order matters** -- they play in this order, cross-fading, holding a few seconds each,
+  looping. `file` is just the filename inside `assets/card/photos/`, not a full path. `caption` is
+  optional; leave it out (or empty) for no caption on that photo. A `file` that doesn't actually
+  exist in the folder falls back to the placeholder illustration for that one slide (its caption
+  still shows), rather than breaking the rest of the slideshow.
 
 ## Open questions for the owner
 
@@ -78,7 +135,8 @@ gift can never be blocked by a hard game.
   each would make those three rooms real instead of guessed. No public floor plans exist (checked
   2026-09-20: official site, prospectus PDF, Wikipedia, 2GIS, Google).
 - Where is the real **main entrance (Gate 2)**? Still assumed (FB-0022).
-- The card's text: names, messages, and how many photos.
+- The card's real photos, video and final wording -- see "How to put your photos and messages in"
+  above; the game plays fine on placeholders until then.
 
 ## Small choices made building the playable spine (M3, 2026-09-22)
 
@@ -101,5 +159,6 @@ correct any of it once the real answer is known:
   missing** (matching this task's own brief) -- so a player who collects them out of order gets a
   hint for a key she may already have. The quest tracker (top-right panel) is smarter about this: it
   always names the first *actually missing* key, in the Physics Lab -> ICVL -> Room 195 order.
-- **The box doesn't visibly open yet** -- receiving it just ends the hunt (`stage: 'rewarded'`); the
-  opening animation and the birthday card itself are explicitly a later milestone.
+- **The box opening and the birthday card were built 2026-09-22** -- see "The box and the birthday
+  card (the ending)" above; at the time this M3 spine was first written they were still a later
+  milestone, noted here only so the history of this decision log stays honest.

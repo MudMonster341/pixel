@@ -58,6 +58,21 @@ test('assets/minigames/ is up to date with tools/make-minigame-art.js (run `npm 
   }
 });
 
+test('assets/cutscenes/ (card art) is up to date with tools/make-card-art.js (run `npm run card-art` if this fails)', () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-card-art-'));
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'make-card-art.js'), '--out', out], { stdio: 'pipe' });
+    const committedDir = path.join(ASSETS, 'cutscenes');
+    for (const name of fs.readdirSync(out)) {
+      const committed = path.join(committedDir, name);
+      assert.ok(fs.existsSync(committed), `assets/cutscenes/${name} is missing`);
+      assert.ok(fs.readFileSync(path.join(out, name)).equals(fs.readFileSync(committed)), `assets/cutscenes/${name} is out of date`);
+    }
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test('every mini-game backdrop is a full 960x540 image', () => {
   const names = ['platformer-bg.png', 'flappy-bg.png', 'tetris-bg.png'];
   for (const name of names) {

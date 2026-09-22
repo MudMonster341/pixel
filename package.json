@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Small top-down pixel RPG exploration game (Phaser 3)",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
     "assets": "node tools/make-assets.js && node tools/make-cutscenes.js && node tools/make-minigame-art.js && node tools/make-card-art.js",
@@ -11,15 +12,55 @@
     "card-art": "node tools/make-card-art.js",
     "campus": "node tools/campus/build-campus.js",
     "interiors": "node tools/interiors/build-interiors.js",
+    "icon": "node tools/make-icon.js",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:e2e": "playwright test",
     "feedback": "node tools/feedback.js",
     "qa:shots": "node tools/qa-shots.js",
     "qa:shots:intro": "node tools/qa-shots-intro.js",
+    "electron": "electron .",
+    "dist": "node tools/make-icon.js && electron-builder --win portable",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@playwright/test": "^1.63.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.mustafa.pixelquest",
+    "productName": "BITS Dubai - The LUG Treasure Hunt",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "server.js",
+      "package.json",
+      "electron/**/*",
+      "src/**/*",
+      "vendor/**/*",
+      "tools/feedback-store.js",
+      "assets/**/*",
+      "!assets/vendor/**",
+      "!assets/External Tilesets/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "verifyUpdateCodeSignature": false
+    },
+    "portable": {
+      "artifactName": "PixelQuest-portable.exe"
+    }
   }
 }

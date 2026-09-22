@@ -3,6 +3,10 @@ node_modules/
 Thumbs.db
 *.log
 
+# M6 packaged build output (docs/decisions/0010): `npm run dist` writes the portable .exe here.
+# Regenerate, don't commit -- see the README "How to build and send the game" section.
+dist/
+
 # test output
 test-results/
 playwright-report/
@@ -17,7 +21,11 @@ qa-shots/
 # The birthday card's own media (docs/STORY.md "How to put your photos and messages in"): the
 # owner's real photos, video and card.json live here and are NEVER committed. Placeholder art
 # (tools/make-card-art.js -> assets/cutscenes/card-*.png) ships instead, so the card always works.
-assets/card/
+# Ignore the *contents*, not the directory itself (`assets/card/*`, not `assets/card/`), so
+# .gitkeep below can be un-ignored -- that keeps the folder present on a fresh clone (M6: `npm run
+# dist` must succeed even before the owner has dropped any photos in).
+assets/card/*
+!assets/card/.gitkeep
 
 # Third-party asset packs: licensed for use in this project, NOT for redistribution.
 # The game ships their art baked into assets/tiles.png etc.; the raw packs stay local.

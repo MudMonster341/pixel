@@ -27,6 +27,11 @@ const TYPES = {
   '.gif': 'image/gif',
   '.mp4': 'video/mp4',
   '.webm': 'video/webm',
+  // The vendored Press Start 2P font (ADR 0010, vendor/press-start-2p/): without a real
+  // Content-Type here it falls back to application/octet-stream below, which some browsers refuse
+  // to use as a @font-face source even though the bytes are fine (same class of issue as the
+  // card's media types above).
+  '.woff2': 'font/woff2',
 };
 
 const store = new FeedbackStore(process.env.FEEDBACK_DIR || path.join(ROOT, 'feedback'));

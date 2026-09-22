@@ -80,6 +80,47 @@ put in real photos, messages and a video, drop them into `assets/card/` (never c
 `.gitignore`). Full details, including the exact `card.json` shape: [docs/STORY.md](docs/STORY.md)
 "How to put your photos and messages in".
 
+## How to build and send the game
+
+For playtesting and development, keep using `npm start` (the web build) -- it needs Node and a
+browser, same as always. To send the finished game to someone as a file that just opens, with no
+install and no server to run, build the portable Windows app ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)):
+
+```bash
+npm run dist
+```
+
+- **If the card is for someone specific**, drop their photos, messages and video into
+  `assets/card/` *first* (see "The birthday card" above and [docs/STORY.md](docs/STORY.md)) -- then
+  run `npm run dist`. The folder is gitignored, never committed, and the build works fine even if
+  it's empty (the card falls back to its placeholders).
+- **Output:** `dist\PixelQuest-portable.exe` -- a single portable executable, about 100-120 MB
+  (bundles Chromium/Electron; the game's own assets are a few MB of that). No installer, no admin
+  rights, nothing else to send -- just that one file. `dist/` itself is gitignored; it's rebuilt
+  from source each time, never committed.
+- **Sending it:** the receiver double-clicks the `.exe`. Nothing to install; it needs no internet
+  (Phaser and the font are vendored locally, see `vendor/README.md`) and no other files alongside
+  it. Their progress (`localStorage`, [src/save.js](src/save.js)) is saved inside the app and
+  survives closing and reopening it, completely separate from any save made playing the web build.
+- **What's inside:** the same `index.html`/`src/` the web build serves, run through the same
+  `server.js` on a fixed local port inside the app ([electron/main.js](electron/main.js)) -- no game
+  code is different between the two builds. The dev feedback overlay and anything gated on
+  `DEV_MODE` never ship: the packaged app always loads with `?dev=0` forced, regardless of the
+  hostname-based default `src/main.js` uses for the web build.
+- **F11** toggles fullscreen in the packaged app. DevTools are compiled out entirely unless it's
+  started with `--devtools` (`npm run electron -- --devtools`), which `npm run dist` never passes.
+- **First build on a new machine:** `npm run dist` downloads Electron and electron-builder's helper
+  tools the first time (needs internet just for that one-time setup, same as any `npm install`);
+  the produced `.exe` itself needs no internet to run. Windows may need
+  [Developer Mode](ms-settings:developers) switched on (or the terminal run as Administrator) the
+  very first time electron-builder needs to unpack one of its own helper archives, which involves
+  creating a symbolic link -- a one-off, machine-specific hiccup, not something `npm run dist` itself
+  needs on every run afterwards.
+- **Regenerating the icon:** `npm run icon` rebuilds `build/icon.ico` from
+  [tools/make-icon.js](tools/make-icon.js) (a small drawn BITS gate/arch motif, the same style as
+  every other sprite in the game) -- `npm run dist` always runs it first, so the committed
+  `build/icon.ico` only needs regenerating by hand if you're editing the icon's own art.
+
 ## Giving feedback while playing (dev mode)
 
 With `npm start` running, press **O** or click the yellow **Feedback** button in the corner. The game

@@ -1,0 +1,13 @@
+Pack: Laboratory Tileset PixelArt 16px ("Land of Pixels")
+Author: marceles (https://marceles.itch.io/)
+URL: https://opengameart.org/content/laboratory-tileset-pixelart-16px
+Direct download: https://opengameart.org/sites/default/files/tiles_laboratory_landofpixels_0.zip
+Licence: CC BY 4.0 (Attribution 4.0 International)
+Licence text: https://creativecommons.org/licenses/by/4.0/
+Downloaded: 2026-09-22
+sha256 of original zip (tiles_laboratory_landofpixels_0.zip): 8ea9808136021c09f6c5a27b3aee8891c7c718a77dbf7c499e0fe517fee54796
+
+Used for: science-lab equipment (intLabBench/intLabTank/intLabRack), tools/interiors — see
+docs/research/asset-packs.md (2026-09-22 addendum) and docs/INTERIORS_PLAN.md. Only the 16px/
+tilesStuff.png sheet is used; the 32px/48px variants and the sci-fi liquid/fire/NPC animation
+sheets are unused.

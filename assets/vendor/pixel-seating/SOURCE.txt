@@ -1,0 +1,11 @@
+Pack: Pixel Seating
+Author: Molly "Cougarmint" Willits
+URL: https://opengameart.org/content/pixel-seating
+Direct download: https://opengameart.org/sites/default/files/Pixel%20Seating.zip
+Licence: CC-BY 3.0 (also listed as OGA-BY 3.0 on the OpenGameArt page)
+Licence text: https://creativecommons.org/licenses/by/3.0/
+Downloaded: 2026-09-22
+sha256 of original zip (Pixel Seating.zip): 36defb18cafb35cc478862a1bfe2e7000b12ce9335f235511a87176ac1a7b27a
+
+Used for: theatre/auditorium seating (intAuditoriumSeat), tools/interiors — see
+docs/research/asset-packs.md (2026-09-22 addendum) and docs/INTERIORS_PLAN.md.

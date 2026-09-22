@@ -31,6 +31,9 @@ const REQUIRED_TILES = [
   'intCabinet', 'intSofa', 'intNoticeboard', 'intReceptionDesk', 'intLocker', 'intAuditoriumSeat',
   'intBadmintonNet', 'intCourtLineIndoor', 'intTTTable', 'intBed', 'intCurtain', 'intMedicalDesk',
   'intMachine', 'table', 'bookshelf', 'plant',
+  // 2026-09-22 interior furniture kit refresh (docs/research/asset-packs.md addendum):
+  'intLabBench', 'intLabTank', 'intLabRack', 'intCanteenCounter', 'intPrinter', 'intBooksStack',
+  'intGlobe', 'intWaterCooler', 'intVendingMachine', 'intBin',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -141,12 +144,15 @@ class Floor {
     throw new Error(`${this.key}: "${idA}" (${a.x0},${a.y0})-(${a.x1},${a.y1}) and "${idB}" (${b.x0},${b.y0})-(${b.x1},${b.y1}) do not share a wall`);
   }
 
-  // Overrides a wall tile on one side of a room with a feature tile (a whiteboard, a window).
+  // Overrides a wall tile on one side of a room with a feature tile (a whiteboard, a window). A
+  // no-op if that spot is actually a doorway (the room's door happens to land at the wall's own
+  // midpoint) -- never silently walls up a room's only way in.
   wallFeature(id, side, tileName) {
     const r = this.get(id);
     const mid = side === 'top' || side === 'bottom' ? Math.round((r.x0 + r.x1) / 2) : Math.round((r.y0 + r.y1) / 2);
     const [x, y] =
       side === 'top' ? [mid, r.y0] : side === 'bottom' ? [mid, r.y1] : side === 'left' ? [r.x0, mid] : [r.x1, mid];
+    if (this.ground[this.idx(x, y)] === TILE.intDoorway) return;
     this.structures[this.idx(x, y)] = TILE[tileName];
   }
 
@@ -226,7 +232,10 @@ class Floor {
     const ix0 = full.x0 + 1, iy0 = full.y0 + 1, ix1 = full.x1 - 1, iy1 = full.y1 - 1;
     if (ix1 - ix0 < MIN_FURNISHABLE - 2 || iy1 - iy0 < MIN_FURNISHABLE - 2) return; // too small to furnish safely
     const fn = FURNISHERS[r.type] || FURNISHERS.default;
-    fn(put, ix0, iy0, ix1, iy1);
+    // `this` (the Floor) and the room's own id are passed through so a furnisher can reach the rarer
+    // per-room operations (wallFeature, rectObject) that a simple put(x,y,tile) grid can't express --
+    // e.g. mounting a whiteboard tile ON a wall rather than as a floor-standing prop.
+    fn(put, ix0, iy0, ix1, iy1, { floor: this, id });
   }
 
   toTiledJSON() {
@@ -289,6 +298,9 @@ const FURNISHERS = {
     put(ix0 + 1, iy0, 'intDesk');
     put(ix1, iy0, 'intCabinet');
     put(ix0, iy1, 'plant');
+    // A bigger office gets a printer too (owner brief: "office desks and cabinets" + small props) --
+    // only if there's room for it without crowding the desk/cabinet already placed.
+    if (ix1 - ix0 >= 5) put(ix1 - 1, iy1, 'intPrinter');
   },
   reception: (put, ix0, iy0, ix1, iy1) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intReceptionDesk');
@@ -306,34 +318,71 @@ const FURNISHERS = {
     put(ix1 - 1, iy0 + 1, 'intSofa');
     put(ix0 + 1, iy1 - 1, 'plant');
   },
-  foyer: (put, ix0, iy0, ix1, iy1) => {
+  // The Main Block foyer (docs/STORY.md: the opening scene, "an event stall behind the stairs") --
+  // the flagship room, so it gets more than the simple-by-design grid every other room uses: a
+  // reception desk, armchair seating and plants near the entrance, a noticeboard, and a *decorative*
+  // grand staircase (intStairsUp is walkable and has no warp trigger of its own -- see
+  // INTERIORS_PLAN.md "the lift is decorative only" for the same trick already used for intLift)
+  // standing away from the entrance with a clear, tucked-away nook behind it for the LUG stall.
+  foyer: (put, ix0, iy0, ix1, iy1, ctx) => {
     const cx = Math.round((ix0 + ix1) / 2);
-    put(cx, iy0 + 1, 'intReceptionDesk');
+    put(cx, iy0 + 6, 'intReceptionDesk');
     put(ix0 + 1, iy1 - 1, 'intSofa');
+    put(ix0 + 2, iy1 - 1, 'intSofa');
+    put(ix1 - 2, iy1 - 1, 'intSofa');
     put(ix1 - 1, iy1 - 1, 'intSofa');
     put(ix0 + 1, iy0 + 1, 'plant');
     put(ix1 - 1, iy0 + 1, 'plant');
-    put(cx, iy1 - 1, 'intNoticeboard');
+    put(ix0 + 1, iy1 - 3, 'plant');
+    put(ix1 - 1, iy1 - 3, 'plant');
+    put(Math.round((ix0 + ix1) / 2) - 6, iy1 - 1, 'intNoticeboard');
+    // The staircase: a block of decorative stairs-up tiles a few rows in from the back (north) wall,
+    // wide enough to read as a real staircase at zoom 3. Everything from the staircase to the back
+    // wall stays open floor -- the LUG Stall nook, walkable and reachable around either side.
+    const stairsY0 = iy0 + 4;
+    const stairsY1 = Math.min(iy0 + 6, iy1 - 4);
+    const stairsX0 = cx - 4;
+    const stairsX1 = cx + 3;
+    if (ctx && ctx.floor && stairsY1 > stairsY0) {
+      ctx.floor.paintFloor(Math.max(ix0, stairsX0), stairsY0, Math.min(ix1, stairsX1), stairsY1, 'intStairsUp');
+      // The stall counter sits in the cleared nook behind (north of) the staircase, closer to one
+      // side so the aisle on the other side stays obviously wider/clearer to walk through.
+      put(stairsX0 + 1, iy0 + 1, 'intCanteenCounter');
+      ctx.floor.rectObject('area', 'LUG Stall', Math.max(ix0, stairsX0), iy0, Math.min(ix1, stairsX1), stairsY0 - 1, { kind: 'stall' });
+    }
   },
-  classroom: (put, ix0, iy0, ix1, iy1) => {
+  classroom: (put, ix0, iy0, ix1, iy1, ctx) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intTeacherDesk');
     rowGrid(put, ix0, iy0, ix1, iy1, 'intDesk', { topMargin: 2 });
+    // A whiteboard mounted on the room's own front wall, above the teacher's desk (owner brief:
+    // "classrooms with desks facing a whiteboard") -- wallFeature overrides one wall tile, it can
+    // never block the doorway ring furniture already respects.
+    if (ctx && ctx.floor) ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
   },
-  classroom60: (put, ix0, iy0, ix1, iy1) => {
+  classroom60: (put, ix0, iy0, ix1, iy1, ctx) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intTeacherDesk');
     rowGrid(put, ix0, iy0, ix1, iy1, 'intDesk', { topMargin: 2, stepX: 2, stepY: 2 });
+    if (ctx && ctx.floor) ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
   },
+  // Science/engineering labs (owner brief: "science-lab benches with equipment... chemistry
+  // glassware, microscopes"): a bench row at each end plus the lab-specific equipment (a chemistry/
+  // bio apparatus tank and an instrument rack) so it reads as a real lab, not a repeated bench grid.
   lab: (put, ix0, iy0, ix1, iy1) => {
-    for (let x = ix0; x <= ix1; x += 2) put(x, iy0, 'intBench');
+    for (let x = ix0; x <= ix1; x += 2) put(x, iy0, 'intLabBench');
     for (let x = ix0 + 1; x <= ix1; x += 3) put(x, iy0, 'intComputerBench');
-    for (let x = ix0; x <= ix1; x += 2) put(x, iy1, 'intBench');
-    if (iy1 - iy0 >= 4) put(ix1, Math.round((iy0 + iy1) / 2), 'intSink');
+    for (let x = ix0; x <= ix1; x += 2) put(x, iy1, 'intLabBench');
+    if (iy1 - iy0 >= 4) {
+      put(ix1, Math.round((iy0 + iy1) / 2), 'intSink');
+      put(ix0, Math.round((iy0 + iy1) / 2), 'intLabTank');
+    }
+    if (ix1 - ix0 >= 6) put(ix0 + 2, Math.round((iy0 + iy1) / 2), 'intLabRack');
   },
   labHeavy: (put, ix0, iy0, ix1, iy1) => {
     for (let x = ix0; x <= ix1; x += 2) {
       put(x, iy0, 'intMachine');
-      put(x, iy1, 'intBench');
+      put(x, iy1, 'intLabBench');
     }
+    if (iy1 - iy0 >= 4) put(ix0, Math.round((iy0 + iy1) / 2), 'intLabRack');
   },
   club: (put, ix0, iy0, ix1, iy1) => {
     put(Math.round((ix0 + ix1) / 2), Math.round((iy0 + iy1) / 2), 'table');
@@ -341,6 +390,7 @@ const FURNISHERS = {
   },
   locker: (put, ix0, iy0, ix1, iy1) => {
     for (let x = ix0; x <= ix1; x++) put(x, iy0, 'intLocker');
+    if (iy1 - iy0 >= 3) put(ix0, iy1, 'intBin');
   },
   service: (put, ix0, iy0, ix1, iy1) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intDesk');
@@ -349,45 +399,65 @@ const FURNISHERS = {
   discussion: (put, ix0, iy0, ix1, iy1) => {
     put(Math.round((ix0 + ix1) / 2), Math.round((iy0 + iy1) / 2), 'table');
   },
+  // The mini mart (owner brief's "small props": a vending machine belongs here as much as anywhere).
   mart: (put, ix0, iy0, ix1, iy1) => {
     for (let x = ix0; x <= ix1; x += 2) put(x, iy0, 'bookshelf');
     put(Math.round((ix0 + ix1) / 2), iy1, 'table');
+    put(ix1, iy1, 'intVendingMachine');
   },
   medical: (put, ix0, iy0, ix1, iy1) => {
     put(ix0 + 1, iy0, 'intBed');
     put(ix0 + 2, iy0 + 1, 'intCurtain');
     put(ix1, iy1, 'intMedicalDesk');
+    if (ix1 - ix0 >= 5) put(ix1, iy0, 'intCabinet');
   },
   badminton: (put, ix0, iy0, ix1, iy1) => {
     const cx = Math.round((ix0 + ix1) / 2);
     for (let y = iy0; y <= iy1; y++) put(cx, y, 'intBadmintonNet');
+    put(ix0, iy0, 'intWaterCooler');
   },
   tabletennis: (put, ix0, iy0, ix1, iy1) => {
     put(Math.round((ix0 + ix1) / 2), Math.round((iy0 + iy1) / 2), 'intTTTable');
+    put(ix0, iy1, 'intWaterCooler');
   },
+  // The auditorium (owner brief: "raked seat rows and a stage") -- the stage strip itself is painted
+  // separately by mainBlockG's own plan (paintFloor to intFloorStage at the far end); this furnisher
+  // just lays out the seat rows facing it, with a centre aisle so every row is walkable end to end.
   auditorium: (put, ix0, iy0, ix1, iy1) => {
+    const aisle = Math.round((ix0 + ix1) / 2);
     for (let y = iy0 + 4; y <= iy1; y += 2) {
-      for (let x = ix0; x <= ix1; x += 2) put(x, y, 'intAuditoriumSeat');
+      for (let x = ix0; x <= ix1; x += 2) {
+        if (x === aisle || x === aisle - 1) continue; // keep a walkable centre aisle down to the stage
+        put(x, y, 'intAuditoriumSeat');
+      }
     }
   },
+  // The library reading room (owner brief: "library shelving and reading tables") -- shelf rows
+  // along the front wall, reading tables in the body of the room, with a globe for a bit of
+  // character.
   library: (put, ix0, iy0, ix1, iy1) => {
     for (let x = ix0; x <= ix1; x += 3) put(x, iy0, 'bookshelf');
     for (let y = iy0 + 3; y <= iy1; y += 3) for (let x = ix0 + 1; x <= ix1 - 1; x += 4) put(x, y, 'table');
+    put(ix1, iy1, 'intGlobe');
   },
   stack: (put, ix0, iy0, ix1, iy1) => {
     for (let y = iy0; y <= iy1; y += 2) for (let x = ix0; x <= ix1; x += 2) put(x, y, 'bookshelf');
   },
   reading: (put, ix0, iy0, ix1, iy1) => {
     for (let y = iy0; y <= iy1; y += 3) for (let x = ix0; x <= ix1; x += 4) put(x, y, 'table');
+    put(ix0, iy0, 'intBooksStack');
   },
+  // The canteen (owner brief: "canteen/cafeteria tables and a serving counter") -- a dedicated
+  // counter tile instead of a reused reception desk, plus a bin near the tables.
   canteen: (put, ix0, iy0, ix1, iy1) => {
-    put(ix0, Math.round((iy0 + iy1) / 2), 'intReceptionDesk');
+    put(ix0, Math.round((iy0 + iy1) / 2), 'intCanteenCounter');
     for (let y = iy0; y <= iy1; y += 3) for (let x = ix0 + 2; x <= ix1; x += 3) put(x, y, 'table');
+    put(ix1, iy1, 'intBin');
   },
   workshop: (put, ix0, iy0, ix1, iy1) => {
     for (let x = ix0; x <= ix1; x += 3) {
       put(x, iy0, 'intMachine');
-      put(x, iy1, 'intBench');
+      put(x, iy1, 'intLabBench');
     }
   },
   stairwell: () => {}, // the stairs graphic itself is the furniture

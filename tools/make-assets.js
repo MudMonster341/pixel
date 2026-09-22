@@ -398,6 +398,92 @@ function blitVehicle(img, x, y, atlas, { maxW = 16, maxH = 12 } = {}) {
   });
 }
 
+// ---------- interior furniture kit, 2026-09-22 (docs/research/asset-packs.md addendum) ----------
+// Owner brief: "find [free asset packs] on your own... take what you need, customise and add it in
+// here" -- the hand-drawn interior furniture looked poor. Same blit+recolor technique as the outdoor
+// kit above, three more sources: LimeZu's own furniture sheet (same pack the walls/floors and
+// characters already come from, ADR 0012/0013 -- so these pieces are guaranteed to match, no recolor
+// needed), Cool School (CC0, downloaded 2026-09-20 for the original survey but never wired in until
+// now -- its pastel palette *does* need recoloring, per that survey's own verdict), and two newly
+// downloaded CC-BY packs for the two gaps neither of the above covers: auditorium seating and
+// science-lab equipment. Exact source rects were found by decoding each sheet (connected-component
+// bounding-box scan / grid overlay) rather than eyeballed from a screenshot -- see MEMORY.md.
+
+// LimeZu Modern Interiors Free (non-commercial + editing allowed, ADR 0012): the furniture sheet,
+// not yet mined before this pass (only the Room Builder wall swatches and character sheets were).
+const LIMEZU_FURNITURE = 'limezu-modern-interiors-free/Modern tiles_Free/Interiors_free/16x16/Interiors_free_16x16.png';
+const LIMEZU = {
+  desk: { atlas: LIMEZU_FURNITURE, sx: 83, sy: 580, sw: 27, sh: 28 }, // a single classroom/office desk with an open book
+  chalkboard: { atlas: LIMEZU_FURNITURE, sx: 162, sy: 640, sw: 26, sh: 24 }, // freestanding chalkboard on its own easel/stand
+  corkboard: { atlas: LIMEZU_FURNITURE, sx: 2, sy: 650, sw: 27, sh: 17 }, // a corkboard with pinned notes
+  globe: { atlas: LIMEZU_FURNITURE, sx: 207, sy: 576, sw: 16, sh: 22 },
+  cabinet: { atlas: LIMEZU_FURNITURE, sx: 192, sy: 639, sw: 13, sh: 26 }, // grey office/lab storage cabinet
+  plant: { atlas: LIMEZU_FURNITURE, sx: 192, sy: 723, sw: 14, sh: 19 }, // a compact potted plant
+  ottoman: { atlas: LIMEZU_FURNITURE, sx: 13, sy: 161, sw: 36, sh: 33 }, // a cushioned bench (foyer/lounge seating)
+};
+
+// Cool School Tileset (NettySvit, CC0, assets/vendor/cool-school-tileset/): a clean 48x48 grid (see
+// its own SOURCE.txt), 1/3 scale = exactly 16x16. Coordinates for the tile-grid items are cell
+// multiples of 48; the small clutter items (chairs/computers/books, lower rows) have real transparent
+// margins and were located with a connected-component bounding-box scan instead.
+const COOL_SCHOOL_SHEET = 'cool-school-tileset/CoolSchool_tileset.png';
+const COOL_SCHOOL = {
+  teacherDesk: { atlas: COOL_SCHOOL_SHEET, sx: 0, sy: 357, sw: 96, sh: 50 }, // desk w/ drawers + kneehole
+  locker: { atlas: COOL_SCHOOL_SHEET, sx: 336, sy: 192, sw: 48, sh: 96 }, // the round-handle 2-tall locker
+  bookshelf: { atlas: COOL_SCHOOL_SHEET, sx: 240, sy: 0, sw: 48, sh: 96 },
+  computer: { atlas: COOL_SCHOOL_SHEET, sx: 8, sy: 487, sw: 35, sh: 41 }, // CRT + keyboard
+  printer: { atlas: COOL_SCHOOL_SHEET, sx: 197, sy: 498, sw: 38, sh: 28 }, // flatbed scanner/printer
+  books: { atlas: COOL_SCHOOL_SHEET, sx: 6, sy: 534, sw: 37, sh: 36 }, // a stacked pile of books
+};
+
+// "Laboratory Tileset PixelArt 16px" ("Land of Pixels") by marceles, CC BY 4.0,
+// assets/vendor/landofpixels-laboratory-tileset/ -- three crops from its tilesStuff.png sheet, kept
+// mostly in the pack's own colors (like the parked cars: "they already read fine... next to the
+// bright... campus palette") since its blue/grey/green console-and-tank look already reads as generic
+// lab equipment once placed on this game's own lab-vinyl floor.
+const LAB_SHEET = 'landofpixels-laboratory-tileset/16px/tilesStuff.png';
+const LAB_PACK = {
+  bench: { atlas: LAB_SHEET, sx: 431, sy: 146, sw: 50, sh: 30 }, // a plain lab workbench
+  tank: { atlas: LAB_SHEET, sx: 492, sy: 111, sw: 22, sh: 55 }, // a tall chemistry/bio apparatus tank
+  rack: { atlas: LAB_SHEET, sx: 527, sy: 141, sw: 32, sh: 50 }, // an equipment/server rack
+};
+
+// "Pixel Seating" by Molly "Cougarmint" Willits, CC-BY 3.0, assets/vendor/pixel-seating/: a single
+// theatre seat, front view -- already close to this game's own red seat ramp, so no recolor needed.
+const SEATING_CHAIR = 'pixel-seating/Chair1_front.png';
+
+// Scales an arbitrary sw x sh crop from `atlas` down (nearest-neighbor, aspect preserved) to fit
+// inside maxW x maxH, then sits it on the tile's own base line (bottom-aligned, like a piece of
+// furniture standing on the floor) rather than centering vertically -- the same idea as blitVehicle
+// above, but for a sub-rectangle of a larger sheet instead of a whole standalone file.
+function blitFit(img, x, y, atlas, sx, sy, sw, sh, { maxW = 16, maxH = 15, remap = null, bottomPad = 1 } = {}) {
+  const scale = Math.min(maxW / sw, maxH / sh, 1);
+  const dw = Math.max(1, Math.round(sw * scale));
+  const dh = Math.max(1, Math.round(sh * scale));
+  blitAtlas(img, x, y, atlas, sx, sy, sw, sh, {
+    dw,
+    dh,
+    offsetX: Math.round((TILE - dw) / 2),
+    offsetY: TILE - dh - bottomPad,
+    remap,
+  });
+}
+
+// Shorthand for blitFit from one of the LIMEZU/COOL_SCHOOL/LAB_PACK rect tables above, instead of
+// repeating `loadAtlas(rect.atlas), rect.sx, rect.sy, rect.sw, rect.sh` at every call site.
+function blitRect(img, x, y, rect, opts) {
+  blitFit(img, x, y, loadAtlas(rect.atlas), rect.sx, rect.sy, rect.sw, rect.sh, opts);
+}
+
+// Cool School's own palette is pastel pink/purple/orange (confirmed by the original survey's
+// mockup) -- a hard clash with this game's warm wood/stone ramps, so every piece from it is
+// recolored the same way the outdoor packs are: bucket by luminance onto this game's own ramps
+// (STYLE_GUIDE.md "Wood": #cf9a66/#b98150/#7a4a24/#5a3418).
+const remapSchoolWood = remapShaded(['#5a3418', '#7a4a24', '#b98150', '#cf9a66'], { loLum: 80, hiLum: 205, outlineBelow: 65 });
+// The CRT computer/printer's own blue-grey plastic, recolored onto this game's stone/screen ramp
+// (STYLE_GUIDE.md "Stone" plus the screen-blue 'I' key) instead of Cool School's lilac-tinted grey.
+const remapSchoolScreen = remapShaded(['#4a4a55', '#9a9a9a', '#c8c8c8'], { loLum: 70, hiLum: 200, outlineBelow: 55, lineAbove: 230 });
+
 // A straight kerb edge is the paver-with-line tile rotated so its line faces the right side; the
 // line sits in the source tile's bottom 4px (rows 12-15), so after each rotation the same 4px band
 // sits at the corresponding edge -- used directly for a straight kerbT/B/L/R tile, or as a strip
@@ -683,34 +769,22 @@ function bedFoot(img, x, y) {
   img.box(x + 1, y + 11, 14, 5, 'N');
 }
 
+// 2026-09-22: the shelf icon itself is now Cool School's bookshelf sprite (CC0, recolored onto this
+// game's wood ramp -- its own pastel palette clashed, per docs/research/asset-packs.md), replacing
+// the hand-drawn colored-books grid below. The wallLower backdrop is unchanged (this tile is reused
+// as-is for library shelving/mini-mart shelving per INTERIORS_PLAN.md, always shown against a wall).
 function bookshelf(img, x, y) {
   wallLower(img, x, y);
-  img.box(x + 1, y, 14, 16, 'n');
-  const colors = ['R', 'U', 'Y', 'J', 'P', 'C', 'I'];
-  [1, 8].forEach((top, shelf) => {
-    for (let bx = 2; bx <= 12; bx += 2) {
-      const height = (bx * 7 + shelf) % 3 === 0 ? 5 : 6;
-      img.fill(x + bx, y + top + (6 - height), 2, height, colors[(bx + shelf * 3) % colors.length]);
-    }
-    img.fill(x + 2, y + top + 6, 12, 1, 'N');
+  blitFit(img, x, y, loadAtlas(COOL_SCHOOL.bookshelf.atlas), COOL_SCHOOL.bookshelf.sx, COOL_SCHOOL.bookshelf.sy, COOL_SCHOOL.bookshelf.sw, COOL_SCHOOL.bookshelf.sh, {
+    maxW: 15, maxH: 16, bottomPad: 0, remap: remapSchoolWood,
   });
 }
 
+// 2026-09-22: a LimeZu potted plant (same pack as the walls/floors, no recolor needed) over the
+// existing floor backdrop, replacing the hand-drawn round shrub below.
 function plant(img, x, y) {
   floor(img, x, y);
-  const inside = (xx, yy) => ((xx - 7.5) / 6) ** 2 + ((yy - 6) / 5.5) ** 2 < 1;
-  const r = rng(21);
-  for (let yy = 0; yy < 13; yy++) {
-    for (let xx = 0; xx < TILE; xx++) {
-      if (inside(xx, yy)) {
-        const roll = r();
-        img.set(x + xx, y + yy, roll < 0.15 ? 't' : roll < 0.25 ? 'e' : 'T');
-      } else if (inside(xx - 1, yy) || inside(xx + 1, yy) || inside(xx, yy - 1) || inside(xx, yy + 1)) {
-        img.set(x + xx, y + yy, 'K');
-      }
-    }
-  }
-  img.box(x + 4, y + 10, 8, 6, 'b');
+  blitFit(img, x, y, loadAtlas(LIMEZU.plant.atlas), LIMEZU.plant.sx, LIMEZU.plant.sy, LIMEZU.plant.sw, LIMEZU.plant.sh, { maxW: 14, maxH: 15 });
 }
 
 // Order here = tile index. The game looks tiles up by name via assets/tiles.json,
@@ -982,6 +1056,20 @@ const TILES = [
   { name: 'bitsFacadeBase', solid: true, draw: bitsFacadeBase },
   { name: 'bitsFacadeBaseEndL', solid: true, draw: (img, x, y) => bitsFacadeBaseEnd(img, x, y, 'L') },
   { name: 'bitsFacadeBaseEndR', solid: true, draw: (img, x, y) => bitsFacadeBaseEnd(img, x, y, 'R') },
+
+  // ---- 2026-09-22 interior furniture kit refresh (docs/research/asset-packs.md addendum): new
+  // props the owner's brief named that the original interior kit didn't have a piece for yet.
+  // Appended at the very end of the catalog so every existing tile's index stays unchanged.
+  { name: 'intLabBench', solid: true, draw: intLabBench },
+  { name: 'intLabTank', solid: true, draw: intLabTank },
+  { name: 'intLabRack', solid: true, draw: intLabRack },
+  { name: 'intCanteenCounter', solid: true, draw: intCanteenCounter },
+  { name: 'intPrinter', solid: true, draw: intPrinter },
+  { name: 'intBooksStack', solid: true, draw: intBooksStack },
+  { name: 'intGlobe', solid: true, draw: intGlobe },
+  { name: 'intWaterCooler', solid: true, draw: intWaterCooler },
+  { name: 'intVendingMachine', solid: true, draw: intVendingMachine },
+  { name: 'intBin', solid: true, draw: intBin },
 ];
 
 // ---------- campus tiles ----------
@@ -1573,23 +1661,21 @@ function intAtriumRailing(img, x, y) {
   for (let i = 2; i < TILE; i += 4) img.fill(x + i, y + 4, 1, 2, '<');
 }
 
+// 2026-09-22: a single classroom/office desk, LimeZu's own sprite (same pack as the walls, no
+// recolor needed) -- replacing the plain hand-drawn box below.
 function intDesk(img, x, y) {
-  img.box(x + 2, y + 3, 12, 7, 'i');
-  img.fill(x + 3, y + 9, 1, 3, 'N');
-  img.fill(x + 12, y + 9, 1, 3, 'N');
-  img.box(x + 5, y + 11, 6, 4, 'o');
+  blitRect(img, x, y, LIMEZU.desk, { maxW: 15, maxH: 15 });
 }
+// 2026-09-22: Cool School's desk-with-drawers (CC0, recolored onto this game's wood ramp -- its own
+// pastel palette clashed) -- a visibly bigger/fancier desk than the plain student one above.
 function intTeacherDesk(img, x, y) {
-  img.box(x + 1, y + 4, 14, 8, 'N');
-  img.fill(x + 2, y + 5, 12, 1, 'i');
-  img.box(x + 6, y + 12, 4, 3, 'o');
+  blitRect(img, x, y, COOL_SCHOOL.teacherDesk, { maxW: 15, maxH: 15, remap: remapSchoolWood });
 }
-// A whiteboard mounted on the front wall: a wall tile (solid), not a floor prop.
+// A whiteboard mounted on the front wall: a wall tile (solid), not a floor prop. 2026-09-22: the
+// board itself is now LimeZu's own freestanding chalkboard sprite, over the usual wall backdrop.
 function intWhiteboardWall(img, x, y) {
   bitsWallPlain(img, x, y);
-  img.box(x + 2, y + 3, 12, 8, 'W');
-  img.fill(x + 3, y + 7, 6, 1, '3');
-  img.fill(x + 3, y + 9, 4, 1, '3');
+  blitRect(img, x, y, LIMEZU.chalkboard, { maxW: 15, maxH: 13, bottomPad: 2 });
 }
 function intBench(img, x, y) {
   img.box(x + 1, y + 5, 14, 7, '¦');
@@ -1597,50 +1683,112 @@ function intBench(img, x, y) {
   img.fill(x + 2, y + 12, 1, 3, 'o');
   img.fill(x + 12, y + 12, 1, 3, 'o');
 }
+// 2026-09-22 (owner brief: "science-lab benches with equipment"): a dedicated lab bench, kept in the
+// Laboratory Tileset pack's own colors (CC BY 4.0, see docs/research/asset-packs.md) over the plain
+// bench shape above, plus a small apparatus tank standing on the near end -- both from the same pack.
+function intLabBench(img, x, y) {
+  intBench(img, x, y);
+  blitRect(img, x, y, LAB_PACK.bench, { maxW: 15, maxH: 12, bottomPad: 3 });
+}
+// A tall chemistry/bio apparatus tank -- lab equipment variety alongside the bench.
+function intLabTank(img, x, y) {
+  blitRect(img, x, y, LAB_PACK.tank, { maxW: 11, maxH: 15 });
+}
+// An equipment/server rack -- doubles as lab instrumentation and computer-lab-adjacent dressing.
+function intLabRack(img, x, y) {
+  blitRect(img, x, y, LAB_PACK.rack, { maxW: 13, maxH: 15 });
+}
 function intComputerBench(img, x, y) {
   intBench(img, x, y);
-  img.box(x + 5, y + 1, 6, 5, 'O');
-  img.fill(x + 6, y + 2, 4, 3, 'I');
+  // 2026-09-22: the monitor itself is now Cool School's CRT+keyboard sprite (recolored onto this
+  // game's stone/screen ramp), replacing the plain hand-drawn box+screen.
+  blitRect(img, x, y, COOL_SCHOOL.computer, { maxW: 13, maxH: 11, bottomPad: 4, remap: remapSchoolScreen });
 }
 function intSink(img, x, y) {
   img.box(x + 2, y + 6, 12, 7, 'Q');
   img.fill(x + 4, y + 7, 8, 3, 'w');
   img.fill(x + 7, y + 4, 2, 3, 'o');
 }
+// 2026-09-22: LimeZu's own office/lab storage cabinet over the existing plain-box silhouette.
 function intCabinet(img, x, y) {
-  img.box(x + 2, y + 1, 12, 14, 'O');
-  img.fill(x + 2, y + 7, 12, 1, 'o');
-  img.set(x + 7, y + 4, 'K');
-  img.set(x + 7, y + 10, 'K');
+  blitRect(img, x, y, LIMEZU.cabinet, { maxW: 12, maxH: 15 });
 }
+// 2026-09-22: a LimeZu cushioned ottoman/bench (foyer/lounge seating), replacing the flat-color box.
 function intSofa(img, x, y) {
-  img.box(x + 1, y + 5, 14, 9, '>');
-  img.fill(x + 1, y + 5, 14, 2, '°');
-  img.fill(x + 1, y + 5, 2, 9, '°');
-  img.fill(x + 12, y + 5, 2, 9, '°');
+  blitRect(img, x, y, LIMEZU.ottoman, { maxW: 15, maxH: 14 });
 }
+// 2026-09-22: LimeZu's own corkboard-with-pinned-notes over the cork backdrop, instead of the
+// hand-drawn dots.
 function intNoticeboard(img, x, y) {
-  img.box(x + 2, y + 2, 12, 11, '¤');
-  img.set(x + 5, y + 5, 'Y');
-  img.set(x + 10, y + 6, 'P');
-  img.set(x + 6, y + 10, 'W');
+  img.fill(x + 2, y + 2, 12, 11, '¤');
+  blitRect(img, x, y, LIMEZU.corkboard, { maxW: 15, maxH: 13, bottomPad: 2 });
 }
 function intReceptionDesk(img, x, y) {
   img.box(x + 1, y + 6, 14, 8, 'N');
   img.fill(x + 1, y + 6, 14, 1, '&');
   img.fill(x + 6, y + 2, 4, 4, 'W');
 }
+// A serving counter for the canteen (owner brief: "a serving counter") -- hand-drawn (no clean free
+// pack match found for this specific piece, see docs/research/asset-packs.md): a wood counter front
+// with a raised service top and a food-tray accent, in the same wood/accent tones as the rest of the
+// kit.
+function intCanteenCounter(img, x, y) {
+  img.box(x + 1, y + 6, 14, 8, 'N');
+  img.fill(x + 1, y + 6, 14, 2, 'i');
+  img.fill(x + 3, y + 3, 4, 3, 'o');
+  img.fill(x + 9, y + 3, 4, 3, 'Y');
+}
+// 2026-09-22: Cool School's round-handle 2-tall locker, recolored onto this game's own wood ramp
+// (its native reddish-brown reads better through a wood remap than a hue-shifted blue one did),
+// replacing the plain 3-division box below.
 function intLocker(img, x, y) {
-  img.box(x + 1, y + 1, 14, 14, 'I');
-  for (const lx of [1, 6, 11]) {
-    img.fill(x + lx + 3, y + 1, 1, 14, 'K');
-    img.set(x + lx + 5, y + 7, 'Q');
-  }
+  blitRect(img, x, y, COOL_SCHOOL.locker, { maxW: 14, maxH: 15, remap: remapSchoolWood });
+}
+// An office/computer-lab printer -- Cool School's flatbed-scanner sprite, recolored.
+function intPrinter(img, x, y) {
+  blitRect(img, x, y, COOL_SCHOOL.printer, { maxW: 14, maxH: 10, bottomPad: 3, remap: remapSchoolScreen });
+}
+// A small pile of books -- decorative clutter for library tables/classroom desks.
+function intBooksStack(img, x, y) {
+  blitRect(img, x, y, COOL_SCHOOL.books, { maxW: 12, maxH: 10, bottomPad: 3 });
+}
+// A globe on a stand -- classroom/library decoration, LimeZu's own sprite.
+function intGlobe(img, x, y) {
+  blitRect(img, x, y, LIMEZU.globe, { maxW: 11, maxH: 15 });
+}
+// A hand-drawn water cooler (owner brief's "small props" list; no clean free-licensed match was found
+// in time, see docs/research/asset-packs.md) -- a blue bottle on a white dispenser stand.
+function intWaterCooler(img, x, y) {
+  img.box(x + 4, y + 1, 8, 6, 'U');
+  img.fill(x + 5, y + 2, 6, 3, 'w');
+  img.box(x + 3, y + 7, 10, 8, 'Q');
+  img.fill(x + 5, y + 9, 2, 2, 'u');
+}
+// A hand-drawn vending machine -- a tall red cabinet with a glowing blue screen and a coin slot.
+function intVendingMachine(img, x, y) {
+  img.box(x + 1, y + 1, 14, 14, 'R');
+  img.box(x + 3, y + 2, 10, 7, 'I');
+  for (const ry of [10, 12]) img.fill(x + 3, y + ry, 10, 1, 'r');
+  img.set(x + 11, y + 10, 'Y');
+}
+// A hand-drawn trash bin -- a grey cylinder with a darker rim.
+function intBin(img, x, y) {
+  img.box(x + 4, y + 5, 8, 9, 'O');
+  img.fill(x + 3, y + 4, 10, 2, 'o');
 }
 function intAuditoriumSeat(img, x, y) {
-  for (let sx = 1; sx < TILE - 3; sx += 5) {
-    img.box(x + sx, y + 3, 4, 11, 'R');
-    img.fill(x + sx + 1, y + 4, 2, 2, 'r');
+  // 2026-09-22 (owner brief: "lecture-hall/auditorium seating"): two real theatre-seat sprites
+  // (Pixel Seating, CC-BY 3.0, see docs/research/asset-packs.md) side by side across the tile,
+  // replacing the flat hand-drawn boxes -- already close to this game's own red seat ramp, no
+  // recolor needed. blitFit centers within a full tile, so each half is placed by hand instead.
+  const atlas = loadAtlas(SEATING_CHAIR);
+  const scale = Math.min(7 / atlas.width, 14 / atlas.height);
+  const dw = Math.max(1, Math.round(atlas.width * scale));
+  const dh = Math.max(1, Math.round(atlas.height * scale));
+  for (const seatX of [1, 9]) {
+    blitAtlas(img, x, y, atlas, 0, 0, atlas.width, atlas.height, {
+      dw, dh, offsetX: seatX + Math.round((7 - dw) / 2), offsetY: TILE - dh - 1,
+    });
   }
 }
 function intBadmintonNet(img, x, y) {

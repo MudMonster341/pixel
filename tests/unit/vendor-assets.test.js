@@ -142,3 +142,27 @@ test('FB-0025: the two packs make-assets.js actually reads pixels from (Roguelik
     assert.ok(fs.existsSync(path.join(dir, 'LICENSE.txt')), `expected assets/vendor/${folder}/LICENSE.txt to exist`);
   }
 });
+
+// ---------- 2026-09-22 interior furniture kit refresh: every vendor pack it reads pixels from has a
+// LICENSE file (docs/research/asset-packs.md's 2026-09-22 addendum) ----------
+
+const INTERIOR_KIT_VENDOR_PACKS = ['pixel-seating', 'landofpixels-laboratory-tileset', 'cool-school-tileset', 'limezu-modern-interiors-free'];
+
+test('interior furniture kit refresh: every vendor pack make-assets.js reads furniture pixels from has its own LICENSE file', () => {
+  for (const folder of INTERIOR_KIT_VENDOR_PACKS) {
+    const dir = path.join(VENDOR_DIR, folder);
+    assert.ok(fs.existsSync(dir), `expected assets/vendor/${folder}/ to exist`);
+    const hasLicense = fs.existsSync(path.join(dir, 'LICENSE.txt')) || fs.readdirSync(dir, { recursive: true }).some((f) => /license/i.test(f));
+    assert.ok(hasLicense, `expected assets/vendor/${folder}/ to have a LICENSE file somewhere under it`);
+  }
+});
+
+test('interior furniture kit refresh: the two newly downloaded packs (Pixel Seating, Laboratory Tileset) have a SOURCE.txt with a quotable licence', () => {
+  for (const folder of ['pixel-seating', 'landofpixels-laboratory-tileset']) {
+    const sourcePath = path.join(VENDOR_DIR, folder, 'SOURCE.txt');
+    assert.ok(fs.existsSync(sourcePath), `expected assets/vendor/${folder}/SOURCE.txt to exist`);
+    const text = fs.readFileSync(sourcePath, 'utf8');
+    assert.match(text, /CC[- ]BY/i, `expected ${folder}/SOURCE.txt to name a CC-BY licence`);
+    assert.match(text, /https?:\/\//, `expected ${folder}/SOURCE.txt to include a source URL`);
+  }
+});

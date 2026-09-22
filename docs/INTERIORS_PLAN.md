@@ -177,6 +177,28 @@ table-tennis table, a hospital bed, workshop machinery...). Interior walls **reu
 `bitsWallPlain`/`bitsWall`/`bitsWallEndL`/`bitsWallEndR` tiles rather than adding new ones, so a
 building looks like the same building inside and out.
 
+**2026-09-22 refresh (owner brief: "find asset packs... take what you need, customise"):** the
+furniture *pieces* were replaced with real pack art (LimeZu's own furniture sheet, Cool School
+recolored, and two new CC-BY packs for auditorium seating and lab equipment), plus ten new tile names
+for props the original kit didn't cover: `intLabBench`/`intLabTank`/`intLabRack` (science-lab
+equipment), `intCanteenCounter`, `intPrinter`, `intBooksStack`, `intGlobe`,
+`intWaterCooler`/`intVendingMachine`/`intBin` (small props). See
+[STYLE_GUIDE.md's "Interior furniture kit refresh"](STYLE_GUIDE.md#interior-furniture-kit-refresh-2026-09-22-owner-brief-find-asset-packs-customise)
+and [docs/research/asset-packs.md](research/asset-packs.md) for exactly which pack each piece comes
+from and why. Room dressing also got richer, not just re-skinned: classrooms mount a whiteboard on
+their own front wall (`Floor.wallFeature`, called from `FURNISHERS.classroom`), labs get a tank and
+equipment rack alongside the benches, the auditorium keeps a walkable centre aisle down to the stage,
+and canteen/mart/lockers/badminton get the small props (a counter, a vending machine, a water cooler,
+a bin) the owner's brief named.
+
+**The Main Block foyer** (below) got the most attention, being the story's opening scene: a real
+reception desk, ottoman seating and plants near the entrance, a noticeboard, and a *decorative* grand
+staircase a few rows in from the back wall -- walkable, with no warp trigger of its own (the same
+"decoration only" trick `intLift` already used) -- with the space behind it kept clear as a "LUG
+Stall" nook (a named `area` object, `kind: "stall"`) and a small counter prop standing in it, matching
+docs/STORY.md's "an event stall behind the stairs." No NPC or dialogue was added here -- that's a
+separate, later task; this pass only built the room to make that scene possible.
+
 ## Rough spots and simplifications (read before the owner asks "why...")
 
 - **Building shapes are simplified rectangles**, not the real (possibly L-shaped) footprints -- the

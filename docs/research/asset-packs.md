@@ -205,6 +205,73 @@ Each of 2-6 above should regenerate `assets/tiles.png`/`tiles.json` via `npm run
 `npm test`, and get a fresh `npm run qa:shots` pass before being considered done, per
 `docs/TESTING.md` and this repo's normal "done" bar.
 
+## Addendum, 2026-09-22: interior furniture kit (owner brief, "find asset packs, cherry-pick, customise")
+
+**Status: wired in.** `tools/make-assets.js` and `tools/interiors/build-interiors.js` were changed
+(unlike every entry above, which was research-only until this point). The owner's brief: *"find ones
+on your own, free ones, some with some stuff and just take all of them and take what you need,
+customise and add it in here"* -- the hand-drawn interior furniture (desks, lockers, seating,
+bookshelves...) looked poor and needed replacing from real packs, the same way the outdoor tiles and
+characters already were (ADR 0012/0013).
+
+### What was already local and got put to real use for the first time
+
+- **Cool School Tileset** (`assets/vendor/cool-school-tileset/`, CC0, see its own `SOURCE.txt`) --
+  downloaded 2026-09-20 for the original survey but never wired in ("earmarked... needs a recolor
+  pass first"). Now used for: the teacher's desk (`intTeacherDesk`), 2-tall lockers (`intLocker`),
+  library/mart shelving (`bookshelf`), a computer-lab monitor overlay (`intComputerBench`), an office
+  printer (new tile `intPrinter`), and a stack of books (new tile `intBooksStack`). Recolored onto
+  this game's own wood/locker-blue/stone ramps via `remapShaded`, the same technique already used for
+  the outdoor packs.
+- **LimeZu Modern Interiors Free** (`assets/vendor/limezu-modern-interiors-free/`, free-version
+  licence already quoted above: non-commercial, editing allowed) -- the *furniture* sheet
+  (`Interiors_free_16x16.png`) had never been mined before this pass, only the Room Builder wall
+  swatches (ADR 0012 addendum) and the character sheets (ADR 0013). Decoded directly (connected-
+  component bounding-box scan, `tools/lib/png-decode.js`) to find exact source rects for: a classroom
+  desk (`intDesk`), a wall-mounted chalkboard (`intWhiteboardWall`), a corkboard with pinned notes
+  (`intNoticeboard`), a globe (new tile `intGlobe`), an office/lab storage cabinet (`intCabinet`), a
+  potted plant (`plant`), a reading armchair (`intSofa`), and a stocked shelf unit for the canteen
+  counter (new tile `intCanteenCounter`). This is the same pack the building walls already come from,
+  so these pieces match the walls/floors with zero new licence risk -- the single best source found
+  for general interior furniture.
+
+### What was newly downloaded this pass
+
+Both licences below are CC-BY (redistribution with attribution is allowed), so neither folder needed
+a `.gitignore` entry, unlike the two non-commercial packs (LimeZu, Sprout Lands).
+
+| Pack | Author | URL | Licence | Used for |
+|---|---|---|---|---|
+| **Pixel Seating** | Molly "Cougarmint" Willits | [opengameart.org/content/pixel-seating](https://opengameart.org/content/pixel-seating) | CC-BY 3.0 (quoted from the pack's own `PixelSeating.txt`: *"Licences CC-BY 3.0. Free Commercial Use: Yes. Free Personal Use: Yes"*; full text [creativecommons.org/licenses/by/3.0](https://creativecommons.org/licenses/by/3.0/)) | A single theatre seat (`Chair1_front.png`), scaled to fit the tile grid, replaces the hand-drawn `intAuditoriumSeat` -- lecture-hall/auditorium seating specifically named in the owner's brief. |
+| **Laboratory Tileset PixelArt 16px** ("Land of Pixels") | marceles | [opengameart.org/content/laboratory-tileset-pixelart-16px](https://opengameart.org/content/laboratory-tileset-pixelart-16px) | CC BY 4.0 (quoted from the pack's own `LICENSE.txt`: *"Attribution 4.0 International (CC BY 4.0)"*; full text [creativecommons.org/licenses/by/4.0](https://creativecommons.org/licenses/by/4.0/)) | Three crops from `16px/tilesStuff.png` -- a lab bench (new tile `intLabBench`, replaces the plain `intBench` in science/engineering labs), a chemistry/bio apparatus tank (new tile `intLabTank`), and an equipment rack (new tile `intLabRack`) -- the "science-lab benches with equipment" and "computer-lab" gap named in the brief. The pack's own visual language is more sci-fi-console than school-chemistry-set, but recolored onto this game's lab-vinyl/steel ramps it reads as generic lab equipment, which is what was asked for. |
+
+Both were found via web search (OpenGameArt, itch.io), evaluated against the same licence filter as
+the original survey (CC0/CC-BY/explicit permissive only; no "personal use only"; nothing
+Nintendo-derived), and downloaded as plain zips with no account or click-through needed. Exact source
+rects (sub-pixel-perfect, found by decoding the PNGs rather than eyeballing a screenshot) are recorded
+next to each tile definition in `tools/make-assets.js`'s `COOL_SCHOOL`/`LIMEZU_FURNITURE`/`LAB_PACK`
+tables.
+
+### What was looked for and not used
+
+- **Free Furniture Office Equipment Set Pixel Art** by Antea (`stcrbcn.itch.io/furniture-office-set`)
+  -- CC-BY, "name your own price" free, and exactly on-brief (cabinets, wall notes, printers, vending
+  machines, desks). **Not downloaded**: itch.io's free-tier download flow requires walking through
+  its purchase page (even a $0 "buy") to mint a download link, which needs an interactive browser
+  session, not a scriptable direct URL like OpenGameArt's `sites/default/files/*.zip` links -- out of
+  proportion to this task's remaining time budget given Cool School and LimeZu already covered most of
+  the same ground (cabinets, a printer, desks). Flagged here rather than silently skipped, per this
+  doc's own rule ("nothing requiring a click-through/account was skipped silently" -- this one *does*
+  effectively need one, which is exactly why it's named instead of just left out).
+- **Modern Canteen Pixel Art Tileset** and **Cozy Cafe & Restaurant Pixel Art Asset Pack** (both
+  itch.io) -- both turned out to be **paid** ($3.99 and $2.50 minimum) when fetched directly, despite
+  ambiguous search-result summaries suggesting otherwise; ruled out under the $0 constraint. LimeZu's
+  own stocked-shelf sprite (`intCanteenCounter`, above) covers the canteen counter instead.
+- **Small props** (water cooler, vending machine, trash bin) -- no clean free-licensed match was found
+  in the time available (the one good candidate, Antea's set, has the itch.io friction above). Kept
+  **hand-drawn** (new tiles `intWaterCooler`, `intVendingMachine`, `intBin`), consistent with this
+  project's existing rule of drawing what no pack covers well rather than forcing a bad fit.
+
 ## Addendum, 2026-09-21: characters, icons, and audio
 
 **Status: research only.** `src/` and `tools/` untouched (another agent was working on

@@ -186,13 +186,13 @@
       "name": "bookshelf",
       "solid": true,
       "overhead": false,
-      "color": "#755f65"
+      "color": "#777879"
     },
     {
       "name": "plant",
       "solid": true,
       "overhead": false,
-      "color": "#66663c"
+      "color": "#897250"
     },
     {
       "name": "sand",
@@ -756,19 +756,19 @@
       "name": "intDesk",
       "solid": true,
       "overhead": false,
-      "color": "#765c4a"
+      "color": "#8b8583"
     },
     {
       "name": "intTeacherDesk",
       "solid": true,
       "overhead": false,
-      "color": "#5b402f"
+      "color": "#8b603c"
     },
     {
       "name": "intWhiteboardWall",
       "solid": true,
       "overhead": false,
-      "color": "#b4a798"
+      "color": "#8d8f83"
     },
     {
       "name": "intBench",
@@ -780,7 +780,7 @@
       "name": "intComputerBench",
       "solid": true,
       "overhead": false,
-      "color": "#8796a3"
+      "color": "#7c8087"
     },
     {
       "name": "intSink",
@@ -792,19 +792,19 @@
       "name": "intCabinet",
       "solid": true,
       "overhead": false,
-      "color": "#727377"
+      "color": "#8c96b3"
     },
     {
       "name": "intSofa",
       "solid": true,
       "overhead": false,
-      "color": "#3f6082"
+      "color": "#b77e54"
     },
     {
       "name": "intNoticeboard",
       "solid": true,
       "overhead": false,
-      "color": "#937c58"
+      "color": "#bf9f75"
     },
     {
       "name": "intReceptionDesk",
@@ -816,13 +816,13 @@
       "name": "intLocker",
       "solid": true,
       "overhead": false,
-      "color": "#395090"
+      "color": "#74553f"
     },
     {
       "name": "intAuditoriumSeat",
       "solid": true,
       "overhead": false,
-      "color": "#59272b"
+      "color": "#86292e"
     },
     {
       "name": "intBadmintonNet",
@@ -973,6 +973,66 @@
       "solid": true,
       "overhead": false,
       "color": "#d5b995"
+    },
+    {
+      "name": "intLabBench",
+      "solid": true,
+      "overhead": false,
+      "color": "#8182a3"
+    },
+    {
+      "name": "intLabTank",
+      "solid": true,
+      "overhead": false,
+      "color": "#567d6b"
+    },
+    {
+      "name": "intLabRack",
+      "solid": true,
+      "overhead": false,
+      "color": "#325a93"
+    },
+    {
+      "name": "intCanteenCounter",
+      "solid": true,
+      "overhead": false,
+      "color": "#85613c"
+    },
+    {
+      "name": "intPrinter",
+      "solid": true,
+      "overhead": false,
+      "color": "#88898e"
+    },
+    {
+      "name": "intBooksStack",
+      "solid": true,
+      "overhead": false,
+      "color": "#817e79"
+    },
+    {
+      "name": "intGlobe",
+      "solid": true,
+      "overhead": false,
+      "color": "#7f866c"
+    },
+    {
+      "name": "intWaterCooler",
+      "solid": true,
+      "overhead": false,
+      "color": "#6b778b"
+    },
+    {
+      "name": "intVendingMachine",
+      "solid": true,
+      "overhead": false,
+      "color": "#5e374c"
+    },
+    {
+      "name": "intBin",
+      "solid": true,
+      "overhead": false,
+      "color": "#6d6e72"
     }
   ]
 }

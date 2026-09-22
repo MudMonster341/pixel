@@ -43,6 +43,28 @@ require. The raw packs are not in this repository; download them again if you ne
   1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
   Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).
 
+## Interior furniture kit (added 2026-09-22, see docs/research/asset-packs.md)
+
+- **Cool School Tileset** by **NettySvit** (`assets/vendor/cool-school-tileset/`) -- CC0 1.0. **Now in
+  use** (previously surveyed only): the teacher's desk, lockers, library/mart shelving (`bookshelf`),
+  a computer-lab monitor, a printer, and a stack of books, recolored onto this game's own ramps.
+- **LimeZu Modern Interiors Free**'s furniture sheet (same pack/licence as above, "Art packs" section)
+  -- its `Interiors_free_16x16.png` sheet is now mined for classroom desks, a wall chalkboard, a
+  corkboard noticeboard, a globe, an office/lab cabinet, a potted plant, a reading armchair (`intSofa`)
+  and a canteen counter shelf, matching the walls/floors already sourced from the same sheet.
+- **Pixel Seating** by **Molly "Cougarmint" Willits** (OpenGameArt,
+  `assets/vendor/pixel-seating/`) -- **CC-BY 3.0**: *"Licences CC-BY 3.0. Free Commercial Use: Yes.
+  Free Personal Use: Yes."* A single theatre seat sprite is the new `intAuditoriumSeat` art.
+- **Laboratory Tileset PixelArt 16px** ("Land of Pixels") by **marceles** (OpenGameArt,
+  `assets/vendor/landofpixels-laboratory-tileset/`) -- **CC BY 4.0**: *"Attribution 4.0 International
+  (CC BY 4.0)"*. A lab bench, a chemistry/bio apparatus tank, and an equipment rack furnish the
+  science/engineering labs (`intLabBench`, `intLabTank`, `intLabRack`).
+- Not used: Antea's "Free Furniture Office Equipment Set" (itch.io, CC-BY) -- on-brief content
+  (cabinets/printer/vending machines) but itch.io's free-tier download needs an interactive browser
+  session rather than a scriptable URL; see docs/research/asset-packs.md's 2026-09-22 addendum for why
+  it's named rather than silently skipped. Water coolers, vending machines and a trash bin are
+  hand-drawn instead (no clean free-licensed match found).
+
 ## Character, icon, and audio survey (added 2026-09-21, see docs/research/asset-packs.md)
 
 Research only -- none of these are wired into the game yet (`src/` and `tools/` untouched).

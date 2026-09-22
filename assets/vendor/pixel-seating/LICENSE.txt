@@ -1,0 +1,16 @@
+Pixel Seating by Molly "Cougarmint" Willits
+https://opengameart.org/content/pixel-seating
+
+Quoted from the pack's own PixelSeating.txt (bundled in this folder) and the OpenGameArt page:
+
+"Credit: Molly "Cougarmint" Willits
+Created by hand using MS Paint and Photoshop Educational Edition 6.0.
+Licences CC-BY 3.0.
+Free Commercial Use: Yes
+Free Personal Use: Yes"
+
+OpenGameArt lists this submission's licence as CC-BY 3.0 (also shown as "OGA-BY 3.0", OpenGameArt's
+own name for the same Attribution 3.0 terms). Full licence text: https://creativecommons.org/licenses/by/3.0/
+
+Attribution used in this project's CREDITS.md: "Pixel Seating" by Molly "Cougarmint" Willits, via
+opengameart.org/content/pixel-seating, CC-BY 3.0.

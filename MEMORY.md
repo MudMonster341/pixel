@@ -600,3 +600,32 @@ is local until it's fixed. That's task 1 next session.
 **Decisions:** none · **Failures:** the tutorial-toast regression above
 
 **Next:** fix the tutorial toast, push, merge audio, then the owner's full playthrough drives the rest.
+
+## 2026-09-27 — Premium pass started; bug batch FB-0035..0043 merged
+
+**Did:** the owner asked (2026-09-26, in chat) for a complete quality pass after playing: no 3D
+presence, mirrored walk, pavements that look like brick walls, an entrance and foyer that should look
+like the real photos, choppy disconnected cutscenes, "I don't understand what's going on" when she
+walks in. Recorded as FB-0027..0034, plus the 2026-09-26 code review as FB-0035..0043. Plan:
+[docs/plans/2026-09-26-premium-pass.md](docs/plans/2026-09-26-premium-pass.md), 7 stages.
+- Research (Sonnet): 32 campus photos + per-space build specs (docs/research/campus-visual-reference.md),
+  free packs (docs/research/asset-packs-2026-09-26.md). Coordinator downloaded the CC0 Ninja Adventure
+  pack (palms, trees, animated flags, FX, UI) through itch.io's free download page (owner approved).
+- Bug batch (Sonnet, worktree): HUD keys gated while a cutscene/mini-game/fade owns the screen; toast
+  queue and the tutorial race fixed at its cause (npc-talked now fires after the dialog opens); honest
+  credits; clothes-colour reload; hints by missing key; overwrite-save confirm; journal redraw/scroll;
+  `take` action so the volunteer collects the keys and the box always fits; mini-game input polish;
+  real left/right character rows (ERR-0007). 315 unit + 115 e2e.
+- ADR 0015 (y-sorted depth groups, door entry) and ADR 0016 (cutscenes play in the world) written.
+- A `.session-active` lock (docs/ROADMAP.md) keeps the 3-hourly loop out while a live session drives.
+
+**Why:** the owner's playthrough; the tutorial fix also unblocks pushing.
+
+**Decisions:** ADR 0015, ADR 0016; the keys leave the bag at the reward (answers an open owner question).
+
+**Failures:** usage limit stopped both agents once; resumed with SendMessage, no work lost. One
+`story.spec.js` timeout in a full run while another agent was also running e2e: passes alone and on
+repeat (18s), host load (ERR-0002/0003 family).
+
+**Next:** merge the campus-art stage (paths, palms, entrance), then the depth engine, interiors, in-world
+cutscenes.

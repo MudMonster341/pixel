@@ -4,20 +4,35 @@
   "type": "bug",
   "area": "Characters",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-09-26T18:03:29.502Z",
-  "updatedAt": "2026-09-26T18:03:29.502Z",
+  "updatedAt": "2026-09-26T21:46:04.550Z",
   "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) BootScene and the bus scene reuse cached `player`/`player-bus` textures, so a different colour chosen later is ignored.",
   "context": {},
   "marker": null,
   "screenshot": null,
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "A new game with a different clothes colour now shows the new colour.",
+      "at": "2026-09-26T21:46:04.550Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/intro.spec.js › FB-0038: a second new game with a different clothes colour replaces the old sprite sheet",
+    "commit": "33c64ab",
+    "at": "2026-09-26T21:46:04.550Z"
+  },
   "history": [
     {
       "at": "2026-09-26T18:03:29.502Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-09-26T21:46:04.550Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

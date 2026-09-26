@@ -4,9 +4,9 @@
   "type": "idea",
   "area": "General",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-20T18:58:16.033Z",
-  "updatedAt": "2026-09-20T19:25:58.304Z",
+  "updatedAt": "2026-09-26T21:46:14.330Z",
   "details": "Study the whole games design of pokemon, downlaod a simulatpr and play the game, or see atutorial with screens, ow it flows, the star and everythinbg, that sort fo game desig of premium feeling si what im trying o recrate. Can you so that for me please",
   "context": {
     "map": "campus",
@@ -54,9 +54,18 @@
       "author": "agent",
       "text": "Doing it: an agent is studying how Pokémon structures its title, save menu, first minutes, dialog boxes, menus and transitions, and writing docs/GAME_FEEL.md as the standard every UI task must follow from now on (spacing, typing speed, transition timing, when input is allowed to block). Structure only, no Nintendo art or text.",
       "at": "2026-09-20T19:25:58.304Z"
+    },
+    {
+      "author": "agent",
+      "text": "docs/GAME_FEEL.md is the Pokémon-flow standard every screen follows; the opening is being reworked again in this pass (FB-0032).",
+      "at": "2026-09-26T21:46:14.330Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/title.spec.js › FB-0024: the title screen appears first, and Play starts a new game through a real loading screen",
+    "commit": null,
+    "at": "2026-09-26T21:46:14.330Z"
+  },
   "history": [
     {
       "at": "2026-09-20T18:58:16.033Z",
@@ -67,6 +76,11 @@
       "at": "2026-09-20T19:25:58.233Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-26T21:46:14.330Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

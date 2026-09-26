@@ -4,20 +4,35 @@
   "type": "bug",
   "area": "UI",
   "priority": "high",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-09-26T18:03:29.335Z",
-  "updatedAt": "2026-09-26T18:03:29.335Z",
+  "updatedAt": "2026-09-26T21:46:04.410Z",
   "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) Confirmed in the browser: the HUD scene keeps handling Esc/J/M/number keys/wheel while the world is paused for a cutscene or mini-game.",
   "context": {},
   "marker": null,
   "screenshot": null,
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Esc, J, M, N, number keys and the wheel are ignored by the HUD while a cutscene, mini-game or door fade owns the screen.",
+      "at": "2026-09-26T21:46:04.410Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/hud-gating.spec.js › FB-0035: Esc skips a cutscene instead of also opening the pause menu underneath it",
+    "commit": "33c64ab",
+    "at": "2026-09-26T21:46:04.410Z"
+  },
   "history": [
     {
       "at": "2026-09-26T18:03:29.335Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-09-26T21:46:04.410Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

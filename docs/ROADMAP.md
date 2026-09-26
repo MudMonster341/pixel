@@ -92,9 +92,9 @@ source asset packages... change all the trees, pavements, everything."
 
 ## M6 — Ship it
 
-- [ ] Web build served as static files, tested in a clean browser profile
-- [ ] Electron wrapper: `npm run dist` produces a signedless Windows `.exe` with an icon, no install needed
-- [ ] The card's media folder documented so the owner can drop files in without touching code
+- [x] Web build served as static files; Phaser and the font vendored locally so it runs offline (2026-09-22)
+- [x] Windows build: `npm run pack:win` makes a 110 MB zip with PixelQuest.exe (no privileges needed); `npm run dist` makes a single portable .exe but needs Developer Mode (2026-09-22)
+- [x] The card's media folder documented (`assets/card/`: card.json, photos/, optional video.mp4) (2026-09-22)
 - [ ] A README for the person receiving the game
 
 ## M7 — Continuous QA (runs every loop, never "done")

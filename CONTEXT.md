@@ -1,6 +1,6 @@
 # Pixel Quest — context
 
-**Last updated:** 2026-09-22 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-26 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -54,9 +54,13 @@ The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in 
   clothes-colour choice bakes one sheet per colour ([ADR 0014](decisions/0014-opening-customisation-recolor-sheets.md)).
 - **Delivery:** an Electron portable .exe, with the web build for development
   ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
-- **Built so far:** the opening (title, Mustafa's greeting, name entry, customisation, bus arrival),
-  campus v3 from satellite (gate on the lower right, roundabout, parking both sides, loop road),
-  8 interior floors with warps, saving, and data-driven dialog with choices and the E/! bubble.
+- **Built so far:** the whole game is playable start to finish — the opening (title, Mustafa's greeting,
+  name entry, clothes customisation, bus arrival), campus v3 from satellite, 8 furnished interior
+  floors, the LUG hunt (volunteer, three keys, locked doors, quest tracker, journal), three mini-games
+  with a skip after three losses, and the ending (reward box, animated birthday card, back to the title).
+- **Sendable build:** `npm run pack:win` → `dist/PixelQuest-win32-x64.zip` (110 MB, unzip and run
+  PixelQuest.exe, no install or internet needed).
+- **In flight:** sound and music on branch `feature/audio`, held back by a tutorial-toast regression.
 - **Owner-supplied media:** pixel video clips for the big cutscenes
   ([prompts](docs/research/cutscene-video-prompts.md)) and the birthday card's photos and video in
   `assets/card/`. Drawn fallbacks mean the game never breaks without them.

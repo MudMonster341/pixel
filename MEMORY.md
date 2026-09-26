@@ -553,3 +553,30 @@ running the suite alongside an agent's own run; the specs pass individually and 
 and server.js served .mp4/.jpeg as octet-stream.
 
 **Next:** packaging as a Windows .exe (M6), then sound and music (M5), then the three key-room cutscenes.
+
+## 2026-09-26 — Paused for the owner to play; where everything stands
+
+**The game is complete end to end** and buildable as a Windows package.
+
+**Done and on main (all pushed, 306 unit + 91 e2e green):**
+- Opening: title screen (BITS DUBAI), Mustafa's greeting, name entry, clothes customisation, the bus
+  arrival at the gate, the Main Block entrance cutscene.
+- Campus v3 from satellite: gate on the lower right, roundabout inside it, parking both sides, loop
+  road, facades with windows, greenery and roads from packs.
+- Interiors: 8 floors furnished from free packs, foyer with the LUG stall nook.
+- Story: the volunteer, three keys (Physics Lab, ICVL, Room 195), locked doors, quest tracker, journal.
+- Mini-games: platformer, flappy, Tetris, each themed, with retry and a skip after three losses.
+- Ending: the reward box opening and the animated birthday card (owner content goes in `assets/card/`).
+- Packaging: Phaser and the font vendored (runs offline), Electron wrapper, icon, and
+  `npm run pack:win` → a 110 MB zip containing PixelQuest.exe. Verified by launching the exe.
+
+**Parked, not on main:** `feature/audio` (music, sound effects, volume settings). It fails
+`tutorial.spec.js` "completing every step finishes the tutorial" repeatably — the completion toast
+never replaces the sword toast — so it stays off main until that's fixed properly.
+
+**Waiting on the owner:** verify the 12 fixed feedback items; the real locations of the Physics Lab,
+the ICVL and Room 195; the card's photos, names and messages; and optionally the pixel video clips
+([prompts](docs/research/cutscene-video-prompts.md)).
+
+**Next when work resumes:** fix the audio regression and merge `feature/audio`, the three key-room
+cutscenes, then a full QA pass over the finished game.

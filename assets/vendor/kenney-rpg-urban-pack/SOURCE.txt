@@ -1,0 +1,14 @@
+Pack: Kenney RPG Urban Pack
+Author: Kenney Vleugels (kenney.nl)
+URL: https://kenney.nl/assets/rpg-urban-pack
+License: CC0 1.0 (public domain) -- quoted from the pack's own License.txt
+Downloaded: 2026-09-26
+Downloaded via: curl.exe -L (direct zip from kenney.nl), no account/click-through needed
+Tile size: 16x16 (Spritesheet/spritesheetInfo.txt has the exact pitch/margin)
+Contents relevant to this project: park/plaza paved paths (teal-grass and tan-sand variants with a
+light stone border -- read clearly as ground, not a repeating brick wall), park benches, streetlamps,
+planters/flower boxes, waste bins, fire hydrants, striped barricades, low fences, market-stall props,
+vending machines, steps, a small "P" parking icon, plus residential brick building parts, round
+autumn/summer trees (no palms), front-angled (not top-down) cars, and a set of chibi RPG characters.
+Evaluated against the game's outdoor-ground complaint (FB-0006/FB-0014, "walkways look like brick
+walls") -- see docs/research/asset-packs-2026-09-26.md.

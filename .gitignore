@@ -40,3 +40,6 @@ dist2/
 
 # Live-session lock read by the scheduled loop (docs/ROADMAP.md); local only
 .session-active
+
+# Worktrees made by isolated agents live inside the repo folder
+.claude/worktrees/

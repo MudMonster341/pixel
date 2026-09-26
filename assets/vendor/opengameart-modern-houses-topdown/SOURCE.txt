@@ -1,0 +1,13 @@
+Pack: "Modern Houses" Tileset TopDown
+Author: uploader on OpenGameArt.org (handle not stated on the asset page beyond the submission itself)
+URL: https://opengameart.org/content/modern-houses-tileset-topdown
+License: CC0 (public domain), quoted from the page: "released under CC0", credit requested but not required
+Downloaded: 2026-09-26
+Downloaded via: curl.exe -L, direct file link (opengameart.org/sites/default/files/tiletest.png), no account needed
+File: tiletest.png (18.5 KB), a single small sample sheet, not a full pack
+Contents: a Pokemon-Fire-Red-style modern house (white walls, orange/blue/teal accent bands, tiled
+roof), a handful of interior furniture pieces (TV, sofa, table), and 3 small round trees. No palm
+trees, no pavers, no modern glass-front canopy. Kept as a *style reference* only (proof that a
+genuinely Pokemon-GBA-style "modern building with accent-colour bands" reads well at this tile size)
+-- see docs/research/asset-packs-2026-09-26.md. Not recommended for direct tile-blitting: too small
+and the wrong building style for BITS' sand/terracotta palette.

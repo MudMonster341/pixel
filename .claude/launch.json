@@ -12,6 +12,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["-e", "process.env.FEEDBACK_DIR=require('path').resolve('feedback'); require(require('path').resolve('../2D_pixel_game-play/server.js'))"],
       "port": 8080
+    },
+    {
+      "name": "preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "process.env.PORT='4190'; require('./server.js')"],
+      "port": 4190
     }
   ]
 }

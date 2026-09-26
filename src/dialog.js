@@ -149,6 +149,7 @@ function runDialogActionsFrom(actions, from, state, onDone) {
     } else if ('key' in action) {
       state.quest.keys[action.key] = true;
       changed = true;
+      AudioManager.play('keyAwarded'); // M5 sound: something triumphant, docs/ROADMAP.md rule 3
     } else if ('journal' in action) {
       state.journal.push(action.journal);
       changed = true;

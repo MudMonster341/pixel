@@ -40,6 +40,9 @@ class MinigameBaseScene extends Phaser.Scene {
     this.hud = this.buildHud();
     this.card = new MinigameCard(this);
     this.showIntro();
+    // M5 sound: a tense-but-light bed while she's playing, crossfaded in like every other scene
+    // change -- finish() below crossfades back to whichever world music was playing before this.
+    AudioManager.playMusic('minigameMusic');
   }
 
   buildHud() {
@@ -109,6 +112,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState !== 'playing' && this.mgState !== 'gameover') return;
     this.mgState = 'win';
     this.setHudVisible(false);
+    AudioManager.play('minigameWin');
     recordAttempt(GameState, this.gameId, skipped ? 'skipped' : 'won', this.score);
     this.card.showWin(this.def, skipped, () => this.finish('won'));
   }
@@ -117,6 +121,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState !== 'playing') return;
     this.mgState = 'gameover';
     this.setHudVisible(false);
+    AudioManager.play('minigameLose');
     // A small screen shake (coordinator brief: "small") -- felt, not jarring; the card fades in right
     // on top of it a moment later.
     this.cameras.main.shake(160, 0.006);
@@ -144,6 +149,10 @@ class MinigameBaseScene extends Phaser.Scene {
       this.scene.stop();
       this.scene.resume(this.returnTo);
       if (world.cameras && world.cameras.main) world.cameras.main.fadeIn(MG_FADE_MS, 0, 0, 0);
+      // M5 sound: crossfade back to whichever world music fits where she actually is (world.js's own
+      // create() won't re-run here -- scene.resume(), not restart() -- so this scene has to put the
+      // right bed back itself).
+      AudioManager.playMusic(world && world.def && world.def.indoors ? 'indoorMusic' : 'overworldMusic');
       this.onComplete(outcome);
     });
   }

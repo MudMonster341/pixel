@@ -183,6 +183,7 @@ class PlatformerScene extends MinigameBaseScene {
       const bufferedOk = shouldBufferedJumpFire(time - this.jumpQueuedAt);
       if (bufferedOk && canCoyoteJump(this.groundedTimer)) {
         body.setVelocityY(PLATFORMER_JUMP_VELOCITY);
+        AudioManager.play('minigameJump');
         this.jumpQueuedAt = null;
         this.groundedTimer = PLATFORMER_COYOTE_MS + 1; // spend the coyote window: no double jump off nothing
       } else if (!bufferedOk) {

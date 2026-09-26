@@ -38,6 +38,11 @@ class TitleScene extends Phaser.Scene {
   preload() {
     if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
     if (!this.textures.exists('title-fg')) this.load.image('title-fg', 'assets/cutscenes/title-fg.png');
+    // M5 sound: the title screen is reachable before BootScene's own preload() ever runs (Play/
+    // Continue is what starts it), so titleMusic needs loading here too -- AudioManager.preload()
+    // skips anything already cached, so this and BootScene's later call never double-load a file.
+    // `?audio=0` skips it (src/maplogic.js audioEnabled()), same as BootScene.
+    if (audioEnabled()) AudioManager.preload(this);
   }
 
   create() {
@@ -65,8 +70,28 @@ class TitleScene extends Phaser.Scene {
     // revealed, the menu's own buttons own clicks instead (see buildMenu() above).
     this.input.on('pointerdown', () => { if (this.stage === 'intro') this.showMenu(); });
 
-    for (const key of ['UP', 'W']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(-1); });
-    for (const key of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(1); });
+    for (const key of ['UP', 'W']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat) return;
+        if (this.controls.visible) this.controls.moveSetting(-1);
+        else this.moveMenu(-1);
+      });
+    }
+    for (const key of ['DOWN', 'S']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat) return;
+        if (this.controls.visible) this.controls.moveSetting(1);
+        else this.moveMenu(1);
+      });
+    }
+    // M5 sound: Left/Right adjust the highlighted setting row while the Controls panel's open --
+    // otherwise unused by the title menu itself (it's Up/Down + Enter only), so no collision.
+    for (const key of ['LEFT', 'A']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.controls.visible) this.controls.adjustSetting(-1); });
+    }
+    for (const key of ['RIGHT', 'D']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.controls.visible) this.controls.adjustSetting(1); });
+    }
     for (const key of ['ENTER', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.onConfirm(); });
     this.input.keyboard.on('keydown-ESC', (e) => { if (!e.repeat) this.onCancel(); });
   }
@@ -123,10 +148,15 @@ class TitleScene extends Phaser.Scene {
 
   // "PRESS ENTER" and the menu are never both on screen (owner feedback: showing both said the same
   // thing twice) -- this is the one-way switch between them.
+  // M5 sound (docs/ROADMAP.md rule 5): this keypress/click is the natural first real gesture almost
+  // every player makes, so it's where the title music actually starts -- Phaser's own SoundManager
+  // queues the play() call if the browser's autoplay lock hasn't lifted yet at this exact instant and
+  // flushes it the moment it does, so this never needs to check "am I unlocked yet" itself.
   showMenu() {
     this.stage = 'menu';
     this.pressEnter.setVisible(false);
     this.menuButtons.forEach((button) => button.setVisible(true));
+    AudioManager.playMusic('titleMusic');
   }
 
   // Continue only shows up when a save actually exists (docs/GAME_FEEL.md); its own label says
@@ -189,6 +219,7 @@ class TitleScene extends Phaser.Scene {
     if (this.stage !== 'menu' || this.controls.visible || this.credits.visible) return;
     this.menuIndex = (this.menuIndex + direction + this.menuItems.length) % this.menuItems.length;
     this.refreshMenu();
+    AudioManager.play('menuMove');
   }
 
   refreshMenu() {
@@ -212,6 +243,7 @@ class TitleScene extends Phaser.Scene {
   }
 
   confirmMenu() {
+    AudioManager.play('menuConfirm');
     const item = this.menuItems[this.menuIndex];
     if (item.id === 'play') this.startPlay(false);
     else if (item.id === 'continue') this.startPlay(true);

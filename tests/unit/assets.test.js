@@ -58,6 +58,26 @@ test('assets/minigames/ is up to date with tools/make-minigame-art.js (run `npm 
   }
 });
 
+// M5 sound: assets/audio/ is nested (music/, sfx/, generated/), unlike the flat folders above, so
+// this walks it recursively (Node's own fs.readdirSync(..., { recursive: true }), same as
+// tests/unit/vendor-assets.test.js already uses for the same reason).
+test('assets/audio/ is up to date with tools/make-audio.js (run `npm run audio` if this fails)', () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-audio-'));
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'make-audio.js'), '--out', out], { stdio: 'pipe' });
+    const committedDir = path.join(ASSETS, 'audio');
+    const entries = fs.readdirSync(out, { recursive: true }).filter((name) => fs.statSync(path.join(out, name)).isFile());
+    assert.ok(entries.length > 0, 'expected tools/make-audio.js to write at least one file');
+    for (const name of entries) {
+      const committed = path.join(committedDir, name);
+      assert.ok(fs.existsSync(committed), `assets/audio/${name} is missing`);
+      assert.ok(fs.readFileSync(path.join(out, name)).equals(fs.readFileSync(committed)), `assets/audio/${name} is out of date`);
+    }
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test('assets/cutscenes/ (card art) is up to date with tools/make-card-art.js (run `npm run card-art` if this fails)', () => {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-card-art-'));
   try {

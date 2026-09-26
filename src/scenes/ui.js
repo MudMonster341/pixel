@@ -792,11 +792,13 @@ class DialogBox {
     if (!this.isOpen || !this.choices) return;
     this.choiceIndex = (this.choiceIndex + direction + this.choices.length) % this.choices.length;
     this.refreshChoiceHighlight();
+    AudioManager.play('menuMove');
   }
 
   // The chosen option's own `lines` (if any) play out like a normal line sequence; once they finish,
   // advance() finds no more lines and no pending choices left, so it closes as usual.
   confirmChoice() {
+    AudioManager.play('menuConfirm');
     const choice = this.choices[this.choiceIndex];
     this.choices = null;
     this.destroyChoiceTexts();
@@ -830,8 +832,14 @@ class DialogBox {
       return;
     }
     if (this.typing) {
+      const prevShown = Math.floor(this.shown);
       this.shown = Math.min(this.fullText.length, this.shown + (delta / 1000) * CHARS_PER_SECOND);
-      this.body.setText(this.fullText.slice(0, Math.floor(this.shown)));
+      const shownChars = Math.floor(this.shown);
+      this.body.setText(this.fullText.slice(0, shownChars));
+      // M5 sound: a blip every couple of characters, not every single one -- at CHARS_PER_SECOND=45
+      // that's still ~22 blips/sec at 1 char each, which reads as a buzz rather than a voice; every
+      // 2nd character is closer to a real Pokemon-style textbox's cadence.
+      if (shownChars > prevShown && shownChars % 2 === 0) AudioManager.play('dialogBlip');
       if (this.shown >= this.fullText.length) this.typing = false;
     }
     this.arrow.setVisible(!this.typing && Math.floor(time / 400) % 2 === 0);
@@ -872,12 +880,32 @@ const CONTROLS = [
   ['ESC', 'Pause'],
 ];
 
+// M5 sound (docs/ROADMAP.md): music/sfx volume + mute, reachable "in the pause menu and the title's
+// Controls/Options screen" -- rather than build a second panel, these 3 rows are prepended to this
+// one shared ControlsPanel (used by both PauseMenu.showControls() and TitleScene), so both places
+// get the same widget for free and rule 1 (docs/GAME_FEEL.md, "a panel's box is sized from its
+// content") keeps holding without any extra work. Up/Down move the highlighted row, Left/Right
+// change it -- wired by whichever scene owns the panel (PauseMenu / TitleScene keydown handlers), the
+// same split every other keyboard-driven menu in this game already uses.
+const SETTINGS_ROWS = ['music', 'sfx', 'mute'];
+function settingLabel(id) {
+  return id === 'music' ? 'MUSIC VOLUME' : id === 'sfx' ? 'SFX VOLUME' : 'MUTE ALL';
+}
+function settingValueText(id) {
+  if (id === 'mute') return AudioManager.isMuted() ? 'ON' : 'OFF';
+  return `${Math.round(AudioManager.getVolume(id) * 100)}%`;
+}
+
 class ControlsPanel {
   constructor(scene) {
     this.scene = scene;
     this.visible = false;
-    const rows = typeof DEV_MODE !== 'undefined' && DEV_MODE ? [...CONTROLS, ['O', 'Give feedback (dev)']] : CONTROLS;
+    const baseRows = typeof DEV_MODE !== 'undefined' && DEV_MODE ? [...CONTROLS, ['O', 'Give feedback (dev)']] : CONTROLS;
+    // Settings rows first (interactive), then the plain key/action rows (display only) -- same
+    // two-column shape for both, so one loop below builds every row's text objects.
+    const rows = [...SETTINGS_ROWS.map((id) => [settingLabel(id), '']), ...baseRows];
     this.rows = rows;
+    this.settingIndex = 0;
 
     const w = 480;
     const rowH = 26;
@@ -906,7 +934,9 @@ class ControlsPanel {
 
   open() {
     this.visible = true;
+    this.settingIndex = 0;
     this.parts.forEach((part) => part.setVisible(true));
+    this.refreshSettings();
   }
 
   close() {
@@ -917,6 +947,28 @@ class ControlsPanel {
   toggle() {
     if (this.visible) this.close();
     else this.open();
+  }
+
+  moveSetting(direction) {
+    this.settingIndex = (this.settingIndex + direction + SETTINGS_ROWS.length) % SETTINGS_ROWS.length;
+    this.refreshSettings();
+    AudioManager.play('menuMove');
+  }
+
+  adjustSetting(direction) {
+    const id = SETTINGS_ROWS[this.settingIndex];
+    if (id === 'mute') AudioManager.setMuted(!AudioManager.isMuted());
+    else AudioManager.setVolume(id, AudioManager.getVolume(id) + direction * 0.1);
+    this.refreshSettings();
+    AudioManager.play('menuConfirm');
+  }
+
+  refreshSettings() {
+    SETTINGS_ROWS.forEach((id, i) => {
+      const selected = i === this.settingIndex;
+      this.rowTexts[i * 2].setText(`${selected ? '> ' : '  '}${settingLabel(id)}`).setColor(selected ? COLORS.highlight : COLORS.text);
+      this.rowTexts[i * 2 + 1].setText(settingValueText(id)).setColor(selected ? COLORS.highlight : COLORS.text);
+    });
   }
 }
 
@@ -959,8 +1011,29 @@ class PauseMenu {
 
     this.controls = new ControlsPanel(scene);
 
-    for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'menu') this.move(-1); });
-    for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'menu') this.move(1); });
+    for (const key of ['UP', 'W']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat || !this.visible) return;
+        if (this.view === 'menu') this.move(-1);
+        else if (this.view === 'controls') this.controls.moveSetting(-1);
+      });
+    }
+    for (const key of ['DOWN', 'S']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat || !this.visible) return;
+        if (this.view === 'menu') this.move(1);
+        else if (this.view === 'controls') this.controls.moveSetting(1);
+      });
+    }
+    // M5 sound: Left/Right adjust the highlighted setting row while the (shared) Controls/Sound
+    // panel is open -- these keys are otherwise unused by the pause menu itself, so this can't
+    // collide with anything (world movement is already blocked while paused).
+    for (const key of ['LEFT', 'A']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'controls') this.controls.adjustSetting(-1); });
+    }
+    for (const key of ['RIGHT', 'D']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'controls') this.controls.adjustSetting(1); });
+    }
     for (const key of ['ENTER', 'SPACE']) {
       scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.confirm(); });
     }
@@ -984,6 +1057,7 @@ class PauseMenu {
   move(direction) {
     this.index = (this.index + direction + PAUSE_ITEMS.length) % PAUSE_ITEMS.length;
     this.refresh();
+    AudioManager.play('menuMove');
   }
 
   refresh() {
@@ -994,6 +1068,7 @@ class PauseMenu {
   }
 
   confirm() {
+    AudioManager.play('menuConfirm');
     if (this.view === 'controls') {
       this.backToMenu();
       return;

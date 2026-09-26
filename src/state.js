@@ -67,6 +67,11 @@ const DEFAULT_PLAYER_NAME = 'Aisha';
 // always has.
 const defaultCustomization = () => ({ clothes: 'pink' });
 
+// M5 sound (docs/ROADMAP.md, src/audio.js AudioManager): volume is a device preference, not game
+// progress -- unlike everything else defaulted on this page, resetGameState() below deliberately
+// never touches this, so starting a new game never resets how loud she set it.
+const defaultSettings = () => ({ musicVolume: 0.6, sfxVolume: 0.7, muted: false });
+
 const GameState = {
   // Where the player is, kept current every frame by WorldScene (src/scenes/world.js) so a save
   // taken at any moment reflects the real position, not just the spot she last warped through.
@@ -100,6 +105,8 @@ const GameState = {
   // and src/scenes/intro-customize.js, saved and restored like everything else.
   playerName: DEFAULT_PLAYER_NAME,
   customization: defaultCustomization(),
+  // M5 sound: music/sfx volume (0..1 each) and a master mute, read by src/audio.js AudioManager.
+  settings: defaultSettings(),
 };
 
 // Call after changing GameState.flags or GameState.quest so autosave (src/save.js) saves soon.

@@ -73,9 +73,12 @@ the player and the campus NPCs are now recolored crops of LimeZu's Modern Interi
 pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per ADR 0012), built by
 `tools/make-assets.js`'s "characters" section, never a hand-edited PNG.
 
-- **Frame:** 16×24 (was 16×16). Sheet layout: one row per direction, **down, up, left** (right =
-  mirrored left, unchanged convention). Columns: **idle, 6 walk frames, 1 idle-anim frame** (8 total
-  per row) -- `CHAR_COLS` in both `tools/make-assets.js` and `src/scenes/world.js`.
+- **Frame:** 16×24 (was 16×16). Sheet layout: one row per direction, **down, up, left, right** -- all
+  four real, separately-drawn art, never mirrored (FB-0043 correction: an earlier pass here claimed
+  "right = mirrored left", which turned out to be untrue and mislabeled besides -- see ERR-0007 and
+  [decisions/0013](../decisions/0013-characters-are-16x24-from-the-pack.md)'s own correction note).
+  Columns: **idle, 6 walk frames, 1 idle-anim frame** (8 total per row) -- `CHAR_COLS` in both
+  `tools/make-assets.js` and `src/scenes/world.js`.
 - **Walk cycle:** 6 real motion frames at 12fps, taken directly from the vendor pack's own run sheet
   (leg stride and arm swing, not a hand-drawn 3-pose bounce).
 - **Idle animation:** alternates the static idle frame with one frame from the pack's `idle_anim`

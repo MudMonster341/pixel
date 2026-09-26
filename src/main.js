@@ -10,6 +10,13 @@ const LOADING_BAR_H = 14;
 // fast path every other test uses skips this (see create() below): it's for the title flow only.
 const MIN_LOADING_MS = 400;
 
+// FB-0038: every animation key ever built from the 'player' texture (world.js createAnimations(),
+// src/minigames/framework-scene.js ensurePlayerAnims()) -- NPCs never play an animation by key (they
+// just setFrame() a static idle pose), so these 8 keys are only ever bound to whichever sheet is
+// currently loaded under 'player'. Listed here (not derived) so BootScene doesn't need to reach into
+// world.js's own direction tables just to know what to clean up.
+const PLAYER_ANIM_KEYS = ['walk-down', 'walk-up', 'walk-left', 'walk-right', 'idle-down', 'idle-up', 'idle-left', 'idle-right'];
+
 class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
@@ -41,7 +48,23 @@ class BootScene extends Phaser.Scene {
     // just picking which pre-baked file to load). `?intro=0`/an old save/Continue never visited the
     // customisation screen, so GameState.customization always has the 'pink' default to fall back on.
     const clothes = (GameState.customization && GameState.customization.clothes) || 'pink';
-    this.load.spritesheet('player', `assets/player-${clothes}.png`, charSheet);
+    const playerFile = `assets/player-${clothes}.png`;
+    // FB-0038: a second "new game" in the same page (Quit to Title -> Play -> a *different* clothes
+    // colour) used to keep the old sheet. Phaser's loader silently skips loading a key that already
+    // exists in the TextureManager (a console warning, never an overwrite) -- so if 'player' is
+    // already loaded under a different file than the one she wants now, remove it (and every
+    // animation built from it, since Phaser animations are global and hold frame references into a
+    // specific texture -- a stale anim would keep drawing the old sheet's frame numbers even after
+    // the texture itself changed) before queueing the real load below.
+    if (this.textures.exists('player')) {
+      const source = this.textures.get('player').source[0];
+      const loadedFile = source && source.image && source.image.src;
+      if (!loadedFile || !loadedFile.endsWith(playerFile)) {
+        this.textures.remove('player');
+        for (const key of PLAYER_ANIM_KEYS) if (this.anims.exists(key)) this.anims.remove(key);
+      }
+    }
+    this.load.spritesheet('player', playerFile, charSheet);
     this.load.spritesheet('npc', 'assets/npc.png', charSheet);
     // Campus NPCs (FB-0025): recolored pack characters, same sheet layout as the player, used by
     // NPC defs with a `character` field (src/maps.js, src/scenes/world.js createNpcs()).

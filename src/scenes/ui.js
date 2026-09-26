@@ -219,17 +219,23 @@ class UIScene extends Phaser.Scene {
     if (world.tileData) this.minimap.setMap(world);
 
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
+    // FB-0035: every one of these is also gated on worldHasControl() (below) -- while a cutscene, a
+    // mini-game or a warp's black-screen fade owns the screen, this scene must not react to a key it
+    // would otherwise handle. Without this, Esc skipping a cutscene (or quitting a mini-game) also
+    // opened the pause menu underneath it, and J could open the journal behind a running mini-game --
+    // both scenes hear the same native keydown, and 'world' being paused/mid-fade is exactly the
+    // signal that this scene shouldn't act on it right now.
     this.input.keyboard.on('keydown-M', (event) => {
-      if (!event.repeat) this.minimap.toggle();
+      if (!event.repeat && this.worldHasControl()) this.minimap.toggle();
     });
     this.input.keyboard.on('keydown-N', (event) => {
-      if (!event.repeat) this.toggleFullMap();
+      if (!event.repeat && this.worldHasControl()) this.toggleFullMap();
     });
     // J: the journal (M1 leftover, docs/STORY.md). Like the full-screen map, it only *opens* from a
     // clean state (not mid-dialog/pause/fullmap -- GAME_FEEL.md rule 6, a modal never opens over
     // another modal), but always closes, so J can't get "stuck".
     this.input.keyboard.on('keydown-J', (event) => {
-      if (event.repeat) return;
+      if (event.repeat || !this.worldHasControl()) return;
       if (this.journal.visible) this.journal.close();
       else if (!this.dialog.isOpen && !this.pause.visible && !this.fullMap.visible) this.journal.open();
     });
@@ -237,11 +243,26 @@ class UIScene extends Phaser.Scene {
     // journal, then the pause menu owns Esc the rest of the time -- opening it, or backing out of its
     // Controls page, or closing it again (docs/GAME_FEEL.md). Not while a conversation owns the screen.
     this.input.keyboard.on('keydown-ESC', (event) => {
-      if (event.repeat) return;
+      if (event.repeat || !this.worldHasControl()) return;
       if (this.fullMap.visible) this.fullMap.close();
       else if (this.journal.visible) this.journal.close();
       else if (!this.dialog.isOpen) this.pause.onEscape();
     });
+  }
+
+  // FB-0035: true only while the 'world' scene actually owns the screen -- running (not paused for a
+  // cutscene/mini-game, see src/scenes/world.js launchMinigame()/playCutscene()/playBoxOpening(), all
+  // of which pause 'world' the same way) and not mid-warp-fade (`world.transitioning`, set the instant
+  // a door/stairs trigger fires and cleared only once the new map has finished loading). Every
+  // UIScene key/wheel handler that shouldn't fire while something else owns the screen (Esc, M, N, J,
+  // the hotbar's number keys/wheel) checks this first. Read fresh on every keypress (never cached),
+  // so a handler in this same scene never sees a stale answer -- including the moment a cutscene/
+  // mini-game's *own* Esc handler already resolved in this exact keydown (ERR-0001-adjacent: both
+  // scenes hear the same native event, but resuming 'world' is always deferred behind that scene's own
+  // fade-out, so it can't already be active again within the same synchronous dispatch).
+  worldHasControl() {
+    const world = this.scene.get('world');
+    return Boolean(world && world.sys.isActive() && !world.transitioning);
   }
 
   // Undoes every subscription create() made on a *persistent* emitter (GameState.inventory,
@@ -582,11 +603,18 @@ class Hotbar {
 
     this.itemName = uiText(scene, GAME_WIDTH / 2, y0 - 22, '', 8).setOrigin(0.5, 1).setStroke('#000000', 4).setAlpha(0);
 
+    // FB-0035: gated the same way UIScene's own key handlers are (worldHasControl()) plus one more
+    // check that's specific to the hotbar -- a number key or the wheel must not change the selected
+    // slot while dialog/pause/journal/the full-screen map is open (`scene.isBlocking()`), even though
+    // `worldHasControl()` alone would still say yes (none of those pause the 'world' scene itself,
+    // see UIScene.isBlocking()).
     scene.input.keyboard.on('keydown', (event) => {
+      if (!scene.worldHasControl() || scene.isBlocking()) return;
       const n = Number(event.key);
       if (Number.isInteger(n) && n >= 1 && n <= count) inventory.select(n - 1);
     });
     scene.input.on('wheel', (pointer, over, dx, dy) => {
+      if (!scene.worldHasControl() || scene.isBlocking()) return;
       if (dy !== 0) inventory.select((inventory.selected + Math.sign(dy) + count) % count);
     });
 
@@ -839,18 +867,45 @@ class DialogBox {
 }
 
 // ---------- toast: short messages like "+1 Apple" ----------
+// FB-0036: a queue, not a single overwrite-in-place slot -- two messages landing close together
+// (e.g. a key station's own "You got the X key!" immediately followed by the tutorial's "Tutorial
+// complete!" a moment later) used to just clobber each other, so whichever came second silently ate
+// the first one before the player could read it. Now each shows in turn (a hold then a fade, same
+// timing as before), identical *consecutive* messages collapse into one (so a spammed action doesn't
+// re-queue the same line over and over), and the queue is capped so it can never grow unbounded.
+
+const TOAST_HOLD_MS = 1400;
+const TOAST_FADE_MS = 500;
+const TOAST_QUEUE_CAP = 4; // messages waiting, not counting whichever one is on screen right now
 
 class Toast {
   constructor(scene) {
     this.scene = scene;
     this.y = 360;
+    this.queue = [];
+    this.showing = null; // the message currently on screen (or fading out), or null between messages
     this.text = uiText(scene, GAME_WIDTH / 2, this.y, '', 16).setOrigin(0.5).setStroke('#1a1c2c', 8).setAlpha(0).setDepth(60);
   }
 
   show(message) {
+    // Collapse identical consecutive messages: don't pile up 5 copies of the same line just because
+    // something fired the same toast repeatedly in a short span.
+    if (this.showing === message) return;
+    if (this.queue.length && this.queue[this.queue.length - 1] === message) return;
+    this.queue.push(message);
+    while (this.queue.length > TOAST_QUEUE_CAP) this.queue.shift(); // never grows unbounded
+    this.pump();
+  }
+
+  pump() {
+    if (this.showing !== null || !this.queue.length) return;
+    this.showing = this.queue.shift();
     this.scene.tweens.killTweensOf(this.text);
-    this.text.setText(message).setAlpha(1).setY(this.y);
-    this.scene.tweens.add({ targets: this.text, alpha: 0, y: this.y - 16, delay: 1400, duration: 500 });
+    this.text.setText(this.showing).setAlpha(1).setY(this.y);
+    this.scene.tweens.add({
+      targets: this.text, alpha: 0, y: this.y - 16, delay: TOAST_HOLD_MS, duration: TOAST_FADE_MS,
+      onComplete: () => { this.showing = null; this.pump(); },
+    });
   }
 }
 
@@ -1250,18 +1305,29 @@ class JournalPanel {
     this.headerH = 56;
     this.footerH = 34;
     this.rowGap = 10;
+    this.scroll = 0;
+    this.maxScroll = 0;
 
     this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
     this.panel = scene.add.graphics();
     this.title = uiText(scene, GAME_WIDTH / 2, 0, 'JOURNAL', 16, COLORS.highlight).setOrigin(0.5);
     this.footer = uiText(scene, GAME_WIDTH / 2, 0, 'J / ESC TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
     this.rowTexts = [];
+    // FB-0041a: the mask shape that clips rows to the panel's own scrollable viewport (below) --
+    // never added to the display list itself, just used to build a GeometryMask.
+    this.maskShape = scene.make.graphics({}, false);
     this.parts = [this.dim, this.panel, this.title, this.footer];
     this.parts.forEach((part) => part.setDepth(115).setVisible(false));
+
+    // FB-0041a: Up/Down scroll the journal while it's open -- a no-op once every entry already fits
+    // (maxScroll === 0), so this is harmless whenever there's nothing to scroll.
+    for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(-1); });
+    for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(1); });
   }
 
   open() {
     this.visible = true;
+    this.scroll = 0;
     this.build();
     this.parts.forEach((part) => part.setVisible(true));
     this.rowTexts.forEach((text) => text.setVisible(true));
@@ -1278,26 +1344,54 @@ class JournalPanel {
     else this.open();
   }
 
+  // FB-0041a: build() used to draw a fresh copy of the panel onto the same Graphics object every time
+  // it opened, without clearing it first -- each open piled another panel rectangle/border on top of
+  // every earlier one (invisible at first, since they're identical rectangles in the same place, but
+  // real extra draw calls that would eventually show as a visibly thicker border/shadow, and pure
+  // waste regardless). `this.panel.clear()` below fixes that; the rest of this method also now caps
+  // the panel's own height to the screen (GAME_HEIGHT - 40, a top/bottom margin) and scrolls its rows
+  // in a masked viewport instead of just growing forever when there are many/long entries.
   build() {
     this.rowTexts.forEach((text) => text.destroy());
     const entries = GameState.journal.length ? GameState.journal : ['No clues yet -- go talk to someone.'];
     const bodyW = this.w - 64;
-    this.rowTexts = entries.map((line) =>
-      uiText(this.scene, this.x + 32, 0, `• ${line}`, 8, COLORS.text).setWordWrapWidth(bodyW).setDepth(116),
-    );
+    this.rowTexts = entries.map((line) => uiText(this.scene, this.x + 32, 0, `• ${line}`, 8, COLORS.text).setWordWrapWidth(bodyW).setDepth(116));
 
+    this.rowRelY = [];
     let rowsH = 0;
-    for (const text of this.rowTexts) rowsH += text.height + this.rowGap;
-    const h = this.headerH + rowsH + this.footerH;
-    const y = Math.round((GAME_HEIGHT - h) / 2);
+    for (const text of this.rowTexts) {
+      this.rowRelY.push(rowsH);
+      rowsH += text.height + this.rowGap;
+    }
 
+    const maxH = GAME_HEIGHT - 40;
+    const h = Math.min(maxH, this.headerH + rowsH + this.footerH);
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+    this.box = { x: this.x, y, w: this.w, h }; // read by tests, same shape every other panel exposes
+    this.viewportH = h - this.headerH - this.footerH;
+    this.viewY = y + this.headerH;
+    this.maxScroll = Math.max(0, rowsH - this.viewportH);
+    this.scroll = Phaser.Math.Clamp(this.scroll, 0, this.maxScroll);
+
+    this.panel.clear();
     drawPanel(this.panel, this.x, y, this.w, h);
     this.title.setPosition(GAME_WIDTH / 2, y + 26);
+    this.footer.setText(this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- J / ESC TO CLOSE' : 'J / ESC TO CLOSE');
     this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);
-    let rowY = y + this.headerH;
-    for (const text of this.rowTexts) {
-      text.setPosition(this.x + 32, rowY);
-      rowY += text.height + this.rowGap;
-    }
+
+    this.maskShape.clear().fillStyle(0xffffff).fillRect(this.x + 16, this.viewY, this.w - 32, this.viewportH);
+    const mask = this.maskShape.createGeometryMask();
+    for (const text of this.rowTexts) text.setMask(mask);
+    this.layoutRows();
+  }
+
+  layoutRows() {
+    this.rowTexts.forEach((text, i) => text.setPosition(this.x + 32, this.viewY - this.scroll + this.rowRelY[i]));
+  }
+
+  scrollBy(direction) {
+    if (!this.maxScroll) return;
+    this.scroll = Phaser.Math.Clamp(this.scroll + direction * 3 * 13, 0, this.maxScroll);
+    this.layoutRows();
   }
 }

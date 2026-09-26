@@ -4,20 +4,35 @@
   "type": "bug",
   "area": "UI",
   "priority": "high",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-09-26T18:03:29.374Z",
-  "updatedAt": "2026-09-26T18:03:29.374Z",
+  "updatedAt": "2026-09-26T21:46:04.460Z",
   "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) tests/e2e/tutorial.spec.js fails repeatably and blocks every push. Talking to Tomas completes the last step before his dialog opens, so the delayed toast fires mid-dialog and the sword toast replaces it. Toasts need a queue.",
   "context": {},
   "marker": null,
   "screenshot": null,
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Messages now queue one after another; the tutorial message waits for the conversation to close.",
+      "at": "2026-09-26T21:46:04.460Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/tutorial.spec.js › FB-0036: toast is a queue -- messages show one after another instead of clobbering each other",
+    "commit": "33c64ab",
+    "at": "2026-09-26T21:46:04.460Z"
+  },
   "history": [
     {
       "at": "2026-09-26T18:03:29.374Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-09-26T21:46:04.460Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

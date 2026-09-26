@@ -5,6 +5,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   openGame, openTitle, titleState, chooseTitleMenu, waitForBoot, state, startGame, holdKey, teleport, waitForMap,
+  pressUntil,
 } = require('./helpers');
 
 test('FB-0024: the title screen appears first, and Play starts a new game through a real loading screen', async ({ page }) => {
@@ -127,6 +128,144 @@ test('FB-0023: the controls panel fits inside its own frame at 960x540 and two o
   } finally {
     await page.setViewportSize({ width: 960, height: 540 }).catch(() => {});
   }
+});
+
+// FB-0037: the in-game Credits used to falsely claim "All art and code original, made for this
+// game" -- rewritten from CREDITS.md's own wording. Every author CREDITS.md names for a pack that's
+// actually wired into the game must show up in the panel's text, and the panel itself must never
+// overflow the fixed 960x540 internal canvas (docs/GAME_FEEL.md rule 2), whether or not its content
+// needs to scroll to fit.
+test('FB-0037: Credits names every third-party pack/author and never overflows 960x540', async ({ page }) => {
+  await openTitle(page, { map: null });
+  await chooseTitleMenu(page, 'credits');
+  await expect.poll(async () => (await titleState(page)).creditsVisible).toBe(true);
+
+  const info = await page.evaluate(() => {
+    const c = game.scene.getScene('title').credits;
+    return { box: c.box, text: c.body.text };
+  });
+
+  // Every pack/author CREDITS.md lists for something actually used, per the task brief.
+  for (const needle of [
+    'OpenStreetMap', 'ODbL', 'Phaser', 'Press Start 2P', 'Open Font License',
+    'Kenney', 'LimeZu', 'Assets - From: Sprout Lands - By: Cup Nooble', 'Kyrise',
+    'NettySvit', 'marceles', 'Cougarmint', 'gift, never sold',
+  ]) {
+    expect(info.text).toContain(needle);
+  }
+  // The false old claim must be gone.
+  expect(info.text).not.toContain('All art and code original');
+
+  // The panel's own box never overflows the fixed internal 960x540 canvas.
+  expect(info.box.x).toBeGreaterThanOrEqual(0);
+  expect(info.box.y).toBeGreaterThanOrEqual(0);
+  expect(info.box.x + info.box.w).toBeLessThanOrEqual(960);
+  expect(info.box.y + info.box.h).toBeLessThanOrEqual(540);
+
+  // Esc closes it back to the menu.
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await titleState(page)).creditsVisible).toBe(false);
+});
+
+// Mirrors chooseTitleMenu()'s own "move the highlight to this item" half, but stops short of
+// confirming it -- chooseTitleMenu()'s own confirm loop assumes a bare Enter always leaves the title
+// scene, which isn't true anymore for "play" once a save exists (FB-0040's confirm dialog opens
+// instead), so these tests drive the final Enter themselves.
+async function selectTitleMenuItem(page, id) {
+  if ((await titleState(page)).stage === 'intro') {
+    await pressUntil(page, 'Enter', async () => (await titleState(page)).stage === 'menu');
+  }
+  for (let i = 0; i < 10; i++) {
+    const { menuItems, menuIndex } = await titleState(page);
+    if (menuItems[menuIndex] === id) break;
+    await pressUntil(page, 'ArrowDown', async () => (await titleState(page)).menuIndex !== menuIndex);
+  }
+  expect((await titleState(page)).menuItems[(await titleState(page)).menuIndex]).toBe(id);
+}
+
+const newGameConfirmVisible = (page) => page.evaluate(() => game.scene.getScene('title').newGameConfirm.visible);
+
+// FB-0040: "Play" used to silently reset the game state (which the next autosave would then use to
+// overwrite an existing save) with no confirmation at all.
+test('FB-0040: Play asks before overwriting an existing save -- No cancels, back to the title untouched', async ({ page }) => {
+  const profile = `e2e-newgame-confirm-${Date.now()}`;
+  // Build a save on the house map via the fast (title-off) path every other spec uses.
+  await openGame(page, { map: 'meadow', save: true, profile });
+  await startGame(page);
+  await teleport(page, 11, 13);
+  await holdKey(page, 'w', 500);
+  await waitForMap(page, 'house');
+  await page.evaluate((p) => saveGame(p), profile);
+
+  await openTitle(page, { save: true, profile });
+  await selectTitleMenuItem(page, 'play');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(true);
+  // 'No' is the default, highlighted item (FB-0040 brief) -- a bare Enter picks it.
+  const index = await page.evaluate(() => game.scene.getScene('title').newGameConfirm.index);
+  expect(index).toBe(0);
+
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(false);
+  // Still on the title screen -- no new game was started, and the save is exactly as it was.
+  expect(await page.evaluate(() => game.scene.isActive('title'))).toBe(true);
+  const saved = await page.evaluate((p) => JSON.parse(localStorage.getItem(`pixelquest.save.v1.${p}`) || 'null'), profile);
+  expect(saved.state.map).toBe('house');
+});
+
+test('FB-0040: Play asks before overwriting an existing save -- Yes proceeds to a new game', async ({ page }) => {
+  const profile = `e2e-newgame-confirm-yes-${Date.now()}`;
+  await openGame(page, { map: 'meadow', save: true, profile });
+  await startGame(page);
+  await teleport(page, 11, 13);
+  await holdKey(page, 'w', 500);
+  await waitForMap(page, 'house');
+  await page.evaluate((p) => saveGame(p), profile);
+
+  await openTitle(page, { save: true, profile });
+  await selectTitleMenuItem(page, 'play');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(true);
+
+  await page.keyboard.press('ArrowDown'); // move the highlight to 'Yes'
+  const index = await page.evaluate(() => game.scene.getScene('title').newGameConfirm.index);
+  expect(index).toBe(1);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(false);
+
+  await waitForBoot(page);
+  // A real new game: the fresh default spawn, not the saved house position.
+  expect((await state(page)).map).toBe('campus');
+});
+
+test('FB-0040: Esc while the confirm is open always means "No"', async ({ page }) => {
+  const profile = `e2e-newgame-confirm-esc-${Date.now()}`;
+  await openGame(page, { map: 'meadow', save: true, profile });
+  await startGame(page);
+  await page.evaluate((p) => saveGame(p), profile);
+
+  await openTitle(page, { save: true, profile });
+  await selectTitleMenuItem(page, 'play');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(true);
+
+  await page.keyboard.press('ArrowDown'); // highlight 'Yes' first, to prove Esc still says No
+  await page.keyboard.press('Escape');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(false);
+  expect(await page.evaluate(() => game.scene.isActive('title'))).toBe(true);
+});
+
+// Continue never touches the save, so it must never show the confirm at all.
+test('FB-0040: Continue never asks for confirmation', async ({ page }) => {
+  const profile = `e2e-newgame-confirm-continue-${Date.now()}`;
+  await openGame(page, { map: 'meadow', save: true, profile });
+  await startGame(page);
+  await page.evaluate((p) => saveGame(p), profile);
+
+  await openTitle(page, { save: true, profile });
+  await chooseTitleMenu(page, 'continue');
+  await waitForBoot(page);
+  expect(await newGameConfirmVisible(page).catch(() => false)).toBeFalsy();
 });
 
 test('FB-0023: each first-time hint shows once, is remembered in the save, and never shows again after a reload', async ({ page }) => {

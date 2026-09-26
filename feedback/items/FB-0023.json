@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "UI",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-09-20T18:57:03.462Z",
-  "updatedAt": "2026-09-20T19:25:58.149Z",
+  "updatedAt": "2026-09-26T21:46:14.283Z",
   "details": "roght now it is going outside the box, UI wise a nightmare at the veryt start, ther game you havce a start game screen witha  name like BITS and then a play button which adds an initial load screen tot he start poitn and then the coontrols show up, liek aveyr proper pokemon game play. cnayou go ahead, and study pokemon game deisgn properly, and completely enand then we can go ahea dand do this fbecause this needs ot be done properly",
   "context": {
     "map": "campus",
@@ -67,9 +67,18 @@
       "author": "agent",
       "text": "Agreed, the controls card is a mess. Building the proper opening now: title screen with the game's name and a Play/Continue menu, a real loading screen, then controls taught as you go instead of a wall of text, plus an ESC pause menu. Panels get a size test so nothing can overflow again.",
       "at": "2026-09-20T19:25:58.149Z"
+    },
+    {
+      "author": "agent",
+      "text": "Title screen with Play/Continue, a real loading screen, controls taught as you go (one hint at a time), and an Esc pause menu with a Controls page that fits its frame.",
+      "at": "2026-09-26T21:46:14.283Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/title.spec.js › FB-0023: the controls panel fits inside its own frame at 960x540 and two other window sizes",
+    "commit": null,
+    "at": "2026-09-26T21:46:14.283Z"
+  },
   "history": [
     {
       "at": "2026-09-20T18:57:03.462Z",
@@ -80,6 +89,11 @@
       "at": "2026-09-20T19:25:58.078Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-09-26T21:46:14.283Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

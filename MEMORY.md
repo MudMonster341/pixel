@@ -580,3 +580,23 @@ the ICVL and Room 195; the card's photos, names and messages; and optionally the
 
 **Next when work resumes:** fix the audio regression and merge `feature/audio`, the three key-room
 cutscenes, then a full QA pass over the finished game.
+
+## 2026-09-26 — Paused at the owner's request; HANDOFF.md written
+
+**Did:** stopped all agents, parked the audio work on `feature/audio`, built the sendable package
+(`dist/PixelQuest-win32-x64.zip`, 110 MB) and launched the exe to confirm it runs, then wrote
+[HANDOFF.md](HANDOFF.md): current state, what's done, known problems, the MVP order, what's waiting on
+the owner, how the 3-hourly loop works and the rules that must not be broken. CLAUDE.md, CONTEXT.md and
+ROADMAP.md now point at it.
+
+**Why:** the owner wants to play the whole game and give feedback across a full playthrough, and wants
+a clean starting point for the next session because usage limits keep ending sessions mid-task.
+
+**Found while pausing:** `tests/e2e/tutorial.spec.js` "completing every step finishes the tutorial"
+fails **repeatably on main**, not just with the audio branch, so it predates that work. It blocks
+pushing (the pre-push hook runs the tests and `--no-verify` is forbidden), so the latest docs commit
+is local until it's fixed. That's task 1 next session.
+
+**Decisions:** none · **Failures:** the tutorial-toast regression above
+
+**Next:** fix the tutorial toast, push, merge audio, then the owner's full playthrough drives the rest.

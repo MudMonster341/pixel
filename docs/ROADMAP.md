@@ -1,5 +1,7 @@
 # Roadmap to the finished game
 
+**Start here:** [HANDOFF.md](../HANDOFF.md) has the current state, the known problems and the MVP order.
+
 **Goal (owner, 2026-09-20):** a finished, sendable game of the [LUG treasure hunt](STORY.md), ending
 in an animated birthday card. Shipped as a **Windows .exe** (plus a hosted web build), with Pokémon-
 class pixel art, proper UI boxes, animations, and genuinely good game feel.
@@ -43,13 +45,13 @@ source asset packages... change all the trees, pavements, everything."
 - [x] Research free-licence 16 px packs, licences checked, best downloaded: `docs/research/asset-packs.md` (2026-09-20)
 - [x] Owner picked: free packs only, then supplied LimeZu Modern Interiors Free and Sprout Lands themselves (2026-09-21)
 - [x] Swap the tile generator over: atlas blit + name→source-rect table; paths, kerbs, roads, crossings, grass and parked cars now come from Kenney (2026-09-21)
-- [ ] Interiors from LimeZu Modern Interiors Free: Room Builder walls/floors/doors + furniture, recoloured to the campus palette
+- [x] Interiors from the packs: LimeZu walls/floors/doors and furniture, a CC-BY seating pack for the auditorium, a CC-BY lab tileset, Cool School props, all recoloured (2026-09-22)
 - [x] **Campus layout v3 from satellite: entrance lower-right, roundabout inside the gate, parking both sides, loop road round the academic core (2026-09-22, FB-0026)**
 - [x] Outdoor greenery from Sprout Lands: hedges, bushes, flowerbeds, tufts, recoloured (2026-09-21)
 - [x] **BITS building kit, made by us in the packs' style** (owner, 2026-09-21: no paid exteriors pack; learn how the packs build a wall and reuse/recolour their window, door and trim pieces)
 - [x] Characters from LimeZu Modern Interiors Free: the lead (recoloured Amelia: black hair, fair skin, pink top), the LUG volunteer and two students, 16×24 with 4-direction walks and idle (2026-09-21, ADR 0013)
 - [ ] UI kit from the pack: dialog box, panels, menus, cursors
-- [ ] CREDITS.md lists every pack, author and licence; packs live in `assets/vendor/<pack>/` with their LICENSE
+- [x] CREDITS.md lists every pack, author and licence; raw packs live gitignored in `assets/vendor/<pack>/` with their LICENSE (2026-09-22)
 
 
 - [x] Title screen, loading screen, pause menu, controls taught as you go (FB-0023), and `docs/GAME_FEEL.md`, our Pokémon-flow standard (FB-0024) — in progress 2026-09-20
@@ -67,7 +69,7 @@ source asset packages... change all the trees, pavements, everything."
 - [x] "A little 3D": depth pass on UI and cutscene art (bevels, shadows, perspective, eased motion) (2026-09-21, docs/GAME_FEEL.md "A little 3D")
 
 
-- [ ] Entrance cutscene: the Main Block steps, pillars and red arch, drawn from photos as reference
+- [x] Entrance cutscene: the Main Block steps, pillars and red arch (2026-09-21)
 - [x] Main Block foyer is the story hub: the LUG stall behind the staircase, other exits politely blocked (2026-09-22)
 - [x] The volunteer: full dialog, gives the hunt, reacts to progress, hands over the box (2026-09-22)
 - [ ] The three key rooms get their own cutscenes: Physics Lab (3rd floor), ICVL (1st floor), Room 195
@@ -103,8 +105,8 @@ source asset packages... change all the trees, pavements, everything."
 
 - [ ] Strict UI tests: every panel at every window size, no overlap, no text overflow, nothing covering the player
 - [ ] UX checks: every screen reachable by keyboard only; no dead ends; every prompt readable in under 2 s
-- [ ] A full playthrough test: gate → foyer → 3 keys → card, headless, asserting each beat
-- [ ] `npm run qa:shots` after every visual change, reviewed before anything is called done
+- [x] A full playthrough test: gate → foyer → 3 keys → box, headless, asserting each beat (`tests/e2e/story.spec.js`); extend it through the card next
+- [x] `npm run qa:shots` after every visual change, reviewed before anything is called done (standing practice)
 
 ## The loop
 

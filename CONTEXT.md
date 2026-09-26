@@ -1,4 +1,6 @@
-# Pixel Quest — context
+# BITS Dubai: The LUG Treasure Hunt — context
+
+**New session? Read [HANDOFF.md](HANDOFF.md) first.**
 
 **Last updated:** 2026-09-26 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 

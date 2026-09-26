@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Start with [CONTEXT.md](CONTEXT.md), then the last few entries of [MEMORY.md](MEMORY.md),
+Start with [HANDOFF.md](HANDOFF.md), then [CONTEXT.md](CONTEXT.md), then the last few entries of [MEMORY.md](MEMORY.md),
 [ERRORS.md](ERRORS.md), and [decisions/](decisions/). Follow the project-memory routine: log each
 work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`.
 

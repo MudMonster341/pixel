@@ -11,6 +11,7 @@ const { ROOT, loadGameData } = require('../helpers/game-data');
 
 const STAGES = ['arrival', 'hunting', 'rewarded'];
 const KEY_IDS = ['physicsLab', 'icvl', 'room195'];
+const countItem = (slots, item) => slots.filter((slot) => slot && slot.item === item).reduce((n, slot) => n + slot.count, 0);
 
 // A fresh, valid GameState-shaped quest for a given stage/key combination -- everything matchesWhen
 // actually reads (flags/quest/inventory/seenDialog aren't touched by this story's own conditions
@@ -77,6 +78,42 @@ test('story: the volunteer\'s hint matches the number of keys held (docs/STORY.m
   assert.equal(reward.id, 'reward');
 });
 
+// FB-0039: the fixtures right above happen to collect keys in docs/STORY.md's own canonical order
+// (Physics Lab, then ICVL, then Room 195), which can't tell a count-based rule apart from a
+// missing-key-based one -- this test collects them out of order instead, the case that was actually
+// broken (a *count*-based hint pointed her back at a room she'd already emptied whenever she found
+// the keys in a different order than the one the volunteer's lines assume).
+test('FB-0039: the volunteer names the first missing key in docs/STORY.md order, even when keys are collected out of order', () => {
+  const { STORY, pickDialogEntry } = loadGameData();
+  const npc = { id: 'lug-volunteer', dialog: STORY.volunteer };
+
+  // Room 195 found first: the hint must still point at the Physics Lab (the first key actually still
+  // missing), not at whatever a *count* of 1 used to mean ("hint-1", the ICVL).
+  const afterRoom195 = pickDialogEntry(npc, questFixture('hunting', { room195: true })).entry;
+  assert.equal(afterRoom195.id, 'hint-0');
+  assert.match(afterRoom195.lines.join(' '), /Physics Lab/);
+
+  // ICVL found first: still the Physics Lab.
+  const afterIcvl = pickDialogEntry(npc, questFixture('hunting', { icvl: true })).entry;
+  assert.equal(afterIcvl.id, 'hint-0');
+  assert.match(afterIcvl.lines.join(' '), /Physics Lab/);
+
+  // Physics Lab + Room 195 held (only ICVL missing): points at the ICVL, not back at Room 195 (which
+  // a count of 2 used to mean under the old "hint-2" rule).
+  const missingIcvl = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, room195: true })).entry;
+  assert.equal(missingIcvl.id, 'hint-1');
+  assert.match(missingIcvl.lines.join(' '), /ICVL/);
+
+  // Physics Lab + ICVL held (only Room 195 missing): points at Room 195.
+  const missingRoom195 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icvl: true })).entry;
+  assert.equal(missingRoom195.id, 'hint-2');
+  assert.match(missingRoom195.lines.join(' '), /Room 195/);
+
+  // All 3, collected out of order: still reaches the reward.
+  const allThree = pickDialogEntry(npc, questFixture('hunting', { room195: true, physicsLab: true, icvl: true })).entry;
+  assert.equal(allThree.id, 'reward');
+});
+
 test('story: the welcome entry only matches while stage is "arrival", and stops matching once she is briefed', () => {
   const { STORY, pickDialogEntry } = loadGameData();
   const npc = { id: 'lug-volunteer', dialog: STORY.volunteer };
@@ -92,6 +129,7 @@ test('story: every action in the volunteer\'s dialog is valid (real item, real q
   for (const entry of STORY.volunteer) {
     for (const action of entry.actions || []) {
       if ('give' in action) assert.ok(ITEMS[action.give], `${entry.id}: gives unknown item "${action.give}"`);
+      if ('take' in action) assert.ok(ITEMS[action.take], `${entry.id}: takes unknown item "${action.take}"`);
       if ('key' in action) assert.ok(KEY_IDS.includes(action.key), `${entry.id}: awards unknown key "${action.key}"`);
       if ('stage' in action) assert.ok(STAGES.includes(action.stage), `${entry.id}: sets unknown stage "${action.stage}"`);
       if ('journal' in action) assert.ok(typeof action.journal === 'string' && action.journal.length > 0, `${entry.id}: empty/invalid journal text`);
@@ -100,11 +138,30 @@ test('story: every action in the volunteer\'s dialog is valid (real item, real q
   }
 });
 
+// FB-0041b: the reward entry now `take`s the 3 key items back before `give`ing the box (docs/STORY.md:
+// the volunteer collects the keys) -- every `take` must come before the `give`, so the box is never
+// even attempted while the key items still occupy bag slots.
+test('story: the reward entry takes all 3 key items back before giving the box', () => {
+  const { STORY } = loadGameData();
+  const reward = STORY.volunteer.find((entry) => entry.id === 'reward');
+  const takeIndexes = reward.actions.flatMap((action, i) => ('take' in action ? [i] : []));
+  const giveIndex = reward.actions.findIndex((action) => 'give' in action);
+  assert.equal(takeIndexes.length, 3, 'reward should take back all 3 key items');
+  // Spread into a plain array first: STORY.volunteer is built inside game-data.js's sandbox (a
+  // separate vm realm), so .filter()/.map()/.sort() on it return sandboxed-realm arrays -- comparing
+  // one of those directly against a literal array here (this file's own realm) fails deepStrictEqual
+  // on cross-realm identity even when every element matches value-for-value.
+  assert.deepEqual([...reward.actions.filter((a) => 'take' in a).map((a) => a.take)].sort(), ['keyIcvl', 'keyPhysicsLab', 'keyRoom195']);
+  for (const i of takeIndexes) assert.ok(i < giveIndex, 'every take must run before the give');
+});
+
 test('story: the volunteer awards the box and reaches "rewarded" only once all 3 keys are held', () => {
   const { STORY, applyDialogActions } = loadGameData();
   const reward = STORY.volunteer.find((entry) => entry.id === 'reward');
   const state = questFixture('hunting', { physicsLab: true, icvl: true, room195: true });
-  state.inventory.add = () => true; // a real GameState.inventory would be an Inventory instance
+  // A real GameState.inventory would be an Inventory instance (src/state.js) with real add()/remove().
+  state.inventory.add = () => true;
+  state.inventory.remove = () => 1;
   applyDialogActions(reward.actions, state);
   assert.equal(state.quest.stage, 'rewarded');
 });
@@ -172,7 +229,7 @@ test('story: a full playthrough (talk, find all 3 keys in any order, return) alw
   const { STORY, keyStationDialog, pickDialogEntry, applyDialogActions, gameEvents } = loadGameData();
   const volunteer = { id: 'lug-volunteer', dialog: STORY.volunteer };
   const state = questFixture('arrival');
-  state.inventory = { slots: [], add: () => true };
+  state.inventory = { slots: [], add: () => true, remove: () => 1 };
   // A key station's "take" entry starts with a `minigame` action (src/story.js) that now really
   // suspends the rest of the list until it resolves (src/dialog.js) -- this test is about the quest
   // *data* reaching every state correctly, not about playing a mini-game, so it auto-resolves every
@@ -185,8 +242,9 @@ test('story: a full playthrough (talk, find all 3 keys in any order, return) alw
   applyDialogActions(picked.entry.actions, state);
   assert.equal(state.quest.stage, 'hunting');
 
-  // Collect the 3 keys in a deliberately different order than the hint text lists them, since
-  // docs/STORY.md's hints are keyed to *count*, not to which key is still missing.
+  // Collect the 3 keys in a deliberately different order than the hint text lists them (FB-0039: the
+  // volunteer's hint is keyed to the first key still *missing*, so this must never dead-end or point
+  // her back at a room she's already done, regardless of collection order).
   for (const keyId of ['room195', 'physicsLab', 'icvl']) {
     const stationDef = { id: keyId, dialog: keyStationDialog(keyId) };
     const stationPicked = pickDialogEntry(stationDef, state);
@@ -206,6 +264,54 @@ test('story: a full playthrough (talk, find all 3 keys in any order, return) alw
 
   const afterReward = pickDialogEntry(volunteer, state);
   assert.equal(afterReward.entry.id, 'after-reward');
+});
+
+// FB-0041b: with a real Inventory (not the plain-object stub `questFixture` uses elsewhere in this
+// file), fill the bag so exactly 3 slots are free -- just enough room for the 3 distinct key items,
+// none spare. Before this fix, the reward's `give: 'lugBox'` ran while those 3 key items still
+// occupied every one of those slots, so a bag filled this way made the reward silently fail (no key,
+// toast "Your bag is full!", stage stuck on "hunting" forever, quietly re-served every time she
+// hasn't already been given the reward text). `take`-ing the keys back first frees the room.
+test('FB-0041b: the reward\'s give never fails even when the bag is otherwise full of the 3 key items', () => {
+  const { STORY, keyStationDialog, pickDialogEntry, applyDialogActions, Inventory, gameEvents } = loadGameData();
+  const volunteer = { id: 'lug-volunteer', dialog: STORY.volunteer };
+  const inventory = new Inventory(5);
+  inventory.add('sword'); // maxStack 1: guaranteed its own slot
+  inventory.add('keycard'); // maxStack 1: guaranteed its own slot -- 2 junk slots, 3 free
+  const state = {
+    quest: { stage: 'arrival', keys: { physicsLab: false, icvl: false, room195: false } },
+    flags: {},
+    inventory,
+    seenDialog: new Set(),
+    journal: [],
+  };
+
+  gameEvents.on('minigame:requested', (payload) => payload.onResult('won'));
+  let toast = null;
+  gameEvents.on('toast', (message) => { toast = message; });
+
+  applyDialogActions(pickDialogEntry(volunteer, state).entry.actions, state); // welcome -> hunting
+  for (const keyId of ['physicsLab', 'icvl', 'room195']) {
+    const stationDef = { id: keyId, dialog: keyStationDialog(keyId) };
+    applyDialogActions(pickDialogEntry(stationDef, state).entry.actions, state);
+  }
+  assert.equal(inventory.slots.filter(Boolean).length, 5, 'the bag should now be completely full: 2 junk + 3 keys');
+
+  toast = null; // clear whatever the key-taking steps above last set, before the reward itself
+  const reward = pickDialogEntry(volunteer, state).entry;
+  assert.equal(reward.id, 'reward');
+  applyDialogActions(reward.actions, state);
+
+  // "Your bag is full!" is exactly what `give` toasts (and the *only* thing it toasts) on failure,
+  // stopping the rest of the list right there -- so stage staying 'hunting' or this exact toast
+  // string would both mean the give silently failed.
+  assert.notEqual(toast, 'Your bag is full!', 'the reward box must never fail to give, even with an otherwise-full bag');
+  assert.equal(state.quest.stage, 'rewarded');
+  assert.equal(countItem(inventory.slots, 'lugBox'), 1);
+  // The 3 key items are gone -- taken back by the volunteer (docs/STORY.md), freeing their slots.
+  assert.equal(countItem(inventory.slots, 'keyPhysicsLab'), 0);
+  assert.equal(countItem(inventory.slots, 'keyIcvl'), 0);
+  assert.equal(countItem(inventory.slots, 'keyRoom195'), 0);
 });
 
 // ---------- src/maps.js wiring matches the real generated interior maps ----------

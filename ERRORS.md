@@ -215,3 +215,40 @@ Physics is on a fixed timestep (`world.fixedStep`, default true) before trusting
 to match what the body will actually do this tick; prefer `body.position`/`body.prevFrame` (or
 attaching the visual as a child of the body's game object) over re-deriving physics Phaser has
 already computed.
+
+## ERR-0007 — The walk animation was mirrored: "I look like I'm walking left when I'm walking right" (2026-09-26)
+
+**Symptom:** Owner feedback (FB-0043): moving right made the lead's sprite look like she was facing
+and walking left, and vice versa -- moving either direction looked backwards ("moonwalking").
+
+**Context:** `tools/make-assets.js` builds the player/NPC sheets (ADR 0013) by cropping frames out of
+LimeZu's `Amelia_idle_16x16.png` / `_run_16x16.png` / `_idle_anim_16x16.png` source sheets, each of
+which lays four directions out as four columns/blocks. The original FB-0025 pass wrote down a
+comment about that layout ("column/block 0 is a side profile... 2 is the *other* side profile, a
+mirror of 0") and built the game's own sheet as 3 rows (down/up/"left", with "left" sourced from
+block 0), then had `src/scenes/world.js` mirror that same row with `flipX` for "right".
+
+**Root cause:** the comment's claim was never checked against the actual pixels -- it assumed block 0
+and block 2 were a mirrored pair (a common convention in some packs) rather than decoding the source
+PNGs and looking at where the face/skin pixels actually sit in each column. They aren't a mirrored
+pair: block 0 is a genuine, separately-drawn RIGHT-facing pose and block 2 is a genuine, separately-
+drawn LEFT-facing pose. Building "left" from block 0 baked a right-facing frame in under the wrong
+name, and then mirroring *that* for "right" produced a left-facing-looking frame for the direction
+that was supposed to be right -- both directions ended up wrong, which is exactly the "moonwalking
+both ways" the owner described (not a single flipped sign, which would only have broken one direction).
+
+**Fix:** decoded the source sheets and measured which column's skin/face pixels lean into which half
+of the frame before writing any mapping down again (see `tests/unit/assets.test.js`'s "FB-0043" test,
+which checks exactly this against the committed PNG). `CHAR_ROWS`/`CHAR_DIR_INDEX` (tools/make-
+assets.js) now build 4 real rows -- down/up/left/right, `right: 0, up: 1, left: 2, down: 3` -- and
+every consumer (`src/scenes/world.js`, `src/minigames/framework-scene.js`, `platformer.js`/
+`flappy.js`) plays the matching real row instead of mirroring one row with `flipX`; the player sprite
+is never flipped at all now.
+
+**Recognise it next time:** a sprite-sheet layout comment that describes column/block N as "the other
+side, mirrored" (or any other structural claim about a vendor pack) without a note saying it was
+actually decoded and looked at → don't trust it; open the source PNG (`tools/lib/png-decode.js`
+already exists for exactly this) and check where the identifying pixels (face, a logo, an asymmetric
+detail) actually land before writing the mapping down. "It moved but looks backwards/mirrored" for a
+character sprite specifically → suspect a mislabeled or wrongly-mirrored source column before assuming
+a simple `flipX`/velocity-sign bug.

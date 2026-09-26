@@ -10,11 +10,13 @@ const OVERHEAD_DEPTH = 1_000_000;
 const INTERACT_RANGE = 24;
 const PICKUP_RANGE = 10;
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
-// Frame layout (ADR 0013): 3 rows (down/up/left; right = mirrored left) x 8 columns (idle, 6 walk
-// frames, 1 idle-anim frame) -- see tools/make-assets.js CHAR_COLS/buildCharacter. Frame index =
-// row * 8 + column, so each direction's idle frame is a multiple of 8.
+// Frame layout (ADR 0013, FB-0043): 4 real rows (down/up/left/right, no mirroring -- was 3 rows with
+// "right" drawn as a mirrored "left", which turned out to be mirroring the wrong art entirely, see
+// ERR-0007) x 8 columns (idle, 6 walk frames, 1 idle-anim frame) -- see tools/make-assets.js
+// CHAR_COLS/CHAR_ROWS/buildCharacter. Frame index = row * 8 + column, so each direction's idle frame
+// is a multiple of 8.
 const CHAR_COLS = 8;
-const PLAYER_IDLE = { down: 0, up: CHAR_COLS, left: 2 * CHAR_COLS, right: 2 * CHAR_COLS };
+const PLAYER_IDLE = { down: 0, up: CHAR_COLS, left: 2 * CHAR_COLS, right: 3 * CHAR_COLS };
 // Legacy 3-frame sheet (Tomas/Guide's 'npc' texture, unchanged hand-drawn art, no walk cycle): one
 // static idle frame per direction, same numbering it always had.
 const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
@@ -130,15 +132,17 @@ class WorldScene extends Phaser.Scene {
   createAnimations() {
     // Walk cycle (ADR 0013): 6 real motion frames straight from the vendor pack's run sheet, not
     // the old 3-pose idle/step1/step2/idle bounce -- columns 1-6 of each row (column 0 is the
-    // static idle pose, column 7 the idle-anim pose, see tools/make-assets.js CHAR_COLS).
-    const walks = { down: [1, 2, 3, 4, 5, 6], up: [9, 10, 11, 12, 13, 14], side: [17, 18, 19, 20, 21, 22] };
+    // static idle pose, column 7 the idle-anim pose, see tools/make-assets.js CHAR_COLS). FB-0043:
+    // 4 real rows now (down/up/left/right), no more shared "side" row played with flipX mirroring --
+    // left and right are each their own genuine art, never a mirror of the other.
+    const walks = { down: [1, 2, 3, 4, 5, 6], up: [9, 10, 11, 12, 13, 14], left: [17, 18, 19, 20, 21, 22], right: [25, 26, 27, 28, 29, 30] };
     for (const [dir, frames] of Object.entries(walks)) {
       if (this.anims.exists(`walk-${dir}`)) continue;
       this.anims.create({ key: `walk-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 12, repeat: -1 });
     }
     // Idle animation (ADR 0013, the pack's idle_anim sheet): a slow alternation between the static
     // idle pose and its idle-anim variant -- STYLE_GUIDE's "gentle life" rule (blink/bob when idle).
-    const idles = { down: [0, 7], up: [8, 15], side: [16, 23] };
+    const idles = { down: [0, 7], up: [8, 15], left: [16, 23], right: [24, 31] };
     for (const [dir, frames] of Object.entries(idles)) {
       if (this.anims.exists(`idle-${dir}`)) continue;
       this.anims.create({ key: `idle-${dir}`, frames: this.anims.generateFrameNumbers('player', { frames }), frameRate: 2, yoyo: true, repeat: -1 });
@@ -159,7 +163,9 @@ class WorldScene extends Phaser.Scene {
     // door: arriving at its spawn point re-triggered the exit warp immediately -- caught by
     // tests/e2e/house.spec.js, not by eye).
     this.player.body.setSize(10, 6).setOffset(3, 14);
-    this.player.setCollideWorldBounds(true).setFlipX(this.facing === 'right');
+    // FB-0043: never flips the player sprite -- right is now its own real, unmirrored row (see
+    // PLAYER_IDLE/createAnimations above), not "left" drawn backwards.
+    this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.solidLayers);
     this.lastPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
     // The currently-selected hotbar item, shown in the character's hand (FB-0002).
@@ -299,15 +305,13 @@ class WorldScene extends Phaser.Scene {
     if (!moving) {
       // Idle animation (ADR 0013), not a hard stop-on-a-frame: a slow blink/bob, STYLE_GUIDE's
       // "gentle life" rule for a character that's just standing there.
-      const idleDir = this.facing === 'left' || this.facing === 'right' ? 'side' : this.facing;
-      p.anims.play(`idle-${idleDir}`, true);
+      p.anims.play(`idle-${this.facing}`, true);
     } else if (dx !== 0) {
+      // FB-0043: real left/right art, never a mirrored "side" row -- see createAnimations().
       this.facing = dx < 0 ? 'left' : 'right';
-      p.setFlipX(dx > 0); // side art faces left; mirror it for right
-      p.anims.play('walk-side', true);
+      p.anims.play(`walk-${this.facing}`, true);
     } else {
       this.facing = dy < 0 ? 'up' : 'down';
-      p.setFlipX(false);
       p.anims.play(`walk-${this.facing}`, true);
     }
 
@@ -367,8 +371,9 @@ class WorldScene extends Phaser.Scene {
     }
 
     const p = this.player;
-    // HELD_OFFSET already has a separate left/right entry, in screen space, so the offset itself
-    // (not player.flipX, which only mirrors the body's own art) decides which side it sits on.
+    // HELD_OFFSET has its own separate left/right entry, in screen space, so the offset itself
+    // decides which side it sits on -- the player sprite is never flipped at all now (FB-0043: real
+    // left/right art), so the held item never needs to be either.
     const offset = HELD_OFFSET[this.facing];
     const bob = moving ? Math.round(Math.sin(time / 100)) : 0;
     // p.x/p.y here are last frame's position: this runs from movePlayer, which sets this frame's
@@ -392,7 +397,6 @@ class WorldScene extends Phaser.Scene {
     const y = p.y + (body.position.y - body.prevFrame.y);
     this.heldItem
       .setFrame(ITEMS[slot.item].frame)
-      .setFlipX(p.flipX)
       .setPosition(x + offset.x, y + offset.y + bob)
       .setDepth(p.depth + (offset.front ? 1 : -1))
       .setVisible(true);
@@ -445,12 +449,20 @@ class WorldScene extends Phaser.Scene {
 
     if (found.kind === 'npc') {
       const npc = found.target;
-      // Turn the NPC to face the player.
+      // Turn the NPC to face the player. FB-0043: a `character` NPC (the recolored pack sprites,
+      // `npc.idleFrames === PLAYER_IDLE`) has its own real left *and* right frames now, so it's shown
+      // unflipped either way; the legacy hand-drawn 'npc' texture (Tomas/Guide, NPC_FRAME) still only
+      // has one side-facing frame (`left === right`), so it keeps the old mirror-for-the-other-side
+      // trick -- that sheet is unchanged on purpose (see tools/make-assets.js's own comment on it).
       const dx = this.player.x - npc.x;
       const dy = this.player.y - npc.y;
-      if (Math.abs(dx) > Math.abs(dy)) npc.setFrame(npc.idleFrames.left).setFlipX(dx > 0);
-      else npc.setFrame(dy < 0 ? npc.idleFrames.up : npc.idleFrames.down).setFlipX(false);
-      this.game.events.emit('npc-talked', npc.def.id);
+      if (Math.abs(dx) > Math.abs(dy)) {
+        const facingRight = dx > 0;
+        if (npc.idleFrames.left === npc.idleFrames.right) npc.setFrame(npc.idleFrames.left).setFlipX(facingRight);
+        else npc.setFrame(facingRight ? npc.idleFrames.right : npc.idleFrames.left).setFlipX(false);
+      } else {
+        npc.setFrame(dy < 0 ? npc.idleFrames.up : npc.idleFrames.down).setFlipX(false);
+      }
     }
 
     const picked = pickDialogEntry(found.def, GameState);
@@ -482,6 +494,12 @@ class WorldScene extends Phaser.Scene {
         }
       });
     }, choices);
+    // FB-0036: emitted *after* dialog.open() (which sets DialogBox.isOpen synchronously), not before
+    // it -- Tutorial.complete('talk') (src/scenes/ui.js) is what this drives, and its own finish()
+    // announcement waits for `dialog.isOpen` to go true-then-false before showing "Tutorial
+    // complete!"; emitting this before the box opened let that check see `isOpen === false` a beat
+    // too early and race the conversation instead of actually waiting for it to close.
+    if (found.kind === 'npc') this.game.events.emit('npc-talked', found.target.def.id);
   }
 
   // Launches a mini-game (docs/ROADMAP.md M4): pauses 'world' exactly like playCutscene() above

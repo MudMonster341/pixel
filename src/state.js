@@ -31,6 +31,27 @@ class Inventory extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  // FB-0041b: removes up to `count` of `itemId` (default 1), oldest slot first, freeing an emptied
+  // slot back to null. Backs the `{ take: itemId }` dialog action (src/dialog.js) -- e.g. the LUG
+  // volunteer "collecting the keys" back off her when the box is handed over (docs/STORY.md), which
+  // is also what keeps the 3 key items from permanently occupying bag slots for the rest of the game.
+  // Returns how many were actually removed (0 if she isn't holding any), so a caller can tell whether
+  // anything really happened without needing its own bookkeeping.
+  remove(itemId, count = 1) {
+    let remaining = count;
+    for (let i = 0; i < this.slots.length && remaining > 0; i++) {
+      const slot = this.slots[i];
+      if (!slot || slot.item !== itemId) continue;
+      const take = Math.min(remaining, slot.count);
+      slot.count -= take;
+      remaining -= take;
+      if (slot.count <= 0) this.slots[i] = null;
+    }
+    const removed = count - remaining;
+    if (removed > 0) this.emit('changed');
+    return removed;
+  }
+
   select(index) {
     if (index < 0 || index >= this.slots.length) return;
     this.selected = index;

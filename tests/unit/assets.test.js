@@ -107,10 +107,10 @@ test('sprite sheets have the sizes the game expects', () => {
   assert.equal(tiles.width, tileInfo.columns * TILE);
   assert.equal(tiles.height, Math.ceil(tileInfo.tiles.length / tileInfo.columns) * TILE);
 
-  // ADR 0013: characters are 16x24, 3 rows (down/up/left) x 8 columns (idle, 6 walk frames,
-  // idle-anim). The player and every recolored-pack NPC share this layout.
+  // ADR 0013/FB-0043: characters are 16x24, 4 rows (down/up/left/right, no mirroring) x 8 columns
+  // (idle, 6 walk frames, idle-anim). The player and every recolored-pack NPC share this layout.
   const CHAR_COLS = 8;
-  const CHAR_ROWS = 3;
+  const CHAR_ROWS = 4;
   for (const name of ['player.png', 'npc-volunteer.png', 'npc-student-a.png', 'npc-student-b.png']) {
     assert.deepEqual(pngSize(path.join(ASSETS, name)), { width: CHAR_COLS * TILE, height: CHAR_ROWS * CHAR_HEIGHT }, name);
   }
@@ -128,16 +128,18 @@ test('sprite sheets have the sizes the game expects', () => {
 // LimeZu Amelia (ADR 0013), not the old hand-drawn sprite. These read the committed PNG's raw pixels
 // (decodePNG, the same decoder tools/make-assets.js uses to read the vendor pack) rather than
 // trusting the generator's own code, so a future edit that quietly breaks the recolor still fails.
-test('FB-0025: the lead\'s sprite sheet is 16x24 with 4-direction walks', () => {
+test('FB-0025/FB-0043: the lead\'s sprite sheet is 16x24 with 4 real direction rows, each with real walk motion', () => {
   const { decodePNG } = require('../../tools/lib/png-decode');
   const { TILE, CHAR_HEIGHT } = loadGameData();
   const img = decodePNG(fs.readFileSync(path.join(ASSETS, 'player.png')));
   assert.equal(img.width, 8 * TILE);
-  assert.equal(img.height, 3 * CHAR_HEIGHT);
+  // FB-0043: 4 rows now (down/up/left/right), not 3 with "right" mirrored from "left" -- see
+  // tools/make-assets.js CHAR_ROWS and ERR-0007.
+  assert.equal(img.height, 4 * CHAR_HEIGHT);
 
-  // "4-direction walks": down/up/left each animate (right is left, mirrored, same as every other
-  // character in this game -- docs/STYLE_GUIDE.md), so the 6 walk-frame columns (1-6) in each row
-  // must actually differ from each other, not repeat the same pixels 6 times.
+  // "4-direction walks": down/up/left/right each genuinely animate on their own now (no mirroring),
+  // so the 6 walk-frame columns (1-6) in each row must actually differ from each other, not repeat
+  // the same pixels 6 times.
   function frameBytes(col, row) {
     const x0 = col * TILE;
     const y0 = row * CHAR_HEIGHT;
@@ -150,10 +152,17 @@ test('FB-0025: the lead\'s sprite sheet is 16x24 with 4-direction walks', () => 
     }
     return bytes.join(',');
   }
-  for (let row = 0; row < 3; row++) {
+  for (let row = 0; row < 4; row++) {
     const walkFrames = new Set([1, 2, 3, 4, 5, 6].map((col) => frameBytes(col, row)));
     assert.ok(walkFrames.size > 1, `row ${row}'s 6 walk frames should have real motion, not be identical`);
   }
+
+  // FB-0043's actual bug: the left (row 2) and right (row 3) rows used to be the *same* art, one of
+  // them just flipped at draw time -- now they must be genuinely different pixels (real, separately
+  // authored left- and right-facing frames), not a mirror of each other.
+  const leftIdle = frameBytes(0, 2);
+  const rightIdle = frameBytes(0, 3);
+  assert.notEqual(leftIdle, rightIdle, 'left and right idle frames should be real, different art, not the same frame twice');
 });
 
 test('FB-0025: the lead\'s palette matches the owner\'s brief (black hair, fair skin, pink top)', () => {
@@ -172,6 +181,43 @@ test('FB-0025: the lead\'s palette matches the owner\'s brief (black hair, fair 
   for (const hex of ['#957350', '#ba8d5e', '#8a6552', '#bf8b78', '#a85377', '#b95d72']) {
     assert.ok(!present.has(hex), `unrecolored pack color ${hex} leaked into player.png`);
   }
+});
+
+// FB-0043 ("she moonwalks both ways"): the actual bug was a *mislabeled* source block, not just "the
+// frames happen to differ" (the previous test above). The real, verifiable claim is about which half
+// of the frame the character leans/faces into: in a genuine right-facing pose the face/skin pixels
+// sit in the right half of the 16px-wide frame, and in a genuine left-facing pose they sit in the left
+// half. A frame that was actually just the other one mirrored would fail this the same way the bug did
+// (world.js used to flip the mislabeled "left" row for right, which is exactly this shape of error).
+test('FB-0043: the right-facing idle frame leans skin-right, the left-facing idle frame leans skin-left', () => {
+  const { decodePNG } = require('../../tools/lib/png-decode');
+  const { TILE, CHAR_HEIGHT } = loadGameData();
+  const img = decodePNG(fs.readFileSync(path.join(ASSETS, 'player.png')));
+  const SKIN = new Set(['#f4c9a0', '#d49a6a']); // the brief's skin highlight/mid tones (PALETTE.S/.s)
+
+  // Average x (in-frame, 0-15) of every skin-colored pixel in one frame -- its "lean".
+  function skinLean(col, row) {
+    const x0 = col * TILE;
+    const y0 = row * CHAR_HEIGHT;
+    let sum = 0;
+    let n = 0;
+    for (let y = 0; y < CHAR_HEIGHT; y++) {
+      for (let x = 0; x < TILE; x++) {
+        const i = ((y0 + y) * img.width + (x0 + x)) * 4;
+        if (img.data[i + 3] === 0) continue;
+        const hex = `#${[img.data[i], img.data[i + 1], img.data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+        if (SKIN.has(hex)) { sum += x; n++; }
+      }
+    }
+    assert.ok(n > 0, `frame (col ${col}, row ${row}) has no skin-colored pixels at all`);
+    return sum / n;
+  }
+
+  // Rows, per tools/make-assets.js CHAR_ROWS: 0 down, 1 up, 2 left, 3 right. Column 0 is the idle pose.
+  const leftLean = skinLean(0, 2);
+  const rightLean = skinLean(0, 3);
+  assert.ok(leftLean < TILE / 2, `left-facing idle frame should lean into the left half of the frame (got x=${leftLean})`);
+  assert.ok(rightLean > TILE / 2, `right-facing idle frame should lean into the right half of the frame (got x=${rightLean})`);
 });
 
 test('FB-0025: the campus NPCs are recolored distinctly from the lead', () => {

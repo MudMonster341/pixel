@@ -27,6 +27,20 @@ function questTrackerText(page) {
   });
 }
 
+// FB-0042: a card ignores confirm keys (and the up/down highlight move) for a short beat after it
+// appears (MinigameCard's own CARD_INPUT_DELAY_MS, src/minigames/framework-scene.js) -- mashing
+// Space/Enter while actually playing (Space also jumps/flaps, Enter also clears a line of dialog)
+// must not carry straight through into an instant Retry/Continue on whatever card pops up next. Every
+// test below that drives a card now waits for `card.acceptInput` first (docs/TESTING.md rule 5: wait
+// for real state, never a fixed sleep) instead of pressing a key the instant the card's own mgState
+// changes.
+async function waitCardReady(page, sceneKey) {
+  await expect.poll(async () => page.evaluate(
+    (key) => Boolean(game.scene.getScene(key)?.card?.acceptInput),
+    sceneKey,
+  )).toBe(true);
+}
+
 function mgInfo(page, sceneKey) {
   return page.evaluate((key) => {
     const active = game.scene.isActive(key);
@@ -102,6 +116,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     let worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
 
     await talkToStation(page, 'physicsLab', 'minigame-platformer');
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
     const platformerHero = await page.evaluate(() => {
@@ -116,6 +131,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
     await talkToStation(page, 'icvl', 'minigame-flappy');
+    await waitCardReady(page, 'minigame-flappy');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
     const flappyHero = await page.evaluate(() => {
@@ -133,6 +149,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(true);
 
     // Start (ENTER is the intro card's default, highlighted item -- one keypress).
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
 
@@ -145,6 +162,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await fall();
     let info = await mgInfo(page, 'minigame-platformer');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'QUIT']);
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
     expect((await mgInfo(page, 'minigame-platformer')).score).toBe(0);
@@ -153,6 +171,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await fall();
     info = await mgInfo(page, 'minigame-platformer');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'QUIT']);
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
 
@@ -161,10 +180,12 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await fall();
     info = await mgInfo(page, 'minigame-platformer');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'SKIP -- TAKE THE KEY ANYWAY', 'QUIT']);
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('win');
 
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter'); // "CONTINUE"
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(false);
     await expect.poll(async () => (await state(page)).quest.keys.physicsLab).toBe(true);
@@ -176,6 +197,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     await talkToStation(page, 'physicsLab', 'minigame-platformer');
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter'); // start
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
 
@@ -191,6 +213,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('win');
     expect((await mgInfo(page, 'minigame-platformer')).cardItems).toEqual(['CONTINUE (ENTER)']);
 
+    await waitCardReady(page, 'minigame-platformer');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(false);
     await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).worldActive).toBe(true);
@@ -201,5 +224,104 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     const tracker = await questTrackerText(page);
     expect(tracker.keys).toBe('Keys: 1 / 3');
     expect(tracker.objective).not.toContain('Physics Lab');
+  });
+
+  // ---------- FB-0042: mini-game input polish ----------
+
+  test('FB-0042: a card ignores confirm keys for a short beat, so mashing Enter cannot skip past it instantly', async ({ page }) => {
+    await openGame(page, { map: 'main-block-1', minigames: true });
+    // Launched directly (not through the real talk-to-station dialog flow, which itself takes long
+    // enough in real wall-clock time -- several keypresses and waits -- that the debounce window this
+    // test means to catch could already have quietly elapsed before the test ever mashed a key,
+    // making the assertion below meaningless rather than wrong): the card's own creation is what
+    // starts CARD_INPUT_DELAY_MS, so the fewer round-trips between that and the mash, the better this
+    // actually tests the debounce instead of testing incidental Playwright/IPC timing.
+    await page.evaluate(() => {
+      GameState.quest.stage = 'hunting';
+      game.scene.getScene('world').launchMinigame('tetris', () => {});
+    });
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).active).toBe(true);
+    expect((await mgInfo(page, 'minigame-tetris')).mgState).toBe('intro');
+
+    // Mash Enter the instant the card appears: still on the intro card a beat later.
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    expect((await mgInfo(page, 'minigame-tetris')).mgState).toBe('intro');
+
+    // Once the debounce has passed, a real Enter does start it.
+    await waitCardReady(page, 'minigame-tetris');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).mgState).toBe('playing');
+  });
+
+  test('FB-0042: confirming Retry with Space does not also make her jump on the first frame', async ({ page }) => {
+    await openGame(page, { map: 'main-block-3', minigames: true });
+    await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+    await talkToStation(page, 'physicsLab', 'minigame-platformer');
+    await waitCardReady(page, 'minigame-platformer');
+    await page.keyboard.press('Space'); // Space also confirms the intro card's default "START"
+    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+
+    await page.evaluate(() => game.scene.getScene('minigame-platformer').player.body.reset(60, 700));
+    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('gameover');
+
+    await waitCardReady(page, 'minigame-platformer');
+    await page.keyboard.press('Space'); // confirms "RETRY (ENTER)" -- Space is also the jump key
+    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+
+    // The very next frame: she must not already be rising from a jump this same Space triggered.
+    const vy = await page.evaluate(() => game.scene.getScene('minigame-platformer').player.body.velocity.y);
+    expect(vy).toBeGreaterThanOrEqual(0);
+  });
+
+  test('FB-0042: reaching the platformer\'s exit door without enough charge cells shows a message, not nothing', async ({ page }) => {
+    await openGame(page, { map: 'main-block-3', minigames: true });
+    await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+    await talkToStation(page, 'physicsLab', 'minigame-platformer');
+    await waitCardReady(page, 'minigame-platformer');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+
+    await page.evaluate(() => {
+      const s = game.scene.getScene('minigame-platformer');
+      s.tryFinish(); // score is still 0 -- reaching the door with nothing collected
+    });
+    // Still playing (not a loss, not a win) -- a message shown instead of silence.
+    expect((await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    const message = await page.evaluate(() => game.scene.getScene('minigame-platformer').message?.label.text);
+    expect(message).toMatch(/charge cells/i);
+  });
+
+  test('FB-0042: the flyer hovers with a "press space to flap" prompt, and gravity/scrolling wait for the first flap', async ({ page }) => {
+    await openGame(page, { map: 'main-block-1', minigames: true });
+    await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
+    await talkToStation(page, 'icvl', 'minigame-flappy');
+    await waitCardReady(page, 'minigame-flappy');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
+
+    const before = await page.evaluate(() => {
+      const s = game.scene.getScene('minigame-flappy');
+      return { promptVisible: s.hoverPrompt.visible, flying: s.flying, pipeX: s.pipes[0] ? s.pipes[0].x : null };
+    });
+    expect(before.flying).toBe(false);
+    expect(before.promptVisible).toBe(true);
+
+    await page.waitForTimeout(300); // long enough that real gravity/scrolling would have visibly moved something
+    const stillHovering = await page.evaluate(() => {
+      const s = game.scene.getScene('minigame-flappy');
+      return { pipeX: s.pipes[0] ? s.pipes[0].x : null, flying: s.flying };
+    });
+    expect(stillHovering.flying).toBe(false);
+    expect(stillHovering.pipeX).toBe(before.pipeX); // the racks never scrolled while she hasn't flapped
+
+    await page.keyboard.press('Space'); // the first flap
+    const after = await page.evaluate(() => {
+      const s = game.scene.getScene('minigame-flappy');
+      return { flying: s.flying, promptVisible: s.hoverPrompt.visible };
+    });
+    expect(after.flying).toBe(true);
+    expect(after.promptVisible).toBe(false);
   });
 });

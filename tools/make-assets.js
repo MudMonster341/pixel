@@ -2,9 +2,9 @@
 // Run:  node tools/make-assets.js
 // Output (in assets/):
 //   tiles.png + tiles.json  every map tile (8 per row), with name, solid flag and minimap color
-//   player.png              the lead, recolored from a vendor pack (ADR 0013): 3 rows (down/up/
-//                           left, right = mirrored left) x 8 cols (idle, 6 walk frames, idle-anim),
-//                           each frame 16x24
+//   player.png              the lead, recolored from a vendor pack (ADR 0013, FB-0043): 4 rows
+//                           (down/up/left/right, no mirroring) x 8 cols (idle, 6 walk frames,
+//                           idle-anim), each frame 16x24
 //   player-<swatch>.png     one full sheet per clothes-color customisation swatch (M3a, see
 //                           "character customisation" section below); player-pink.png === player.png
 //   npc.png                 Tomas (hand-drawn, unchanged): 3 frames (down/up/left), 16x24
@@ -1836,9 +1836,17 @@ function intMachine(img, x, y) {
 //   - `<name>_idle_16x16.png`: 64x32, four 16x32 frames, one static pose per direction.
 //   - `<name>_run_16x16.png` / `<name>_idle_anim_16x16.png`: 384x32, 24 columns = four 6-frame
 //     blocks (one block per direction), with genuine per-frame motion (verified by diffing columns).
-// In both layouts, the four directions sit in the same order: column/block 0 is a side profile,
-// 1 is up (back of the head, no face), 2 is the *other* side profile (a mirror of 0 -- unused here,
-// since docs/STYLE_GUIDE.md already mirrors "left" for "right"), 3 is down (facing the camera).
+// In both layouts, the four directions sit in the same order: column/block 0 faces RIGHT, 1 is up
+// (back of the head, no face), 2 faces LEFT, 3 is down (facing the camera) -- verified ERR-0007-style
+// by actually decoding the source PNGs and looking at where the face/skin pixels sit in each column,
+// not assumed from a guess about how these packs are usually laid out. The original FB-0025/ADR-0013
+// pass got this wrong: it read block 0 as "a side profile, mirrored for the other side" and built
+// only 3 rows (down/up/"left" -- actually built from block 0, i.e. genuinely right-facing art), then
+// had world.js mirror that same row for "right" -- so *both* directions ended up wrong (a real
+// right-facing frame shown unflipped while walking left, and that same frame mirrored into a
+// left-facing pose while walking right; ERR-0007, "she moonwalks both ways"). FB-0043 fixes it by
+// building all FOUR rows for real, one per direction, each from its own genuine block -- no mirroring
+// anywhere in this file or in any of its consumers.
 // Every frame's actual figure occupies only the bottom ~22-24 rows of the 32-tall canvas (rows
 // 8-31) -- confirmed with a bounding-box scan, not assumed -- so building a 16x24 frame (ADR 0013)
 // means cropping that bottom 24px band, not the whole 32px canvas.
@@ -1847,10 +1855,15 @@ const CHAR_W = TILE; // 16
 const CHAR_H = 24; // ADR 0013: characters are 16x24 now, was 16x16
 const CHAR_WALK_FRAMES = 6; // one full stride cycle, taken straight from the pack's run sheet
 const CHAR_IDLE_ANIM_FRAME = 3; // mid-block idle_anim frame -- reads as the clearest blink/breathe pose
-const CHAR_ROWS = ['down', 'up', 'left']; // sheet row order (docs/STYLE_GUIDE.md "Characters")
+// FB-0043: 4 real rows now, down/up/left/right -- was 3 (down/up/"left", with world.js mirroring that
+// row for right). Every consumer of this sheet layout (src/scenes/world.js, src/minigames/
+// framework-scene.js, platformer.js/flappy.js, intro-customize.js/intro-bus.js) was updated alongside
+// this: search each for "FB-0043" to see what changed and why.
+const CHAR_ROWS = ['down', 'up', 'left', 'right']; // output row order (docs/STYLE_GUIDE.md "Characters")
 // Column in idle_16x16 *and* block index (of 6) in run/idle_anim -- both sheets share the same
-// four-direction order, so one table serves both lookups.
-const CHAR_DIR_INDEX = { left: 0, up: 1, down: 3 };
+// four-direction order, so one table serves both lookups. FB-0043: `right: 0`/`left: 2` (previously
+// just `left: 0`, which was actually the pack's right-facing block mislabeled).
+const CHAR_DIR_INDEX = { right: 0, up: 1, left: 2, down: 3 };
 
 function charSheet(name, suffix) {
   return loadAtlas(path.join(CHAR_LIB, `${name}_${suffix}_16x16.png`));
@@ -1862,9 +1875,9 @@ function blitCharFrame(img, dx, dy, atlas, sx, remap) {
   blitAtlas(img, dx, dy, atlas, sx, 32 - CHAR_H, CHAR_W, CHAR_H, { remap });
 }
 
-// One character's full sheet: 3 rows (down/up/left; right is flipX-mirrored left everywhere this
-// game draws a character) x (1 idle frame, CHAR_WALK_FRAMES walk frames, 1 idle-anim frame) --
-// CHAR_COLS wide. `recolorMap` is an exact-RGB swap table (see AMELIA_RECOLOR etc.), built by
+// One character's full sheet: 4 rows (down/up/left/right, FB-0043 -- no mirroring anywhere, every
+// direction is its own genuine art) x (1 idle frame, CHAR_WALK_FRAMES walk frames, 1 idle-anim frame)
+// -- CHAR_COLS wide. `recolorMap` is an exact-RGB swap table (see AMELIA_RECOLOR etc.), built by
 // decoding the source PNGs and sampling every distinct color they actually use -- the method
 // docs/research/asset-packs.md's character addendum already proved out. Anything not in the map
 // passes through unchanged, so a character can keep its own hair/skin and only have its clothes

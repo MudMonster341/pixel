@@ -129,6 +129,8 @@ shows a selectable list and runs whichever option's own `actions` the player pic
 ```js
 { give: 'keycard' }                       // adds an item; if the bag is full, the rest of this
                                            // action list is skipped and a generic toast shows instead
+{ take: 'keyPhysicsLab' }                 // removes one of that item from the inventory (FB-0041b),
+                                           // never blocks the rest of the list even if none is held
 { setFlag: 'metVolunteer' }               // sets a flag to true
 { setFlag: { name: 'tomasChats', value: 2 } }   // sets a flag to any value
 { stage: 'hunting' }                      // GameState.quest.stage = 'hunting'

@@ -30,6 +30,47 @@ const BUTTON_GAP = 12;
 const MENU_BOTTOM = 470;
 const MENU_TOP_MIN = 180; // never crowds the "LUG Treasure Hunt" subtitle above it
 
+// FB-0037: the in-game Credits used to say "All art and code original, made for this game" -- false,
+// and several of the third-party packs actually in use require exactly this kind of on-screen credit
+// (LimeZu/Sprout Lands non-commercial "credit required" clauses, Kyrise/Land of Pixels/Pixel Seating's
+// CC BY licences, OpenStreetMap's ODbL). Built from CREDITS.md's own wording -- every pack and licence
+// named there for something actually wired into the game (`grep` the packs list below against that
+// file's own headings before editing either one) -- not restated from memory. Sprout Lands' free-tier
+// licence spells out an exact required line ("credit required... Assets - From: Sprout Lands - By:
+// Cup Nooble"), kept verbatim rather than paraphrased.
+// Kept as short, individually pre-wrapped lines (each comfortably under this panel's own wrap width)
+// rather than long paragraphs left for Phaser's word-wrap to break up on its own -- the exact
+// required phrases (the Sprout Lands credit line especially) must never be split mid-sentence across
+// a wrap boundary, and a short line can't wrap wrong.
+const CREDITS_LINES = [
+  'BITS DUBAI: THE LUG TREASURE HUNT',
+  '',
+  'Built with Phaser 3 (phaser.io), free and open source.',
+  'Font: Press Start 2P by Cody "CodeMan38" Boisclair.',
+  'SIL Open Font License.',
+  '',
+  'Campus layout from OpenStreetMap contributors,',
+  'used under the Open Database License (ODbL).',
+  '',
+  'Art:',
+  'Kenney (kenney.nl) -- Roguelike Modern City and',
+  'Pixel Vehicle Pack, CC0.',
+  'Modern Interiors (Free) by LimeZu -- interiors,',
+  'floors, doors and characters.',
+  'Assets - From: Sprout Lands - By: Cup Nooble',
+  '(outdoor greenery).',
+  "Kyrise's 16x16 RPG Icon Pack by Kyrise -- item",
+  'icons, CC BY 4.0.',
+  'Cool School Tileset by NettySvit -- classroom',
+  'furniture, CC0.',
+  'Laboratory Tileset by marceles ("Land of Pixels")',
+  '-- lab furniture, CC BY 4.0.',
+  'Pixel Seating by Molly "Cougarmint" Willits --',
+  'auditorium seats, CC-BY 3.0.',
+  '',
+  'A gift, never sold.',
+];
+
 class TitleScene extends Phaser.Scene {
   constructor() {
     super('title');
@@ -60,13 +101,31 @@ class TitleScene extends Phaser.Scene {
 
     this.controls = new ControlsPanel(this);
     this.credits = this.buildCredits();
+    this.newGameConfirm = this.buildNewGameConfirm();
 
     // Mouse click also reveals the menu from the intro prompt (the owner plays in a browser); once
     // revealed, the menu's own buttons own clicks instead (see buildMenu() above).
     this.input.on('pointerdown', () => { if (this.stage === 'intro') this.showMenu(); });
 
-    for (const key of ['UP', 'W']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(-1); });
-    for (const key of ['DOWN', 'S']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.moveMenu(1); });
+    // FB-0037/FB-0040: while Credits is open, Up/Down scroll its (possibly-clipped) content; while
+    // the "start a new game?" confirm is open, they move its No/Yes highlight instead. Both checks
+    // come before moveMenu() so the title menu's own highlight never moves underneath an open overlay.
+    for (const key of ['UP', 'W']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat) return;
+        if (this.newGameConfirm.visible) this.moveNewGameConfirm(-1);
+        else if (this.credits.visible) this.scrollCredits(-1);
+        else this.moveMenu(-1);
+      });
+    }
+    for (const key of ['DOWN', 'S']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat) return;
+        if (this.newGameConfirm.visible) this.moveNewGameConfirm(1);
+        else if (this.credits.visible) this.scrollCredits(1);
+        else this.moveMenu(1);
+      });
+    }
     for (const key of ['ENTER', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.onConfirm(); });
     this.input.keyboard.on('keydown-ESC', (e) => { if (!e.repeat) this.onCancel(); });
   }
@@ -149,35 +208,75 @@ class TitleScene extends Phaser.Scene {
     return items;
   }
 
+  // FB-0037: the old text here ("All art and code original, made for this game") was simply false --
+  // this game leans on a stack of third-party art/data packs and a font, every one of them under a
+  // licence that (per CREDITS.md, the source of truth this is built from) requires exactly this kind
+  // of on-screen credit. Rebuilt from CREDITS.md's own wording rather than restating it from memory,
+  // and sized from its own wrapped content (docs/GAME_FEEL.md rule 1) with a scrollable viewport for
+  // the (unlikely, but not impossible) case a future addition makes the list taller than the screen
+  // has room for -- "must size to its content or scroll/page", never overflow at 960x540 either way.
   buildCredits() {
-    const w = 560;
-    const h = 260;
-    const x = (GAME_WIDTH - w) / 2;
-    const y = (GAME_HEIGHT - h) / 2;
+    const w = 680;
+    const maxH = GAME_HEIGHT - 40; // leaves a margin top/bottom even if the content is this tall
+    const headerH = 48;
+    const footerH = 30;
+    const lineH = 13;
+    const wrapWidth = w - 80;
+
+    // A throwaway text object gives the exact wrap Phaser will use for the real one (the same trick
+    // src/scenes/ui.js's DialogBox/JournalPanel already use for their own wrapped text), so the
+    // panel's height is measured from the *wrapped* line count, not the raw paragraph count.
+    const measurer = uiText(this, 0, 0, '', 8).setWordWrapWidth(wrapWidth).setLineSpacing(5).setVisible(false);
+    const wrapped = [];
+    for (const para of CREDITS_LINES) {
+      if (para === '') { wrapped.push(''); continue; }
+      wrapped.push(...measurer.getWrappedText(para));
+    }
+    measurer.destroy();
+
+    const contentH = wrapped.length * lineH;
+    const h = Math.min(maxH, headerH + contentH + footerH);
+    const x = Math.round((GAME_WIDTH - w) / 2);
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+    const viewportH = h - headerH - footerH;
+    const scrollable = contentH > viewportH;
+    const maxScroll = Math.max(0, contentH - viewportH);
+
     const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6).setOrigin(0, 0);
     const panel = this.add.graphics();
     drawPanel(panel, x, y, w, h);
-    const lines = [
-      'BITS DUBAI: THE LUG TREASURE HUNT',
-      '',
-      'Built with Phaser 3, free and open source.',
-      'Campus layout from OpenStreetMap contributors,',
-      'under the Open Database License (ODbL).',
-      'All art and code original, made for this game.',
-      '',
-      'A gift, not a product.',
-    ];
-    const body = uiText(this, GAME_WIDTH / 2, y + 36, lines.join('\n'), 8, COLORS.text)
-      .setOrigin(0.5, 0).setAlign('center').setLineSpacing(10);
-    const footer = uiText(this, GAME_WIDTH / 2, y + h - 24, 'ESC / ENTER TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
-    const parts = [dim, panel, body, footer];
+    const title = uiText(this, GAME_WIDTH / 2, y + 22, 'CREDITS', 12, COLORS.highlight).setOrigin(0.5);
+
+    const viewX = x + 20;
+    const viewY = y + headerH;
+    const body = uiText(this, x + 40, viewY, wrapped.join('\n'), 8, COLORS.text).setLineSpacing(5);
+    // Clips the body text to the panel's own content area -- without this, scrolled-past lines would
+    // just draw over the header/footer instead of being hidden (the whole point of a viewport).
+    const maskShape = this.make.graphics({}, false);
+    maskShape.fillStyle(0xffffff).fillRect(viewX, viewY, w - 40, viewportH);
+    body.setMask(maskShape.createGeometryMask());
+
+    const footerText = scrollable ? 'UP/DOWN TO SCROLL -- ESC/ENTER TO CLOSE' : 'ESC / ENTER TO CLOSE';
+    const footer = uiText(this, GAME_WIDTH / 2, y + h - 20, footerText, 8, COLORS.dim).setOrigin(0.5);
+    const parts = [dim, panel, title, body, footer];
     parts.forEach((part) => part.setDepth(115).setVisible(false));
-    return { parts, visible: false };
+    return { parts, maskShape, body, viewY, viewportH, contentH, maxScroll, scroll: 0, visible: false, box: { x, y, w, h } };
   }
 
   openCredits() {
     this.credits.visible = true;
+    this.credits.scroll = 0;
+    this.credits.body.setY(this.credits.viewY);
     this.credits.parts.forEach((part) => part.setVisible(true));
+  }
+
+  // Up/Down while Credits is open scroll it instead of moving the title menu's own highlight (see the
+  // UP/DOWN keydown handlers in create()); a no-op once every line already fits (maxScroll === 0).
+  scrollCredits(direction) {
+    const c = this.credits;
+    if (!c.maxScroll) return;
+    c.scroll = Phaser.Math.Clamp(c.scroll + direction * 3 * 13, 0, c.maxScroll);
+    c.body.setY(c.viewY - c.scroll);
   }
 
   closeCredits() {
@@ -186,7 +285,7 @@ class TitleScene extends Phaser.Scene {
   }
 
   moveMenu(direction) {
-    if (this.stage !== 'menu' || this.controls.visible || this.credits.visible) return;
+    if (this.stage !== 'menu' || this.controls.visible || this.credits.visible || this.newGameConfirm.visible) return;
     this.menuIndex = (this.menuIndex + direction + this.menuItems.length) % this.menuItems.length;
     this.refreshMenu();
   }
@@ -198,6 +297,7 @@ class TitleScene extends Phaser.Scene {
   // Enter/Space: reveals the menu from the intro prompt the first time, confirms the highlighted
   // button every time after (docs/GAME_FEEL.md -- one prompt at a time, never both on screen).
   onConfirm() {
+    if (this.newGameConfirm.visible) { this.confirmNewGameConfirm(); return; }
     if (this.controls.visible) { this.controls.close(); return; }
     if (this.credits.visible) { this.closeCredits(); return; }
     if (this.stage === 'intro') { this.showMenu(); return; }
@@ -207,17 +307,99 @@ class TitleScene extends Phaser.Scene {
   }
 
   onCancel() {
+    // FB-0040: Esc always means "No" here -- it never starts a new game, same spirit as every other
+    // modal in this game where Esc is the safe/no-op way out (docs/GAME_FEEL.md).
+    if (this.newGameConfirm.visible) { this.resolveNewGameConfirm(false); return; }
     if (this.controls.visible) this.controls.close();
     else if (this.credits.visible) this.closeCredits();
   }
 
   confirmMenu() {
     const item = this.menuItems[this.menuIndex];
-    if (item.id === 'play') this.startPlay(false);
-    else if (item.id === 'continue') this.startPlay(true);
+    // FB-0040: "Play" used to silently reset the game state (and, the moment autosave next fired,
+    // overwrite whatever save already existed) with no way to back out. Continue/Watch the Card Again
+    // never touch the save, so they're unaffected.
+    if (item.id === 'play') {
+      if (saveEnabled() && hasSaveFile(currentProfile())) this.openNewGameConfirm();
+      else this.startPlay(false);
+    } else if (item.id === 'continue') this.startPlay(true);
     else if (item.id === 'watch-card') this.watchCardAgain();
     else if (item.id === 'controls') this.controls.open();
     else if (item.id === 'credits') this.openCredits();
+  }
+
+  // ---------- FB-0040: "start a new game? your save will be replaced" ----------
+  // Shown only when "Play" (new game) is chosen and a save already exists -- Continue/Watch the Card
+  // Again never touch the save, so they skip this entirely (confirmMenu() above). Built once in
+  // create(), the same "measure once, redraw on state change" shape every other panel in this file
+  // already uses, reusing drawPanel()/Button exactly as the brief asks.
+  buildNewGameConfirm() {
+    const w = 460;
+    const h = 190;
+    const x = Math.round((GAME_WIDTH - w) / 2);
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+
+    const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6).setOrigin(0, 0);
+    const panel = this.add.graphics();
+    drawPanel(panel, x, y, w, h);
+    const title = uiText(this, GAME_WIDTH / 2, y + 40, 'Start a new game?', 12, COLORS.highlight).setOrigin(0.5);
+    const sub = uiText(this, GAME_WIDTH / 2, y + 68, 'Your saved game will be replaced.', 8, COLORS.text).setOrigin(0.5);
+
+    const items = [{ id: 'no', label: 'No' }, { id: 'yes', label: 'Yes' }]; // 'No' is index 0: the safe default
+    const btnW = 160;
+    const btnH = 44;
+    const gap = 20;
+    const bx = x + (w - (btnW * 2 + gap)) / 2;
+    const by = y + h - btnH - 30;
+    const buttons = items.map((it, i) => new Button(this, bx + i * (btnW + gap), by, btnW, btnH, it.label, () => {
+      this.newGameConfirm.index = i;
+      this.refreshNewGameConfirm();
+      this.resolveNewGameConfirm(it.id === 'yes');
+    }));
+
+    const parts = [dim, panel, title, sub];
+    parts.forEach((part) => part.setDepth(118).setVisible(false));
+    buttons.forEach((button) => button.setVisible(false));
+    return { parts, buttons, items, index: 0, visible: false };
+  }
+
+  openNewGameConfirm() {
+    const c = this.newGameConfirm;
+    c.visible = true;
+    c.index = 0; // 'No', highlighted by default (FB-0040 brief)
+    c.parts.forEach((part) => part.setVisible(true));
+    c.buttons.forEach((button) => button.setVisible(true));
+    this.refreshNewGameConfirm();
+  }
+
+  closeNewGameConfirm() {
+    const c = this.newGameConfirm;
+    c.visible = false;
+    c.parts.forEach((part) => part.setVisible(false));
+    c.buttons.forEach((button) => button.setVisible(false));
+  }
+
+  moveNewGameConfirm(direction) {
+    const c = this.newGameConfirm;
+    c.index = (c.index + direction + c.items.length) % c.items.length;
+    this.refreshNewGameConfirm();
+  }
+
+  refreshNewGameConfirm() {
+    const c = this.newGameConfirm;
+    c.buttons.forEach((button, i) => button.setFocused(i === c.index));
+  }
+
+  // Enter/Space confirms whichever of No/Yes is currently highlighted.
+  confirmNewGameConfirm() {
+    const c = this.newGameConfirm;
+    this.resolveNewGameConfirm(c.items[c.index].id === 'yes');
+  }
+
+  resolveNewGameConfirm(startNewGame) {
+    this.closeNewGameConfirm();
+    if (startNewGame) this.startPlay(false);
+    // 'No': just closes, back to the menu exactly as it was -- no game state touched.
   }
 
   // Loads the save (for her name/customisation/the config's own recipient fallback, src/card.js)

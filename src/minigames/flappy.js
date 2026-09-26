@@ -36,10 +36,19 @@ class FlappyScene extends MinigameBaseScene {
     grid.lineBetween(0, FL_GROUND_Y, GAME_WIDTH, FL_GROUND_Y);
 
     ensurePlayerAnims(this);
-    // Facing right (the direction she's travelling through the room): the sheet's own left-row art
-    // mirrored, same convention world.js uses for `right`.
-    this.bird = this.add.sprite(FL_BIRD_X, GAME_HEIGHT / 2, 'player', 16).setFlipX(true).setDepth(10);
+    // Facing right (the direction she's travelling through the room): FB-0043's own real right-facing
+    // art now, not a mirrored left frame (world.js/framework-scene.js no longer mirror anything).
+    this.bird = this.add.sprite(FL_BIRD_X, GAME_HEIGHT / 2, 'player', HERO_IDLE_FRAME.right).setDepth(10);
     this.pipes = [];
+
+    // FB-0042: a "get ready" beat -- she hovers with a gentle bob and a prompt instead of immediately
+    // falling under gravity through a level that's already scrolling before the player has done
+    // anything. `flying` (set on the very first real flap, in flap() below) gates every bit of that:
+    // playUpdate() below returns before gravity, pipe-scrolling or collision run at all while it's
+    // false, and startAttempt() resets it fresh for every attempt including a retry.
+    this.flying = false;
+    this.hoverPrompt = uiText(this, FL_BIRD_X, GAME_HEIGHT / 2 - 34, 'PRESS SPACE TO FLAP', 10, COLORS.highlight)
+      .setOrigin(0.5).setDepth(11).setStroke('#1a1c2c', 4);
 
     this.blinkOn = true;
     this.time.addEvent({ delay: FL_BLINK_MS, loop: true, callback: () => { this.blinkOn = !this.blinkOn; this.applyBlink(); } });
@@ -53,6 +62,8 @@ class FlappyScene extends MinigameBaseScene {
 
   startAttempt() {
     this.vy = 0;
+    this.flying = false;
+    this.hoverPrompt.setVisible(true);
     this.bird.setPosition(FL_BIRD_X, GAME_HEIGHT / 2).setRotation(0);
     for (const pipe of this.pipes) this.destroyRack(pipe);
     this.pipes = [];
@@ -61,6 +72,10 @@ class FlappyScene extends MinigameBaseScene {
   }
 
   flap() {
+    if (!this.flying) {
+      this.flying = true;
+      this.hoverPrompt.setVisible(false);
+    }
     this.vy = flappyFlap();
   }
 
@@ -117,12 +132,21 @@ class FlappyScene extends MinigameBaseScene {
   }
 
   playUpdate(time, delta) {
+    // FB-0042: the "get ready" hover -- gentle bob, no gravity, no pipe scrolling, no collision --
+    // until she actually flaps for the first time (flap() above).
+    if (!this.flying) {
+      this.bird.y = GAME_HEIGHT / 2 + Math.sin(time / 300) * 6;
+      this.bird.setRotation(0);
+      this.bird.anims.play('idle-right', true);
+      return;
+    }
+
     const dt = delta / 1000;
     const step = flappyStep(this.vy, this.bird.y, dt);
     this.vy = step.vy;
     this.bird.y = step.y;
     this.bird.setRotation(Phaser.Math.Clamp(this.vy / 500, -0.5, 1.0));
-    this.bird.anims.play('idle-side', true);
+    this.bird.anims.play('idle-right', true);
 
     for (const pipe of this.pipes) {
       pipe.x -= FL_SCROLL_SPEED * dt;

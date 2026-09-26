@@ -64,6 +64,31 @@ class MinigameBaseScene extends Phaser.Scene {
     this.hud.text.setText(`${label}: ${this.score} / ${this.def.scoreTarget}`);
   }
 
+  // FB-0042: a short, self-fading message shown inside the mini-game itself (e.g. the platformer's
+  // "collect all the charge cells first!" when she reaches the door too early) -- the game's own
+  // global 'toast' event goes to UIScene's Toast, which would be hidden behind this scene's own
+  // opaque backdrop while a mini-game is on top (world.js launchMinigame() only pauses 'world', not
+  // 'ui', but every mini-game scene renders above both), so a mini-game that needs a quick message
+  // shows it here instead, built once and reused, same drawPanel()/uiText() look as everywhere else.
+  showMessage(text) {
+    if (!this.message) {
+      const w = 380;
+      const h = 34;
+      const x = Math.round((GAME_WIDTH - w) / 2);
+      const y = GAME_HEIGHT - 74;
+      const panel = this.add.graphics().setDepth(95).setAlpha(0);
+      drawPanel(panel, x, y, w, h);
+      const label = uiText(this, GAME_WIDTH / 2, y + h / 2, '', 10, COLORS.text).setOrigin(0.5).setDepth(96).setAlpha(0);
+      this.message = { panel, label };
+    }
+    const m = this.message;
+    m.label.setText(text);
+    this.tweens.killTweensOf([m.panel, m.label]);
+    m.panel.setAlpha(1);
+    m.label.setAlpha(1);
+    this.tweens.add({ targets: [m.panel, m.label], alpha: 0, delay: 1400, duration: 400 });
+  }
+
   // ---------- intro ----------
   showIntro() {
     this.mgState = 'intro';
@@ -167,6 +192,13 @@ class MinigameBaseScene extends Phaser.Scene {
 // as the same game's UI, not a different one bolted on. Sized from its own content every time
 // (docs/GAME_FEEL.md rule 1: "a panel's box is sized from its content, never the other way around"),
 // since an intro's instructions and a game-over's score/skip line are different lengths.
+// FB-0042: a card ignores ENTER/SPACE for this long after it appears -- mashing Space to play (it's
+// also the jump/flap key) or Enter to clear a line of dialog beforehand used to carry straight through
+// into an instant Retry/Continue on whatever card popped up next, including the "SKIP" offer sharing
+// the same list. Comfortably above human reaction time to an unexpected screen change, comfortably
+// below "feels laggy" for a deliberate keypress once the card's actually up.
+const CARD_INPUT_DELAY_MS = 350;
+
 class MinigameCard {
   constructor(scene) {
     this.scene = scene;
@@ -175,6 +207,7 @@ class MinigameCard {
     this.itemTexts = [];
     this.index = 0;
     this.handlers = [];
+    this.acceptInput = false;
   }
 
   hide() {
@@ -183,6 +216,7 @@ class MinigameCard {
     this.itemTexts = [];
     this.handlers.forEach(({ event, fn }) => this.scene.input.keyboard.off(event, fn));
     this.handlers = [];
+    this.acceptInput = false;
   }
 
   on(event, fn) {
@@ -263,9 +297,17 @@ class MinigameCard {
     for (const key of ['UP', 'W']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(-1); });
     for (const key of ['DOWN', 'S']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(1); });
     for (const key of ['ENTER', 'SPACE']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.confirm(); });
+
+    // FB-0042: confirm keys are ignored for a short beat after the card appears (see
+    // CARD_INPUT_DELAY_MS above) -- mashing Space (also the jump/flap key) or Enter (also how you
+    // clear a line of dialog) could otherwise carry straight through into an instant Retry/Continue
+    // the instant a new card popped up, skipping past it (and past the "skip" offer) unread.
+    this.acceptInput = false;
+    scene.time.delayedCall(CARD_INPUT_DELAY_MS, () => { this.acceptInput = true; });
   }
 
   move(direction) {
+    if (!this.acceptInput) return;
     this.index = (this.index + direction + this.items.length) % this.items.length;
     this.refresh();
   }
@@ -278,6 +320,7 @@ class MinigameCard {
   }
 
   confirm() {
+    if (!this.acceptInput) return;
     const item = this.items[this.index];
     if (item && item.onSelect) item.onSelect();
   }
@@ -349,12 +392,17 @@ class MinigameCard {
 // nothing here needs to know the colour at all, it just uses the texture the game already loaded.
 //
 // The walk/idle animations are global to the whole Phaser game (`scene.anims` is a reference to one
-// shared AnimationManager, not a per-scene one), so WorldScene has always already created 'walk-side'
-// / 'idle-side' by the time a mini-game can possibly launch (it's only reachable from inside a real
-// game session) -- this guard (`anims.exists`) is just defensive, the same pattern world.js's own
-// createAnimations() already uses for itself.
-const HERO_WALK_SIDE_FRAMES = [17, 18, 19, 20, 21, 22];
-const HERO_IDLE_SIDE_FRAMES = [16, 23];
+// shared AnimationManager, not a per-scene one), so WorldScene has always already created 'walk-left'/
+// 'walk-right'/'idle-left'/'idle-right' by the time a mini-game can possibly launch (it's only
+// reachable from inside a real game session) -- this guard (`anims.exists`) is just defensive, the
+// same pattern world.js's own createAnimations() already uses for itself. FB-0043: real left/right
+// rows now, no more a single shared "side" row played with flipX -- see world.js's own comment on why
+// (ERR-0007, "she moonwalks both ways").
+const HERO_WALK_FRAMES = { left: [17, 18, 19, 20, 21, 22], right: [25, 26, 27, 28, 29, 30] };
+const HERO_IDLE_FRAMES = { left: [16, 23], right: [24, 31] };
+// A sensible still frame per direction for a subclass that wants to place its hero sprite before its
+// first anims.play() call (platformer.js/flappy.js).
+const HERO_IDLE_FRAME = { left: 16, right: 24 };
 
 // A small landing puff (coordinator brief, "juice": "a small landing puff in the platformer") --
 // three little dust motes that pop out sideways and fade, cheap enough to spawn on every landing
@@ -370,21 +418,23 @@ function spawnDustPuff(scene, x, y) {
 }
 
 function ensurePlayerAnims(scene) {
-  if (!scene.anims.exists('walk-side')) {
-    scene.anims.create({
-      key: 'walk-side',
-      frames: scene.anims.generateFrameNumbers('player', { frames: HERO_WALK_SIDE_FRAMES }),
-      frameRate: 12,
-      repeat: -1,
-    });
-  }
-  if (!scene.anims.exists('idle-side')) {
-    scene.anims.create({
-      key: 'idle-side',
-      frames: scene.anims.generateFrameNumbers('player', { frames: HERO_IDLE_SIDE_FRAMES }),
-      frameRate: 2,
-      yoyo: true,
-      repeat: -1,
-    });
+  for (const dir of ['left', 'right']) {
+    if (!scene.anims.exists(`walk-${dir}`)) {
+      scene.anims.create({
+        key: `walk-${dir}`,
+        frames: scene.anims.generateFrameNumbers('player', { frames: HERO_WALK_FRAMES[dir] }),
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
+    if (!scene.anims.exists(`idle-${dir}`)) {
+      scene.anims.create({
+        key: `idle-${dir}`,
+        frames: scene.anims.generateFrameNumbers('player', { frames: HERO_IDLE_FRAMES[dir] }),
+        frameRate: 2,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
   }
 }

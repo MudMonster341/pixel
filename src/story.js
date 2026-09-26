@@ -11,10 +11,13 @@
 const STORY = {
   // The LUG volunteer (docs/STORY.md beats 5-9): stands at the stall behind the Main Block foyer's
   // staircase (src/maps.js `main-block-g`). The first talk sets the hunt going; while hunting, he
-  // reacts to how many of the 3 keys she's holding right now, not which ones specifically -- the
-  // task brief's own wording ("reacts to how many keys she has (0, 1, 2), with a hint each time")
-  // ties the hint to the *count*, so the order the owner listed the rooms in (Physics Lab -> ICVL ->
-  // Room 195) is also the order the hints come in, regardless of which key she actually found first.
+  // names the first key she's still missing, in docs/STORY.md's own room order (Physics Lab -> ICVL
+  // -> Room 195) -- the same rule src/maplogic.js questObjectiveText() already uses for the always-on
+  // tracker panel (FB-0039: a *count*-based hint used to point her at a room she'd already done
+  // whenever she found the keys out of order, e.g. physicsLab then room195 left her on "keysCount: 1"
+  // -> "hint-0", sending her back to the Physics Lab desk she'd already emptied). `reward` (all 3, a
+  // count check since collecting order doesn't matter once she has everyone) is listed first so it
+  // always wins once she's actually done, before any per-key hint below it gets a chance to match.
   // With all 3 he calls her the first to finish and hands over the small box; the box itself opening
   // into the birthday card (docs/STORY.md "the box opens...") is the reward entry's own last action,
   // `{ boxOpening: true }`, below.
@@ -34,24 +37,6 @@ const STORY = {
       ],
     },
     {
-      id: 'hint-0',
-      when: { stage: 'hunting', keysCount: 0 },
-      lines: [
-        "Still looking, {name}? The first key's in the Physics Lab, up on the 3rd floor.",
-        "The lift's just for show — take the stairs!",
-      ],
-    },
-    {
-      id: 'hint-1',
-      when: { stage: 'hunting', keysCount: 1 },
-      lines: ['One down, two to go! Try the ICVL — the computing lab on the 1st floor.'],
-    },
-    {
-      id: 'hint-2',
-      when: { stage: 'hunting', keysCount: 2 },
-      lines: ['Almost there — the last one is in Room 195.'],
-    },
-    {
       id: 'reward',
       when: { stage: 'hunting', keysCount: 3 },
       lines: [
@@ -59,6 +44,12 @@ const STORY = {
         'Here — this is yours. Well earned.',
       ],
       actions: [
+        // FB-0041b: the volunteer collects the 3 keys back from her here (docs/STORY.md: he's the one
+        // who hid them and hands out the reward) -- `take` before `give` also guarantees the reward
+        // box is never even attempted while the 3 key items still occupy bag slots.
+        { take: 'keyPhysicsLab' },
+        { take: 'keyIcvl' },
+        { take: 'keyRoom195' },
         { give: 'lugBox' },
         { stage: 'rewarded' },
         { journal: 'I found all 3 keys and gave them to the volunteer — I was the first to finish! He gave me a small box.' },
@@ -69,6 +60,24 @@ const STORY = {
       ],
     },
     {
+      id: 'hint-0',
+      when: { stage: 'hunting', notHasKey: 'physicsLab' },
+      lines: [
+        "Still looking, {name}? The first key's in the Physics Lab, up on the 3rd floor.",
+        "The lift's just for show — take the stairs!",
+      ],
+    },
+    {
+      id: 'hint-1',
+      when: { stage: 'hunting', notHasKey: 'icvl' },
+      lines: ['One down, two to go! Try the ICVL — the computing lab on the 1st floor.'],
+    },
+    {
+      id: 'hint-2',
+      when: { stage: 'hunting', notHasKey: 'room195' },
+      lines: ['Almost there — the last one is in Room 195.'],
+    },
+    {
       id: 'after-reward',
       when: { stage: 'rewarded' },
       lines: ['Enjoy your prize, {name}. You really earned it.'],
@@ -76,11 +85,11 @@ const STORY = {
   ],
 
   // The three key rooms (docs/STORY.md "Key rooms" table): a desk/bench interactable, not a floor
-  // pickup -- pressing E starts the room's own moment. `minigame` names the M4 mini-game this key
-  // will eventually be won from (platformer / flappy / tetris, per the table); for now it's a stub
-  // action (src/dialog.js) that resolves immediately, right before the key is actually given, so
-  // wiring the real mini-game in later only means making that one action block on an outcome instead
-  // of no-op-ing -- nothing else about this data (the item, the flag, the journal line) changes.
+  // pickup -- pressing E starts the room's own moment. `minigame` names the real M4 mini-game this
+  // key is won from (platformer / flappy / tetris, per the table, src/minigames/) -- the `take` entry
+  // below runs it *before* `give`/`key` (src/dialog.js's `minigame` action suspends the rest of the
+  // list until the mini-game reports an outcome), so the key/journal/toast lines only fire once she's
+  // actually won it (or taken the after-3-losses skip gift, docs/STORY.md "nobody may be locked out").
   keyStations: {
     physicsLab: {
       name: 'Physics Lab',
@@ -122,10 +131,14 @@ function keyStationDialog(keyId) {
       id: 'take',
       when: { notHasKey: keyId },
       lines: [def.takenLine],
+      // FB-0041b: `key` (quest progress) now runs *before* `give` (the physical item) -- so the
+      // treasure hunt itself always advances the instant the mini-game is won, even in the
+      // unreachable-today-but-still-worth-guarding-against case the bag were somehow full right at
+      // that moment (a full bag only ever stops the *rest* of this list, src/dialog.js `give`).
       actions: [
         { minigame: def.minigame },
-        { give: def.item },
         { key: keyId },
+        { give: def.item },
         { journal: def.journal },
         { toast: `You got the ${def.name} key!` },
       ],

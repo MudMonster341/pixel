@@ -132,6 +132,72 @@ test('a chosen clothes colour is saved and visible on her sprite in the world', 
   expect(colors).not.toEqual(expect.arrayContaining(['#ff6fb1'])); // the pink default's top should be gone
 });
 
+// The idle-down frame's own colors -- not the filename: Phaser's loader hands textures back as blob:
+// URLs (see the "a chosen clothes colour..." test above), so a texture's source file can't be read
+// back from `.src`; sampling pixels the same way that test does is the only real way to tell which
+// sheet actually ended up loaded.
+async function playerIdleColors(page) {
+  return page.evaluate(() => {
+    const tex = game.textures.get('player');
+    const frame = tex.get(0); // idle-down, ADR 0013/FB-0043 frame layout
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(frame.source.image, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+    const { data } = ctx.getImageData(0, 0, frame.width, frame.height);
+    const hexes = new Set();
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue;
+      hexes.add(`#${[data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`);
+    }
+    return [...hexes];
+  });
+}
+
+// FB-0038: Phaser's loader skips (a console warning, not an overwrite) queueing a spritesheet under
+// a texture key that already exists -- so a second "new game" in the same page that picks a
+// *different* clothes colour than the first used to keep the old sheet forever. src/main.js
+// BootScene now removes the stale 'player' texture (and every global animation built from it) first
+// whenever the wanted file differs from what's already loaded.
+test('FB-0038: a second new game with a different clothes colour replaces the old sprite sheet', async ({ page }) => {
+  await startPlayIntoIntro(page);
+  await pressUntil(page, 'Escape', () => isActive(page, 'name-entry'));
+  await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
+  await pressUntil(page, 'ArrowRight', async () => (await page.evaluate(() => GameState.customization.clothes)) === 'sky');
+  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
+  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  await waitForBoot(page);
+  expect((await state(page)).map).toBe('campus');
+  let colors = await playerIdleColors(page);
+  expect(colors).toEqual(expect.arrayContaining(['#3b7dd8'])); // sky swatch top base
+  expect(colors).not.toEqual(expect.arrayContaining(['#3d8a3f'])); // mint swatch top base -- not yet
+
+  // Quit to Title (Resume -> Controls -> Save -> Quit to Title).
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await state(page)).pause.visible).toBe(true);
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('title'))).toBe(true);
+
+  // Play again, picking a different colour this time.
+  await chooseTitleMenu(page, 'play');
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('greeting'))).toBe(true);
+  await pressUntil(page, 'Escape', () => isActive(page, 'name-entry'));
+  await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
+  await pressUntil(page, 'ArrowRight', async () => (await page.evaluate(() => GameState.customization.clothes)) === 'mint');
+  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
+  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  await waitForBoot(page);
+
+  colors = await playerIdleColors(page);
+  expect(colors).toEqual(expect.arrayContaining(['#3d8a3f'])); // mint swatch top base -- the new sheet
+  expect(colors).not.toEqual(expect.arrayContaining(['#3b7dd8'])); // the old sky colour must be gone
+  // A working walk animation on the new sheet too -- proves the stale, mint-less anims were really
+  // rebuilt, not just left pointing at frame numbers from whatever texture happened to be 'player'.
+  expect(await page.evaluate(() => game.anims.exists('walk-down'))).toBe(true);
+});
+
 test('the bus sequence blocks input and Esc skips it, ending with her outside the gate', async ({ page }) => {
   await startPlayIntoIntro(page);
   await pressUntil(page, 'Escape', () => isActive(page, 'name-entry')); // skip greeting

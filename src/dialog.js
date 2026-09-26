@@ -96,6 +96,12 @@ function hasNewDialog(npc, state) {
 //                                (matches the ground-pickup behaviour in updatePickups(),
 //                                src/scenes/world.js) -- so a following setFlag never fires for an
 //                                item the player didn't actually receive
+//   { take: 'keyPhysicsLab' }  removes one of that item from the inventory (add a `count` for more
+//                                than one), oldest slot first (Inventory.remove(), src/state.js) --
+//                                never blocks the rest of the list even if she isn't holding any
+//                                (FB-0041b: the LUG volunteer "collecting" the 3 key items back when
+//                                she turns them in, docs/STORY.md, so they don't sit in the bag
+//                                forever and can't ever crowd out the reward `give` right after them)
 //   { setFlag: 'metVolunteer' }                      sets a flag to true
 //   { setFlag: { name: 'tomasChats', value: 2 } }    sets a flag to any value (e.g. a chat counter)
 //   { stage: 'hunting' }        GameState.quest.stage = 'hunting'
@@ -139,7 +145,9 @@ function runDialogActionsFrom(actions, from, state, onDone) {
       if (onDone) onDone('full');
       return;
     }
-    if ('setFlag' in action) {
+    if ('take' in action) {
+      if (state.inventory.remove(action.take, action.count || 1) > 0) changed = true;
+    } else if ('setFlag' in action) {
       if (typeof action.setFlag === 'string') state.flags[action.setFlag] = true;
       else state.flags[action.setFlag.name] = action.setFlag.value;
       changed = true;

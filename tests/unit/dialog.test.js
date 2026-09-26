@@ -198,6 +198,34 @@ test('actions: give stops the rest of the list and toasts when the bag is full',
   assert.equal(GameState.flags.shouldNotRun, undefined);
 });
 
+// FB-0041b: `{ take: itemId }` removes one of that item from the inventory (Inventory.remove(),
+// src/state.js) -- backs the volunteer "collecting" the 3 key items back at the reward (src/story.js).
+test('actions: take removes one of an item held, and never blocks the rest of the list', () => {
+  const { GameState, applyDialogActions, gameEvents } = loadGameData();
+  GameState.inventory.add('apple');
+  GameState.inventory.add('apple');
+  let changed = 0;
+  gameEvents.on('state-changed', () => changed++);
+
+  applyDialogActions([{ take: 'apple' }], GameState);
+  assert.equal(countItem(GameState.inventory.slots, 'apple'), 1);
+  assert.equal(changed, 1);
+
+  applyDialogActions([{ take: 'apple' }, { setFlag: 'afterTake' }], GameState);
+  assert.equal(countItem(GameState.inventory.slots, 'apple'), 0);
+  assert.equal(GameState.flags.afterTake, true, 'take never stops the rest of the list');
+});
+
+test('actions: take is a safe no-op (no crash, no notifyStateChanged) when nothing is actually held', () => {
+  const { GameState, applyDialogActions, gameEvents } = loadGameData();
+  let changed = 0;
+  gameEvents.on('state-changed', () => changed++);
+
+  applyDialogActions([{ take: 'sword' }, { setFlag: 'afterTake' }], GameState);
+  assert.equal(GameState.flags.afterTake, true);
+  assert.equal(changed, 1, 'only the setFlag fired state-changed, not the no-op take');
+});
+
 test('actions: setFlag (bare and with an explicit value)', () => {
   const { GameState, applyDialogActions } = loadGameData();
   applyDialogActions([{ setFlag: 'metVolunteer' }], GameState);

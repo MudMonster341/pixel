@@ -50,14 +50,21 @@ similar brightness).
 | Background student A | Alex | Only the plaid shirt recolored, to plain blue (reusing `PALETTE.B`, the existing pants blue). Hair and grey vest untouched. |
 | Background student B | Bob | Only the near-black blazer recolored, to the mustard/gold already documented as this game's Accent gold ramp in STYLE_GUIDE.md (`#a8812a`/`#e0b84f`/`#ffd23f`). Hair and skin untouched -- his hair was already dark like the lead's new hair, so leaving his top dark too would have made him a visual near-duplicate; the recolor exists specifically to avoid that. |
 
-**Frame layout, per character, 3 rows x 8 columns** (`CHAR_COLS = 8` in both `tools/make-assets.js`
+**Frame layout, per character, 4 rows x 8 columns** (`CHAR_COLS = 8` in both `tools/make-assets.js`
 and `src/scenes/world.js`, kept as two independent literals rather than a shared import since this
 project has no module system yet -- see docs/ARCHITECTURE.md):
 
-- Rows: down, up, left (right = flipX-mirrored left, unchanged convention, STYLE_GUIDE.md
-  "Characters"). The pack's own sheets have an explicit fourth "right" column, but it's a plain
-  horizontal mirror of "left" in every frame checked, so mirroring stays the simpler, unchanged
-  approach rather than adding a true fourth direction throughout the engine.
+- Rows: down, up, left, right, **all four genuine, separately-drawn art -- never mirrored.**
+  **Correction (FB-0043, ERR-0007, 2026-09-26):** this ADR originally said "right = flipX-mirrored
+  left... the pack's own sheets have an explicit fourth 'right' column, but it's a plain horizontal
+  mirror of 'left' in every frame checked." That claim was never actually true -- it wasn't checked
+  against decoded pixels, just assumed -- and it was backwards besides: the column this ADR called
+  "left" was actually the pack's *right*-facing block, and mirroring it for "right" produced a
+  left-facing-looking pose, so both directions rendered wrong ("she moonwalks both ways"). Fixed by
+  decoding the source sheets and building all 4 rows for real (`tools/make-assets.js` `CHAR_ROWS`/
+  `CHAR_DIR_INDEX`); nothing about the recolor tables, the 16x24 frame size, or the 8-column layout
+  below changed, only which source block feeds which output row, and that "right" is no longer
+  derived from "left" at all.
 - Columns: `[idle, walk×6, idle-anim]`.
   - **Idle** (frame 0 of each row): the pack's `_idle_16x16.png`, one static pose per direction.
   - **Walk** (frames 1-6): the pack's `_run_16x16.png`, which has genuine per-frame motion (leg

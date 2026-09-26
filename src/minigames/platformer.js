@@ -59,7 +59,8 @@ class PlatformerScene extends MinigameBaseScene {
     this.player.body.setSize(14, 22);
     this.player.body.setCollideWorldBounds(true);
     ensurePlayerAnims(this);
-    this.hero = this.add.sprite(60, PF_GROUND_Y - 40, 'player', 16).setDepth(20);
+    this.heroFacing = 'right'; // she runs into the level, left to right
+    this.hero = this.add.sprite(60, PF_GROUND_Y - 40, 'player', HERO_IDLE_FRAME.right).setDepth(20);
     this.physics.add.collider(this.player, this.platformGroup);
 
     this.coinSprites = PF_COINS.map((coin) => this.makeCoin(coin));
@@ -69,7 +70,11 @@ class PlatformerScene extends MinigameBaseScene {
 
     this.wasGrounded = true;
     this.jumpQueuedAt = null;
-    const queueJump = (event) => { if (!event.repeat) this.jumpQueuedAt = this.time.now; };
+    // FB-0042: gated on `mgState === 'playing'` -- Space is also how you confirm the intro/game-over
+    // card's default item ("START"/"RETRY"), and this listener is scene-wide (registered once, here,
+    // not torn down between attempts), so the very same Space press that confirmed Retry used to also
+    // queue a jump for the instant play resumed, making her hop on frame one of every single retry.
+    const queueJump = (event) => { if (!event.repeat && this.mgState === 'playing') this.jumpQueuedAt = this.time.now; };
     const releaseJump = () => {
       if (this.mgState === 'playing' && this.player.body.velocity.y < 0) {
         this.player.body.velocity.y = clipJumpRelease(this.player.body.velocity.y);
@@ -145,11 +150,16 @@ class PlatformerScene extends MinigameBaseScene {
   tryFinish() {
     if (this.mgState !== 'playing') return;
     if (this.score >= this.def.scoreTarget) this.win();
+    // FB-0042: reaching the door without enough cells used to do nothing at all -- no feedback that
+    // she was even close, just a wall that quietly refuses to open. A short on-screen message (this
+    // scene's own, see framework-scene.js showMessage()) instead of silence.
+    else this.showMessage('Collect all the charge cells first!');
   }
 
   startAttempt() {
     this.player.setPosition(60, PF_GROUND_Y - 40);
     this.player.body.reset(60, PF_GROUND_Y - 40);
+    this.heroFacing = 'right';
     this.groundedTimer = 0;
     this.wasGrounded = true;
     this.jumpQueuedAt = null;
@@ -191,11 +201,14 @@ class PlatformerScene extends MinigameBaseScene {
     }
 
     this.hero.setPosition(this.player.x, this.player.y + 1);
+    // FB-0043: real left/right art, never a mirrored "side" row (see framework-scene.js
+    // ensurePlayerAnims()) -- `heroFacing` remembers the last real direction so idle keeps facing
+    // the way she was last actually moving, the same way world.js's own idle animation does.
     if (dx !== 0) {
-      this.hero.setFlipX(dx < 0);
-      this.hero.anims.play('walk-side', true);
+      this.heroFacing = dx < 0 ? 'left' : 'right';
+      this.hero.anims.play(`walk-${this.heroFacing}`, true);
     } else {
-      this.hero.anims.play('idle-side', true);
+      this.hero.anims.play(`idle-${this.heroFacing}`, true);
     }
 
     if (this.player.y > PF_KILL_Y) this.lose();

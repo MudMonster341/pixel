@@ -17,6 +17,39 @@ test('walks right and faces right', async ({ page }) => {
   expect(after.facing).toBe('right');
 });
 
+// FB-0043 ("I look like I'm walking left when I'm walking right"): the sheet used to have only 3
+// real rows (down/up/left) and mirror "left" for "right" with flipX -- but the row it mirrored was
+// actually the pack's *right*-facing block mislabeled "left" (ERR-0007), so both directions ended up
+// wrong. Now there are 4 real rows and the player sprite is never flipped at all: walking right must
+// play the real 'walk-right' animation with flipX false, and walking left must play 'walk-left', also
+// unflipped.
+// Read the animation *while still holding the key*, not after holdKey() has already released it --
+// releasing switches her straight to the idle animation (still facing the same way), so reading
+// afterward would just be checking idle-right/idle-left, not the walk row this is actually about.
+async function animWhileHolding(page, key) {
+  await page.keyboard.down(key);
+  await expect.poll(() => page.evaluate(() => game.scene.getScene('world').player.anims.currentAnim?.key))
+    .toMatch(/^walk-/);
+  const info = await page.evaluate(() => {
+    const { player } = game.scene.getScene('world');
+    return { flipX: player.flipX, anim: player.anims.currentAnim && player.anims.currentAnim.key };
+  });
+  await page.keyboard.up(key);
+  return info;
+}
+
+test('FB-0043: walking right plays the real walk-right row, not a flipped walk-left', async ({ page }) => {
+  const info = await animWhileHolding(page, 'd');
+  expect(info.flipX).toBe(false);
+  expect(info.anim).toBe('walk-right');
+});
+
+test('FB-0043: walking left plays the real walk-left row, unflipped', async ({ page }) => {
+  const info = await animWhileHolding(page, 'a');
+  expect(info.flipX).toBe(false);
+  expect(info.anim).toBe('walk-left');
+});
+
 test('arrow keys move too', async ({ page }) => {
   const before = await state(page);
   await holdKey(page, 'ArrowDown', 300);

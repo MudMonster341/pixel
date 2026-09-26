@@ -72,10 +72,14 @@ module.exports = {
   // ordinary salmon-trim ones -- it's the building the story actually enters, and the one
   // photo-confirmed as "glass front under a red arch" (docs/research/bits-dubai-campus.md "Look
   // (from photos)").
+  // `portico: true` (premium pass, 2026-09-26, FB-0029): the Library and Mechanical Blocks get the
+  // smaller version of the Main Block's entrance language -- the same portico columns and glass
+  // canopy tiles flanking their door, just without the "BITS PILANI, DUBAI CAMPUS" sign lettering
+  // (`grand` only), per the premium-pass brief ("they stay locked; that's story logic, not art").
   buildings: {
     224330149: { name: 'Main Block', style: 'bits', wallTiles: 2, door: true, to: 'main-block-g', grand: true },
-    224330155: { name: 'Library Block', style: 'bits', wallTiles: 2, door: true, to: 'library-block-g' },
-    224330151: { name: 'Mechanical Block', style: 'bits', wallTiles: 2, door: true, to: 'mechanical-block-g' },
+    224330155: { name: 'Library Block', style: 'bits', wallTiles: 2, door: true, to: 'library-block-g', portico: true },
+    224330151: { name: 'Mechanical Block', style: 'bits', wallTiles: 2, door: true, to: 'mechanical-block-g', portico: true },
     // Hostel letters are best guesses from Google labels and the Wikimedia map (unverified, ADR 0007).
     519043993: { name: 'Hostel A', style: 'bits', wallTiles: 2, unverified: true },
     519043994: { name: 'Hostel B', style: 'bits', wallTiles: 2, unverified: true },

@@ -95,7 +95,9 @@ test('FB-0014: road kerb edge and corner tiles exist and roads stay walkable', (
 test('FB-0014: a kerb edge tile shows both the black-and-white kerb line and the paved sidewalk', () => {
   const counts = colorCounts('kerbT');
   assert.ok('#1a1c2c' in counts && '#ffffff' in counts, 'kerbT is missing the black/white kerb line');
-  assert.ok('#c0735c' in counts, 'kerbT is missing the paving (sidewalk) brick color');
+  // premium pass (2026-09-26, docs/research/campus-visual-reference.md): nudged browner/redder than
+  // the original FB-0025 salmon-pink ('#c0735c' -> '#b06b4a'), same 3-stop paver ramp.
+  assert.ok('#b06b4a' in counts, 'kerbT is missing the paving (sidewalk) brick color');
 });
 
 test('FB-0014: lane markings and a pedestrian crossing exist', () => {
@@ -104,9 +106,26 @@ test('FB-0014: lane markings and a pedestrian crossing exist', () => {
   }
 });
 
-test('FB-0014: the walkway path has a border distinct from its brick fill, so it reads as a path', () => {
+// premium pass (2026-09-26, FB-0028: "the map pavements... look like brick walls... same visual
+// weight as a wall"): the walkway's own border used to be baked into the top+bottom of every single
+// tile unconditionally, which is exactly what made a path read as walled-in (a 3-tile-wide run
+// stripes itself with a false seam down the middle, see tools/make-assets.js walkway()'s own comment).
+// The plain `walkway` fill is now genuinely borderless -- a real border only exists on the network's
+// true outward edge, as its own dedicated tile (build-campus.js stamps walkwayEdge*/walkwayCorner* in
+// place of a plain `walkway` cell only where it actually borders lawn).
+test("FB-0028: the walkway's plain fill has no border baked in (a path doesn't read as a walled-in strip)", () => {
   const counts = colorCounts('walkway');
-  assert.ok('#c8c8c8' in counts || '#6b6b6b' in counts, 'walkway has no stone border color');
+  assert.ok(!('#c8c8c8' in counts) && !('#ffffff' in counts), 'walkway should not have its own border baked into every tile');
+});
+
+test('FB-0028: the walkway network has dedicated edge/corner tiles for its true outward border', () => {
+  for (const name of ['walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR', 'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR']) {
+    const tile = tileInfoFor(name);
+    assert.ok(tile, `missing "${name}"`);
+    assert.equal(tile.solid, false, `${name} should stay walkable`);
+    const counts = colorCounts(name);
+    assert.ok('#e6ded0' in counts || '#8c8478' in counts, `${name} has no stone border color`);
+  }
 });
 
 // ---------- FB-0015: lawns, hedges, bushes, and trees with an overhead canopy ----------
@@ -246,10 +265,15 @@ test('BITS building walls use the BITS palette (sand wall, terracotta trim, and 
   assert.ok('#cf8a6c' in wallCounts, 'bitsWallPlain is missing the terracotta trim color');
   assert.ok('#f2ddb8' in wallCounts, 'bitsWallPlain is missing the light cap band (wallHi)');
   assert.ok('#6b7280' in wallCounts, 'bitsWallPlain is missing the cool baseboard (baseCool)');
+  // premium pass (2026-09-26, FB-0029): the Main Block entrance is a terracotta portal frame around
+  // a dark glass door, per the owner's own photo and two independent Wikimedia angles -- not the red
+  // arch this test used to pin (docs/STYLE_GUIDE.md's "Main Block specifically gets a real red arch"
+  // section is corrected to match, see that file's own note). archRed is gone entirely now; the
+  // terracotta trim ('&') and dark glass ('*') colors are what read as "grand" instead.
   const grandCounts = colorCounts('bitsEntranceGrandL');
-  assert.ok('#9c3a28' in grandCounts, 'bitsEntranceGrandL is missing the red arch color (archRed)');
-  const plainCounts = colorCounts('bitsEntranceL');
-  assert.ok(!('#9c3a28' in plainCounts), 'the ordinary bitsEntranceL should not have the grand arch color');
+  assert.ok(!('#9c3a28' in grandCounts), 'bitsEntranceGrandL should no longer use the old red arch color (archRed)');
+  assert.ok('#cf8a6c' in grandCounts, 'bitsEntranceGrandL is missing the terracotta portal frame color');
+  assert.ok('#2f3a44' in grandCounts, 'bitsEntranceGrandL is missing the dark glass door color');
 });
 
 test('the Main Block entrance tiles exist, are distinct from the ordinary entrance, and stay walkable', () => {

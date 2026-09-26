@@ -282,49 +282,49 @@
       "name": "kerbT",
       "solid": false,
       "overhead": false,
-      "color": "#d28e78"
+      "color": "#cd9772"
     },
     {
       "name": "kerbB",
       "solid": false,
       "overhead": false,
-      "color": "#d28e78"
+      "color": "#cd9772"
     },
     {
       "name": "kerbL",
       "solid": false,
       "overhead": false,
-      "color": "#d28e78"
+      "color": "#cd9772"
     },
     {
       "name": "kerbR",
       "solid": false,
       "overhead": false,
-      "color": "#d28e78"
+      "color": "#cd9772"
     },
     {
       "name": "kerbTL",
       "solid": false,
       "overhead": false,
-      "color": "#d59580"
+      "color": "#d19e7a"
     },
     {
       "name": "kerbTR",
       "solid": false,
       "overhead": false,
-      "color": "#d49480"
+      "color": "#d09e7a"
     },
     {
       "name": "kerbBL",
       "solid": false,
       "overhead": false,
-      "color": "#d4947f"
+      "color": "#d09d79"
     },
     {
       "name": "kerbBR",
       "solid": false,
       "overhead": false,
-      "color": "#d2927e"
+      "color": "#cd9b78"
     },
     {
       "name": "roadLineH",
@@ -354,7 +354,7 @@
       "name": "walkway",
       "solid": false,
       "overhead": false,
-      "color": "#cb8c77"
+      "color": "#ca9068"
     },
     {
       "name": "lawn",
@@ -396,25 +396,25 @@
       "name": "treeCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#619643"
+      "color": "#42622f"
     },
     {
       "name": "treeCanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#5f9342"
+      "color": "#364f2d"
     },
     {
       "name": "treeCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#3d5d2a"
+      "color": "#3c5b29"
     },
     {
       "name": "treeCanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#3f602b"
+      "color": "#314828"
     },
     {
       "name": "palmTrunk",
@@ -426,25 +426,25 @@
       "name": "palmCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#507246"
+      "color": "#263526"
     },
     {
       "name": "palmCanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#315737"
+      "color": "#273725"
     },
     {
       "name": "palmCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#377039"
+      "color": "#293b26"
     },
     {
       "name": "palmCanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#36532f"
+      "color": "#222d28"
     },
     {
       "name": "courtLineH",
@@ -894,13 +894,13 @@
       "name": "bitsEntranceGrandL",
       "solid": false,
       "overhead": false,
-      "color": "#835b51"
+      "color": "#715f5a"
     },
     {
       "name": "bitsEntranceGrandR",
       "solid": false,
       "overhead": false,
-      "color": "#835b51"
+      "color": "#715f5a"
     },
     {
       "name": "bitsFacadeCap",
@@ -1033,6 +1033,216 @@
       "solid": true,
       "overhead": false,
       "color": "#6d6e72"
+    },
+    {
+      "name": "walkwayEdgeT",
+      "solid": false,
+      "overhead": false,
+      "color": "#bc9d84"
+    },
+    {
+      "name": "walkwayEdgeB",
+      "solid": false,
+      "overhead": false,
+      "color": "#bc9d84"
+    },
+    {
+      "name": "walkwayEdgeL",
+      "solid": false,
+      "overhead": false,
+      "color": "#bc9d84"
+    },
+    {
+      "name": "walkwayEdgeR",
+      "solid": false,
+      "overhead": false,
+      "color": "#bc9d84"
+    },
+    {
+      "name": "walkwayCornerTL",
+      "solid": false,
+      "overhead": false,
+      "color": "#bb9b82"
+    },
+    {
+      "name": "walkwayCornerTR",
+      "solid": false,
+      "overhead": false,
+      "color": "#bb9b82"
+    },
+    {
+      "name": "walkwayCornerBL",
+      "solid": false,
+      "overhead": false,
+      "color": "#bb9b82"
+    },
+    {
+      "name": "walkwayCornerBR",
+      "solid": false,
+      "overhead": false,
+      "color": "#bb9b82"
+    },
+    {
+      "name": "lampPost",
+      "solid": true,
+      "overhead": false,
+      "color": "#659d63"
+    },
+    {
+      "name": "bench",
+      "solid": true,
+      "overhead": false,
+      "color": "#978159"
+    },
+    {
+      "name": "bin",
+      "solid": true,
+      "overhead": false,
+      "color": "#6da265"
+    },
+    {
+      "name": "planter",
+      "solid": true,
+      "overhead": false,
+      "color": "#888e59"
+    },
+    {
+      "name": "lowFence",
+      "solid": true,
+      "overhead": false,
+      "color": "#449b61"
+    },
+    {
+      "name": "bollard",
+      "solid": true,
+      "overhead": false,
+      "color": "#789066"
+    },
+    {
+      "name": "flagPoleYellow",
+      "solid": true,
+      "overhead": false,
+      "color": "#668c47"
+    },
+    {
+      "name": "flagPoleBlue",
+      "solid": true,
+      "overhead": false,
+      "color": "#518f53"
+    },
+    {
+      "name": "flagPoleRed",
+      "solid": true,
+      "overhead": false,
+      "color": "#638645"
+    },
+    {
+      "name": "bitsEntranceColumn",
+      "solid": true,
+      "overhead": false,
+      "color": "#b4947c"
+    },
+    {
+      "name": "bitsEntranceCanopy",
+      "solid": true,
+      "overhead": false,
+      "color": "#ab9179"
+    },
+    {
+      "name": "bitsEntranceGrandLOpen",
+      "solid": false,
+      "overhead": false,
+      "color": "#654f4d"
+    },
+    {
+      "name": "bitsEntranceGrandROpen",
+      "solid": false,
+      "overhead": false,
+      "color": "#654f4d"
+    },
+    {
+      "name": "bitsSignB",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdb69c"
+    },
+    {
+      "name": "bitsSignI",
+      "solid": true,
+      "overhead": false,
+      "color": "#d1ba9d"
+    },
+    {
+      "name": "bitsSignT",
+      "solid": true,
+      "overhead": false,
+      "color": "#d5bc9f"
+    },
+    {
+      "name": "bitsSignS",
+      "solid": true,
+      "overhead": false,
+      "color": "#d1ba9d"
+    },
+    {
+      "name": "bitsSignP",
+      "solid": true,
+      "overhead": false,
+      "color": "#d1ba9d"
+    },
+    {
+      "name": "bitsSignL",
+      "solid": true,
+      "overhead": false,
+      "color": "#d5bc9f"
+    },
+    {
+      "name": "bitsSignA",
+      "solid": true,
+      "overhead": false,
+      "color": "#cfb89d"
+    },
+    {
+      "name": "bitsSignN",
+      "solid": true,
+      "overhead": false,
+      "color": "#d0b89d"
+    },
+    {
+      "name": "bitsSignD",
+      "solid": true,
+      "overhead": false,
+      "color": "#cfb89d"
+    },
+    {
+      "name": "bitsSignU",
+      "solid": true,
+      "overhead": false,
+      "color": "#d1ba9d"
+    },
+    {
+      "name": "bitsSignC",
+      "solid": true,
+      "overhead": false,
+      "color": "#d3bb9e"
+    },
+    {
+      "name": "bitsSignM",
+      "solid": true,
+      "overhead": false,
+      "color": "#d0b89d"
+    },
+    {
+      "name": "bitsSignComma",
+      "solid": true,
+      "overhead": false,
+      "color": "#dbc1a1"
+    },
+    {
+      "name": "bitsSignSpace",
+      "solid": true,
+      "overhead": false,
+      "color": "#dec3a2"
     }
   ]
 }

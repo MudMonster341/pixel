@@ -32,7 +32,7 @@ require. The raw packs are not in this repository; download them again if you ne
   redistributed. *Assets - From: Sprout Lands - By: Cup Nooble.*
 - **Roguelike Modern City pack** and **Pixel Vehicle Pack** by **Kenney** ([kenney.nl](https://kenney.nl),
   `assets/vendor/kenney-roguelike-modern-city/` and `assets/vendor/kenney-pixel-vehicle-pack/`) --
-  CC0 1.0 (public domain). **In use**: `walkway`, all 8 kerb tiles, `asphalt`, `roadLineH`/
+  CC0 1.0 (public domain). **In use**: all 8 kerb tiles, `asphalt`, `roadLineH`/
   `roadLineV`, `crossingH`/`crossingV`, `parking` (asphalt only -- see docs/STYLE_GUIDE.md for why
   the stall lines stay hand-drawn), `lawn`/`lawn2`/`grass`/`grass2`'s flat ground fill, and the
   parked cars (`carSedan`, `carSedanBlue`, `carSuv`, `carVan`) -- see `tools/make-assets.js`'s `PACK`
@@ -42,6 +42,25 @@ require. The raw packs are not in this repository; download them again if you ne
 - **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0
   1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
   Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).
+
+## Premium pass (added 2026-09-26, see docs/research/asset-packs-2026-09-26.md and
+docs/plans/2026-09-26-premium-pass.md)
+
+- **RPG Urban Pack** by **Kenney Vleugels** ([kenney.nl](https://kenney.nl),
+  `assets/vendor/kenney-rpg-urban-pack/`) -- CC0 1.0 (public domain). **In use**: `walkway`'s plain
+  fill (replacing Roguelike Modern City's plainPaver, FB-0028's "look like brick walls" fix) plus its
+  own edge/corner border tiles (`walkwayEdgeT/B/L/R`, `walkwayCornerTL/TR/BL/BR`), and the new campus
+  props `lampPost`, `bench`, `bin`, `planter`, `lowFence`, `bollard` -- see `tools/make-assets.js`'s
+  `URBAN` table.
+- **Ninja Adventure -- Asset Pack** by **Pixel-boy and AAA**
+  ([pixel-boy.itch.io/ninja-adventure-asset-pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack),
+  `assets/vendor/ninja-adventure/`) -- CC0 1.0, attribution appreciated but not required. **In use**:
+  `treeCanopyTL/TR/BL/BR`'s fill (its Nature tileset's own round tree, replacing Sprout Lands) and
+  `palmCanopyTL/TR/BL/BR`'s fill (its Desert tileset's potted-palm fronds, replacing the hand-picked
+  palette ramp -- our own hand-drawn trunk/shape/outline is unchanged, only the fill, the same "our
+  shape, its fill" technique FB-0025 used for the round tree originally), plus `flagPoleYellow`/
+  `flagPoleBlue`/`flagPoleRed` (its animated Flag sprites, first frame only for now -- named per
+  colour so the engine can animate them later). See `tools/make-assets.js`'s `NINJA` table.
 
 ## Interior furniture kit (added 2026-09-22, see docs/research/asset-packs.md)
 

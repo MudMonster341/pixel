@@ -500,3 +500,127 @@ test('FB-0006: the campus uses paving and walkway tiles (not plain asphalt) for 
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (groundNameAt(x, y) === 'walkway') walkway++;
   assert.ok(walkway > 200, `expected substantial walkway coverage inside the fence, found ${walkway} tiles`);
 });
+
+// ---------- premium pass (2026-09-26, docs/plans/2026-09-26-premium-pass.md) ----------
+
+test('FB-0028: every walkway connects -- a hardscape-only walk (no cutting across lawn) reaches every building door from spawn, with no dead-end stubs along the way', () => {
+  // "Hardscape" is every tile family a pedestrian actually walks on, including this pass's own new
+  // walkway edge/corner tiles (tests/unit/campus-osm.test.js's own "no isolated walkway/road island"
+  // test already covers the general case with the correct, looser "reachable on foot, lawn included"
+  // definition -- a paved spur opening onto lawn/turf is fine by design there. This test is the
+  // stricter, additional guarantee the premium-pass brief asks for: the route from the gate to every
+  // building door specifically never needs to leave paving at all.)
+  const HARDSCAPE = new Set([
+    'walkway', 'paving', 'asphalt', 'parking',
+    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+    'walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR',
+    'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR',
+    'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
+  ]);
+  const isHardscape = (x, y) => Boolean(groundNameAt(x, y) && HARDSCAPE.has(groundNameAt(x, y))) && walkable(x, y);
+  const startX = Math.floor(spawn.x);
+  const startY = Math.floor(spawn.y);
+  assert.ok(isHardscape(startX, startY), 'the spawn point itself is not on a road/walkway tile');
+
+  const seen = new Uint8Array(json.width * json.height);
+  const queue = [{ x: startX, y: startY }];
+  seen[startY * json.width + startX] = 1;
+  for (let i = 0; i < queue.length; i++) {
+    const { x, y } = queue[i];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= json.width || ny >= json.height) continue;
+      if (seen[ny * json.width + nx] || !isHardscape(nx, ny)) continue;
+      seen[ny * json.width + nx] = 1;
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  // Every enterable BITS building's door has a hardscape tile in front of it, reachable through that
+  // same network (the same "first walkable tile going south" search FB-0026's own Main-Block-only
+  // version of this check already uses, generalised to every door).
+  const enterable = doors.filter((d) => d.props.building);
+  assert.ok(enterable.length >= 3, 'expected at least the three enterable BITS buildings to have doors');
+  for (const door of enterable) {
+    let py = Math.floor(door.y);
+    let steps = 0;
+    while (steps < 6 && !isHardscape(Math.floor(door.x), py)) {
+      py += 1;
+      steps += 1;
+    }
+    assert.ok(isHardscape(Math.floor(door.x), py), `no hardscape tile found in front of the ${door.props.building} door`);
+    assert.equal(seen[py * json.width + Math.floor(door.x)], 1, `no all-hardscape walk from spawn to the ${door.props.building} door plaza`);
+  }
+
+  // No dead-end stubs: every walkway/walkway-edge tile inside the fence has at least one hardscape
+  // neighbour (a lone paved tile with lawn on all four sides would be exactly the kind of stub the
+  // premium-pass brief asks this test to catch).
+  const x0 = Math.round(campusZone.x);
+  const y0 = Math.round(campusZone.y);
+  const x1 = x0 + Math.round(campusZone.width);
+  const y1 = y0 + Math.round(campusZone.height);
+  let stubs = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      if (!isHardscape(x, y)) continue;
+      const neighbours = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => isHardscape(x + dx, y + dy)).length;
+      if (neighbours === 0) stubs++;
+    }
+  }
+  assert.equal(stubs, 0, `found ${stubs} dead-end walkway/road stub(s) with no paved neighbour on any side`);
+});
+
+test('FB-0029: the Main Block entrance has the portico columns, the glass canopy, the sign-band lettering, and a wide double door with open-tile variants', () => {
+  const mainDoorObj = doors.find((d) => d.props.building === 'Main Block');
+  assert.ok(mainDoorObj, 'no Main Block door object');
+
+  // openTiles (ADR 0015): the door's own "open" variant, one name per tile of the door, left to right.
+  const openTiles = (mainDoorObj.props.openTiles || '').split(',').filter(Boolean);
+  assert.equal(openTiles.length, 2, 'the Main Block door should name exactly 2 open-tile variants (a wide double door)');
+  for (const name of openTiles) assert.ok(tileInfo.tiles.some((t) => t.name === name), `openTiles names an unknown tile "${name}"`);
+
+  const doorX0 = Math.floor(mainDoorObj.x);
+  const doorY = Math.floor(mainDoorObj.y);
+  // Row layout (FRONT_WALL_TILES = 4, tools/campus/build-campus.js facadeRowKind): base (doorY) is
+  // the door itself; body (doorY - 1) carries the portico columns + canopy; cap (doorY - 3) carries
+  // the sign lettering.
+  const bodyY = doorY - 1;
+  const capY = doorY - 3;
+  assert.equal(structNameAt(doorX0 - 1, bodyY), 'bitsEntranceColumn', 'no portico column left of the Main Block door');
+  assert.equal(structNameAt(doorX0 + 2, bodyY), 'bitsEntranceColumn', 'no portico column right of the Main Block door');
+  assert.equal(structNameAt(doorX0, bodyY), 'bitsEntranceCanopy', 'no glass canopy over the left half of the Main Block door');
+  assert.equal(structNameAt(doorX0 + 1, bodyY), 'bitsEntranceCanopy', 'no glass canopy over the right half of the Main Block door');
+
+  // The sign band spells "BITS PILANI, DUBAI CAMPUS" (tools/campus/build-campus.js MAIN_SIGN_TEXT),
+  // centred on the front run -- reconstruct whatever letters sit on the cap row near the door and
+  // check the message is really there, not just that a sign tile exists somewhere.
+  let message = '';
+  for (let x = doorX0 - 15; x <= doorX0 + 15; x++) {
+    const n = structNameAt(x, capY);
+    if (!n || !n.startsWith('bitsSign')) continue;
+    const suffix = n.replace('bitsSign', '');
+    message += suffix === 'Space' ? ' ' : suffix === 'Comma' ? ',' : suffix;
+  }
+  assert.ok(message.includes('BITS'), `expected "BITS" in the Main Block's sign lettering, read "${message}"`);
+  assert.ok(message.includes('CAMPUS'), `expected "CAMPUS" in the Main Block's sign lettering, read "${message}"`);
+});
+
+test('FB-0027: every building and tall prop has a depthGroup covering its tiles', () => {
+  const depthGroups = objects.filter((o) => o.type === 'depthGroup');
+  assert.ok(depthGroups.length > 100, `expected a depthGroup per building/tree/palm/lamp/flag/sign, found only ${depthGroups.length}`);
+
+  for (const name of ['Main Block', 'Library Block', 'Mechanical Block']) {
+    const group = depthGroups.find((g) => g.name === name);
+    assert.ok(group, `no depthGroup for ${name}`);
+    const doorObj = doors.find((d) => d.props.building === name);
+    assert.ok(group.y + group.height > Math.floor(doorObj.y), `${name}'s depthGroup does not reach as far as its own door`);
+  }
+
+  const treeGroups = depthGroups.filter((g) => g.name === 'tree' || g.name === 'palm').length;
+  assert.ok(treeGroups >= 100, `expected a depthGroup for most of the map's trees/palms, found ${treeGroups}`);
+
+  for (const kind of ['lampPost', 'flagPole', 'signboard']) {
+    assert.ok(depthGroups.some((g) => g.name === kind), `no depthGroup for any "${kind}" prop`);
+  }
+});

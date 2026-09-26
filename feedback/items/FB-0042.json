@@ -1,0 +1,23 @@
+{
+  "id": "FB-0042",
+  "title": "Mini-game input polish: Space-mash skips the game-over card, jump on retry, no door hint, no get-ready",
+  "type": "change",
+  "area": "Mini-games",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.828Z",
+  "updatedAt": "2026-09-26T18:03:29.828Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) Game-over/win cards need a short input guard; platformer should not jump from the Space that confirmed Retry and should say \"collect all cells first\" at the door; the flyer needs a \"get ready\" beat before gravity starts. Number keys/wheel also change slots while menus are open.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.828Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

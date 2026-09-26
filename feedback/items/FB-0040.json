@@ -1,0 +1,23 @@
+{
+  "id": "FB-0040",
+  "title": "Play on the title screen overwrites an existing save without asking",
+  "type": "change",
+  "area": "UI",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.641Z",
+  "updatedAt": "2026-09-26T18:03:29.641Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) Needs a \"Start a new game? Your saved game will be replaced.\" confirm when a save exists.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.641Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

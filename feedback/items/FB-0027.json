@@ -1,0 +1,23 @@
+{
+  "id": "FB-0027",
+  "title": "No 3D presence: she walks over doors and building fronts",
+  "type": "bug",
+  "area": "Maps & buildings",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.036Z",
+  "updatedAt": "2026-09-26T18:03:29.036Z",
+  "details": "(Owner, in chat, 2026-09-26) \"I FEEL LIKE THE 3D PRESENCE IS NOT THERE, FOR EXAMPLE I WALK OVER DOORS\". Doors/walls/building fronts need proper depth: things in front of her draw over her, she walks INTO a door (it opens) instead of over it.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.036Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

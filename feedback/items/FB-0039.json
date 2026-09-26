@@ -1,0 +1,23 @@
+{
+  "id": "FB-0039",
+  "title": "Volunteer hints go by key count, not by which key is missing",
+  "type": "bug",
+  "area": "Story",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.589Z",
+  "updatedAt": "2026-09-26T18:03:29.589Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) Collecting keys out of order makes him point at a room she has already done.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.589Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

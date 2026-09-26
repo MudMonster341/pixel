@@ -37,3 +37,6 @@ assets/vendor/sprout-lands-basic/
 # build output
 dist/
 dist2/
+
+# Live-session lock read by the scheduled loop (docs/ROADMAP.md); local only
+.session-active

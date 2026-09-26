@@ -1,0 +1,23 @@
+{
+  "id": "FB-0038",
+  "title": "A second new game in one session keeps the old clothes colour",
+  "type": "bug",
+  "area": "Characters",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.502Z",
+  "updatedAt": "2026-09-26T18:03:29.502Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) BootScene and the bus scene reuse cached `player`/`player-bus` textures, so a different colour chosen later is ignored.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.502Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

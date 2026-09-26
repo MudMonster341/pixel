@@ -1,0 +1,23 @@
+{
+  "id": "FB-0029",
+  "title": "Main Block entrance must look like the real entrance, not two random doors",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.096Z",
+  "updatedAt": "2026-09-26T18:03:29.096Z",
+  "details": "(Owner, in chat, 2026-09-26) \"THE MAIN ENTRANCE SHOULD LOOK LIKE A MAIN ENTRANCE, LIKE IN THIS PICTURE, NOT TWO RANDOM DOORS\". Reference photo attached (docs/research/reference/owner-main-block-entrance.png): peach facade, blue \"BITS Pilani, Dubai Campus\" lettering, two tall columns, glass front, steps, red accent band, palms, flags, hedges, red paver plaza.",
+  "context": {},
+  "marker": null,
+  "screenshot": "screenshots/FB-0029.png",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.096Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

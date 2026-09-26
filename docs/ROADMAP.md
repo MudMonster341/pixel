@@ -17,6 +17,12 @@ class pixel art, proper UI boxes, animations, and genuinely good game feel.
 
 ## How this file is used
 
+> **Live-session lock (2026-09-26).** If a file named `.session-active` exists in the repo root and
+> was modified in the last 6 hours, a live session is driving the work (the premium pass,
+> [docs/plans/2026-09-26-premium-pass.md](plans/2026-09-26-premium-pass.md)). A scheduled run must
+> then **do nothing**: don't start a task, don't touch the working tree or branches, don't revert
+> anything. Report "live session active" and end the run.
+
 This is the **loop's single source of truth**. Each scheduled run:
 1. reads CLAUDE.md, CONTEXT.md, STORY.md and this file
 2. runs `npm run feedback`; anything the owner sent goes to the front of the queue

@@ -1,0 +1,23 @@
+{
+  "id": "FB-0037",
+  "title": "In-game Credits say \"All art original\": wrong, and the pack licences need credit",
+  "type": "bug",
+  "area": "UI",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.435Z",
+  "updatedAt": "2026-09-26T18:03:29.435Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) src/scenes/title.js credits must name Kenney, LimeZu, Sprout Lands (credit required), Kyrise, the other packs in CREDITS.md, and OpenStreetMap.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.435Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

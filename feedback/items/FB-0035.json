@@ -1,0 +1,23 @@
+{
+  "id": "FB-0035",
+  "title": "Esc in a cutscene or mini-game also opens the pause menu (and J opens the journal behind a mini-game)",
+  "type": "bug",
+  "area": "UI",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.335Z",
+  "updatedAt": "2026-09-26T18:03:29.335Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) Confirmed in the browser: the HUD scene keeps handling Esc/J/M/number keys/wheel while the world is paused for a cutscene or mini-game.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.335Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

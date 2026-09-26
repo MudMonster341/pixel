@@ -1,0 +1,23 @@
+{
+  "id": "FB-0043",
+  "title": "Walking animation is mirrored: walking right looks like walking left",
+  "type": "bug",
+  "area": "Characters",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:28.974Z",
+  "updatedAt": "2026-09-26T18:03:28.974Z",
+  "details": "(Owner, in chat, 2026-09-26) \"THE WALKING ANIMATION IS INVERTED SO I LOOK LIKE IM WALKING LEFT WHEN IM WALKING RIGHT ... WE DONT HAVE ALL THE ANIMATION FRAMES\". Cause found: tools/make-assets.js treats the LimeZu sheet's first block (which faces right) as \"left\", then world.js mirrors it for right.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:28.974Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

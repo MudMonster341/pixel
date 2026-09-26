@@ -1,0 +1,23 @@
+{
+  "id": "FB-0041",
+  "title": "Journal redraws over itself and has no height limit; bag-full can block a key or the ending",
+  "type": "bug",
+  "area": "UI",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.704Z",
+  "updatedAt": "2026-09-26T18:03:29.704Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) JournalPanel.build() never clears its Graphics. A full bag after winning a mini-game gives no key (replay needed), and a full bag would block the reward box and so the ending.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.704Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

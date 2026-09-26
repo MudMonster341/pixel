@@ -1,0 +1,23 @@
+{
+  "id": "FB-0036",
+  "title": "Tutorial \"complete\" toast is overwritten, and toasts replace each other instantly",
+  "type": "bug",
+  "area": "UI",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.374Z",
+  "updatedAt": "2026-09-26T18:03:29.374Z",
+  "details": "(Found in the 2026-09-26 code review, owner asked for all of these to be fixed) tests/e2e/tutorial.spec.js fails repeatably and blocks every push. Talking to Tomas completes the last step before his dialog opens, so the delayed toast fires mid-dialog and the sword toast replaces it. Toasts need a queue.",
+  "context": {},
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.374Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "FB-0030",
+  "title": "Main Block foyer must look like the real reception foyer",
+  "type": "change",
+  "area": "Interiors",
+  "priority": "high",
+  "status": "new",
+  "createdAt": "2026-09-26T18:03:29.128Z",
+  "updatedAt": "2026-09-26T18:03:29.128Z",
+  "details": "(Owner, in chat, 2026-09-26) \"THE MAIN RECEPTION FOYER, MAKE IT LOOK LIKE THAT\". Reference photo attached (docs/research/reference/owner-main-block-foyer.png): marble floor, white columns, central staircase up to a mezzanine balcony with plants, chandelier, logo + name on the mezzanine fascia, potted plants.",
+  "context": {},
+  "marker": null,
+  "screenshot": "screenshots/FB-0030.png",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-09-26T18:03:29.128Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

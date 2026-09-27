@@ -15,7 +15,7 @@ building. Target: 8+ in every area.
 | 7 | Mini-games | — | — | |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
-| 10 | Card and ending | — | — | |
+| 10 | Card and ending | — | — | (temp slide card-temp-1 draws the old red arch; must match the real terracotta portal + glass canopy) |
 | 11 | Performance and stability | — | — | (e2e timeouts only under parallel load) |
 
 ## Log

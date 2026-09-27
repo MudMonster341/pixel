@@ -20,6 +20,11 @@
 // him fresh off the bus, or just walking up to the same spot under her own steam -- both read as one
 // continuous scene, never two back-to-back cuts.
 //
+// Mustafa stays (never despawns): a friendly, decorative presence standing near the gate once control
+// returns -- he isn't wired up as a real, talk-to-again map NPC yet (no dialog data, ADR 0016 scope),
+// just a script actor left idling where the scene put him, so the world doesn't feel like he vanished
+// the instant she's on her own.
+//
 // Every point below is relative to wherever the player actually is *right now* (`{ actor: 'player',
 // offset }`), not a fixed map coordinate: this plays after a scripted bus stop (which already placed
 // her at the 'spawn' anchor) just as readily as it plays from a live walk-in a few tiles further along
@@ -43,8 +48,8 @@ const MUSTAFA_MEETS_HER_CORE = [
   { wait: 250 },
   // NEW line (the brief's own suggested wording for this exact beat).
   { say: { speaker: 'Mustafa', lines: ['The LUG stall is inside the Main Block — behind the staircase.'] } },
+  { face: { actor: 'mustafa', dir: 'down' } },
   { cameraPan: { to: { actor: 'player' }, ms: 1200 } },
-  { despawnActor: 'mustafa' },
   { cameraFollow: 'player' },
 ];
 

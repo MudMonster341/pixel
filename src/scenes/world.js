@@ -429,11 +429,17 @@ class WorldScene extends Phaser.Scene {
   onInteractKey(event) {
     // this.sys.isActive() is false while a cutscene has this scene paused (Phaser still delivers
     // keyboard events to paused scenes, since they're not tied to the update loop).
-    if (event.repeat || this.transitioning || !this.sys.isActive()) return;
+    if (event.repeat || !this.sys.isActive()) return;
     const ui = this.scene.get('ui');
     if (!ui.tutorial) return;
-    if (ui.dialog.isOpen) ui.dialog.advance();
-    else if (!ui.isBlocking()) this.interact();
+    // ADR 0016: a script's own `say` step (src/scripts-runtime.js) reuses this exact dialog box, so
+    // advancing it has to work even while `this.transitioning` is set for the whole script -- the same
+    // reasoning Esc's own skip already follows (see the keydown-ESC handler right above create()'s own
+    // door-departure comment on this flag). Starting a *new* conversation (interact()) still isn't
+    // allowed mid-script/mid-door-walk, only reading the lines already on screen.
+    if (ui.dialog.isOpen) { ui.dialog.advance(); return; }
+    if (this.transitioning || ui.isBlocking()) return;
+    this.interact();
   }
 
   movePlayer(blocked, time, delta) {

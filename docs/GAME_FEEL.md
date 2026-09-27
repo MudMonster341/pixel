@@ -98,33 +98,42 @@ Esc's full priority order in `UIScene`: the full-screen map closes first if it's
 older, still-valid rule), then Pause owns Esc, except while a conversation is on screen — you can't
 pause mid-dialog, same as you can't in Pokemon either.
 
-## The M3a opening (owner brief, 2026-09-21, docs/STORY.md "Opening")
+## The M3a opening (owner brief, 2026-09-21, docs/STORY.md "Opening"; reworked 2026-09-27, ADR 0016)
 
 Title's "Play" (new game only -- "Continue" skips straight to loading, she's already named and
-dressed) chains through four scenes before ever reaching the loading screen, each its own file in
-`src/scenes/intro-*.js`, each fading 250ms in and out like every other scene change in this game:
+dressed) chains through three menu-like scenes, each its own file in `src/scenes/intro-*.js`, each
+crossfaded (not a black flash) over the same live campus-pan backdrop every one of them shares
+(`src/scenes/opening-backdrop.js`, FB-0032) -- then the bus arrival and the Gate 2 "Mustafa meets her"
+beat play *in-world* (WorldScene's own script runner, ADR 0016, docs/ARCHITECTURE.md "In-world
+cutscene scripts"), not as further scenes in this chain:
 
 ```
-'greeting' → 'name-entry' → 'customize' → 'bus-arrival' → 'boot'
+'greeting' → 'name-entry' → 'customize' → 'boot' (playOpening:true) → 'world' (SCRIPTS.opening)
 ```
 
-- **`greeting`**: Mustafa's portrait + the game's own dialog box (reused from ui.js, exactly like the
-  cutscene player does) -- a handful of short lines, skippable.
+- **`greeting`**: Mustafa's portrait + the game's own dialog box (reused from ui.js) -- a handful of
+  short lines, skippable.
 - **`name-entry`**: real typing *and* an on-screen keyboard grid (arrows + Enter, or a click), a
   default name so a single Enter/Esc accepts it and moves on, letters/spaces only, 10 characters.
 - **`customize`**: a live, animated preview of her actual sprite, clothes-color swatches (left/right
-  or click), a default so it's skippable the same way.
-- **`bus-arrival`**: no player input at all beyond Esc (a pure cutscene, not a menu) -- the bus drives
-  in, stops, the door opens, she steps down, the door closes, the bus pulls away. Ends by handing off
-  to `boot` exactly where "Play" always did, so the existing Gate 2 cutscene trigger (campus map, a
-  few tiles past the default spawn) fires normally the moment she takes her first real steps --
-  the bus scene doesn't re-implement or duplicate that trigger, it just lands her in front of it.
+  or click), a default so it's skippable the same way. Confirming hands off straight to `boot` with
+  `{ playOpening: true }`, which rides through to `WorldScene.init()` (src/main.js).
+- **The bus + Mustafa, in-world**: `WorldScene.create()` runs `SCRIPTS.opening` (src/scripts.js) the
+  moment `this.playOpening` is set -- a real bus sprite drives in on the actual Gate 2 road, she steps
+  off, it pulls away, then Mustafa (a script actor, not a placed map NPC) walks up and greets her,
+  walks her up the avenue, and the camera pans to the Main Block entrance and back before handing
+  control over. The *same* beat (`SCRIPTS.gate2`) plays from the existing Gate 2 map trigger for
+  anyone who reaches it another way (`?intro=0`, an old save, or just walking up under her own steam)
+  -- one beat, two ways to trigger it, never duplicated.
 
-`?intro=0` skips the whole chain straight to `boot`, the same shape as `?title=0` skips the title
-screen: `tests/e2e/helpers.js` `openTitle()` sets it off by default, only `tests/e2e/intro.spec.js`
-turns it on. Every scene in the chain follows the same skip rule as everything else in this file
-(rule 7 below): Esc always accepts whatever's currently chosen/typed and moves to the next scene,
-never a dead end.
+`?intro=0` skips the greeting/name/customize chain straight to `boot` (no `playOpening` flag, so the
+in-world bus/Mustafa beat doesn't run automatically either -- she still meets Mustafa the normal way,
+by walking into the Gate 2 trigger), the same shape as `?title=0` skips the title screen:
+`tests/e2e/helpers.js` `openTitle()` sets it off by default, only `tests/e2e/intro.spec.js` turns it
+on. Every scene in the chain follows the same skip rule as everything else in this file (rule 7
+below): Esc always accepts whatever's currently chosen/typed and moves to the next scene, never a dead
+end; Esc during the in-world bus/Mustafa script fast-forwards it to its own end state instead (ADR
+0016's own `ScriptRunner.skip()`), the same "never a half state" promise.
 
 ## "A little 3D": the rules this pass settled on (owner brief 2026-09-21)
 

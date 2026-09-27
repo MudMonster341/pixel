@@ -42,9 +42,12 @@ class ScriptRunner {
     return this.running;
   }
 
-  // Runs `steps` to completion (or to skip()'s fast-forwarded end state), then tears down any script
-  // actor still standing (a script that means for one to persist despawns it itself as its own last
-  // step; this is just the safety net for "Esc mid-script").
+  // Runs `steps` to completion (or to skip()'s fast-forwarded end state). Deliberately does NOT tear
+  // down leftover actors itself: whether an actor should still be standing there once control returns
+  // is content's own call (Mustafa, ADR 0016's own SCRIPTS.opening/gate2, stays -- a decorative presence
+  // near the gate; the bus despawns itself, its own last step) -- "run to the end" and "skip straight
+  // to the end" have to agree on that same end state either way (never a half state), so the engine
+  // can't unilaterally clean up after either path without breaking whichever script meant to keep one.
   async run(steps) {
     this.running = true;
     this.skipping = false;
@@ -52,7 +55,6 @@ class ScriptRunner {
     try {
       await this.runSteps(steps);
     } finally {
-      this.cleanupActors();
       this.scene.transitioning = false;
       this.running = false;
       this.skipping = false;
@@ -161,9 +163,6 @@ class ScriptRunner {
     }
   }
 
-  cleanupActors() {
-    for (const [id] of this.actors) this.step_despawnActor(id);
-  }
 
   // ---------- step handlers ----------
 

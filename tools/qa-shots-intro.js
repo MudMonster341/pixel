@@ -63,15 +63,16 @@ function waitFor(page, fn, timeout = 15_000) {
   return page.waitForFunction(fn, undefined, { timeout });
 }
 
-// Presses Enter until the dialog box now showing has fully closed (whatever its own line/typing
-// state), the same "keep pressing like an impatient player would" shape tests/e2e/helpers.js
-// pressUntil() uses -- robust to exactly how many lines a `say` step has or how far mid-typewriter
-// any single press happens to land.
+// Presses E (WorldScene's own dialog-advance key, not Enter -- ordinary in-world dialog, including a
+// script's own `say` step, only listens for E/Space, src/scenes/world.js onInteractKey()) until the
+// dialog box now showing has fully closed, the same "keep pressing like an impatient player would"
+// shape tests/e2e/helpers.js pressUntil() uses -- robust to exactly how many lines a `say` step has or
+// how far mid-typewriter any single press happens to land.
 async function advanceDialogToClose(page, maxPresses = 12) {
   for (let i = 0; i < maxPresses; i++) {
     const open = await page.evaluate(() => game.scene.getScene('ui').dialog.isOpen);
     if (!open) return;
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('e');
     await page.waitForTimeout(150);
   }
 }

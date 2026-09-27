@@ -286,6 +286,77 @@ which door tile she's arriving through without any extra per-map data. A locked 
 rattles in place and the usual toast shows, same throttle as everywhere else (once per approach).
 Stairs get the same walk-in/out shape, just shorter, with no overlay.
 
+## In-world cutscene scripts (ADR 0016)
+
+Cutscenes play *inside* WorldScene, never a cut to a differently-styled illustration or a separate
+Phaser scene (owner feedback FB-0032). Content (`src/scripts.js` `SCRIPTS`) is a list of **steps**,
+each a single-key object naming which one it is -- the exact shape `src/dialog.js`'s own action
+vocabulary already uses (`{ give: 'sword' }`, `{ stage: 'hunting' }`), applied to cutscenes. The engine
+(`src/scripts-runtime.js` `ScriptRunner`, one instance per `WorldScene`, `this.scriptRunner`) is the
+only code that knows how to run a step; scripts themselves are pure data.
+
+```js
+[
+  { lockInput: true },                       // sets scene.transitioning (below)
+  { unlockInput: true },
+  { letterbox: 'in' | 'out' },                // thin top/bottom bars (src/scenes/ui.js Letterbox)
+  { fade: { dir: 'in' | 'out', ms } },        // the world camera's own fade
+  { cameraPan: { to, ms, ease } },            // stops following, pans to a point
+  { cameraFollow: actorId },                  // resumes following an actor ('player' or a spawned one)
+  { spawnActor: { id, sprite, at, facing, kind } },  // kind: 'character' (idle/walk anims) | 'image'
+  { despawnActor: actorId },
+  { placeActor: { actor, at, facing } },      // teleports, no animation (e.g. "at the bus door")
+  { setActorVisible: { actor, visible } },
+  { move: { actor, path: [point, ...], speed, ease } },  // speed in tiles/sec; plays walk/idle anims
+  { face: { actor, dir } },
+  { emote: { actor, kind: '!' | '?' | '...' | 'sparkle' } },  // a small bubble above the actor's head
+  { say: { speaker, lines } },                // opens the same DialogBox every conversation uses
+  { wait: ms },
+  { sound: id },                              // src/audio.js AudioManager.play()
+  { setFlag: 'name' | { name, value } },
+  { parallel: [step, ...] },                  // runs several steps at once, awaits all of them
+]
+```
+
+A **point** (`cameraPan.to`, `spawnActor.at`, a `move` path entry) is one of:
+- a tile `{ x, y }`;
+- a **named anchor** (a plain string), resolved at runtime against the current map's own Tiled objects
+  by `src/maplogic.js` `resolveAnchor()` -- "spawn", "gate", a door/stairs object's own name, an
+  area/zone's own name -- so a later map regeneration that moves a building doesn't silently break a
+  script that walks up to its door;
+- `{ anchor, offset: [dx, dy] }` or `{ actor: id, offset: [dx, dy] }` -- a point *relative* to a named
+  anchor or another actor's current position, in tiles (e.g. "a few tiles north of wherever she is
+  right now", `MUSTAFA_MEETS_HER_CORE`'s own shape, `src/scripts.js`);
+- `{ keyStation: id }` -- a key station's own desk (`src/maps.js` `keyStations`).
+
+**Running a script.** `WorldScene.playScript(key, steps)` (walk-into-a-trigger cutscenes, the same
+`cutscene`-typed Tiled objects and `GameState.seenCutscenes` play-once bookkeeping as before this ADR
+-- `checkCutscene()` prefers `SCRIPTS[key]` over the older `CUTSCENES[key]`/`CutsceneScene`, which stay
+only as a fallback for anything never migrated) or `WorldScene.playOpeningSequence()` (the M3a opening,
+started once from `create()` when `this.playOpening` is set) both call `this.scriptRunner.run(steps)`,
+which sets `scene.transitioning = true` for the whole run -- the exact same flag a door walk-through
+already used, so every existing gate (`update()`'s own early return, `UIScene.worldHasControl()`) keeps
+working unchanged. **Esc** (`WorldScene`'s own keydown-ESC handler, gated on `scriptRunner.isRunning`)
+calls `scriptRunner.skip()`: every step still pending jumps straight to its own end state and resolves;
+every step not yet reached checks the same flag and does the same, with no delay at all -- "the whole
+script fast-forwards to its end state (actors where they'd end, flags set), never a half state."
+**E/Space** still advances a `say` step's dialog mid-script (`WorldScene.onInteractKey()` lets an
+already-open dialog advance even while `transitioning` is set, the one deliberate hole in that gate).
+
+The 3 key-room beats (`SCRIPTS.keyRoomPhysicsLab`/`Icvl`/`Room195`, docs/STORY.md beat 8) have no Tiled
+trigger of their own -- `WorldScene.checkKeyRoomBeats()` fires the matching script the first time she
+comes within `ROOM_BEAT_RANGE` of that key's own (not-yet-taken) desk, keyed the same way as any other
+cutscene (`GameState.seenCutscenes`, `` `keyRoom:${id}` ``).
+
+**Onboarding (FB-0033).** `src/objective-routes.js` `OBJECTIVE_ROUTES` maps each objective
+(`src/maplogic.js` `objectiveId(quest)`, the same branching `questObjectiveText()` uses) to an ordered
+list of `{ map, anchor }` / `{ map, npc }` / `{ map, keyStation }` stops, one per map that objective's
+own route actually passes through. `WorldScene.currentObjectiveAnchor()` picks the stop matching the
+current map (or `null` if she's off-route) and resolves it to real tile coordinates; `src/scenes/ui.js`
+`Onboarding` draws a bouncing arrow over it when it's on screen, `Minimap`/`FullMap` draw the same
+pulsing marker regardless, and a gentle toast repeats the quest tracker's own objective text if she
+hasn't gotten meaningfully closer to it in `WANDER_HINT_MS`.
+
 ## Naming
 
 - **ids:** kebab-case, globally unique, prefixed by map: `meadow-chest-1`, `house-sign`.

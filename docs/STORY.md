@@ -4,23 +4,44 @@
 ask in the feedback thread instead. The ending is a **birthday surprise** for a real person, so the
 whole game is a gift: everything before the card exists to lead up to it.
 
-## Opening (owner brief, 2026-09-21)
+## Opening (owner brief, 2026-09-21; reworked 2026-09-27, ADR 0016/FB-0032)
 
-Before beat 1, the game opens the way a Pokémon game does.
+Before beat 1, the game opens the way a Pokémon game does -- and, since the FB-0032 rework, as one
+continuous shot in the real game world, never a cut to a differently-styled illustration.
 
-0. **Title screen.** Properly drawn, with big pressable buttons, not plain text rows. It must look
-   good: this is the first thing anyone sees.
-1. **"Hello there!"** A character called **Mustafa** greets the player. He's the friendly organiser
-   type who explains things: who the lead is (a new student arriving at BITS Pilani Dubai), what's
-   about to happen, and he keeps it short.
-2. **Name entry.** The player types the lead's name (on-screen keyboard plus real typing, with a
-   sensible default so it can be skipped).
-3. **Character customisation.** At least clothes colour, picked from swatches, previewed live on her
-   sprite. Hair and skin tone too if it's cheap to add.
-4. **The arrival animation.** A bus drives in from off-screen, stops at the BITS main gate, the door
-   opens, she steps off, the bus pulls away. Then the gate cutscene plays and she walks in.
-5. She walks up the avenue to the **Main Block entrance**, where the entrance cutscene (steps,
-   pillars, the glass front under the red arch) plays. Then the story below begins.
+0. **Title screen.** Big pressable buttons over a slow, live pan across the *real* generated campus
+   map (a lightweight top-down render, `src/scenes/opening-backdrop.js` -- not a booted WorldScene),
+   dimmed for legibility, with the original palm/fence silhouette strip scrolling in front of it.
+1. **"Hello there!"** Mustafa greets the player over that same live backdrop (crossfaded in, not a cut
+   to a new picture). He's the friendly organiser type who explains things: who the lead is (a new
+   student arriving at BITS Pilani Dubai), what's about to happen, and he keeps it short.
+2. **Name entry** and **3. Character customisation** (clothes colour, live-previewed) keep their own
+   UI, over the same live backdrop, crossfading between the three screens.
+4. **The arrival animation, in-world (ADR 0016).** Confirming her clothes hands off to the loading
+   screen, then WorldScene itself: a real bus sprite drives in along the real Gate 2 approach road,
+   stops, she steps off (revealed for the first time), the bus pulls away -- then Mustafa (a new
+   recoloured character, not a placed map NPC) walks up from further inside the gate, greets her
+   ("Welcome to BITS Pilani, Dubai Campus!", reused verbatim from the old gate cutscene), and walks her
+   a few tiles up the avenue. The camera pans up to the Main Block entrance and back with his own line
+   about the LUG stall, then hands control back with the objective already showing (FB-0033, below).
+   Skipping the whole opening chain (`?intro=0`, an old save) or simply walking up to the same spot
+   under her own steam plays the identical "Mustafa meets her" beat as a normal walk-into-a-trigger
+   cutscene (`SCRIPTS.gate2`) -- one beat, two ways to reach it.
+5. She walks up the avenue to the **Main Block entrance**, where an in-world beat (the camera pans up
+   the facade, one line reused verbatim from the old entrance cutscene) plays, replacing the old static
+   illustration. Then the story below begins.
+
+**Onboarding (FB-0033, "as soon as I walk in, I don't understand what's going on").** From the moment
+she has control: the quest tracker's objective text, a pulsing destination marker on the minimap and
+full-screen map, and a bouncing arrow over the current destination door/desk when it's on screen,
+always following the quest stage and whichever key is still missing. If she wanders for about 20
+seconds without getting closer, a gentle toast repeats the objective.
+
+**New dialogue written for this rework** (owner: please review/edit -- everything else is reused
+verbatim from the lines that already existed): Mustafa's "Right this way — let's get you started."
+and "The LUG stall is inside the Main Block — behind the staircase."; the three key-room beats'
+own naming lines, "The Physics Lab.", "The ICVL — the computing lab." and "Room 195." (docs/STORY.md
+beat 8, kept deliberately short and functional).
 
 **Look:** the owner's words are "currently it looks very blocky and 2D, a little 3D please". Everything
 in this opening needs depth: shaded and bevelled buttons and panels, drop shadows, a sense of

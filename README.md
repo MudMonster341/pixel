@@ -1,11 +1,59 @@
-# Pixel Quest
+# BITS Dubai: The LUG Treasure Hunt
 
-A small top-down pixel RPG exploration game. It looks like the old Pokémon games and plays like
-Realm of the Mad God (ROTMG). Everything here is free: free engine, free tools, and original art.
+A small pixel-art game, made as a birthday gift. You play a new student arriving at BITS Pilani
+Dubai, join the LUG treasure hunt, win three keys, and open a birthday card at the end.
 
-## Play it
+## Opening the game
 
-You need [Node.js](https://nodejs.org) (free). There's nothing to install.
+1. Unzip `PixelQuest-win32-x64.zip` -- right-click it and choose **Extract All**, anywhere you like
+   (your Desktop is fine).
+2. Open the folder that appears and double-click **`PixelQuest.exe`**.
+3. Windows may show a blue **"Windows protected your PC"** screen first. This just means the app
+   isn't signed with a paid certificate -- it happens to almost every small, independently-made
+   program. Click **More info**, then **Run anyway**, and the game will open normally from then on.
+4. The game opens in its own window, starting on the title screen. Pick **Play** to start a new game,
+   or **Continue** to pick up where you left off.
+
+Nothing needs installing, and you don't need to be online -- it's a normal desktop app once it's
+open.
+
+## Controls
+
+| Key | Action |
+|---|---|
+| WASD / arrow keys | Move |
+| Shift | Run (outdoors only) |
+| E / Space | Talk, advance a line of dialog |
+| 1-5 / mouse wheel / click | Choose an inventory slot |
+| M | Show/hide the minimap |
+| N, or click the minimap | Full-screen map |
+| J | Journal |
+| Esc | Pause |
+| F11 | Toggle fullscreen |
+
+The game teaches each of these the first time you'd actually need it, so you don't need to memorize
+this table before playing -- it's here for reference. The same list is always available in-game from
+the pause menu (Esc → **Controls**) or from the title screen.
+
+## Saving
+
+Your progress saves itself automatically as you play -- there's no separate "save" button to
+remember. It's stored inside the app itself, so it stays put between sessions on this computer.
+**Continue** on the title screen picks up exactly where you left off. Once you've reached the end,
+a **Watch the Card Again** option appears on the title screen too, so you can revisit the birthday
+card any time without replaying the whole game.
+
+## Credits
+
+This game uses some free, third-party art and audio packs alongside original work -- every one of
+them, and what it's used for, is listed in [CREDITS.md](CREDITS.md) and in the game's own **Credits**
+screen (title screen → **Credits**).
+
+---
+
+## For developers
+
+You need [Node.js](https://nodejs.org) (free). There's nothing else to install for the web build.
 
 ```bash
 npm start
@@ -13,32 +61,16 @@ npm start
 
 Then open **http://localhost:8080**.
 
-| Key | Action |
-|---|---|
-| WASD / arrow keys | Move |
-| Shift | Run (outdoors only) |
-| E / Space | Talk, next line of dialog |
-| 1-5 / mouse wheel / click | Select inventory slot |
-| M | Show/hide minimap |
-| H | Show controls |
-| Esc | Skip tutorial |
-
-## The stack (all free)
+### The stack (all free)
 
 | Part | Tool | Why |
 |---|---|---|
-| Game engine | [Phaser 3](https://phaser.io) (JavaScript) | Runs in the browser like ROTMG. Handles tilemaps, physics, cameras and animation |
-| Art | `tools/make-assets.js` | Pixel art written as text and turned into PNGs. Original, so no license worries |
+| Game engine | [Phaser 3](https://phaser.io) (JavaScript) | Runs in the browser. Handles tilemaps, physics, cameras and animation |
+| Art | `tools/make-assets.js` and friends | Pixel art written as text/code and turned into PNGs, plus some third-party CC0/free packs (see [CREDITS.md](CREDITS.md)) |
 | Local server | `server.js` | Browsers won't load game images straight off the disk |
 | Code editor | [VS Code](https://code.visualstudio.com) | Free |
 
-Free tools for later:
-- **[Tiled](https://www.mapeditor.org)**: draw maps visually instead of editing text.
-- **[Piskel](https://www.piskelapp.com)** (in the browser) or **[LibreSprite](https://libresprite.github.io)**: draw pixel art by hand.
-- **Free art packs** (check each license; CC0 means do anything): [Kenney.nl](https://kenney.nl/assets), [OpenGameArt](https://opengameart.org), free packs on [itch.io](https://itch.io/game-assets/free).
-- **Free hosting**: GitHub Pages or itch.io.
-
-## How it's put together
+### How it's put together
 
 ```
 index.html            loads Phaser + the game scripts
@@ -46,45 +78,65 @@ src/items.js          item definitions
 src/maps.js           the map list: the campus (generated) + text test maps with doors, items and NPCs
 tools/campus/         campus map generator: OpenStreetMap extract + layout.js → assets/maps/campus.json
                       (run `npm run campus`; open the old test map with ?map=meadow)
+tools/interiors/      interior map generator (run `npm run interiors`)
 src/maplogic.js       map helpers shared by the game and the tests
 src/state.js          inventory + game state that survives moving between maps
+src/save.js           save/load (localStorage), profiles, autosave
 src/scenes/world.js   the map, player, NPCs, pickups, doors
-src/scenes/ui.js      minimap, inventory bar, dialog box, tutorial
-src/main.js           loads the art and starts the game
+src/scenes/ui.js      minimap, inventory bar, dialog box, tutorial, pause menu, controls panel
+src/scenes/title.js   title screen
+src/scenes/card.js    the ending's birthday card
+src/minigames/        the three key mini-games (platformer, flyer, Tetris)
 src/dev/              dev-only tools (feedback overlay)
-tools/make-assets.js  the pixel art (run `npm run assets` after changing it)
+tools/make-*.js       the pixel art (run `npm run assets` after changing any of them)
 tools/feedback*.js    feedback storage + command line
-assets/               the generated PNGs + tiles.json
+assets/               the generated PNGs, audio and maps
 server.js             local web server + feedback API
 tests/                unit tests and browser tests
 feedback/             feedback items from play-testing
 ```
 
 **Change the world:** edit `src/maps.js` and refresh the browser.
-**Change the art:** edit the text sprites in `tools/make-assets.js`, run `npm run assets`, and refresh.
+**Change the art:** edit the text/code sprites in `tools/make-assets.js` (or the matching
+`tools/make-*.js` file), run `npm run assets`, and refresh. Never hand-edit the PNGs in `assets/`.
 
-## Tests
+### Tests
 
 ```bash
 npm install && npx playwright install chromium
 npm test
 ```
 
-The first command is only needed once. `npm test` runs unit tests plus browser tests that play the game in Chromium. The same suite runs
-automatically before every `git push` and on GitHub Actions. Details: [docs/TESTING.md](docs/TESTING.md).
+The first command is only needed once. `npm test` runs unit tests plus browser tests that play the
+game in Chromium. The same suite runs automatically before every `git push` and on GitHub Actions.
+Details: [docs/TESTING.md](docs/TESTING.md).
 
-## The birthday card (the ending)
+### The birthday card (the ending)
 
-The game ends on a full-screen animated birthday card. It plays on placeholders out of the box; to
-put in real photos, messages and a video, drop them into `assets/card/` (never committed -- see
-`.gitignore`). Full details, including the exact `card.json` shape: [docs/STORY.md](docs/STORY.md)
-"How to put your photos and messages in".
+The game ends on a full-screen animated birthday card. It plays on a finished-looking temporary
+slideshow out of the box; to put in real photos, messages and a video, drop them into `assets/card/`
+(never committed -- see `.gitignore`, and copy the shape from
+`assets/card/card.example.json`). Full details: [docs/STORY.md](docs/STORY.md) "How to put your
+photos and messages in".
 
-## How to build and send the game
+### Useful scripts
 
-For playtesting and development, keep using `npm start` (the web build) -- it needs Node and a
-browser, same as always. To send the finished game to someone as a file that just opens, with no
-install and no server to run, build a Windows app
+```
+npm start           # http://localhost:8080
+npm test            # unit + browser tests
+npm run assets       # regenerate all generated art after editing tools/make-*.js
+npm run campus       # regenerate the campus map
+npm run interiors    # regenerate the interior maps
+npm run qa:shots     # screenshots of every area/room into qa-shots/
+npm run feedback     # feedback waiting on the agent
+npm run pack:win     # dist/PixelQuest-win32-x64.zip -- the sendable build
+npm run dist         # dist/PixelQuest-portable.exe -- single-file build (needs Developer Mode/admin)
+```
+
+### Building and sending the game
+
+For playtesting and development, keep using `npm start` (the web build). To send the finished game
+to someone as a file that just opens, with no install and no server to run, build a Windows app
 ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)). There are **two ways to build
 one** -- pick whichever works on the machine you're building on:
 
@@ -101,15 +153,10 @@ Both produce the exact same game -- same `index.html`/`src/`, same `server.js`, 
 can build it (nicer to send); use `npm run pack:win` when you can't turn on Developer Mode or don't
 have an admin terminal handy.
 
-```bash
-npm run dist       # single PixelQuest-portable.exe (needs Developer Mode/admin, see below)
-npm run pack:win    # dist/PixelQuest-win32-x64.zip (works everywhere, no setting to change)
-```
-
 - **If the card is for someone specific**, drop their photos, messages and video into
   `assets/card/` *first* (see "The birthday card" above and [docs/STORY.md](docs/STORY.md)) -- then
   build. The folder is gitignored, never committed, and either build works fine even if it's empty
-  (the card falls back to its placeholders).
+  (the card falls back to its temporary slideshow).
 - **`npm run dist` output:** `dist\PixelQuest-portable.exe` -- a single portable executable. No
   installer, no admin rights *to run it*, nothing else to send -- just that one file.
 - **`npm run pack:win` output:** `dist\PixelQuest-win32-x64\` (containing `PixelQuest.exe` plus
@@ -164,27 +211,19 @@ npm run pack:win    # dist/PixelQuest-win32-x64.zip (works everywhere, no settin
   so the committed `build/icon.ico` only needs regenerating by hand if you're editing the icon's own
   art.
 
-## Giving feedback while playing (dev mode)
+### Giving feedback while playing (dev mode)
 
 With `npm start` running, press **O** or click the yellow **Feedback** button in the corner. The game
 pauses, takes a screenshot (click it to point at something), and saves your note with where you
 are. Answers to questions and fixes to check show up in the **Inbox** tab. Details:
 [docs/FEEDBACK.md](docs/FEEDBACK.md). Add `?dev=0` to the address to play without dev tools.
 
-## Roadmap (small steps, each one playable)
+### Where to start
 
-1. ✅ **Move one character** on a tile map with collisions and a camera that follows
-2. ✅ **Tutorial, minimap, 5-slot inventory bar**
-3. ✅ **A house you can enter** with an NPC you can talk to (dialog box, gives an item)
-4. Trees and rocks drawn in front of or behind the player (depth sorting), plus animated water
-5. A simple enemy that wanders and chases you. Health bar, taking damage
-6. **ROTMG-style combat:** aim with the mouse, click to shoot projectiles
-7. Loot drops, a small inventory, and XP/levels
-8. Save the game in the browser (localStorage)
-9. Maps built in Tiled instead of text
-10. *(Big step)* Multiplayer: a Node.js WebSocket server so friends share the same world
-
-## Project memory
-
-Development notes live in [CONTEXT.md](CONTEXT.md), [MEMORY.md](MEMORY.md),
-[ERRORS.md](ERRORS.md) and [decisions/](decisions/).
+Read [HANDOFF.md](HANDOFF.md) first, then [CONTEXT.md](CONTEXT.md) and the last few entries of
+[MEMORY.md](MEMORY.md). Other useful pointers: [docs/ROADMAP.md](docs/ROADMAP.md) (what's built and
+what's next), [docs/STORY.md](docs/STORY.md) (the script this game follows),
+[docs/GAME_FEEL.md](docs/GAME_FEEL.md) (the UI/UX standard), [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)
+(art rules), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (content vs. engine), and
+[decisions/](decisions/) (ADRs) / [ERRORS.md](ERRORS.md) (failures and fixes) for the history behind
+any of it.

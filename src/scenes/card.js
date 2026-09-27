@@ -56,7 +56,6 @@ const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
-const CONFETTI_INTERVAL_MS = 220;
 const END_HOLD_MS = 2200;
 
 class CardScene extends Phaser.Scene {
@@ -80,6 +79,13 @@ class CardScene extends Phaser.Scene {
     if (!this.textures.exists('card-cake')) this.load.image('card-cake', 'assets/cutscenes/card-cake.png');
     if (!this.textures.exists('card-heart')) this.load.image('card-heart', 'assets/cutscenes/card-heart.png');
     if (!this.textures.exists('card-placeholder-photo')) this.load.image('card-placeholder-photo', 'assets/cutscenes/card-placeholder-photo.png');
+    // The temporary slideshow's art (src/card.js TEMP_CARD_SLIDES) -- always queued, unlike the
+    // owner's own photos below: these 5 are generated, committed files (tools/make-card-art.js), not
+    // gitignored content that might not exist, so there's nothing conditional about loading them.
+    for (let i = 1; i <= 5; i++) {
+      const key = `card-temp-${i}`;
+      if (!this.textures.exists(key)) this.load.image(key, `assets/cutscenes/card-temp-${i}.png`);
+    }
     this.load.json('card-config', CARD_CONFIG_URL);
     // The closing video is NOT queued here -- see playEndingVideoOrFinish()'s own comment for why
     // (Phaser's video loader can't be trusted to report a 404 as a real error).
@@ -182,6 +188,17 @@ class CardScene extends Phaser.Scene {
   buildInterior() {
     this.panel = this.add.graphics().setDepth(1);
     drawCardPanel(this.panel, CARD_X, CARD_Y, CARD_W, CARD_H);
+    // "A soft glow on the title" (owner brief, this pass): a second, larger, low-alpha copy of the
+    // same text sitting just behind the real one, pulsing gently -- cheap, texture-free "glow" that
+    // works under Canvas rendering too (Phaser's real postFX.addGlow is WebGL-only, and this game's
+    // renderer picks whichever Phaser.AUTO finds, src/main.js); same trick as the vignette rings in
+    // src/scenes/box-opening.js buildVignette(), a blurred look faked with plain shape/text stacking.
+    this.titleGlow = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#ffe27a')
+      .setOrigin(0.5).setDepth(1).setScale(1.1).setAlpha(0.3);
+    this.tweens.add({
+      targets: this.titleGlow, alpha: { from: 0.22, to: 0.5 }, duration: 1500,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
     // A deep pink, not the game's usual gold highlight -- gold reads poorly against this card's own
     // cream paper interior (too close in tone); the outline's own player-pink palette pops instead.
     this.title = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#d94b8f')
@@ -195,7 +212,7 @@ class CardScene extends Phaser.Scene {
     // caption inside the card itself (docs/GAME_FEEL.md rule 1 still applies: DialogBox measures its
     // own content, this just gives it a different box to measure into -- src/scenes/ui.js).
     this.dialog = new DialogBox(this, MESSAGE_BOX);
-    this.interiorParts = [this.panel, this.title, this.cakeParts, this.frameParts, this.heartParts].flat();
+    this.interiorParts = [this.panel, this.titleGlow, this.title, this.cakeParts, this.frameParts, this.heartParts].flat();
   }
 
   // A small corner motif (coordinator review: was a large, lone centerpiece with nothing balancing
@@ -232,6 +249,7 @@ class CardScene extends Phaser.Scene {
     this.photoB = this.add.image(firstPoint.x, firstPoint.y, this.slides[0].key).setDepth(2).setAlpha(0);
     this.fitPhoto(this.photoA, windowSize);
     this.fitPhoto(this.photoB, windowSize);
+    this.startKenBurns(this.photoA);
     const frame = this.add.image(cx, cy, 'card-frame').setScale(FRAME_SCALE).setDepth(3);
     // A warm brown, not COLORS.dim's cool gray -- COLORS.dim is tuned for the game's own dark navy
     // panels and reads washed-out against this card's cream paper interior.
@@ -246,23 +264,44 @@ class CardScene extends Phaser.Scene {
   }
 
   // Real owner photos can be any resolution/aspect ratio; scale-to-fit inside the frame's window
-  // rather than assuming the placeholder's own native 200x140.
+  // rather than assuming the placeholder's own native 200x140. `baseScale` is remembered so
+  // startKenBurns() below has a stable 100% to breathe around, instead of re-deriving it from
+  // whatever scale a mid-zoom tween happened to leave the image at.
   fitPhoto(image, windowSize) {
     const src = image.width || 1;
     const srcH = image.height || 1;
     const fit = Math.min((windowSize.w * FRAME_SCALE) / src, (windowSize.h * FRAME_SCALE) / srcH);
+    image.baseScale = fit;
     image.setScale(fit);
+  }
+
+  // "Photos cross-fade with a slight Ken Burns zoom" (owner brief, this pass): a slow, continuous
+  // breathing zoom on whichever photo is currently the front one -- a fixed, generous duration (not
+  // tied to PHOTO_HOLD_MS) so it reads the same whether the slideshow has 5 slides or just one, and
+  // yoyos forever rather than snapping back, so it never looks like it "resets". Killed and restarted
+  // (not just left running) whenever a photo image is reused for a new slide, so the zoom always
+  // starts fresh from 100% instead of picking up wherever the previous slide's zoom left off.
+  startKenBurns(image) {
+    this.tweens.killTweensOf(image);
+    const base = image.baseScale || image.scaleX;
+    image.setScale(base);
+    this.tweens.add({
+      targets: image, scaleX: base * 1.06, scaleY: base * 1.06,
+      duration: 6000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
   }
 
   // One slide per configured photo, falling back to the placeholder art (still keeping the owner's
   // own caption, if they wrote one) for any entry whose file 404'd -- "missing photos tolerated"
-  // (docs/ROADMAP.md M3's own testing brief), not a broken slideshow.
+  // (docs/ROADMAP.md M3's own testing brief), not a broken slideshow. With no configured photos at
+  // all (the common case on a fresh checkout), src/card.js's own buildCardSlides() falls back to the
+  // temporary slideshow (TEMP_CARD_SLIDES) instead of a single repeated placeholder -- see its own
+  // comment for why "real photos always win" lives there, not here.
   buildSlides() {
-    if (this.config.photos.length === 0) return [{ key: 'card-placeholder-photo', caption: '' }];
-    return this.config.photos.map((photo, i) => {
+    return buildCardSlides(this.config.photos, (i) => {
       const key = `card-photo-${i}`;
       const missing = this.missingPhotoKeys.has(key) || !this.textures.exists(key);
-      return { key: missing ? 'card-placeholder-photo' : key, caption: photo.caption };
+      return missing ? 'card-placeholder-photo' : key;
     });
   }
 
@@ -272,12 +311,16 @@ class CardScene extends Phaser.Scene {
     const windowSize = { w: FRAME_WINDOW.x1 - FRAME_WINDOW.x0, h: FRAME_WINDOW.y1 - FRAME_WINDOW.y0 };
     this.photoB.setTexture(slide.key).setAlpha(0);
     this.fitPhoto(this.photoB, windowSize);
+    this.startKenBurns(this.photoB);
     this.tweens.add({ targets: this.photoB, alpha: 1, duration: PHOTO_FADE_MS });
     this.tweens.add({
       targets: this.photoA, alpha: 0, duration: PHOTO_FADE_MS,
       onComplete: () => {
-        // Swap so photoA is always the one currently visible, ready for the next cross-fade.
+        // Swap so photoA is always the one currently visible, ready for the next cross-fade -- and
+        // stop the now-hidden one's Ken Burns tween rather than leaving it breathing off-screen until
+        // it's reused (startKenBurns() restarts it fresh then anyway).
         const tmp = this.photoA; this.photoA = this.photoB; this.photoB = tmp;
+        this.tweens.killTweensOf(this.photoB);
       },
     });
     this.caption.setText(slide.caption);
@@ -315,15 +358,33 @@ class CardScene extends Phaser.Scene {
   runInterior() {
     this.interiorParts.forEach((part) => part.setVisible(true));
     AudioManager.play('cardWhoosh'); // M5 sound: one soft cue as the card actually reveals, not per-piece
-    this.confettiTimer = this.time.addEvent({ delay: CONFETTI_INTERVAL_MS, loop: true, callback: () => this.spawnConfettiPiece() });
-    this.addTimer(this.confettiTimer);
+    this.spawnConfettiBurst();
     // Narration-style box (no speaker name), the same DialogBox class and typewriter feel every
     // other piece of story text in this game uses (src/scenes/cutscene.js reuses it the same way).
     this.dialog.open(null, this.config.messages, () => this.afterMessages());
   }
 
+  // "Confetti bursts at the start then settles" (owner brief, this pass): a dense burst of pieces
+  // right as the card reveals, tapering to a handful of trailing pieces and then stopping for good --
+  // not the original always-on 220ms timer, which kept raining confetti for the entire message
+  // sequence (however long the owner's own messages run) and only ever stopped once they finished.
+  // Every piece is scheduled up front via addTimer()'d delayedCall()s, so skipToEnd() -> killTimers()
+  // cancels whichever ones haven't fired yet, the same as every other timer this scene owns.
+  spawnConfettiBurst() {
+    const BURST_COUNT = 26;
+    const BURST_SPACING_MS = 45;
+    for (let i = 0; i < BURST_COUNT; i++) {
+      this.addTimer(this.time.delayedCall(i * BURST_SPACING_MS, () => this.spawnConfettiPiece()));
+    }
+    const SETTLE_COUNT = 6;
+    const SETTLE_SPACING_MS = 550;
+    const settleStart = BURST_COUNT * BURST_SPACING_MS + 400; // a beat after the burst mostly lands
+    for (let i = 0; i < SETTLE_COUNT; i++) {
+      this.addTimer(this.time.delayedCall(settleStart + i * SETTLE_SPACING_MS, () => this.spawnConfettiPiece()));
+    }
+  }
+
   afterMessages() {
-    if (this.confettiTimer) this.confettiTimer.remove();
     this.playEndingVideoOrFinish();
   }
 
@@ -379,8 +440,41 @@ class CardScene extends Phaser.Scene {
     const end = uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, 'THE END', 24, COLORS.highlight).setOrigin(0.5).setAlpha(0);
     this.tweens.add({
       targets: end, alpha: 1, duration: 500,
-      onComplete: () => this.time.delayedCall(END_HOLD_MS, () => this.returnToTitle()),
+      onComplete: () => {
+        // "'THE END' fades in with a sparkle" (owner brief, this pass): a small one-shot burst right
+        // as the text settles in, not a nonstop shower -- it fires once, here, after the fade
+        // completes, never on a timer of its own.
+        this.spawnEndingSparkles();
+        this.time.delayedCall(END_HOLD_MS, () => this.returnToTitle());
+      },
     });
+  }
+
+  // Same cheap, texture-free technique src/scenes/box-opening.js's own spawnSparkle() uses for the
+  // box's reveal -- small motes radiating outward and fading -- so the ending's two beats (the box,
+  // then this) share one visual language instead of two different effects bolted together. A fixed,
+  // one-time burst (10 motes, each with its own finite tween), not a loop, so this can never keep
+  // spawning objects on its own after the card is already headed back to the title.
+  spawnEndingSparkles() {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.2, 0.2);
+      const dist = Phaser.Math.Between(50, 100);
+      const startX = cx + Math.cos(angle) * 16;
+      const startY = cy + Math.sin(angle) * 16;
+      const mote = this.add.circle(startX, startY, Phaser.Math.Between(2, 4), 0xffd23f, 0.95).setDepth(1);
+      this.tweens.add({
+        targets: mote,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0,
+        duration: 700,
+        ease: 'Cubic.easeOut',
+        onComplete: () => mote.destroy(),
+      });
+    }
   }
 
   returnToTitle() {
@@ -409,7 +503,6 @@ class CardScene extends Phaser.Scene {
   killTimers() {
     this.timers.forEach((timer) => { if (timer && typeof timer.remove === 'function') timer.remove(); });
     this.timers = [];
-    if (this.confettiTimer) { this.confettiTimer.remove(); this.confettiTimer = null; }
     this.tweens.killAll();
   }
 }

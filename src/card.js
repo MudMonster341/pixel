@@ -26,6 +26,9 @@
 //   }
 // `{name}` in a message is replaced with the resolved recipient name, the same `{name}` convention
 // src/dialog.js already uses for the player's name everywhere else in the game.
+//
+// A ready-to-copy example of this exact shape lives at assets/card/card.example.json (committed --
+// unlike the rest of assets/card/, see .gitignore's own exception for it).
 
 // Shown until the owner writes their own card.json -- warm, generic, and honest about being a
 // placeholder, so an unfinished setup still plays as a complete (if plain) little card rather than
@@ -88,4 +91,37 @@ function buildCardConfig(raw, fallbackName) {
 // loadable and testable on its own.
 function renderCardText(text, name) {
   return text.replace(/\{name\}/g, name || '');
+}
+
+// ---------- the temporary slideshow ("add in a temporary card as well", owner brief, this pass) ----------
+//
+// Until the owner drops real photos into assets/card/photos/ (buildCardConfig() above always leaves
+// `photos` an empty array on a fresh checkout -- assets/card/ is gitignored and empty by default),
+// the slideshow shows these 5 generated pixel illustrations instead of the single "YOUR PHOTO HERE"
+// placeholder repeated forever: campus/story moments in story order (docs/STORY.md), so the
+// placeholder-state card still looks like a finished slideshow rather than an empty slot. The art
+// itself is drawn by tools/make-card-art.js (`card-temp-1.png`..`card-temp-5.png`, into
+// assets/cutscenes/ -- committed, not the owner's own gitignored content); this is just the caption
+// list src/scenes/card.js pairs each one with. Captions are short and neutral on purpose (matching
+// DEFAULT_CARD_MESSAGES' own tone) -- no invented personal details, this game doesn't know any yet.
+const TEMP_CARD_SLIDES = [
+  { key: 'card-temp-1', caption: 'Day one at BITS Dubai' },
+  { key: 'card-temp-2', caption: 'Up the stairs, behind the staircase' },
+  { key: 'card-temp-3', caption: 'The LUG treasure hunt' },
+  { key: 'card-temp-4', caption: 'Three keys, one at a time' },
+  { key: 'card-temp-5', caption: 'A small box, right at the end' },
+];
+
+// Chooses what the card's photo frame actually shows, given the resolved config's own `photos` list.
+// `resolvePhotoKey(index)` turns a real photo entry into the texture key to show for it (its own real
+// photo, or that one slide's placeholder texture if the file 404'd) -- passed in rather than looked up
+// here because that check needs `this.textures`/`this.missingPhotoKeys`, Phaser-only state this file
+// has no business knowing about (see the file header: this is pure data/logic, no Phaser). Real
+// photos always win whenever there are any at all -- the temporary slideshow only ever appears when
+// `photos` is completely empty, never mixed in alongside real ones.
+function buildCardSlides(photos, resolvePhotoKey) {
+  if (!Array.isArray(photos) || photos.length === 0) {
+    return TEMP_CARD_SLIDES.map((slide) => ({ ...slide }));
+  }
+  return photos.map((photo, i) => ({ key: resolvePhotoKey(i), caption: photo.caption }));
 }

@@ -1,0 +1,12 @@
+{
+  "recipient": "Her Name",
+  "messages": [
+    "Happy Birthday, {name}!",
+    "Here's a photo from that time...",
+    "Have the best year yet."
+  ],
+  "photos": [
+    { "file": "1.jpg", "caption": "Caption for the first photo" },
+    { "file": "2.jpg", "caption": "Caption for the second photo" }
+  ]
+}

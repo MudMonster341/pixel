@@ -104,14 +104,24 @@ When she turns in all 3 keys, the volunteer hands over a small box (`GameState.q
    shown once a save has actually reached this point) jumps straight back to the card without
    replaying the box or the hunt.
 
-The game runs on placeholders (a generic message, a soft placeholder illustration in the photo frame)
-until the owner supplies real content -- nothing here can be "unfinished" in a way that breaks it.
+The game runs on placeholders (a generic message, a temporary 5-slide photo slideshow of campus/story
+moments -- see below) until the owner supplies real content -- nothing here can be "unfinished" in a
+way that breaks it.
 
 ### How to put your photos and messages in
 
 Everything below goes in **`assets/card/`**, a folder the game never commits (see `.gitignore`) --
 so this is safe to edit directly on the machine that will actually send the finished game, without
-it ever ending up in git history.
+it ever ending up in git history. A ready-to-copy, committed example of the exact `card.json` shape
+below lives at [`assets/card/card.example.json`](../assets/card/card.example.json) -- copy it to
+`assets/card/card.json` in the same folder and edit it.
+
+Until any of this exists, the card doesn't show a bare "YOUR PHOTO HERE" placeholder photo forever --
+it plays a temporary 5-slide slideshow instead (the Main Block entrance, the foyer staircase, the LUG
+stall, the three keys, the box; `src/card.js` `TEMP_CARD_SLIDES`, drawn by `tools/make-card-art.js`),
+so the game still looks finished before the owner's real photos exist. The instant `card.json` lists
+even one real photo, the temporary slideshow disappears completely -- real photos always win, never
+mixed in alongside the temporary ones.
 
 | What | Where | Notes |
 |---|---|---|

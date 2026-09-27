@@ -19,6 +19,11 @@
 //                            balloon/confetti motif; the actual "Happy Birthday" title is real
 //                            Phaser text drawn over it (src/scenes/card.js), not baked into the PNG,
 //                            so it can use the game's own font and the recipient's name
+//   card-temp-1..5.png       200x140 each (same size as card-placeholder-photo.png), the temporary
+//                            slideshow (entrance, foyer staircase, LUG stall, the three keys, the
+//                            box) shown until the owner's own photos exist -- see src/card.js
+//                            TEMP_CARD_SLIDES for the captions and the "real photos always win"
+//                            fallback rule
 //
 // `--out <dir>` writes elsewhere (tests check the files are up to date), matching every other
 // generator in tools/.
@@ -113,7 +118,16 @@ const C = {
   candle: '#9fd3ff', candleFlame: '#ffd23f',
   glow: '#fff1a8',
   ribbon: '#3b7dd8', ribbonDeep: '#2a5aa8',
-  sky: '#bfe6ff',
+  sky: '#bfe6ff', skyHaze: '#dff3ff',
+  // Added for the temporary slideshow (below): entrance/foyer/stall/keys/box scenes reuse this same
+  // ramp set rather than inventing a new palette per scene, so all 5 slides still read as "this game".
+  stone: '#cbb98a', stoneShade: '#b39c68',
+  wallBeige: '#f0e6cf', wallShade: '#c9b483',
+  archRed: '#c1443b', archRedDeep: '#8a2a24',
+  glass: '#8fd0e6', glassDeep: '#5aa0c0',
+  clothDark: '#241d38', clothGlow: '#3a3260',
+  silver: '#c7d0da', silverShade: '#98a3ae',
+  bronze: '#c98a4b', bronzeShade: '#96602f',
 };
 
 // ---------- the reward box: base + lid drawn separately so the lid can hinge open in the scene ----------
@@ -304,6 +318,159 @@ function buildPlaceholderPhoto() {
   return img;
 }
 
+// ---------- the temporary slideshow (owner brief, this pass: "add in a temporary card as well"): 5
+// small pixel illustrations of campus/story moments, shown in the card's photo frame instead of a
+// single "YOUR PHOTO HERE" placeholder whenever the owner hasn't dropped real photos into
+// assets/card/photos/ yet (src/card.js TEMP_CARD_SLIDES pairs each one with a short, neutral caption
+// -- captions live there, not here, this file only draws pixels). Every one is exactly the frame
+// window's own size (FRAME_WINDOW, 200x140) so it drops in with the same fit math as a real photo or
+// the single placeholder above -- no separate scaling path to keep in sync. docs/STORY.md still calls
+// the whole card a placeholder until the owner supplies real content; the point of this pass is that
+// the placeholder LOOKS finished in the meantime, not that it stops being one. ----------
+
+const TEMP_W = FRAME_WINDOW.x1 - FRAME_WINDOW.x0 + 1; // 200
+const TEMP_H = FRAME_WINDOW.y1 - FRAME_WINDOW.y0 + 1; // 140
+
+// Slide 1: the Main Block entrance -- steps, pillars, the glass front under a red arch (docs/STORY.md
+// beat 3), the same forced-perspective narrowing-toward-the-back idea docs/GAME_FEEL.md's cutscene
+// art already uses, sketched small rather than reusing tools/make-cutscenes.js's own (much bigger,
+// differently-scaled) entrance art.
+function buildTempEntrance() {
+  const img = new Img(TEMP_W, TEMP_H);
+  img.rect(0, 0, TEMP_W - 1, 68, C.sky);
+  img.rect(0, 56, TEMP_W - 1, 68, C.skyHaze);
+  img.rect(0, 69, TEMP_W - 1, TEMP_H - 1, C.stone);
+  for (let x = 0; x < TEMP_W; x += 18) img.rect(x, 100, x, TEMP_H - 1, C.stoneShade, 0.35); // plaza seams
+  // Steps, narrowing toward the entrance (near) from the plaza (far).
+  const steps = [C.wallShade, C.wallBeige, '#f7edd2'];
+  steps.forEach((hex, i) => {
+    const inset = i * 12;
+    const y0 = 100 - i * 11;
+    img.rect(58 + inset, y0, TEMP_W - 59 - inset, y0 + 10, hex);
+  });
+  // Pillars either side of the glass front.
+  for (const px of [64, TEMP_W - 65]) {
+    img.rect(px - 7, 26, px + 7, 100, C.wallShade);
+    img.rect(px - 7, 26, px, 100, C.wallBeige);
+    img.outlineRect(px - 7, 26, px + 7, 100);
+  }
+  // Glass front with faint pane lines.
+  img.rect(78, 30, TEMP_W - 79, 100, C.glassDeep);
+  for (let y = 34; y < 100; y += 9) img.rect(78, y, TEMP_W - 79, y, C.glass, 0.45);
+  img.outlineRect(78, 30, TEMP_W - 79, 100);
+  // The red arch over the door.
+  img.rect(70, 18, TEMP_W - 71, 30, C.archRed);
+  img.ellipse(TEMP_W / 2, 18, 30, 13, C.archRed);
+  img.outlineRect(70, 12, TEMP_W - 71, 30, C.archRedDeep);
+  img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
+  return img;
+}
+
+// Slide 2: the foyer staircase (docs/STORY.md beat 4, "everywhere else... blocked off... only way is
+// around and behind the staircase") -- warm interior, steps rising toward the upper floors.
+function buildTempFoyer() {
+  const img = new Img(TEMP_W, TEMP_H);
+  img.rect(0, 0, TEMP_W - 1, TEMP_H - 1, C.wallBeige);
+  img.rect(0, 100, TEMP_W - 1, TEMP_H - 1, C.stone);
+  const stepCount = 6;
+  for (let i = 0; i < stepCount; i++) {
+    const x0 = 30 + i * 24;
+    const y0 = 96 - i * 11;
+    img.rect(x0, y0, x0 + 24, 100, i % 2 === 0 ? C.wood : C.woodHi);
+    img.outlineRect(x0, y0, x0 + 24, 100, C.woodDeep);
+  }
+  // Banister rail along the top of the stairs.
+  img.rect(30, 24, TEMP_W - 31, 30, C.woodDeep);
+  img.rect(30, 24, TEMP_W - 31, 26, C.woodShade);
+  // A couple of warm ceiling lamps, low-alpha glow pools underneath.
+  for (const lx of [46, TEMP_W - 46]) {
+    img.ellipse(lx, 40, 22, 14, C.goldHi, 0.18);
+    img.ellipse(lx, 16, 7, 5, C.gold);
+    img.outlineRect(lx - 7, 12, lx + 7, 20, C.goldDeep);
+  }
+  img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
+  return img;
+}
+
+// Slide 3: the LUG stall (docs/STORY.md beat 5, "a student stands at the stall") -- a table with a
+// banner and a couple of balloons, no baked-in text (the caption below it already says what it is).
+function buildTempStall() {
+  const img = new Img(TEMP_W, TEMP_H);
+  img.rect(0, 0, TEMP_W - 1, TEMP_H - 1, C.wallShade);
+  img.rect(0, 92, TEMP_W - 1, TEMP_H - 1, C.stone);
+  // Banner backdrop.
+  img.rect(46, 22, TEMP_W - 47, 60, C.pinkDeep);
+  img.rect(46, 22, TEMP_W - 47, 30, C.pinkLight, 0.5);
+  img.outlineRect(46, 22, TEMP_W - 47, 60);
+  // Balloons either side of the banner.
+  img.ellipse(58, 14, 9, 11, C.gold);
+  img.ellipse(TEMP_W - 58, 14, 9, 11, C.ribbon);
+  // The table.
+  img.rect(36, 92, TEMP_W - 37, 118, C.wood);
+  img.rect(36, 92, TEMP_W - 37, 98, C.woodHi);
+  img.outlineRect(36, 92, TEMP_W - 37, 118);
+  // A stack of small key-shaped tokens on the table, hinting at the hunt without spelling it out.
+  for (const kx of [TEMP_W / 2 - 16, TEMP_W / 2 + 2]) {
+    img.ellipse(kx, 84, 4, 4, C.gold);
+    img.rect(kx - 1, 86, kx + 1, 92, C.gold);
+  }
+  img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
+  return img;
+}
+
+// Slide 4: the three keys (docs/STORY.md "find 3 keys hidden around campus") -- a small trophy-style
+// display, gold/silver/bronze, on a dark cloth so they read as the prize, not clutter on a table.
+function buildTempKeys() {
+  const img = new Img(TEMP_W, TEMP_H);
+  img.rect(0, 0, TEMP_W - 1, TEMP_H - 1, C.clothDark);
+  img.ellipse(TEMP_W / 2, 76, 92, 50, C.clothGlow, 0.6);
+  img.ellipse(TEMP_W / 2, 76, 56, 30, '#4a4270', 0.4);
+  const keys = [
+    { x: TEMP_W / 2 - 46, hex: C.gold, shade: C.goldDeep },
+    { x: TEMP_W / 2, hex: C.silver, shade: C.silverShade },
+    { x: TEMP_W / 2 + 46, hex: C.bronze, shade: C.bronzeShade },
+  ];
+  for (const key of keys) {
+    const { x, hex, shade } = key;
+    img.ellipse(x, 54, 11, 11, hex);
+    img.ellipse(x, 54, 5, 5, C.clothDark);
+    img.rect(x - 3, 62, x + 3, 96, hex);
+    img.rect(x - 3, 62, x, 96, shade, 0.4);
+    img.rect(x - 3, 80, x + 7, 86, hex); // tooth
+    img.rect(x - 3, 88, x + 5, 93, hex); // tooth
+    img.outlineRect(x - 11, 43, x + 11, 65);
+  }
+  img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
+  return img;
+}
+
+// Slide 5: the box (docs/STORY.md "hands her a small box") -- a preview of the ending's own reward,
+// lid ajar with a warm glow escaping, so this slide bridges straight into the box-opening scene that
+// actually follows it in the real game.
+function buildTempBox() {
+  const img = new Img(TEMP_W, TEMP_H);
+  img.rect(0, 0, TEMP_W - 1, TEMP_H - 1, '#2a1c14');
+  img.ellipse(TEMP_W / 2, 82, 86, 44, C.woodDeep, 0.5);
+  img.ellipse(TEMP_W / 2, 82, 52, 26, C.goldDeep, 0.35);
+  const x0 = TEMP_W / 2 - 40, x1 = TEMP_W / 2 + 40;
+  // Box body.
+  img.rect(x0, 90, x1, 122, C.wood);
+  img.rect(x0, 90, x1, 96, C.woodHi);
+  img.rect(x0, 116, x1, 122, C.woodDeep);
+  img.outlineRect(x0, 90, x1, 122);
+  // Lid, tilted ajar, with the glow escaping from underneath it.
+  img.ellipse(TEMP_W / 2, 88, 30, 10, C.goldHi, 0.85);
+  img.rect(x0 - 2, 68, x1 + 2, 90, C.woodHi);
+  img.rect(x0 - 2, 68, x1 + 2, 74, C.icing, 0.2);
+  img.outlineRect(x0 - 2, 68, x1 + 2, 90);
+  // Ribbon down the front.
+  img.rect(TEMP_W / 2 - 4, 90, TEMP_W / 2 + 4, 122, C.ribbon);
+  img.ellipse(TEMP_W / 2 - 7, 70, 6, 5, C.ribbon);
+  img.ellipse(TEMP_W / 2 + 7, 70, 6, 5, C.ribbon);
+  img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
+  return img;
+}
+
 // ---------- a small floating heart (confetti/decoration) ----------
 
 function buildHeart() {
@@ -362,6 +529,11 @@ write('card-frame.png', buildFrame());
 write('card-placeholder-photo.png', buildPlaceholderPhoto());
 write('card-heart.png', buildHeart());
 write('card-cover.png', buildCover());
-console.log(`Wrote card-box-base, card-box-lid, card-cake, card-frame, card-placeholder-photo, card-heart and card-cover to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+write('card-temp-1.png', buildTempEntrance());
+write('card-temp-2.png', buildTempFoyer());
+write('card-temp-3.png', buildTempStall());
+write('card-temp-4.png', buildTempKeys());
+write('card-temp-5.png', buildTempBox());
+console.log(`Wrote card-box-base, card-box-lid, card-cake, card-frame, card-placeholder-photo, card-heart, card-cover and card-temp-1..5 to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
 
 module.exports = { FRAME_W, FRAME_H, FRAME_WINDOW, CAKE_CANDLE_X, CAKE_CANDLE_TOP_Y };

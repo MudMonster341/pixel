@@ -26,6 +26,9 @@ qa-shots/
 # dist` must succeed even before the owner has dropped any photos in).
 assets/card/*
 !assets/card/.gitkeep
+# A committed, ready-to-copy example of card.json's exact shape (docs/STORY.md "How to put your
+# photos and messages in") -- not the owner's own real content, safe to ship.
+!assets/card/card.example.json
 
 # Third-party asset packs: licensed for use in this project, NOT for redistribution.
 # The game ships their art baked into assets/tiles.png etc.; the raw packs stay local.

@@ -137,8 +137,21 @@ const MAPS = {
     ],
     spawn: { x: 17, y: 12, facing: 'down' },
     structures: [{ type: 'house', x: 9, y: 9 }],
-    // Step on a warp tile to go to another map. The house door is at (11, 12).
-    warps: [{ x: 11, y: 12, to: 'house', spawn: { x: 9.5, y: 10, facing: 'up' } }],
+    // Depth groups (ADR 0015, engine test coverage -- the real campus gets these from its own
+    // generator once that branch lands): the house's whole footprint, so she sorts against it by
+    // feet instead of always drawing under it, plus two free-standing trees nearby to prove a 1x1
+    // group works too. baseOffset defaults to 0 (the group's own bottom row is the base line).
+    depthGroups: [
+      { x: 9, y: 9, width: 5, height: 4 }, // Tomas's house (the `house` structure stamped above)
+      { x: 11, y: 3, width: 1, height: 1 }, // a lone tree, north of the house
+      { x: 22, y: 10, width: 1, height: 1 }, // another lone tree, east of the house
+    ],
+    // Step on a warp tile to go to another map. The house door is at (11, 12), the house structure's
+    // own bottom-middle `door` tile (STRUCTURES.house above). `openTiles` (ADR 0015): shown as an
+    // open-doorway overlay while she's walking through, reusing the 'doorway' tile art the house's
+    // own interior threshold already uses -- a closed 'door' tile is what the depth group's own
+    // baked image already shows, so nothing extra is needed for the closed state.
+    warps: [{ x: 11, y: 12, to: 'house', spawn: { x: 9.5, y: 10, facing: 'up' }, openTiles: 'doorway' }],
     pickups: [
       { id: 'meadow-apple-1', item: 'apple', x: 20, y: 12 },
       { id: 'meadow-apple-2', item: 'apple', x: 6, y: 17 },

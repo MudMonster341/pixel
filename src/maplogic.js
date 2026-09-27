@@ -156,6 +156,48 @@ function isDoorLocked(rule, stage) {
   return !(rule.stages && rule.stages.includes(stage));
 }
 
+// ---------- depth groups and door entry (ADR 0015) ----------
+
+// A door/stairs object's `facing` property is the direction the player faces once they arrive AT
+// that object (docs/INTERIORS_PLAN.md "door object format"). world.js resolveSpawnAt() uses this
+// going forward (`target + DIRECTION_OFFSET[facing]`); doorTileFromSpawn() below uses it in reverse.
+const DIRECTION_OFFSET = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+// The door/stairs tile a given arrival spawn point came from -- the exact inverse of world.js's own
+// resolveSpawnAt() (`target + DIRECTION_OFFSET[facing]`). ADR 0015's arrival animation ("she appears
+// in the doorway, hidden behind the group... walks out") needs to know which door she's arriving
+// through from nothing but the spawn point + facing a map def already carries -- this is how, for
+// both a Tiled door/stairs object and a text map's own `warps` entry. Rounded (Math.round, not
+// Math.floor) because a spawn can sit on a half-tile (e.g. centered between a 2-tile-wide doorway,
+// src/maps.js house's own warps): the door tile itself is always a whole tile.
+function doorTileFromSpawn(spawn, facing) {
+  const [dx, dy] = DIRECTION_OFFSET[facing] || [0, 0];
+  return { x: Math.round(spawn.x - dx), y: Math.round(spawn.y - dy) };
+}
+
+// The group (smallest by tile area) that owns a tile at (x, y), among `groups` (plain {x, y, width,
+// height, ...} rects in TILE units -- Tiled `depthGroup` objects via tiledObjects(), or a text map's
+// own `depthGroups` array, src/maps.js). A tile inside more than one group belongs to the smallest
+// one (say, a lamp post's own tiny rect over the corner of a bigger building's rect); a tile outside
+// every group returns null and is left completely untouched: not baked, not hidden, not collided
+// with any differently (world.js's own tile-visibility loop skips a null owner entirely).
+function depthGroupAt(groups, x, y) {
+  const hits = groups.filter((g) => x >= g.x && x < g.x + g.width && y >= g.y && y < g.y + g.height);
+  if (!hits.length) return null;
+  return hits.reduce((a, b) => (a.width * a.height <= b.width * b.height ? a : b));
+}
+
+// A door/stairs object's `openTiles` property (Tiled) or a text map's own `warps`/door entry
+// (src/maps.js): a comma-separated list of tile names (assets/tiles.json), one per door tile, left
+// to right, shown as a static overlay while the door is open (ADR 0015). Missing/empty -> null, so
+// callers can degrade gracefully (the walk-in/out still happens, just with no overlay to show) --
+// the campus art branch adds real tile names for this later; nothing here requires them yet.
+function parseOpenTiles(value) {
+  if (!value) return null;
+  const names = value.split(',').map((s) => s.trim()).filter(Boolean);
+  return names.length ? names : null;
+}
+
 // ---------- quest tracker text (M1 leftover, docs/STORY.md) ----------
 // The single line src/scenes/ui.js's QuestTracker shows under "Keys: n / 3" -- pure so it can be
 // unit-tested directly against every stage/key combination without booting a scene.

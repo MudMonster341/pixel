@@ -4,6 +4,12 @@ Start with [HANDOFF.md](HANDOFF.md), then [CONTEXT.md](CONTEXT.md), then the las
 [ERRORS.md](ERRORS.md), and [decisions/](decisions/). Follow the project-memory routine: log each
 work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`.
 
+- **BUILD FIRST, THEN TEST (owner rule, 2026-09-27): follow [docs/QUALITY_LOOP.md](docs/QUALITY_LOOP.md).**
+  While features are being built: unit tests only, no game servers, browsers, Playwright runs,
+  screenshot scripts or pushes, and nothing left running in the background. Once the whole flow is
+  built, one full test round, then the quality loop: each run tests ONE category, rates it against
+  the rubric in the scorecard, fixes that category, and repeats. This overrides "done = tried in the
+  running game" below during the build phase.
 - The owner wants the agent to make design and technical choices on its own. They review the
   playable result and ask for changes, so ship something playable, then ask for feedback.
 - Art lives in `tools/make-assets.js` as text sprites. Edit it there and re-run `npm run assets`.

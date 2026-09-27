@@ -122,6 +122,19 @@ function minigamesEnabled(search) {
   return qs.get('minigames') !== '0';
 }
 
+// `?audio=0` skips preloading every registered sound (src/audio.js AudioManager.preload(), called
+// from src/main.js BootScene and src/scenes/title.js) -- every AudioManager method already no-ops
+// safely when a sound was never loaded (its own `loaded()` check), so this is purely a *performance*
+// switch, not a correctness one: the 5 full-length music beds alone are several MB of real audio,
+// and decoding them fresh on every single e2e test's page load (Playwright: docs/TESTING.md, a fresh
+// browser context per test) measurably slows the whole suite down for no benefit most specs actually
+// need. tests/e2e/helpers.js defaults this off; tests/e2e/audio.spec.js turns it back on for the
+// handful of tests that actually care whether real files load and play without error.
+function audioEnabled(search) {
+  const qs = new URLSearchParams(search ?? (typeof location === 'undefined' ? '' : location.search));
+  return qs.get('audio') !== '0';
+}
+
 // The smallest object (by tile area) among a Tiled map's objects whose type is one of `types` and
 // whose rectangle contains the point (x, y) — all in tile units, as tiledObjects() returns them.
 // Smallest-first so a specific area (e.g. "Athletics Track") wins over a bigger one it sits inside

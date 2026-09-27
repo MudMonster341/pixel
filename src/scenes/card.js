@@ -119,6 +119,9 @@ class CardScene extends Phaser.Scene {
   beginSequence() {
     this.cameras.main.setBackgroundColor('#1a1610');
     this.cameras.main.fadeIn(250, 0, 0, 0);
+    // M5 sound: a no-op if box-opening.js already started it (the common path); makes sure it's
+    // playing regardless when this scene is reached directly (title's "Watch the Card Again").
+    AudioManager.playMusic('cardMusic');
     this.buildInterior(); // built up front, hidden behind the cover until openCover() runs
     this.showCover();
   }
@@ -311,6 +314,7 @@ class CardScene extends Phaser.Scene {
 
   runInterior() {
     this.interiorParts.forEach((part) => part.setVisible(true));
+    AudioManager.play('cardWhoosh'); // M5 sound: one soft cue as the card actually reveals, not per-piece
     this.confettiTimer = this.time.addEvent({ delay: CONFETTI_INTERVAL_MS, loop: true, callback: () => this.spawnConfettiPiece() });
     this.addTimer(this.confettiTimer);
     // Narration-style box (no speaker name), the same DialogBox class and typewriter feel every

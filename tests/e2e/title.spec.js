@@ -150,6 +150,10 @@ test('FB-0037: Credits names every third-party pack/author and never overflows 9
     'OpenStreetMap', 'ODbL', 'Phaser', 'Press Start 2P', 'Open Font License',
     'Kenney', 'LimeZu', 'Assets - From: Sprout Lands - By: Cup Nooble', 'Kyrise',
     'NettySvit', 'marceles', 'Cougarmint', 'gift, never sold',
+    // M5 sound (feature/audio merge): the audio packs CREDITS.md's own "Character, icon, and audio
+    // survey" section names for something actually wired in (footsteps/menu/story sfx, jingles,
+    // music beds) -- kept consistent with CREDITS.md the same way every art pack above already is.
+    'Kenney Vleugels', 'Aureolus_Omicron',
   ]) {
     expect(info.text).toContain(needle);
   }

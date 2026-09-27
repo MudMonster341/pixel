@@ -629,3 +629,60 @@ repeat (18s), host load (ERR-0002/0003 family).
 
 **Next:** merge the campus-art stage (paths, palms, entrance), then the depth engine, interiors, in-world
 cutscenes.
+
+## 2026-09-27 — `feature/audio` merged into the FB-0035..FB-0043 bug batch (M5 sound)
+
+**Did:** merged the parked `feature/audio` branch (music, sound effects, volume settings, 321 unit
+tests at the time) into a worktree branch already caught up to `main` (dbce111, the FB-0035..0043 bug
+batch). One real conflict, in `src/scenes/title.js` (both sides added Up/Down keydown handlers on the
+same lines: audio's Controls-panel setting scroll vs. the bug batch's Credits scroll and "start a new
+game?" confirm) -- resolved by priority-ordering all three (new-game confirm > Controls settings >
+Credits scroll > the plain menu), since the three overlays are never open at once. Everything else
+auto-merged cleanly (non-overlapping hunks in the same files: `world.js`'s footstep sfx sat right next
+to FB-0043's real left/right animation rows, `framework-scene.js`/`flappy.js`/`platformer.js`'s sound
+calls sat next to FB-0042's input-delay/hover-prompt work) -- checked each by hand against both
+branches' diffs, not just trusted a clean auto-merge.
+
+**Adapted audio to the new main:** menuMove/menuConfirm sfx added to the two pieces the audio branch
+never saw -- the Credits panel's scroll (FB-0037) and the new-game overwrite confirm (FB-0040), both
+in `src/scenes/title.js`. Confirmed the FB-0035 HUD-gating rule already covers every sound-emitting
+path for free: `movePlayer()` zeroes `dx`/`dy` (so no footstep) and `update()` returns early
+(`this.transitioning`) before any sound-triggering code runs, whenever `worldHasControl()` would say
+no -- no gated key needed a separate silence fix. Added the audio packs (Kenney RPG/UI Audio, Kenney
+Music Jingles, Aureolus_Omicron's 15 Melodic RPG Chiptunes -- already in CREDITS.md via the clean
+merge) to the in-game Credits text too, extending FB-0037's own test to check for them
+(`'Kenney Vleugels'`, `'Aureolus_Omicron'`) -- caught one real bug doing this: a two-line credit split
+"Kenney" and "Vleugels" across two separate array entries, which the panel's own `\n` join broke
+apart exactly the way this file's header comment warns against; fixed by keeping the whole phrase on
+one short line, per that same file's own established convention.
+
+**Test fixed, not just adapted:** `tests/e2e/audio.spec.js`'s pause-menu/title-Controls settings tests
+used a bare `page.keyboard.press()` sequence (move to a row, adjust it, move again...) with only the
+*final* state wrapped in `expect.poll` -- exactly the ERR-0003 shape (a dropped one-shot keydown
+under load derails everything after it, and the final poll times out for a reason several steps
+back). Caught this for real: the second of two full `npm test` runs failed exactly this way. Rewrote
+both tests to use `pressUntil` (retrying the keypress itself, not just the read) for every step,
+matching how the rest of the suite already handles one-shot toggles. Confirmed with
+`--repeat-each=3` on `audio.spec.js` alone (all green) and both full-suite reruns after (see below).
+
+**Also added:** 2 new e2e regression tests (`FB-0037/M5 sound`, `FB-0040/M5 sound` in
+`tests/e2e/audio.spec.js`) covering the Credits-scroll and new-game-confirm sound wiring with real
+audio files loaded, specifically to catch an `AudioManager.play()` call throwing partway through
+either panel.
+
+**Test counts:** 330 unit (unchanged) + 124 e2e, both green, on two full `npm test` runs after the
+pause-menu-settings fix. A third full run (taken before that fix, to decide whether the failure was
+audio-related) turned up the ERR-0003 flake above plus, separately, 3 more failures in
+`intro.spec.js`/`minigames.spec.js`/`story.spec.js` -- all pre-existing, timing-sensitive, host-load
+flakes unrelated to this merge (none of those 3 files were touched by it); re-running just those 3
+files in isolation passed all 3 but turned up a 4th, *different* pre-existing flake instead (a
+Backspace-loop in `intro.spec.js`'s name-entry test, same ERR-0003 shape) -- the textbook signature of
+host load, not a regression, so left as-is (out of scope for this task; matches the existing
+ERR-0002/0003 family already documented).
+
+**Decisions:** none new. **Failures:** the pre-existing ERR-0003-shaped flake in
+`audio.spec.js` above (fixed) and the load-only flakes in 3 unrelated specs (not fixed, out of scope,
+see above).
+
+**Next:** the owner's full playthrough should now include music/sfx/volume; cutscenes for the three
+key rooms are still the next real feature.

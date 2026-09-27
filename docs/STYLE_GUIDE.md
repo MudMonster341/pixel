@@ -624,6 +624,55 @@ in its scene with `scrollFactor(0)` so a scrolling level never needs to tile it.
 `npm run minigame-art` alone) regenerates them; `tests/unit/assets.test.js` checks they're committed
 and up to date, same as every other generated art file.
 
+## Audio (roadmap M5, 2026-09-22)
+
+`src/audio.js` is the single source of truth for every sound (data: `SOUNDS`, id -> file/volume/
+loop/category) and how it's played (`AudioManager`: load, one-shot play, rate-limited play,
+crossfaded music, volume/mute). Nothing else in the game hard-codes a filename or a volume number --
+adding a sound means adding one row to `SOUNDS` and calling `AudioManager.play('newId')` from wherever
+it happens, the same "content is data, the engine is code" split as everything else
+(docs/ARCHITECTURE.md).
+
+**Where every file actually lives.** `assets/audio/{music,sfx,generated}/` -- never
+`assets/vendor/` directly: the packaged build excludes `assets/vendor/**` entirely
+(`decisions/0012-third-party-asset-packs.md`), so a scene loading a vendor path straight would go
+silent in the shipped .exe. `tools/make-audio.js` copies the exact bytes of each credited CC0 file
+into `assets/audio/` (or synthesizes the 4 sounds no pack covered -- see its own header) the same way
+`tools/make-assets.js` bakes vendor pixels into `assets/tiles.png`. Run `npm run audio` (or
+`npm run assets`, which includes it) after touching either file; `tests/unit/assets.test.js` checks
+the committed files are up to date, same as every other generated asset.
+
+**When each sound plays:**
+
+| Sound | Plays when | File |
+|---|---|---|
+| `titleMusic` | The title screen's "PRESS ENTER" is actually pressed/clicked (the first real gesture almost every player makes -- the browser autoplay rule needs one, `src/scenes/title.js` `showMenu()`) | `assets/audio/music/title.ogg` |
+| `overworldMusic` / `indoorMusic` | Crossfades in on every map load, picked by the map's own `indoors` flag (`src/scenes/world.js` `create()`) | `assets/audio/music/overworld.ogg` / `indoor.ogg` |
+| `minigameMusic` | A mini-game's own scene starts (`src/minigames/framework-scene.js` `create()`); crossfades back to overworld/indoor on `finish()` | `assets/audio/music/minigame.ogg` |
+| `cardMusic` | The reward box starts opening (`src/scenes/box-opening.js`), carries through the card itself | `assets/audio/music/card.ogg` |
+| `footstepOutdoor1-4` / `footstepIndoor1-4` | Every few steps while moving (`src/scenes/world.js` `movePlayer()`), cycled so it's never the same sample twice in a row, softer and slower-paced indoors (no running indoors either, FB-0017) | `assets/audio/sfx/footstep-{outdoor,indoor}-N.ogg` |
+| `menuMove` / `menuConfirm` | Any keyboard/menu navigation: the title menu, the pause menu, the shared Controls/Sound panel's setting rows, a dialog's choice list, the title's Credits scroll and its "start a new game?" overwrite confirm (FB-0037/FB-0040) | `assets/audio/sfx/menu-move.ogg` / `menu-confirm.ogg` |
+| `dialogBlip` | Every other character while a dialog line types out (`src/scenes/ui.js` `DialogBox.update()`) -- not every character, so it reads as a voice, not a buzz | `assets/audio/sfx/dialog-blip.ogg` |
+| `itemPickup` | A ground pickup is actually added to the bag (`src/scenes/world.js` `updatePickups()`) | `assets/audio/sfx/item-pickup.ogg` |
+| `keyAwarded` | A `{ key: ... }` dialog action actually fires (`src/dialog.js`) -- one of the 3 treasure-hunt keys | `assets/audio/sfx/key-awarded.ogg` |
+| `doorOpen` / `warpStairs` | A warp is taken, picked by whether the Tiled object is a `door` or `stairs` (`src/scenes/world.js` `checkWarps()`) | `assets/audio/sfx/door-open.ogg` / `warp-stairs.ogg` |
+| `lockedDoorThud` | Walking into a story-locked door (`checkWarps()`, same toast throttle as the "Locked for the event" message) | `assets/audio/sfx/locked-door-thud.ogg` |
+| `minigameJump` / `minigameFlap` / `minigameLineClear` | The platformer's jump, the flyer's flap, Tetris clearing at least one row | `assets/audio/generated/minigame-{jump,flap,line-clear}.wav` |
+| `minigameWin` / `minigameLose` | `MinigameBaseScene.win()` / `.lose()` (`src/minigames/framework-scene.js`, shared by all 3 games) | `assets/audio/sfx/minigame-win.ogg` / `minigame-lose.ogg` |
+| `boxOpen` | The reward box's lid actually lifts (`src/scenes/box-opening.js` `openLid()`) | `assets/audio/sfx/box-open.ogg` |
+| `cardWhoosh` | The card's interior reveals and the confetti starts (`src/scenes/card.js` `runInterior()`) -- once, not per confetti piece | `assets/audio/generated/card-whoosh.wav` |
+
+**Volume conventions.** Every `SOUNDS` entry has its own 0-1 mix level (`volume`) *before* the
+player's own sliders apply -- a naturally loud sample (a jingle) and a naturally quiet one (a
+footstep) share one category slider without one drowning out the other. As a rough guide: music beds
+sit 0.36-0.5 (they're a backdrop, never louder than a line of dialog reads), footsteps 0.18-0.3
+(indoors quieter than outdoors), the dialog blip lowest of all at 0.14 (constant, so it can't
+become fatiguing), and one-shot stingers (a key, a win/lose card, the box) 0.45-0.55 (they're a
+payoff moment, allowed to stand out). `category` picks which slider actually controls it: `'music'`
+for beds, `'sfx'`/`'ui'` both share the one sfx slider (docs/GAME_FEEL.md's panel rules apply to the
+volume rows the same as every other row -- see the pause menu / title Controls panel,
+`src/scenes/ui.js` `ControlsPanel`).
+
 ## Asset sources and licenses
 
 - Current art is original, generated by `tools/make-assets.js` from text sprites.

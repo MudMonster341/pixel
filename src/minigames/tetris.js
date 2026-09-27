@@ -134,6 +134,7 @@ class TetrisScene extends MinigameBaseScene {
     for (const [x, y] of absoluteCells(this.piece)) { if (y >= 0 && y < TETRIS_ROWS) merged[y][x] = this.piece.color; }
     const fullRows = [];
     for (let y = 0; y < TETRIS_ROWS; y++) if (merged[y].every(Boolean)) fullRows.push(y);
+    if (fullRows.length > 0) AudioManager.play('minigameLineClear');
 
     const { board, linesCleared } = lockPiece(this.board, this.piece);
     this.board = merged;

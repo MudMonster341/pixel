@@ -6,7 +6,9 @@
 //
 // This repo's checkout has no assets/card/ at all (gitignored, docs/STORY.md) -- so every test here
 // doubles as the "a missing video or empty photo folder must not break anything" check the ending's
-// own brief asks for: there is nothing else this suite could run against.
+// own brief asks for: there is nothing else this suite could run against. It also means every run of
+// this spec plays the temporary slideshow (src/card.js TEMP_CARD_SLIDES, "add in a temporary card as
+// well") end to end, with no console errors, since that's the only slideshow a fresh checkout has.
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame, teleport, chooseTitleMenu } = require('./helpers');
 
@@ -95,11 +97,13 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
   const card = await cardState(page);
   expect(card.recipient).toBe('Zara'); // {name} comes from GameState.playerName with no card.json
-  // No assets/card/photos/ in this checkout -- the slideshow falls back to exactly one placeholder
-  // slide instead of breaking (docs/ROADMAP.md M3 "a missing video or empty photo folder must not
-  // break anything").
-  expect(card.slideCount).toBe(1);
-  expect(card.slideKey).toBe('card-placeholder-photo');
+  // No assets/card/photos/ in this checkout -- the slideshow falls back to the temporary slideshow
+  // (src/card.js TEMP_CARD_SLIDES, "add in a temporary card as well") instead of breaking
+  // (docs/ROADMAP.md M3 "a missing video or empty photo folder must not break anything"), and looks
+  // like a finished 5-slide slideshow rather than a single repeated placeholder.
+  const tempSlideCount = await page.evaluate(() => TEMP_CARD_SLIDES.length);
+  expect(card.slideCount).toBe(tempSlideCount);
+  expect(card.slideKey).toBe('card-temp-1');
 
   // The cover hasn't been dismissed yet -- Enter opens it (same key that would otherwise advance a
   // line of dialog, docs/ROADMAP.md M3's own dialog-box reuse).

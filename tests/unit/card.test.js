@@ -88,3 +88,44 @@ test('renderCardText: replaces every {name} occurrence', () => {
   assert.equal(renderCardText('Hi {name}, bye {name}!', 'Sam'), 'Hi Sam, bye Sam!');
   assert.equal(renderCardText('No placeholder here', 'Sam'), 'No placeholder here');
 });
+
+// buildCardSlides(): the temporary card (owner brief, this pass -- "add in a temporary card as
+// well"). This is the pure decision of *which* slides to show; the actual on-screen images and the
+// "a missing real photo falls back to a placeholder" texture check are src/scenes/card.js's own job
+// (needs a real Phaser/texture cache), covered instead by tests/e2e/ending.spec.js.
+test('buildCardSlides: falls back to the temporary slideshow when there are no real photos at all', () => {
+  const { buildCardSlides, TEMP_CARD_SLIDES } = loadGameData();
+  const resolvePhotoKey = () => { throw new Error('should not be called with an empty photo list'); };
+  assert.deepEqual(plain(buildCardSlides([], resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
+  assert.deepEqual(plain(buildCardSlides(undefined, resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
+  assert.deepEqual(plain(buildCardSlides(null, resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
+});
+
+test('buildCardSlides: the temporary slideshow has more than one slide and every caption is short and non-empty', () => {
+  const { TEMP_CARD_SLIDES } = loadGameData();
+  assert.ok(TEMP_CARD_SLIDES.length >= 4);
+  for (const slide of TEMP_CARD_SLIDES) {
+    assert.ok(slide.key && slide.key.length > 0);
+    assert.ok(slide.caption && slide.caption.length > 0 && slide.caption.length <= 60);
+  }
+});
+
+test('buildCardSlides: real photos win over the temporary slideshow whenever any exist at all', () => {
+  const { buildCardSlides } = loadGameData();
+  const photos = [
+    { file: '1.jpg', caption: 'The first day' },
+    { file: '2.jpg', caption: 'A little later' },
+  ];
+  const slides = buildCardSlides(photos, (i) => `card-photo-${i}`);
+  assert.deepEqual(plain(slides), [
+    { key: 'card-photo-0', caption: 'The first day' },
+    { key: 'card-photo-1', caption: 'A little later' },
+  ]);
+});
+
+test('buildCardSlides: a single real photo still wins over the 5-slide temporary slideshow', () => {
+  const { buildCardSlides } = loadGameData();
+  const photos = [{ file: 'only.jpg', caption: 'Just one' }];
+  const slides = buildCardSlides(photos, () => 'card-photo-0');
+  assert.deepEqual(plain(slides), [{ key: 'card-photo-0', caption: 'Just one' }]);
+});

@@ -161,6 +161,8 @@ function loadGameData() {
     buildCardConfig: get('buildCardConfig'),
     renderCardText: get('renderCardText'),
     DEFAULT_CARD_MESSAGES: get('DEFAULT_CARD_MESSAGES'),
+    buildCardSlides: get('buildCardSlides'),
+    TEMP_CARD_SLIDES: get('TEMP_CARD_SLIDES'),
     // M5 sound
     SOUNDS: get('SOUNDS'),
     AUDIO_CATEGORIES: get('AUDIO_CATEGORIES'),

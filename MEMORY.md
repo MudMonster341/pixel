@@ -712,3 +712,48 @@ two agents ran e2e suites failed three times (timeouts, corrupted trace zips); e
 machine. Rule: push only when no other tests are running.
 
 **Next:** see HANDOFF.md "How to resume".
+
+## 2026-09-27 — Stage 7 (partial): the temporary card + a recipient/developer README
+
+**Did:**
+- Built the temporary card slideshow ("add in a temporary card as well", owner brief): 5 pixel
+  illustrations (Main Block entrance, foyer staircase, LUG stall, three keys, the box) drawn by
+  `tools/make-card-art.js` into `assets/cutscenes/card-temp-1..5.png`. `src/card.js` gained
+  `TEMP_CARD_SLIDES` (the captions) and a pure `buildCardSlides(photos, resolvePhotoKey)` that shows
+  them only when `card.json` has zero real photos -- real photos always win, never mixed in.
+- Polished the card's motion (`src/scenes/card.js`): a slow continuous Ken Burns zoom on whichever
+  photo is currently shown (`startKenBurns()`), confetti that bursts at the start then tapers off and
+  stops (`spawnConfettiBurst()`, replacing the old always-on 220ms timer that ran the whole message
+  sequence), a soft pulsing glow behind the title (a second low-alpha text copy, since Phaser's real
+  `postFX.addGlow` is WebGL-only and this game's renderer is `Phaser.AUTO`), and a one-shot sparkle
+  burst as "THE END" fades in (`spawnEndingSparkles()`, same technique as `box-opening.js`'s own
+  `spawnSparkle()`).
+- Added `assets/card/card.example.json` (committed, with a `.gitignore` exception alongside the
+  existing `.gitkeep` one) and pointed `docs/STORY.md` at it.
+- Rewrote README.md: top half for the person receiving the game (unzip/run/SmartScreen "More info ->
+  Run anyway", a controls table read straight from `src/scenes/ui.js` CONTROLS, how autosave works,
+  F11, a Credits pointer), bottom half (below a divider) for developers (unchanged stack/tests/build
+  content, reorganised). Removed stale claims: the Realm of the Mad God comparison, "H: show
+  controls" and "Esc: skip tutorial" (both replaced long ago by in-fiction hints/pause-menu Controls),
+  and "original art only" (this game now also credits several free/CC0 packs, CREDITS.md).
+- Extended `tests/unit/card.test.js` (4 new tests: temp slides used with no photos, one real photo
+  still wins, temp slide captions are short/non-empty) and `tests/helpers/game-data.js` to expose
+  `buildCardSlides`/`TEMP_CARD_SLIDES`. Updated `tests/e2e/ending.spec.js`'s existing assertions for
+  the new 5-slide temp slideshow (written correctly, not run this session -- see below).
+
+**Why:** the owner's two asks this pass -- a temporary card that looks finished rather than a bare
+placeholder, and a README a non-developer recipient can actually follow to open the game
+(roadmap M6). Ken Burns/confetti/glow/sparkle came from the same brief's own "polish the card's
+motion" list.
+
+**Decisions:** none new (no ADR) -- the glow-via-duplicate-text choice (over `postFX.addGlow`) is
+recorded in `src/scenes/card.js`'s own comment, not worth a separate decision record.
+
+**Failures:** none.
+
+**Next:** this chunk was built under an explicit owner rule for the session ("BUILD ONLY" -- no
+server/browser/Playwright): `node --test tests/unit/*.test.js` is green (341 passed, including the 4
+new card tests), and `tools/make-card-art.js`'s output was regenerated and matches what's committed
+(`assets.test.js` passes), but `tests/e2e/ending.spec.js` and a look at the actual card in
+`npm start` are still outstanding before this is fully checked off -- run those next, then the rest of
+stage 7 (UI kit polish, performance, QA at window sizes).

@@ -93,7 +93,7 @@ source asset packages... change all the trees, pavements, everything."
 
 ## M5 — Feel and polish
 
-- [ ] Sound effects (jsfxr, free) and background music (CC0), with a volume setting
+- [x] Sound effects (Kenney CC0 + synth-generated) and background music (CC0), with a volume setting reachable from the pause menu and the title (2026-09-27, `feature/audio` merged)
 - [ ] Transitions everywhere: doors, cutscenes, mini-games, card
 - [ ] Idle animations, footstep dust, door-open animation, camera nudges
 - [ ] Minor campus enhancements only (the owner likes the map): benches, bins, bus stop, better signage, a few students walking loops

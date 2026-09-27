@@ -50,6 +50,9 @@ function snapshotState(state) {
     // before this existed simply has neither field; applyState() below falls back to the defaults.
     playerName: state.playerName,
     customization: { ...state.customization },
+    // M5 sound (src/audio.js): volume/mute, so a player's own level carries across reloads and
+    // devices the same way everything else in GameState does.
+    settings: { ...state.settings },
   };
 }
 
@@ -88,6 +91,9 @@ function applyState(state, saved) {
   // for a save written before these fields existed, exactly like `flags`/`quest` above.
   state.playerName = typeof saved.playerName === 'string' && saved.playerName ? saved.playerName : state.playerName;
   state.customization = { ...state.customization, ...(saved.customization || {}) };
+  // M5 sound: falls back to whatever GameState already had (the just-booted defaults) for a save
+  // written before this field existed, same reasoning as playerName/customization above.
+  state.settings = { ...state.settings, ...(saved.settings || {}) };
 }
 
 function saveGame(profile = currentProfile(), state = GameState) {

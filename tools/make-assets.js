@@ -437,6 +437,110 @@ const NINJA = {
   flag: (color) => ({ atlas: `ninja-adventure/Backgrounds/Animated/Flag/Flag${color}16x16.png`, sx: 0, sy: 0, sw: 16, sh: 16 }),
 };
 
+// premium pass round 3 (2026-09-27 continued, coordinator "one coherent free kit" review): more of
+// the same Kenney RPG Urban Pack sheet, this time its building parts and a proper concrete-sidewalk
+// plot -- round 2 fixed *colors* (flat palette fills tuned to the right hexes) but the coordinator's
+// side-by-side photo comparison found flat fills still read as a box with no material at the real
+// camera, and separately found that road-facing kerb tiles (kerbT/B/L/R/TL/TR/BL/BR, drawn by a
+// completely different code path below until this pass) were still blitting Modern City's brick
+// paver recolored to a salmon-brick ramp everywhere a sidewalk meets a road -- the actual reason "the
+// avenue is still salmon brick" survived round 2's walkway() rewrite untouched (walkway() only ever
+// controlled the *interior* fill, never the road-edge tiles). Coordinates found the same way as URBAN
+// above (decoding the sheet, measuring crops), cross-checked against a labelled contact-sheet render
+// this time (script kept out of the repo; MEMORY.md has the method and every coordinate's own pixel
+// sample) since this pass reads much more of the sheet than Part 1/2 did.
+const SIDEWALK = {
+  // A complete concrete-plaza 9-slice: a light blue-grey slab fill with its own built-in warm
+  // tan/khaki kerb border baked into the edge/corner pieces -- literally "a sidewalk with a kerb
+  // edge" in one asset family. Used unrecolored (the coordinator's own "or only slightly warmed" --
+  // native is already close enough) for every ordinary walkway *and* every road-facing kerb tile
+  // (kerbEdge below now points at this same table instead of Modern City's brick paver).
+  fill: urbanTile(9, 4),
+  edgeT: urbanTile(9, 3), edgeB: urbanTile(9, 5), edgeL: urbanTile(8, 4), edgeR: urbanTile(10, 4),
+  cornerTL: urbanTile(8, 3), cornerTR: urbanTile(10, 3), cornerBL: urbanTile(8, 5), cornerBR: urbanTile(10, 5),
+};
+// Building parts: a red-brick wall-with-coping (one crop for the cap row, one for the plain body,
+// one for the base/plinth row -- the coping band sits at the *top* edge of the cap crop and the
+// *bottom* edge of the base crop), a tan arched window (frame + glass, already close to this game's
+// sand wall so needs the least recoloring), a wide glass double door (two tiles, left+right halves
+// of one picture), a plain glass panel with and without a green sill (the portico's own flanking
+// glass, not the door itself), a free-standing pillar (transparent margin -- a prop, not a wall
+// crop), and a 3-tread stone staircase.
+const BLDG = {
+  cap: urbanTile(18, 0),
+  body: urbanTile(18, 2),
+  base: urbanTile(18, 3),
+  window: urbanTile(13, 13),
+  doorL: urbanTile(7, 15), doorR: urbanTile(8, 15),
+  glassPanel: urbanTile(9, 13), glassPanelBase: urbanTile(9, 14),
+  pillar: urbanTile(2, 10),
+  step1: urbanTile(0, 12), step2: urbanTile(0, 13), step3: urbanTile(0, 14),
+};
+// A plain pole shaft (the bare post beneath one of the sheet's own street signs, cropped of its own
+// sign) -- see flagPoleBase/flagPoleTop below, replacing the single squat Ninja "flag on a stick"
+// tile the coordinator described as reading like a hand axe at this scale.
+const FLAG_POLE_SRC = urbanTile(4, 7);
+const BUS_STOP_SIGN_SRC = urbanTile(6, 6); // a plaque-on-a-pole street sign, native blue
+
+// Buckets a wall pixel by HUE first, not just luminance: this sheet's brick body and its tan coping
+// share overlapping luminance bands (sampled directly -- MEMORY.md), so a plain remapShaded ramp
+// would smear one into the other. `r - b` cleanly separates them (brick body samples at r-b > ~100;
+// tan coping/plinth at r-b < ~40). Brick -> this game's own sand wall body (#e3c09b, the
+// coordinator's exact hex); tan coping -> the existing `wallHi` cream (#f2ddb8, reused so a recolored
+// roofline matches every hand-drawn cap band already using that key) with a terracotta shadow at its
+// own darker edge.
+function remapBitsWall(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (r - b > 60) {
+    if (lum < 105) return [...hexToRgb('#a86a44'), a];
+    if (lum < 125) return [...hexToRgb('#e3c09b'), a];
+    return [...hexToRgb('#f0d6b0'), a];
+  }
+  if (lum < 150) return [...hexToRgb('#b5583c'), a];
+  if (lum < 200) return [...hexToRgb('#f2ddb8'), a];
+  return [...hexToRgb('#f8ecd4'), a];
+}
+// Same hue-split, but the tan band becomes a genuinely *darker* cool plinth course instead of a light
+// coping -- round 2's own "darker plinth, not just a thin shadow line" ask, now built from a real
+// Kenney crop instead of a flat fill.
+function remapBitsWallBase(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (r - b > 60) {
+    if (lum < 105) return [...hexToRgb('#a86a44'), a];
+    if (lum < 125) return [...hexToRgb('#e3c09b'), a];
+    return [...hexToRgb('#f0d6b0'), a];
+  }
+  if (lum < 150) return [...hexToRgb('#4f4536'), a];
+  if (lum < 200) return [...hexToRgb('#6b7280'), a]; // baseCool's own hex, reused
+  return [...hexToRgb('#7d8290'), a];
+}
+// The tan window frame is already close to the sand wall -- darken its own shadow edge to terracotta
+// for definition, lighten its face to the sand body, and leave the glass pane exactly as drawn.
+function remapBitsWindow(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (lum < 150) return [...hexToRgb('#b5583c'), a];
+  if (lum < 210) return [...hexToRgb('#e3c09b'), a];
+  return [r, g, b, a];
+}
+// The door/glass-panel's dark navy frame becomes terracotta; the light blue-white glass (and its own
+// reflection tones) are left exactly as the pack drew them -- "a big glass entrance", not a flat
+// recolor of the glass itself.
+function remapBitsDoorFrame(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (lum < 115) return [...hexToRgb('#8a4530'), a];
+  return [r, g, b, a];
+}
+// A neutral light stone for the staircase, and a terracotta pillar for the portico columns -- both
+// plain grey-purple on the sheet, recolored the same luminance-ramp way every other pack crop in this
+// file already is (lineAbove pushed out of range since these crops have no separate bright accent to
+// snap away from -- the ramp alone covers their whole tonal range).
+const remapLightStone = remapShaded(['#8a8a94', '#d6d2c8', '#efece4'], { loLum: 90, hiLum: 190, outlineBelow: 0, lineAbove: 500 });
+const remapBitsColumn = remapShaded(['#8a4530', '#b5583c', '#d97850'], { loLum: 85, hiLum: 195, outlineBelow: 0, lineAbove: 500 });
+
 // Pixel Vehicle Pack (Kenney, CC0): irregular small top-down sprites, not on the 16x16 tile grid --
 // each is its own PNG, decoded on demand (they're 4-bit palette images, see tools/lib/png-decode.js).
 const VEHICLE_DIR = 'kenney-pixel-vehicle-pack/PNG/Cars';
@@ -544,50 +648,14 @@ const remapSchoolWood = remapShaded(['#5a3418', '#7a4a24', '#b98150', '#cf9a66']
 // (STYLE_GUIDE.md "Stone" plus the screen-blue 'I' key) instead of Cool School's lilac-tinted grey.
 const remapSchoolScreen = remapShaded(['#4a4a55', '#9a9a9a', '#c8c8c8'], { loLum: 70, hiLum: 200, outlineBelow: 55, lineAbove: 230 });
 
-// A straight kerb edge is the paver-with-line tile rotated so its line faces the right side; the
-// line sits in the source tile's bottom 4px (rows 12-15), so after each rotation the same 4px band
-// sits at the corresponding edge -- used directly for a straight kerbT/B/L/R tile, or as a strip
-// overlaid on a plain base for a corner (see atlasKerbCorner).
-const KERB_ROTATE = { B: 0, L: 90, T: 180, R: 270 };
-const KERB_BAND = {
-  B: { x: 0, y: 12, w: 16, h: 4 },
-  T: { x: 0, y: 0, w: 16, h: 4 },
-  L: { x: 0, y: 0, w: 4, h: 16 },
-  R: { x: 12, y: 0, w: 4, h: 16 },
-};
-function atlasKerbSide(img, x, y, side) {
-  blitAtlas(img, x, y, loadAtlas(PACK.kerbPaver.atlas), PACK.kerbPaver.sx, PACK.kerbPaver.sy, 16, 16, {
-    rotate: KERB_ROTATE[side],
-    remap: remapPaver,
-  });
-}
-// Only the band strip for `side` (its gutter line + a little paver either side of it), overlaid on
-// top of whatever's already there -- how a corner tile gets both of its two lines.
-function atlasKerbBand(img, x, y, side) {
-  const band = KERB_BAND[side];
-  const full = new Img(16, 16);
-  blitAtlas(full, 0, 0, loadAtlas(PACK.kerbPaver.atlas), PACK.kerbPaver.sx, PACK.kerbPaver.sy, 16, 16, {
-    rotate: KERB_ROTATE[side],
-    remap: remapPaver,
-  });
-  for (let yy = 0; yy < band.h; yy++) {
-    for (let xx = 0; xx < band.w; xx++) {
-      const i = ((band.y + yy) * 16 + (band.x + xx)) * 4;
-      img.setRGBA(x + band.x + xx, y + band.y + yy, full.data[i], full.data[i + 1], full.data[i + 2], full.data[i + 3]);
-    }
-  }
-}
-// A straight border (kerbT/B/L/R): the whole tile is the rotated paver-with-line source.
-function atlasKerbEdge(img, x, y, sides) {
-  if (sides.length === 1) {
-    atlasKerbSide(img, x, y, sides);
-    return;
-  }
-  // A corner (two sides, e.g. "TL"): a plain-paver base (no baked-in line) plus both sides' bands,
-  // so the corner shows the paver texture with a line along each of its two road-facing edges.
-  blitAtlas(img, x, y, loadAtlas(PACK.plainPaver.atlas), PACK.plainPaver.sx, PACK.plainPaver.sy, 16, 16, { remap: remapPaver });
-  for (const side of sides) atlasKerbBand(img, x, y, side);
-}
+// Coordinator review round 3 (2026-09-27): this used to blit Modern City's brick paver-with-gutter-
+// line tile (PACK.kerbPaver), recolored via remapPaver to a salmon-brick ramp, as the *entire* 16x16
+// tile for every kerbT/B/L/R/TL/TR/BL/BR -- i.e. every road-facing edge of every sidewalk in the
+// game, avenue included. Round 2's walkway() rewrite never touched this code path, which is the real
+// reason the avenue still read as brick after that pass. kerbT/B/L/R/TL/TR/BL/BR now just reuse the
+// same Kenney concrete-sidewalk edge/corner pieces as an ordinary pedestrian walkway (see
+// walkway()/walkwayEdge()/walkwayCorner() below) -- one sidewalk material for the whole campus,
+// whether it's bordering a road or a lawn.
 
 // Seeded random so the art is the same every time you run the script.
 function rng(seed) {
@@ -1007,19 +1075,19 @@ const TILES = [
   // premium pass (2026-09-26, Part 2): the fill is now Ninja Adventure's own round tree (its Nature
   // tileset), replacing Sprout Lands -- same "our shape, its fill" technique FB-0025 used, and the
   // same remapDryLeaves ramp so it still sits with the rest of the dry-campus-green palette.
-  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, roundCanopyShape, NINJA.treeCanopy, remapDryLeaves) },
-  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, roundCanopyShape, NINJA.treeCanopy, remapDryLeaves) },
-  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, roundCanopyShape, NINJA.treeCanopy, remapDryLeaves) },
-  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, roundCanopyShape, NINJA.treeCanopy, remapDryLeaves) },
+  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, roundCanopyShape, NINJA.treeCanopy) },
+  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, roundCanopyShape, NINJA.treeCanopy) },
+  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, roundCanopyShape, NINJA.treeCanopy) },
+  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, roundCanopyShape, NINJA.treeCanopy) },
   { name: 'palmTrunk', solid: true, draw: palmTrunk },
   // premium pass (Part 2): the frond fill is now Ninja Adventure's desert-tileset potted palm
   // (cropped to fronds only, no pot -- our own trunk/neck shape stays exactly as FB-0019 built it,
   // same "our shape, its fill" technique as the round tree above, still on the palm's own dry-green
   // palette keys since remapDryLeaves already matches them).
-  { name: 'palmCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, palmCanopyShape, NINJA.palmCanopy, remapDryLeaves) },
-  { name: 'palmCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, palmCanopyShape, NINJA.palmCanopy, remapDryLeaves) },
-  { name: 'palmCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, palmCanopyShape, NINJA.palmCanopy, remapDryLeaves) },
-  { name: 'palmCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, palmCanopyShape, NINJA.palmCanopy, remapDryLeaves) },
+  { name: 'palmCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, palmCanopyShape, NINJA.palmCanopy) },
+  { name: 'palmCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, palmCanopyShape, NINJA.palmCanopy) },
+  { name: 'palmCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, palmCanopyShape, NINJA.palmCanopy) },
+  { name: 'palmCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, palmCanopyShape, NINJA.palmCanopy) },
 
   // FB-0016: a tennis court kit. See the arrangement comment above courtSurface() below for how
   // these combine into a standard 18x9-tile court (36x18 m including run-off).
@@ -1173,9 +1241,9 @@ const TILES = [
   { name: 'planter', solid: true, draw: planter },
   { name: 'lowFence', solid: true, draw: lowFence },
   { name: 'bollard', solid: true, draw: bollard },
-  { name: 'flagPoleYellow', solid: true, draw: (img, x, y) => flagPole(img, x, y, 'Yellow') },
-  { name: 'flagPoleBlue', solid: true, draw: (img, x, y) => flagPole(img, x, y, 'Blue') },
-  { name: 'flagPoleRed', solid: true, draw: (img, x, y) => flagPole(img, x, y, 'Red') },
+  { name: 'flagPoleYellow', solid: true, draw: (img, x, y) => flagPoleBase(img, x, y) },
+  { name: 'flagPoleBlue', solid: true, draw: (img, x, y) => flagPoleBase(img, x, y) },
+  { name: 'flagPoleRed', solid: true, draw: (img, x, y) => flagPoleBase(img, x, y) },
 
   // Part 3 (FB-0029): the Main Block's portico columns, glass canopy, open-door variants and its
   // "BITS PILANI, DUBAI CAMPUS" sign-band lettering (one tile per character actually used).
@@ -1216,6 +1284,14 @@ const TILES = [
   { name: 'bitsStep2', draw: bitsStep2 },
   { name: 'bitsStep3', draw: bitsStep3 },
   ...SIGN_SEGMENTS.map((text3, i) => ({ name: `bitsSignSeg${i}`, solid: true, draw: (img, x, y) => bitsSignSegment(img, x, y, text3) })),
+
+  // premium pass round 3 (2026-09-27, coordinator review, "one coherent free kit"): the flag's own
+  // overhead top-of-pole tile (see flagPoleTop's comment), and a bus stop sign prop. Appended at the
+  // very end so every existing tile's name/index stays stable.
+  { name: 'flagTopYellow', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Yellow') },
+  { name: 'flagTopBlue', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Blue') },
+  { name: 'flagTopRed', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Red') },
+  { name: 'busStopSign', solid: true, draw: busStopSign },
 ];
 
 // ---------- campus tiles ----------
@@ -1331,36 +1407,33 @@ function bitsWallEnd(img, x, y, side) {
 // at the base, windows with a frame + sill + glint, and a cast shadow tile on the ground right below
 // the facade (bitsFacadeShadow, placed by build-campus.js) -- these four are what sell height at the
 // real game camera, more than any single building's own entrance treatment.
+// Coordinator review round 3 (2026-09-27): round 2 tuned these to flat palette fills in the right
+// hexes (sand wall, terracotta trim, light parapet) -- the coordinator's side-by-side photo
+// comparison found a flat fill still reads as a box with no material at the real camera, "compose it
+// from Kenney building parts, recolored" instead. Every band below now blits BLDG's own wall crop
+// (remapBitsWall/remapBitsWallBase, above) for its real brick-coursing texture, onto the *same* target
+// hexes round 2 already established (so nothing about the established palette changes, only the fact
+// that it's now real pack pixels instead of a flat fill) -- a thin flat roofline/panel/ground-line
+// accent stays on top where a crisp 1px architectural line reads better than more texture.
 function bitsFacadeCap(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
+  blitAtlas(img, x, y, loadAtlas(BLDG.cap.atlas), BLDG.cap.sx, BLDG.cap.sy, 16, 16, { remap: remapBitsWall });
   img.fill(x, y, TILE, 1, 'K'); // roofline outline
-  img.fill(x, y + 1, TILE, 2, 'wallHi'); // parapet highlight -- the roof edge catching top-left light
-  img.fill(x, y + 3, TILE, 1, '&'); // terracotta coping line, distinct from the crown fill below
-  img.fill(x, y + 4, TILE, 7, 'wallHi'); // crown body
-  img.fill(x, y + 11, TILE, 2, '&'); // trim line
 }
 
 function bitsFacadeWindow(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x + 2, y + 1, 12, 11, '&'); // frame
-  img.fill(x + 3, y + 2, 10, 9, '*'); // glass
-  img.set(x + 5, y + 4, 'W');
-  img.set(x + 5, y + 5, 'W'); // a taller glint than the small punched windows, matching the bigger pane
-  img.fill(x + 2, y + 12, 12, 1, 'wallHi'); // sill, a light ledge the window frame rests on
-  img.fill(x, y + 13, TILE, 3, '%'); // shadow under the sill, down to the next band
+  blitAtlas(img, x, y, loadAtlas(BLDG.body.atlas), BLDG.body.sx, BLDG.body.sy, 16, 16, { remap: remapBitsWall });
+  // BLDG.window is an arched crop with its own transparent corners (a real window punched into the
+  // wall, not a full tile) -- the wall blit above is its backdrop.
+  blitAtlas(img, x, y, loadAtlas(BLDG.window.atlas), BLDG.window.sx, BLDG.window.sy, 16, 16, { remap: remapBitsWindow });
 }
 
 function bitsFacadeBody(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
+  blitAtlas(img, x, y, loadAtlas(BLDG.body.atlas), BLDG.body.sx, BLDG.body.sy, 16, 16, { remap: remapBitsWall });
   img.fill(x + 7, y, 1, TILE, '%'); // panel line, full height -- no cap/base bands to interrupt it here
 }
 
 function bitsFacadeBase(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 2, '%'); // shadow where the body above ends
-  img.fill(x, y + 2, TILE, 11, '%'); // a genuinely darker plinth band, not just a thin shadow line --
-  // the base course reads as its own material now, the way a real building's stone/rendered plinth does
-  img.fill(x, y + 13, TILE, 2, 'baseCool'); // cool baseboard where the wall meets the ground
+  blitAtlas(img, x, y, loadAtlas(BLDG.base.atlas), BLDG.base.sx, BLDG.base.sy, 16, 16, { remap: remapBitsWallBase });
   img.fill(x, y + 15, TILE, 1, 'K'); // a dark ground-line pixel, the plinth's own contact shadow
 }
 
@@ -1432,10 +1505,14 @@ function otherWallEnd(img, x, y, side) {
 // "Campus kit" for which pack tile backs which name.
 
 // A road rectangle's border: `sides` is a string built from 'T'/'B'/'L'/'R' ('kerbEdge(img,x,y,
-// "TL")' etc. below); one letter is a straight edge, two make a corner. atlasKerbEdge/atlasKerbSide/
-// atlasKerbBand (defined above, with the vendor-atlas helpers) do the actual rotation/compositing.
+// "TL")' etc. below); one letter is a straight edge, two make a corner. Coordinator review round 3
+// (2026-09-27): this used to be its own brick-paver-based rotation/compositing path (see the removed
+// atlasKerbEdge/atlasKerbSide/atlasKerbBand above this comment's old location) -- now it's simply the
+// same Kenney concrete sidewalk edge/corner used for an ordinary pedestrian walkway, so a road-facing
+// kerb and a lawn-facing walkway edge are the same material campus-wide.
 function kerbEdge(img, x, y, sides) {
-  atlasKerbEdge(img, x, y, sides);
+  if (sides.length === 1) walkwayEdge(img, x, y, sides);
+  else walkwayCorner(img, x, y, sides);
 }
 
 function roadLineH(img, x, y) {
@@ -1467,39 +1544,28 @@ function crossingV(img, x, y) {
 //
 // Coordinator review round 2 (2026-09-27): recoloring the same Kenney brick-pattern fill onto a
 // browner hue still read as brick at the real game camera ("the avenue shot looks almost
-// unchanged"). Ordinary walkways are now light warm CONCRETE slabs instead (Pokemon HGSS/BW city
-// sidewalks) -- hand-drawn, not blitted from a pack: a flat warm-grey base, a faint one-in-six-
-// pixel speckle, and a 1px joint line only at the tile's own top/left edge (so a run of tiles reads
-// as a continuous slab grid on the 16px tile pitch, not a stamped brick). No outline color, no
-// pack texture. A border is drawn only at the network's true outward edge, as its own dedicated
-// tiles (walkwayEdge*/walkwayCorner*, below) that build-campus.js stamps in place of a plain
-// `walkway` cell only where it actually borders lawn or a road.
+// unchanged"). Round 2's fix was a hand-drawn flat concrete fill; coordinator review round 3
+// (2026-09-27) found *that* still wasn't the fix the owner needed either -- flat palette fills read
+// as a flat plane with no material at all, and separately, the walkway's own kerb-adjacent tiles
+// were a completely different code path (kerbEdge above) still blitting actual brick the whole time.
+// Ordinary walkways are now the Kenney RPG Urban Pack's own light concrete sidewalk plot (SIDEWALK,
+// above) -- native colors ("unrecoloured or only slightly warmed"), a light blue-grey slab fill with
+// a warm tan kerb line built into its own edge/corner pieces, used directly instead of drawn.
 function walkway(img, x, y) {
-  img.fill(x, y, TILE, TILE, 'Å');
-  const r = rng(733);
-  for (let i = 0; i < 4; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'å'); // faint dark fleck
-  for (let i = 0; i < 3; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'ą'); // faint light fleck
-  img.fill(x, y, TILE, 1, 'å'); // joint line, top edge (16px slab grid)
-  img.fill(x, y, 1, TILE, 'å'); // joint line, left edge
+  blitAtlas(img, x, y, loadAtlas(SIDEWALK.fill.atlas), SIDEWALK.fill.sx, SIDEWALK.fill.sy, 16, 16);
 }
 
-// The walkway's true outward edge: the same concrete fill, plus a thin 2px light-grey line only on
-// the side(s) that face lawn or a road -- not a brick/paver border, just a kerb line (the
-// coordinator's exact spec). `Q` is this game's existing light-grey stone tone (already used by the
-// old hand-drawn walkway border and by rocks), reused here rather than adding a new key.
-const WALKWAY_EDGE_BAND = { T: [0, 0, TILE, 2], B: [0, TILE - 2, TILE, 2], L: [0, 0, 2, TILE], R: [TILE - 2, 0, 2, TILE] };
+// The walkway's true outward edge/corner: the same plot's own bordered pieces, which already carry a
+// warm kerb line along the side(s) that face lawn or a road -- not a second border drawn on top.
+const WALKWAY_EDGE_SRC = { T: SIDEWALK.edgeT, B: SIDEWALK.edgeB, L: SIDEWALK.edgeL, R: SIDEWALK.edgeR };
+const WALKWAY_CORNER_SRC = { TL: SIDEWALK.cornerTL, TR: SIDEWALK.cornerTR, BL: SIDEWALK.cornerBL, BR: SIDEWALK.cornerBR };
 function walkwayEdge(img, x, y, side) {
-  walkway(img, x, y);
-  const [bx, by, bw, bh] = WALKWAY_EDGE_BAND[side];
-  img.fill(x + bx, y + by, bw, bh, 'Q');
+  const src = WALKWAY_EDGE_SRC[side];
+  blitAtlas(img, x, y, loadAtlas(src.atlas), src.sx, src.sy, 16, 16);
 }
 function walkwayCorner(img, x, y, corner) {
-  walkway(img, x, y);
-  const sides = { TL: ['T', 'L'], TR: ['T', 'R'], BL: ['B', 'L'], BR: ['B', 'R'] }[corner];
-  for (const side of sides) {
-    const [bx, by, bw, bh] = WALKWAY_EDGE_BAND[side];
-    img.fill(x + bx, y + by, bw, bh, 'Q');
-  }
+  const src = WALKWAY_CORNER_SRC[corner];
+  blitAtlas(img, x, y, loadAtlas(src.atlas), src.sx, src.sy, 16, 16);
 }
 
 // -- FB-0015: lush lawn, hedges, bushes, a flower bed, and trees with overhead canopies --
@@ -1586,7 +1652,11 @@ const roundCanopyShape = (gx, gy) => {
 // flat 3-tone hand-picked ramp. `rect` is a SPROUT source rect (a crop containing ONLY the tree's
 // canopy, no trunk pixels -- see SPROUT.treeCanopy's comment) nearest-neighbor-mapped from the
 // canopy's 32x32 virtual space onto the crop's own (possibly different) size.
-function canopyQuadrantFromAtlas(img, x, y, qx, qy, shapeFn, rect, remap) {
+// Coordinator review round 3 (2026-09-27): `remap` defaults to identity (native pack colors) --
+// round 2's palms/round trees used `remapDryLeaves` to match a muted "Dubai-dry" ramp, but the
+// coordinator's review found the palm "murky and dark" and asked for both back in their pack's own
+// bright native colors, so the tree/palm TILES entries below now call this with no remap at all.
+function canopyQuadrantFromAtlas(img, x, y, qx, qy, shapeFn, rect, remap = (r, g, b, a) => [r, g, b, a]) {
   const atlas = loadAtlas(rect.atlas);
   forEachPixel((xx, yy) => {
     const gx = qx * TILE + xx;
@@ -1731,12 +1801,16 @@ function bitsEntrance(img, x, y, isLeft, grand) {
   img.fill(x, y + 15, TILE, 1, 'O'); // step riser, in shadow
 }
 
+// Coordinator review round 3 (2026-09-27): composed from a Kenney wall crop (backdrop) plus its own
+// free-standing pillar prop (BLDG.pillar, a transparent-margin sprite -- the same "grass then prop"
+// pattern lampPost/bench/etc. already use, just with a wall backdrop instead of grass), recolored
+// terracotta so it reads as an architectural column rather than another flat wall panel.
+function bitsColumnTile(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(BLDG.body.atlas), BLDG.body.sx, BLDG.body.sy, 16, 16, { remap: remapBitsWall });
+  blitAtlas(img, x, y, loadAtlas(BLDG.pillar.atlas), BLDG.pillar.sx, BLDG.pillar.sy, 16, 16, { remap: remapBitsColumn });
+}
 function bitsPillar(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 1, 'K');
-  img.fill(x, y + 1, TILE, 2, '&');
-  img.box(x + 5, y + 3, 6, 11, '%');
-  img.fill(x + 6, y + 4, 4, 9, '&');
+  bitsColumnTile(img, x, y);
   img.fill(x, y + 15, TILE, 1, 'baseCool');
 }
 
@@ -1784,28 +1858,20 @@ function signboard(img, x, y) {
 // established approach here. `bitsEntranceGrandL/R` keep their existing names (tools/campus/
 // build-campus.js/layout.js `grand: true` already selects them for the Main Block only); only the
 // art inside them changes, the same way earlier passes redrew `bitsWallPlain` in place.
+// Coordinator review round 3 (2026-09-27): composed from Kenney's own wide glass double door
+// (BLDG.doorL/doorR, a matched left/right pair -- one picture, two tiles), frame recolored terracotta,
+// glass left exactly as drawn ("a big glass entrance", not a flat recolor).
 function bitsEntranceGrand(img, x, y, isLeft, open) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 1, 'K'); // roofline
-  img.fill(x, y + 1, TILE, 2, '&'); // terracotta lintel: meets bitsEntranceCanopy's own fascia above
-  const pierX = isLeft ? 0 : TILE - 2;
-  img.fill(x + pierX, y + 3, 2, 11, '&'); // the portal frame's outer pier (only on the outward side)
-  const doorX0 = isLeft ? 2 : 0;
-  const doorW = TILE - 2;
+  const src = isLeft ? BLDG.doorL : BLDG.doorR;
+  blitAtlas(img, x, y, loadAtlas(src.atlas), src.sx, src.sy, 16, 16, { remap: remapBitsDoorFrame });
   if (open) {
     // FB-0029/ADR 0015 "door-entry animation": the open-tile variant (`openTiles` on the door
     // object) -- a dark, empty doorway instead of the glass, so stepping in reads as the door having
-    // actually opened rather than the glass just vanishing.
-    img.fill(x + doorX0, y + 3, doorW, 11, 'K');
-  } else {
-    img.fill(x + doorX0, y + 3, doorW, 11, '*');
-    img.set(x + doorX0 + (isLeft ? 4 : 8), y + 6, 'W'); // glint
+    // actually opened rather than the glass just vanishing. Approximate rectangle (the glass panes'
+    // own footprint within the source picture, not pixel-measured) rather than the door's full tile,
+    // so the terracotta frame around the opening still reads as this same door.
+    img.fill(x + 2, y + 2, 12, 12, 'K');
   }
-  // Centre mullion where the two door tiles meet -- the double door's own dividing frame.
-  img.fill(x + (isLeft ? TILE - 1 : 0), y + 3, 1, 11, '&');
-  img.fill(x, y + 13, TILE, 1, '%'); // shadow line above the steps
-  img.fill(x, y + 14, TILE, 1, '-'); // step tread, lit, full width (wide steps across the entrance)
-  img.fill(x, y + 15, TILE, 1, 'O'); // step riser, in shadow
 }
 
 // The glass canopy, directly above the door (one row up): a fascia band (where the sign lettering
@@ -1821,14 +1887,11 @@ function bitsEntranceCanopy(img, x, y) {
   img.fill(x, y + 10, TILE, 6, '%');
 }
 
-// The two tall portico columns flanking the door -- a thick square pier with a terracotta face band,
-// the same row as the canopy above.
+// The two tall portico columns flanking the door -- reuses the same Kenney pillar-on-wall composition
+// as the ordinary bitsPillar decoration (bitsColumnTile, defined with it above) so every column in the
+// game, grand entrance or not, is the same real material.
 function bitsEntranceColumn(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 1, 'K');
-  img.fill(x, y + 1, TILE, 3, 'wallHi');
-  img.box(x + 3, y + 4, 10, 12, '%');
-  img.fill(x + 4, y + 5, 8, 10, '&');
+  bitsColumnTile(img, x, y);
 }
 
 // A tiny 5x7 pixel font, just the characters "BITS PILANI, DUBAI CAMPUS" needs -- generated into
@@ -1881,52 +1944,42 @@ function bitsSignGlyph(img, x, y, ch) {
 // position -- the composition (which column is a frame vs. glass vs. a column) is authored once,
 // here, as a single coherent picture read left-to-right, not scattered per-tile logic.
 
-// The terracotta portal frame's own vertical edge (flanks the glass front, between the outer columns
-// and the glass) -- reused for the window/body/base rows alike, so the frame reads as one continuous
-// pier from the canopy down to the ground.
+// Coordinator review round 3 (2026-09-27): the portal frame stays a flat terracotta pier (a crisp
+// 1px-scale architectural mullion reads better flat than textured at this width), now on a real
+// Kenney wall backdrop instead of a flat '$' fill.
 function bitsPorticoFrame(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
+  blitAtlas(img, x, y, loadAtlas(BLDG.body.atlas), BLDG.body.sx, BLDG.body.sy, 16, 16, { remap: remapBitsWall });
   img.fill(x, y, TILE, 1, 'K');
   img.fill(x + 4, y + 1, 8, 15, '&'); // terracotta pier, centred, full height
   img.fill(x + 5, y + 1, 6, 1, 'wallHi'); // a thin lit highlight along its top-left edge
 }
 
-// The glass front's top row: reflections, plus a 2px dark eave shadow along the very top -- the
-// visual cue that a canopy is projecting out above it (a 2D stand-in for true forward projection,
-// which would need drawing outside this building's own footprint; see the round-2 report).
+// The glass front's top/mid/base rows -- Kenney's own wide glass panel (BLDG.glassPanel/
+// glassPanelBase, not the door itself: this is the flanking "dark glass front... with reflections"
+// either side of the real double door), frame recolored terracotta, glass left native.
 function bitsPorticoGlassTop(img, x, y) {
-  img.fill(x, y, TILE, TILE, '$');
+  blitAtlas(img, x, y, loadAtlas(BLDG.glassPanel.atlas), BLDG.glassPanel.sx, BLDG.glassPanel.sy, 16, 16, { remap: remapBitsDoorFrame });
   img.fill(x, y, TILE, 2, 'K'); // canopy underside shadow -- reads as an overhang above the glass
-  img.fill(x, y + 2, TILE, 14, '*');
-  img.fill(x + 2, y + 4, 3, 8, 'Œ'); // a broad soft reflection streak
-  img.set(x + 11, y + 6, 'W');
 }
-// The glass front's middle row: plain reflective glass, a narrower reflection streak (varies the
-// texture down the height so three stacked rows of the same tile don't look identical).
 function bitsPorticoGlassMid(img, x, y) {
-  img.fill(x, y, TILE, TILE, '*');
-  img.fill(x + 9, y, 2, TILE, 'Œ');
-  img.set(x + 3, y + 7, 'W');
+  blitAtlas(img, x, y, loadAtlas(BLDG.glassPanel.atlas), BLDG.glassPanel.sx, BLDG.glassPanel.sy, 16, 16, { remap: remapBitsDoorFrame });
 }
-// The glass front's base row (either side of the actual door, not the door itself): glass down to
-// a light stone sill at the ground, matching the staircase's own tone.
+// The glass front's base row (either side of the actual door, not the door itself): Kenney's own
+// glass-with-a-sill crop, so the ground line reads as a real ledge instead of a flat color band.
 function bitsPorticoGlassBase(img, x, y) {
-  img.fill(x, y, TILE, TILE, '*');
-  img.fill(x + 4, y, 2, TILE, 'Œ');
-  img.fill(x, y + 13, TILE, 1, '%');
-  img.fill(x, y + 14, TILE, 2, '-');
+  blitAtlas(img, x, y, loadAtlas(BLDG.glassPanelBase.atlas), BLDG.glassPanelBase.sx, BLDG.glassPanelBase.sy, 16, 16, { remap: remapBitsDoorFrame });
 }
 
-// The wide 3-row light-stone staircase in front of the portico (ground layer, walkable) -- three
-// tones from lightest (top, nearest the door) to a slightly cooler shadow (bottom, meeting the
-// plaza), each with a 1px riser shadow along its own top edge so the steps read as separate treads.
-function bitsStepTread(img, x, y, tone) {
-  img.fill(x, y, TILE, TILE, tone);
-  img.fill(x, y, TILE, 2, '%');
+// The wide 3-row light-stone staircase in front of the portico (ground layer, walkable): Kenney's own
+// 3-tread staircase crop (BLDG.step1/2/3, top to bottom), recolored to a neutral light stone so the
+// steps read as their own material against both the sand wall above and the sidewalk below.
+function bitsStepTread(img, x, y, src) {
+  img.fill(x, y, TILE, TILE, '-'); // light-stone backdrop for the tread crop's own transparent corners
+  blitAtlas(img, x, y, loadAtlas(src.atlas), src.sx, src.sy, 16, 16, { remap: remapLightStone });
 }
-function bitsStep1(img, x, y) { bitsStepTread(img, x, y, '-'); }
-function bitsStep2(img, x, y) { bitsStepTread(img, x, y, 'D'); }
-function bitsStep3(img, x, y) { bitsStepTread(img, x, y, 'd'); }
+function bitsStep1(img, x, y) { bitsStepTread(img, x, y, BLDG.step1); }
+function bitsStep2(img, x, y) { bitsStepTread(img, x, y, BLDG.step2); }
+function bitsStep3(img, x, y) { bitsStepTread(img, x, y, BLDG.step3); }
 
 // A tight 4x6 pixel font (the coordinator's "1px spacing... several letters per tile" -- the old
 // 5x7-one-tile-per-character version spelled the message across the *whole* facade). 4 wide + 1px
@@ -1997,15 +2050,34 @@ function bollard(img, x, y) {
   grass(img, x, y, 156);
   blitAtlas(img, x, y, loadAtlas(URBAN.bollard.atlas), URBAN.bollard.sx, URBAN.bollard.sy, 16, 16);
 }
-// A row of coloured pennant flags on a tall pole (Ninja Adventure, CC0) in front of the Main Block
-// forecourt, per the owner's own reference photo. Named per colour (yellow/blue/red, matching the
-// photo) so the engine can animate them later (ADR 0015-adjacent note in the premium-pass brief) --
-// static first frame only for now, the same "static now, animate later" call already made for
-// gentle-life props elsewhere in this kit.
-function flagPole(img, x, y, color) {
+// A row of coloured pennant flags on a tall pole in front of the Main Block forecourt, per the
+// owner's own reference photo. Named per colour (yellow/blue/red, matching the photo) so the engine
+// can animate them later (ADR 0015-adjacent note in the premium-pass brief) -- static first frame
+// only for now, the same "static now, animate later" call already made for gentle-life props
+// elsewhere in this kit.
+// Coordinator review round 3 (2026-09-27): the single-tile version above (grass + Ninja's own short
+// "flag on a stick" sprite, its pole and pennant both squeezed into one 16px tile) "read as a little
+// axe" at this scale. Now a real 2-tile-tall pole (`flagPoleYellow` etc. stay the *base* tile,
+// unchanged names -- ADR/append-only -- now drawing just the lower pole shaft; a new `flagTopYellow`
+// etc., overhead like a tree canopy, draws the shaft continuing up plus the Ninja flag mounted at its
+// top) -- "a proper flag pole (a Kenney pole piece, 2 tiles tall)... a Ninja Adventure flag frame at
+// the top", exactly the coordinator's own words.
+function flagPoleBase(img, x, y) {
   grass(img, x, y, 157);
+  blitAtlas(img, x, y, loadAtlas(FLAG_POLE_SRC.atlas), FLAG_POLE_SRC.sx, FLAG_POLE_SRC.sy, 16, 16, { remap: remapLightStone });
+}
+function flagPoleTop(img, x, y, color) {
+  blitAtlas(img, x, y, loadAtlas(FLAG_POLE_SRC.atlas), FLAG_POLE_SRC.sx, FLAG_POLE_SRC.sy, 16, 16, { remap: remapLightStone });
   const rect = NINJA.flag(color);
-  blitAtlas(img, x, y, loadAtlas(rect.atlas), rect.sx, rect.sy, 16, 16);
+  // Enlarged and shifted up so the pennant clears the pole's own top and reads as a distinct flag
+  // shape, not a small icon glued to the shaft -- native Ninja Adventure colors, no recolor.
+  blitAtlas(img, x, y, loadAtlas(rect.atlas), rect.sx, rect.sy, 16, 16, { dw: 20, dh: 20, offsetX: -2, offsetY: -6 });
+}
+// A plaque-on-a-pole street sign (Kenney RPG Urban Pack, native blue) near Gate 2 -- "Kenney...bus
+// stop sign near the gate", coordinator review round 3.
+function busStopSign(img, x, y) {
+  grass(img, x, y, 158);
+  blitAtlas(img, x, y, loadAtlas(BUS_STOP_SIGN_SRC.atlas), BUS_STOP_SIGN_SRC.sx, BUS_STOP_SIGN_SRC.sy, 16, 16);
 }
 
 // ---------- interior kit (P3: Main/Library/Mechanical Block interiors, 1 m/tile) ----------

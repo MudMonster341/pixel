@@ -69,6 +69,8 @@ const REQUIRED_TILES = [
   'bitsSignB', 'bitsSignI', 'bitsSignT', 'bitsSignS', 'bitsSignP', 'bitsSignL', 'bitsSignA', 'bitsSignN', 'bitsSignD', 'bitsSignU', 'bitsSignC', 'bitsSignM', 'bitsSignComma', 'bitsSignSpace',
   // premium pass round 2 (2026-09-27): the composed entrance prefab and the general 3D-feel shadow.
   'bitsFacadeShadow', 'bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase', 'bitsStep1', 'bitsStep2', 'bitsStep3',
+  // premium pass round 3 (2026-09-27): the flag's overhead top-of-pole tile, and a bus stop sign prop.
+  'flagTopYellow', 'flagTopBlue', 'flagTopRed', 'busStopSign',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -1693,11 +1695,14 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
 // below, after the forecourt paving itself exists (this section runs first, and the forecourt
 // rectangle would otherwise overwrite a staircase placed here).
 
-// Bollards flanking Gate 2's own approach, just inside the fence.
+// Bollards flanking Gate 2's own approach, just inside the fence, plus a bus stop sign a little
+// further in on the same side (coordinator review round 3: "Kenney lamps, benches, bins, bus stop
+// sign near the gate").
 {
   const gateRow = gy(fenceFrame.v1) - 2;
   structOnLawn(gx(gate2U - AVENUE_W / 2) - 2, gateRow, TILE.bollard);
   structOnLawn(gx(gate2U + AVENUE_W / 2) + 2, gateRow, TILE.bollard);
+  structOnLawn(gx(gate2U - AVENUE_W / 2) - 4, gateRow + 2, TILE.busStopSign);
 }
 
 // A low decorative fence along each gate-side parking lot's near (avenue-facing) edge.
@@ -1834,12 +1839,20 @@ if (mainBlock.frontBand) {
   // shorter than assumed once the forecourt got its real depth (point D's own fix, above) -- doorY+8
   // now lands inside the loop road itself. The lawn flanking the forecourt's own west side (still
   // wide open at this row) is a safer, still-forecourt-adjacent spot for the flag row.
+  // Coordinator review round 3 (2026-09-27): the flag is now a real 2-tile-tall pole (make-assets.js
+  // flagPoleBase/flagPoleTop's own comment) -- flagColors' base name still picks the pole/flag color,
+  // paired with the matching `flagTop*` overhead tile placed one row above the base, the same way
+  // plantTree above places a tree's canopy overhead one row above its trunk.
   const flagColors = ['flagPoleYellow', 'flagPoleBlue', 'flagPoleRed', 'flagPoleYellow', 'flagPoleBlue'];
   const flagY = doorY + 3;
   const flagX0 = doorX0 - 18;
   flagColors.forEach((name, i) => {
     const x = flagX0 + i * 2;
-    if (structOnLawn(x, flagY, TILE[name])) addDepthGroup('flagPole', x, flagY, 1, 1);
+    if (structOnLawn(x, flagY, TILE[name])) {
+      addDepthGroup('flagPole', x, flagY, 1, 1);
+      const topName = 'flagTop' + name.slice('flagPole'.length);
+      if (inGrid(x, flagY - 1)) overhead[(flagY - 1) * W + x] = TILE[topName];
+    }
   });
 }
 

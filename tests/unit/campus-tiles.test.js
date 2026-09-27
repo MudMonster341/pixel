@@ -92,12 +92,21 @@ test('FB-0014: road kerb edge and corner tiles exist and roads stay walkable', (
   }
 });
 
-test('FB-0014: a kerb edge tile shows both the black-and-white kerb line and the paved sidewalk', () => {
-  const counts = colorCounts('kerbT');
-  assert.ok('#1a1c2c' in counts && '#ffffff' in counts, 'kerbT is missing the black/white kerb line');
-  // premium pass (2026-09-26, docs/research/campus-visual-reference.md): nudged browner/redder than
-  // the original FB-0025 salmon-pink ('#c0735c' -> '#b06b4a'), same 3-stop paver ramp.
-  assert.ok('#b06b4a' in counts, 'kerbT is missing the paving (sidewalk) brick color');
+// Coordinator review round 3 (2026-09-27): kerbT/B/L/R/TL/TR/BL/BR used to be a completely separate
+// code path from walkway()/walkwayEdge() -- Modern City's own brick paver-with-gutter-line tile,
+// recolored to a salmon-brick ramp, filling the *entire* tile. That's what made every road-facing
+// sidewalk edge (the avenue included) still read as brick even after round 2 fixed the plain
+// `walkway` fill. kerbT is now literally the same Kenney concrete-sidewalk edge piece as
+// walkwayEdgeT -- one sidewalk material, whether it borders a road or a lawn -- so this test checks
+// they're pixel-identical and that neither one is brick.
+test('FB-0014/round 3: a kerb edge tile is the same real sidewalk material as an ordinary walkway edge, not brick', () => {
+  const kerb = colorCounts('kerbT');
+  const walkEdge = colorCounts('walkwayEdgeT');
+  assert.deepEqual(kerb, walkEdge, 'kerbT should be the same Kenney sidewalk-edge art as walkwayEdgeT');
+  for (const brick of ['#1a1c2c', '#ffffff', '#b06b4a', '#9d6249', '#c0735c']) {
+    assert.ok(!(brick in kerb), `kerbT should not contain the old brick-paver color ${brick}`);
+  }
+  assert.ok(Object.keys(kerb).length >= 3, 'kerbT should show real pack texture (several distinct tones), not a flat fill');
 });
 
 test('FB-0014: lane markings and a pedestrian crossing exist', () => {
@@ -118,17 +127,21 @@ test("FB-0028: the walkway's plain fill has no border baked in (a path doesn't r
   assert.ok(!('#c8c8c8' in counts) && !('#ffffff' in counts), 'walkway should not have its own border baked into every tile');
 });
 
-// Coordinator review round 2 (2026-09-27): the edge tiles' own border is now a plain 2px light-grey
-// kerb line ('#c8c8c8', this game's existing "light stone" tone -- Q in tools/make-assets.js's
-// PALETTE) on top of the same concrete fill as plain `walkway`, not a pack-sourced paver border.
+// Coordinator review round 3 (2026-09-27): round 2's own hand-drawn concrete fill + a flat 2px
+// light-grey line border ('#c8c8c8' on a '#d9d1c3' fill) was replaced with Kenney RPG Urban Pack's
+// own concrete-sidewalk plot -- a real light blue-grey slab with its own built-in warm tan kerb
+// border baked into the edge/corner art itself, used unrecolored. So the edge/corner tiles no longer
+// carry either of round 2's specific hex values; instead each one differs from the plain `walkway`
+// fill (it has its own border baked in) while staying in the same light, low-saturation tonal family.
 test('FB-0028: the walkway network has dedicated edge/corner tiles for its true outward border', () => {
+  const plainWalkway = colorCounts('walkway');
   for (const name of ['walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR', 'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR']) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);
     assert.equal(tile.solid, false, `${name} should stay walkable`);
     const counts = colorCounts(name);
-    assert.ok('#c8c8c8' in counts, `${name} has no light-grey kerb line`);
-    assert.ok('#d9d1c3' in counts, `${name} should still be the same concrete fill as plain walkway`);
+    assert.notDeepEqual(counts, plainWalkway, `${name} should have its own kerb border, not be identical to plain walkway`);
+    assert.ok(Object.keys(counts).length >= 3, `${name} should show real pack texture (several distinct tones)`);
   }
 });
 
@@ -272,12 +285,16 @@ test('BITS building walls use the BITS palette (sand wall, terracotta trim, and 
   // premium pass (2026-09-26, FB-0029): the Main Block entrance is a terracotta portal frame around
   // a dark glass door, per the owner's own photo and two independent Wikimedia angles -- not the red
   // arch this test used to pin (docs/STYLE_GUIDE.md's "Main Block specifically gets a real red arch"
-  // section is corrected to match, see that file's own note). archRed is gone entirely now; the
-  // terracotta trim ('&') and dark glass ('*') colors are what read as "grand" instead.
+  // section is corrected to match, see that file's own note). archRed is gone entirely now.
+  // Coordinator review round 3 (2026-09-27): "compose it from Kenney's glass storefront/double door...
+  // pieces" -- bitsEntranceGrandL/R are now a real Kenney glass double door (recolored terracotta
+  // frame, native glass), not a flat '&'/'*' palette fill, so the frame is now '#8a4530' (this pass's
+  // own terracotta-from-brick remap, not round 2's '#cf8a6c') and the glass is several real reflection
+  // tones instead of one flat dark fill.
   const grandCounts = colorCounts('bitsEntranceGrandL');
   assert.ok(!('#9c3a28' in grandCounts), 'bitsEntranceGrandL should no longer use the old red arch color (archRed)');
-  assert.ok('#cf8a6c' in grandCounts, 'bitsEntranceGrandL is missing the terracotta portal frame color');
-  assert.ok('#2f3a44' in grandCounts, 'bitsEntranceGrandL is missing the dark glass door color');
+  assert.ok('#8a4530' in grandCounts, 'bitsEntranceGrandL is missing the terracotta portal frame color');
+  assert.ok(Object.keys(grandCounts).length >= 4, 'bitsEntranceGrandL should show real glass-door texture (several distinct tones), not a flat fill');
 });
 
 test('the Main Block entrance tiles exist, are distinct from the ordinary entrance, and stay walkable', () => {
@@ -302,23 +319,47 @@ test('FB-0029: the compact sign band is navy lettering on a light fascia, not a 
   assert.ok(counts['#1a3a6b'] >= 6, `expected a real glyph (several navy pixels), found only ${counts['#1a3a6b'] || 0}`);
 });
 
-test('FB-0029: the entrance glass reads as glazing (a reflection tone), not a flat dark fill', () => {
+// Coordinator review round 3 (2026-09-27): the portico's glass panels are now Kenney's own wide glass
+// window crop (frame recolored terracotta, glass left exactly as the pack drew it) instead of a flat
+// dark '*' fill with one hand-drawn reflection streak -- real reflection variation (several distinct
+// light-blue/lavender tones) is the whole point, not a single extra hex.
+test('FB-0029: the entrance glass reads as glazing (real reflection texture), not a flat dark fill', () => {
   for (const name of ['bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase']) {
     const counts = colorCounts(name);
-    assert.ok('#2f3a44' in counts, `${name} is missing the dark glass base color`);
-    assert.ok('#4a5a68' in counts, `${name} is missing the lighter reflection streak`);
+    assert.ok('#8a4530' in counts, `${name} is missing the terracotta frame color`);
+    assert.ok(Object.keys(counts).length >= 4, `${name} should show several distinct glass/reflection tones, not a flat fill`);
   }
 });
 
-test('FB-0028: ordinary walkways are light warm concrete, not brick, and stay a subtle multi-tone slab', () => {
+// Coordinator review round 3 (2026-09-27): ordinary walkways moved again -- round 2's hand-drawn
+// flat concrete fill ('#d9d1c3' etc.) still didn't read as real ground at the camera, so `walkway` is
+// now Kenney RPG Urban Pack's own light concrete sidewalk plot, used natively (the coordinator's own
+// "unrecoloured or only slightly warmed"). It should be a light, low-saturation grey slab with real
+// texture (several distinct tones) and, still, no brick.
+test('FB-0028: ordinary walkways are light concrete, not brick, and stay a subtle multi-tone slab', () => {
   const counts = colorCounts('walkway');
-  assert.ok('#d9d1c3' in counts, 'walkway is missing its concrete base tone');
-  assert.ok(!('#b06b4a' in counts) && !('#9d6249' in counts), 'walkway should not use the forecourt paver colors (it should read as concrete, not brick)');
+  assert.ok(Object.keys(counts).length >= 3, `walkway uses only ${Object.keys(counts).length} tone(s), expected real pack texture`);
+  for (const brick of ['#b06b4a', '#9d6249', '#c0735c', '#8c5236']) {
+    assert.ok(!(brick in counts), `walkway should not use the forecourt paver/brick color ${brick} (it should read as concrete, not brick)`);
+  }
+  // Light and low-saturation: every opaque tone's channels should sit close together (grey, not a
+  // warm brick hue) and the tile should be reasonably bright overall.
+  for (const hex of Object.keys(counts)) {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    assert.ok(r - b < 40, `walkway tone ${hex} looks too warm/brick-like for a concrete sidewalk`);
+    assert.ok((r + g + b) / 3 > 120, `walkway tone ${hex} looks too dark for a light concrete sidewalk`);
+  }
 });
 
+// Coordinator review round 3 (2026-09-27): the cap/base bands are now blitted from a real Kenney wall
+// crop (remapBitsWall/remapBitsWallBase, tools/make-assets.js) instead of a flat '$'/'wallHi'/'&'
+// fill -- the parapet highlight is still this game's own `wallHi` hex ('#f2ddb8', reused deliberately
+// so a recolored roofline still matches every hand-drawn cap band using that key), but the coping's
+// own darker edge is now the coordinator's exact terracotta hex ('#b5583c'), not round 2's '#cf8a6c'.
 test("point E: every building's facade has a distinct parapet/coping roof band, a darker plinth, and a cast-shadow tile", () => {
   const capCounts = colorCounts('bitsFacadeCap');
-  assert.ok('#f2ddb8' in capCounts && '#cf8a6c' in capCounts, 'bitsFacadeCap is missing a distinct parapet highlight + terracotta coping');
+  assert.ok('#f2ddb8' in capCounts && '#b5583c' in capCounts, 'bitsFacadeCap is missing a distinct parapet highlight + terracotta coping');
+  assert.ok(Object.keys(capCounts).length >= 4, 'bitsFacadeCap should show real brick-coursing texture, not a flat fill');
   const baseCounts = colorCounts('bitsFacadeBase');
   assert.ok('#6b7280' in baseCounts, 'bitsFacadeBase is missing its cool baseboard');
   const shadowTile = tileInfoFor('bitsFacadeShadow');

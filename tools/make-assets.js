@@ -103,6 +103,19 @@ const PALETTE = {
   // Main Block's "BITS Pilani, Dubai Campus" entrance sign band (docs/research/campus-visual-
   // reference.md "Signage": #1A3A6B, confirmed from the owner's and Wikimedia photos, not gold/white).
   Ñ: '#1a3a6b',
+  // Coordinator review round 2 (2026-09-27): ordinary walkways read as brick at any hue -- light warm
+  // concrete slabs instead (Pokemon HGSS/BW city sidewalks), a base tone with a slightly darker 1px
+  // joint line, both close in luminance so the grid stays subtle, plus an occasional lighter fleck
+  // (a third tone, still faint) so the slab isn't perfectly flat up close.
+  Å: '#d9d1c3', å: '#c6bcae', ą: '#e6ded0',
+  // The Main Block forecourt keeps red-brown pavers, but at small scale and low contrast (a joint
+  // ~10% darker than the brick face, not the old high-contrast bevel) so it reads as a floor, not a
+  // wall, per the coordinator's exact spec. A third, slightly lighter tone on each brick's own
+  // top-left pixel keeps it from being perfectly flat while staying inside that same low-contrast band.
+  Æ: '#b06b4a', æ: '#9d6249', ǽ: '#c47f5c',
+  // A lighter blue-grey reflection streak on the entrance's dark glass front (`*`), so the glass
+  // reads as glazing catching the sky rather than a flat dark fill.
+  Œ: '#4a5a68',
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -344,26 +357,6 @@ function remapGreenOnly(greenRemap) {
 }
 const remapFlowerLeaf = remapGreenOnly(remapDryLeaves);
 
-// premium pass (2026-09-26, FB-0028 "the map pavements... look like brick walls"): the general
-// pedestrian `walkway` fill, recolored from Kenney RPG Urban Pack's own plaza-path tones onto this
-// game's red-brown paver ramp (same target hue as remapPaver above, #B06B4A family) so the new plaza
-// art sits on the same palette as the roads/kerbs it connects to. Source tones sampled directly from
-// the pack's plain plaza-path tile: a light fill (~lum 190) and a darker mortar-joint line (~lum 174).
-const remapPlaza = remapShaded(['#8c5236', '#b06b4a', '#d9a478'], { loLum: 170, hiLum: 188, outlineBelow: 40, lineAbove: 250 });
-// The plaza path's own edge/corner tiles bake a light stone/paver BORDER into the same source tile as
-// the fill (a fused "path piece", not a separate overlay band like the Modern City kerb) -- its
-// border tone is a distinct blue-purple hue (not just darker), so it's snapped to a light/mid stone
-// kerb tone by hue rather than folded into the paver ramp by luminance, then the rest of the tile
-// still falls through to remapPlaza for its own paver fill.
-function remapPlazaEdge(r, g, b, a) {
-  if (a === 0) return [r, g, b, a];
-  if (b > r + 15 && b > g + 8) {
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    return [...hexToRgb(lum > 150 ? '#e6ded0' : '#8c8478'), a];
-  }
-  return remapPlaza(r, g, b, a);
-}
-
 // ---------- vendor source rects (docs/research/asset-packs.md) ----------
 // Roguelike Modern City pack (Kenney, CC0): 16x16 tiles on a 17px pitch (1px margin). Coordinates
 // found by decoding the sheet and eyeballing/measuring crops -- see MEMORY.md for how.
@@ -415,9 +408,9 @@ const SPROUT = {
 const URBAN_SHEET = 'kenney-rpg-urban-pack/Tilemap/tilemap.png';
 const urbanTile = (col, row) => ({ atlas: URBAN_SHEET, sx: col * 17, sy: row * 17, sw: 16, sh: 16 });
 const URBAN = {
-  plazaFill: urbanTile(1, 4), // fully plain paver, no border on any edge -- the walkway's new base fill
-  plazaEdge: urbanTile(0, 3), // paver + a border band along the top edge only (rotated per side below)
-  plazaCorner: urbanTile(2, 3), // paver + a border band along the top AND left edges (rotated per corner)
+  // premium pass round 2 (2026-09-27): the plaza-path tiles this pack offered for `walkway` are no
+  // longer used -- they still read as a brick pattern at any recolor, so ordinary walkways are now
+  // hand-drawn concrete instead (see walkway()'s own comment). This table keeps only the props.
   lampPost: urbanTile(0, 6), // a curved-arm street lamp
   bench: urbanTile(3, 14), // a wooden park bench, slatted seat
   bin: urbanTile(10, 9), // a round waste bin
@@ -854,6 +847,18 @@ function plant(img, x, y) {
   blitFit(img, x, y, loadAtlas(LIMEZU.plant.atlas), LIMEZU.plant.sx, LIMEZU.plant.sy, LIMEZU.plant.sw, LIMEZU.plant.sh, { maxW: 14, maxH: 15 });
 }
 
+// premium pass round 2 (2026-09-27): the Main Block sign message, as data (STYLE_GUIDE "content is
+// data") -- moved above TILES because the `...SIGN_SEGMENTS.map(...)` spread below evaluates eagerly
+// at array-construction time (unlike a `draw: (img,x,y) => fn(...)` closure, which only reads a
+// same-named function later and so can point at something defined further down the file).
+// build-campus.js only needs `SIGN_SEGMENTS.length` and places `bitsSignSeg0..N` in order.
+const MAIN_SIGN_TEXT = 'BITS PILANI, DUBAI CAMPUS';
+const SIGN_CHARS_PER_TILE = 3;
+const SIGN_SEGMENTS = Array.from(
+  { length: Math.ceil(MAIN_SIGN_TEXT.length / SIGN_CHARS_PER_TILE) },
+  (_, i) => MAIN_SIGN_TEXT.slice(i * SIGN_CHARS_PER_TILE, i * SIGN_CHARS_PER_TILE + SIGN_CHARS_PER_TILE).padEnd(SIGN_CHARS_PER_TILE, ' '),
+);
+
 // Order here = tile index. The game looks tiles up by name via assets/tiles.json,
 // so reordering is safe; `solid` tiles block the player.
 const TILES = [
@@ -1192,6 +1197,25 @@ const TILES = [
   { name: 'bitsSignM', solid: true, draw: (img, x, y) => bitsSignGlyph(img, x, y, 'M') },
   { name: 'bitsSignComma', solid: true, draw: (img, x, y) => bitsSignGlyph(img, x, y, ',') },
   { name: 'bitsSignSpace', solid: true, draw: (img, x, y) => bitsSignGlyph(img, x, y, ' ') },
+
+  // premium pass round 2 (2026-09-27, coordinator review): the composed entrance prefab's own
+  // pieces, plus the general per-building 3D-feel shadow. Appended at the very end so every
+  // existing tile's name/index stays stable.
+  { name: 'bitsFacadeShadow', draw: bitsFacadeShadow },
+  { name: 'bitsPorticoFrame', solid: true, draw: bitsPorticoFrame },
+  { name: 'bitsPorticoGlassTop', solid: true, draw: bitsPorticoGlassTop },
+  { name: 'bitsPorticoGlassMid', solid: true, draw: bitsPorticoGlassMid },
+  // Coordinator review round 2 (2026-09-27): non-solid, unlike the window/body glass above it -- the
+  // pedestrian walkway network's own door-connecting spur is 3 tiles wide and centred on the door
+  // (an existing, deliberate exception, `crossWalls: true` in tools/campus/build-campus.js), so it
+  // legitimately reaches the 2 columns immediately either side of the door at ground level. Making
+  // this one row walkable (a player "stands in front of the glass", not through it) avoids stranding
+  // that spur's own tiles instead of fighting the router to avoid a path it's explicitly allowed to take.
+  { name: 'bitsPorticoGlassBase', draw: bitsPorticoGlassBase },
+  { name: 'bitsStep1', draw: bitsStep1 },
+  { name: 'bitsStep2', draw: bitsStep2 },
+  { name: 'bitsStep3', draw: bitsStep3 },
+  ...SIGN_SEGMENTS.map((text3, i) => ({ name: `bitsSignSeg${i}`, solid: true, draw: (img, x, y) => bitsSignSegment(img, x, y, text3) })),
 ];
 
 // ---------- campus tiles ----------
@@ -1202,22 +1226,19 @@ function speckle(img, x, y, base, speck, seed, count) {
   for (let i = 0; i < count; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), speck);
 }
 
-// Red-brown brick pavers in a running bond (FB-0006): each brick is bevelled, with a highlight on
-// its top/left edge and a shadow on its bottom/right edge (light from the top-left), plus a
-// slightly varying base tone so a large paved area doesn't read as one flat repeating grid.
-function brickBevel(xx, yy, offset, period, base) {
-  const withinRow = yy % 4;
-  const brickX = (xx + offset) % period;
-  if (withinRow === 3 || brickX === period - 1) return '8'; // mortar joint
-  if (withinRow === 0 || brickX === 0) return '-';           // highlight (top-left of brick)
-  if (withinRow === 2 || brickX === period - 2) return '_';  // shadow (bottom-right of brick)
-  return base;
-}
-
+// Coordinator review round 2 (2026-09-27): the Main Block forecourt keeps red-brown pavers, but the
+// old running-bond brick (8px bricks, a bright highlight + a dark shadow bevel on every brick) read
+// as a wall at the real camera. Small-scale interlock instead -- each brick is only 4x2 px, one joint
+// tone about 10% darker than the face (no highlight/shadow bevel at all), so up close it reads as a
+// finely-jointed floor rather than individually-lit blocks.
 function paving(img, x, y) {
   forEachPixel((xx, yy) => {
-    const offset = (yy >> 2) % 2 ? 4 : 0;
-    img.set(x + xx, y + yy, brickBevel(xx, yy, offset, 8, '7'));
+    const offset = (yy >> 1) % 2 ? 2 : 0; // running bond, offset every 2px row
+    const withinRow = yy % 2;
+    const brickX = (xx + offset) % 4;
+    const joint = withinRow === 1 || brickX === 3;
+    const highlight = !joint && withinRow === 0 && brickX === 0; // each brick's own top-left pixel
+    img.set(x + xx, y + yy, joint ? 'æ' : highlight ? 'ǽ' : 'Æ');
   });
 }
 
@@ -1305,19 +1326,28 @@ function bitsWallEnd(img, x, y, side) {
 // where the entrance is carved in). `tools/campus/build-campus.js`'s drawBuilding assigns one of
 // these per wall row instead of repeating bitsWallPlain/bitsWall for every row (which stay exactly
 // as they were, still used for interiors and un-touched here).
+// Coordinator review round 2 (2026-09-27), point E ("the core complaint" -- 3D feel for every
+// building): a visible flat roof band (parapet highlight + terracotta coping), a darker plinth band
+// at the base, windows with a frame + sill + glint, and a cast shadow tile on the ground right below
+// the facade (bitsFacadeShadow, placed by build-campus.js) -- these four are what sell height at the
+// real game camera, more than any single building's own entrance treatment.
 function bitsFacadeCap(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
   img.fill(x, y, TILE, 1, 'K'); // roofline outline
-  img.fill(x, y + 1, TILE, 10, 'wallHi'); // tall light cap band -- this is the building's crown
+  img.fill(x, y + 1, TILE, 2, 'wallHi'); // parapet highlight -- the roof edge catching top-left light
+  img.fill(x, y + 3, TILE, 1, '&'); // terracotta coping line, distinct from the crown fill below
+  img.fill(x, y + 4, TILE, 7, 'wallHi'); // crown body
   img.fill(x, y + 11, TILE, 2, '&'); // trim line
 }
 
 function bitsFacadeWindow(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x + 2, y + 1, 12, 14, '&'); // frame, nearly the full tile: this row exists to *be* windows
-  img.fill(x + 3, y + 2, 10, 12, '*'); // glass
+  img.fill(x + 2, y + 1, 12, 11, '&'); // frame
+  img.fill(x + 3, y + 2, 10, 9, '*'); // glass
   img.set(x + 5, y + 4, 'W');
   img.set(x + 5, y + 5, 'W'); // a taller glint than the small punched windows, matching the bigger pane
+  img.fill(x + 2, y + 12, 12, 1, 'wallHi'); // sill, a light ledge the window frame rests on
+  img.fill(x, y + 13, TILE, 3, '%'); // shadow under the sill, down to the next band
 }
 
 function bitsFacadeBody(img, x, y) {
@@ -1327,9 +1357,20 @@ function bitsFacadeBody(img, x, y) {
 
 function bitsFacadeBase(img, x, y) {
   img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 3, '%'); // shadow band where the body above ends
-  img.fill(x, y + 13, TILE, 2, '%'); // shadow just above the baseboard
-  img.fill(x, y + 15, TILE, 1, 'baseCool'); // cool baseboard where the wall meets the ground
+  img.fill(x, y, TILE, 2, '%'); // shadow where the body above ends
+  img.fill(x, y + 2, TILE, 11, '%'); // a genuinely darker plinth band, not just a thin shadow line --
+  // the base course reads as its own material now, the way a real building's stone/rendered plinth does
+  img.fill(x, y + 13, TILE, 2, 'baseCool'); // cool baseboard where the wall meets the ground
+  img.fill(x, y + 15, TILE, 1, 'K'); // a dark ground-line pixel, the plinth's own contact shadow
+}
+
+// The cast shadow a facade throws onto the ground right in front of it -- a flat 25%-black overlay
+// (real alpha, not a palette color) placed by build-campus.js one row south of every BITS building's
+// front run, on top of whatever ground/steps/paving is there. Non-solid: it's a tint, not an object.
+function bitsFacadeShadow(img, x, y) {
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, 0, 0, 0, 64);
+  }
 }
 
 // Shared corner treatment for every facade band above: darken a 3px side column (the 3/4-view
@@ -1422,34 +1463,43 @@ function crossingV(img, x, y) {
 // exactly one tile wide, but the pedestrian network is 3 tiles wide (layout.js walkwayWidthMeters),
 // so the middle row's own top+bottom borders landed right next to its neighbours' borders too,
 // striping the whole path with a repeating light band every tile, in both directions -- exactly the
-// "same visual weight as a wall" complaint. The fill is now genuinely plain (Kenney RPG Urban Pack's
-// own borderless plaza-path tile, recolored onto the reference paver hue); a real border is drawn
-// only at the network's true outward edge, as its own dedicated tiles (walkwayEdge*/walkwayCorner*,
-// below) that build-campus.js stamps in place of a plain `walkway` cell where it actually borders
-// lawn -- the same "kerb only at the edge, not the seam" shape the road kerb tiles already use.
+// "same visual weight as a wall" complaint.
+//
+// Coordinator review round 2 (2026-09-27): recoloring the same Kenney brick-pattern fill onto a
+// browner hue still read as brick at the real game camera ("the avenue shot looks almost
+// unchanged"). Ordinary walkways are now light warm CONCRETE slabs instead (Pokemon HGSS/BW city
+// sidewalks) -- hand-drawn, not blitted from a pack: a flat warm-grey base, a faint one-in-six-
+// pixel speckle, and a 1px joint line only at the tile's own top/left edge (so a run of tiles reads
+// as a continuous slab grid on the 16px tile pitch, not a stamped brick). No outline color, no
+// pack texture. A border is drawn only at the network's true outward edge, as its own dedicated
+// tiles (walkwayEdge*/walkwayCorner*, below) that build-campus.js stamps in place of a plain
+// `walkway` cell only where it actually borders lawn or a road.
 function walkway(img, x, y) {
-  blitAtlas(img, x, y, loadAtlas(URBAN.plazaFill.atlas), URBAN.plazaFill.sx, URBAN.plazaFill.sy, 16, 16, { remap: remapPlaza });
+  img.fill(x, y, TILE, TILE, 'Å');
+  const r = rng(733);
+  for (let i = 0; i < 4; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'å'); // faint dark fleck
+  for (let i = 0; i < 3; i++) img.set(x + randInt(r, 0, 15), y + randInt(r, 0, 15), 'ą'); // faint light fleck
+  img.fill(x, y, TILE, 1, 'å'); // joint line, top edge (16px slab grid)
+  img.fill(x, y, 1, TILE, 'å'); // joint line, left edge
 }
 
-// A straight walkway edge (a light stone/paver border along one side, meeting lawn), and the corner
-// where two of those borders meet -- both fused source pieces (the pack draws the border baked
-// directly into the path tile, not a separate overlay band the way the Modern City kerb works), so a
-// quarter-turn rotation is all that's needed to cover every side/corner from the one authored piece.
-// Base orientation: plazaEdge's own border runs along its TOP edge; plazaCorner's along its TOP and
-// LEFT edges together.
-const WALKWAY_EDGE_ROTATE = { T: 0, R: 90, B: 180, L: 270 };
-const WALKWAY_CORNER_ROTATE = { TL: 0, BL: 90, BR: 180, TR: 270 };
+// The walkway's true outward edge: the same concrete fill, plus a thin 2px light-grey line only on
+// the side(s) that face lawn or a road -- not a brick/paver border, just a kerb line (the
+// coordinator's exact spec). `Q` is this game's existing light-grey stone tone (already used by the
+// old hand-drawn walkway border and by rocks), reused here rather than adding a new key.
+const WALKWAY_EDGE_BAND = { T: [0, 0, TILE, 2], B: [0, TILE - 2, TILE, 2], L: [0, 0, 2, TILE], R: [TILE - 2, 0, 2, TILE] };
 function walkwayEdge(img, x, y, side) {
-  blitAtlas(img, x, y, loadAtlas(URBAN.plazaEdge.atlas), URBAN.plazaEdge.sx, URBAN.plazaEdge.sy, 16, 16, {
-    rotate: WALKWAY_EDGE_ROTATE[side],
-    remap: remapPlazaEdge,
-  });
+  walkway(img, x, y);
+  const [bx, by, bw, bh] = WALKWAY_EDGE_BAND[side];
+  img.fill(x + bx, y + by, bw, bh, 'Q');
 }
 function walkwayCorner(img, x, y, corner) {
-  blitAtlas(img, x, y, loadAtlas(URBAN.plazaCorner.atlas), URBAN.plazaCorner.sx, URBAN.plazaCorner.sy, 16, 16, {
-    rotate: WALKWAY_CORNER_ROTATE[corner],
-    remap: remapPlazaEdge,
-  });
+  walkway(img, x, y);
+  const sides = { TL: ['T', 'L'], TR: ['T', 'R'], BL: ['B', 'L'], BR: ['B', 'R'] }[corner];
+  for (const side of sides) {
+    const [bx, by, bw, bh] = WALKWAY_EDGE_BAND[side];
+    img.fill(x + bx, y + by, bw, bh, 'Q');
+  }
 }
 
 // -- FB-0015: lush lawn, hedges, bushes, a flower bed, and trees with overhead canopies --
@@ -1814,6 +1864,104 @@ function bitsSignGlyph(img, x, y, ch) {
   glyph.forEach((row, ry) => {
     [...row].forEach((c, rx) => {
       if (c === '#') img.set(gx + rx, gy + ry, 'Ñ');
+    });
+  });
+}
+// bitsSignB..bitsSignSpace and bitsEntranceCanopy (above) are kept but no longer placed by
+// build-campus.js as of the round-2 rework below (one letter per 16px tile read as "widely spaced,
+// running the whole facade" -- the coordinator's own words) -- tile names/indices stay stable
+// (STYLE_GUIDE "append only"), so they're simply unused rather than removed.
+
+// ---------- premium pass round 2 (2026-09-27, coordinator review): a composed entrance prefab -----
+// The coordinator's brief: "a centred portico about 8-10 tiles wide... two full-height columns... a
+// glass canopy, a dark glass front about 4 tiles wide with reflections, and the double door... in
+// the middle... a wide 3-row light-stone staircase below it... planters at the step ends". Built as
+// a small set of column-type tiles (frame / glass-top / glass-mid / glass-base / step) that
+// build-campus.js lays out from one column table, rather than one function per absolute tile
+// position -- the composition (which column is a frame vs. glass vs. a column) is authored once,
+// here, as a single coherent picture read left-to-right, not scattered per-tile logic.
+
+// The terracotta portal frame's own vertical edge (flanks the glass front, between the outer columns
+// and the glass) -- reused for the window/body/base rows alike, so the frame reads as one continuous
+// pier from the canopy down to the ground.
+function bitsPorticoFrame(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 1, 'K');
+  img.fill(x + 4, y + 1, 8, 15, '&'); // terracotta pier, centred, full height
+  img.fill(x + 5, y + 1, 6, 1, 'wallHi'); // a thin lit highlight along its top-left edge
+}
+
+// The glass front's top row: reflections, plus a 2px dark eave shadow along the very top -- the
+// visual cue that a canopy is projecting out above it (a 2D stand-in for true forward projection,
+// which would need drawing outside this building's own footprint; see the round-2 report).
+function bitsPorticoGlassTop(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 2, 'K'); // canopy underside shadow -- reads as an overhang above the glass
+  img.fill(x, y + 2, TILE, 14, '*');
+  img.fill(x + 2, y + 4, 3, 8, 'Œ'); // a broad soft reflection streak
+  img.set(x + 11, y + 6, 'W');
+}
+// The glass front's middle row: plain reflective glass, a narrower reflection streak (varies the
+// texture down the height so three stacked rows of the same tile don't look identical).
+function bitsPorticoGlassMid(img, x, y) {
+  img.fill(x, y, TILE, TILE, '*');
+  img.fill(x + 9, y, 2, TILE, 'Œ');
+  img.set(x + 3, y + 7, 'W');
+}
+// The glass front's base row (either side of the actual door, not the door itself): glass down to
+// a light stone sill at the ground, matching the staircase's own tone.
+function bitsPorticoGlassBase(img, x, y) {
+  img.fill(x, y, TILE, TILE, '*');
+  img.fill(x + 4, y, 2, TILE, 'Œ');
+  img.fill(x, y + 13, TILE, 1, '%');
+  img.fill(x, y + 14, TILE, 2, '-');
+}
+
+// The wide 3-row light-stone staircase in front of the portico (ground layer, walkable) -- three
+// tones from lightest (top, nearest the door) to a slightly cooler shadow (bottom, meeting the
+// plaza), each with a 1px riser shadow along its own top edge so the steps read as separate treads.
+function bitsStepTread(img, x, y, tone) {
+  img.fill(x, y, TILE, TILE, tone);
+  img.fill(x, y, TILE, 2, '%');
+}
+function bitsStep1(img, x, y) { bitsStepTread(img, x, y, '-'); }
+function bitsStep2(img, x, y) { bitsStepTread(img, x, y, 'D'); }
+function bitsStep3(img, x, y) { bitsStepTread(img, x, y, 'd'); }
+
+// A tight 4x6 pixel font (the coordinator's "1px spacing... several letters per tile" -- the old
+// 5x7-one-tile-per-character version spelled the message across the *whole* facade). 4 wide + 1px
+// gap = 5px pitch, 3 characters comfortably per 16px tile with a 1px margin.
+const SIGN_FONT_4X6 = {
+  B: ['###.', '#..#', '###.', '#..#', '#..#', '###.'],
+  I: ['####', '..#.', '..#.', '..#.', '..#.', '####'],
+  T: ['####', '..#.', '..#.', '..#.', '..#.', '..#.'],
+  S: ['.###', '#...', '.##.', '...#', '...#', '###.'],
+  P: ['###.', '#..#', '###.', '#...', '#...', '#...'],
+  L: ['#...', '#...', '#...', '#...', '#...', '####'],
+  A: ['.##.', '#..#', '#..#', '####', '#..#', '#..#'],
+  N: ['#..#', '##.#', '#.##', '#..#', '#..#', '#..#'],
+  D: ['###.', '#..#', '#..#', '#..#', '#..#', '###.'],
+  U: ['#..#', '#..#', '#..#', '#..#', '#..#', '.##.'],
+  C: ['.###', '#...', '#...', '#...', '#...', '.###'],
+  M: ['#..#', '####', '#..#', '#..#', '#..#', '#..#'],
+  ',': ['....', '....', '....', '....', '..#.', '.#..'],
+  ' ': ['....', '....', '....', '....', '....', '....'],
+};
+// A compact sign band: navy letters on a light fascia, three per tile -- replaces bitsSignGlyph's
+// one-letter-per-tile band above (kept, unused) for the Main Block's own cap row.
+function bitsSignSegment(img, x, y, text3) {
+  img.fill(x, y, TILE, TILE, '$');
+  img.fill(x, y, TILE, 1, 'K');
+  img.fill(x, y + 1, TILE, 10, 'wallHi');
+  img.fill(x, y + 11, TILE, 2, '&');
+  [...text3].forEach((ch, i) => {
+    const glyph = SIGN_FONT_4X6[ch] || SIGN_FONT_4X6[' '];
+    const gx = x + 1 + i * 5;
+    const gy = y + 3;
+    glyph.forEach((row, ry) => {
+      [...row].forEach((c, rx) => {
+        if (c === '#') img.set(gx + rx, gy + ry, 'Ñ');
+      });
     });
   });
 }

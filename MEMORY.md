@@ -686,3 +686,59 @@ see above).
 
 **Next:** the owner's full playthrough should now include music/sfx/volume; cutscenes for the three
 key rooms are still the next real feature.
+
+## 2026-09-27: campus premium pass, coordinator review round 2 (worktree agent-a3b2fc0b219dea823)
+
+The coordinator compared round 1's before/after shots against the owner's own
+`owner-main-block-entrance.png` and sent it back with 6 specific problems (A-F). Fixed all of them
+in `tools/make-assets.js`/`tools/campus/build-campus.js`:
+
+- **A, walkway:** round 1 had just recoloured the same Kenney Urban Pack brick-pattern fill onto a
+  browner hue -- still read as brick. Replaced with hand-drawn light warm concrete (a flat base +
+  faint speckle + a 1px joint on the tile's own top/left edge, no pack texture at all). The Main
+  Block forecourt's own paver (`paving`) shrank to a 4x2px low-contrast interlock.
+- **B, Mechanical Block "fence":** the actual cause was `bitsPillar` (the old decorative column, 2
+  tiles out from the door) drawing *alongside* the new portico columns -- doubled columns read as
+  a fence. Suppressed wherever `showPortico` already draws its own.
+- **C, sign lettering:** was one 16px tile per character, spelling the message across the *whole*
+  facade run and mostly hidden behind the HUD. Replaced with a composed prefab: a tight 4x6 font, 3
+  characters per tile (`bitsSignSeg0..8`), centred over just the portico (9 tiles).
+- **D, the entrance itself:** replaced the old 2-tile door in a plain wall with a real composed
+  portico -- a column table (`PORTICO_WIDE`: column/column/frame/glass x4/door x2/glass/frame/
+  column/column) spanning 3 facade rows, a new wide 3-row staircase (ground layer, walkable), and a
+  forecourt plaza. Hit a real geometry problem doing this: the Main Block's *real* drawn door sits
+  much closer to the loop road and the entrance parking than `coreFrontV`'s estimate assumed (an
+  L-shaped building's front run isn't always on its bbox's own edge) -- `loopBox.v1`/`parkingV0` now
+  floor against the real door position instead. This specific campus's gate-to-core corridor turned
+  out to be only ~14 tiles deep once a forecourt *and* the loop road both need room -- pushing the
+  forecourt to the coordinator's literal "5 tiles" would have shrunk the entrance parking lot to 0
+  actual tiles (paveRectFrame's own kerb border eats 1 tile top+bottom, so <3 tiles deep shows none
+  at all). Settled on ~3-4 tiles of real forecourt + keeping the parking lot's FB-0026 test passing
+  (>20 tiles) -- a genuine trade-off given the fixed corridor, documented in the test itself and in
+  STYLE_GUIDE.md, not hidden.
+- **E, 3D feel generally:** every BITS building's cap/window/base bands redrawn again -- a 2-row
+  parapet highlight + terracotta coping, a window sill, a real darker plinth course, and a new
+  `bitsFacadeShadow` tile (25%-black, real alpha, non-solid) placed one row south of every building's
+  own front run.
+- **F, screenshots:** teleported in-game (not the fixed qa-shots camera) to the real Main Block door,
+  Mechanical Block door, and the Gate 2 roundabout/avenue, with the HUD visible; composed proper
+  before/after pairs against round 1's own committed assets (not the very first, pre-round-1 state)
+  since that's the comparison the coordinator's own review used. Palms flanking the steps directly
+  failed to place (the walkway network hems in the lawn too tightly right at the door for a 2x3+
+  margin footprint) -- widened the search to a ring of candidate spots and took the nearest that
+  actually planted; they ended up ~30 tiles out instead of right at the steps, a real placement
+  compromise, not silently dropped.
+
+**A real bug found (not on the coordinator's list) while building the portico:** the re-stamp step
+that protects the entrance from being overwritten by a later-processed run of the same L-shaped
+building was destructuring `[x, tile]` from cells that were actually `[x, y, tile]` triples (the row
+varies now, it used to be fixed) -- `portico.y` was `undefined`, so every re-stamp silently no-opped
+and the whole body row came out blank. Found by direct pixel inspection of the generated map, not by
+a test (no test was pinning that specific row -- added one after, `FB-0029`'s own body/window-row
+checks).
+
+**Test counts:** 339 unit (up from 324 after the audio merge), all green. E2E on E2E_PORT=4174.
+
+**Decisions:** none new (no ADR needed -- this is an art/generator-tuning pass, same as round 1).
+**Failures:** none outstanding from this pass; the parking-lot depth trade-off above is a known,
+documented compromise, not a bug.

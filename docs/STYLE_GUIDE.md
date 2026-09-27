@@ -542,6 +542,52 @@ already makes.
   the map's objects layer -- data for the y-sorted depth engine ADR 0015 describes, built separately;
   a map without a consumer for these still renders exactly as it did before this pass.
 
+### Coordinator review round 2 (2026-09-27): the round-1 pass above didn't clear the bar
+
+The owner compared the round-1 shots against `owner-main-block-entrance.png` directly and found the
+walkway still read as brick (same pattern, same scale, just recoloured), the Mechanical Block's
+portico columns doubled up with the older `bitsPillar` decoration into a "fence" look, the sign
+lettering was one huge letter per 16px tile running the whole facade, and the entrance was still a
+2-tile door in a flat wall with the road immediately behind it. Round 2 replaces most of round 1's
+own art rather than layering on top of it:
+
+- **`walkway` (again):** the Kenney Urban Pack plaza-path tile is dropped entirely -- it's still a
+  brick pattern at any hue. Ordinary walkways are now hand-drawn light warm **concrete** (`Å`/`å`/`ą`
+  in `PALETTE`, Pokemon HGSS/BW city-sidewalk style): a flat base, a faint speckle, and a 1px joint
+  line only on the tile's own top/left edge (a 16px slab grid, not a brick bond). `walkwayEdge*`/
+  `walkwayCorner*` are the same concrete plus a plain 2px light-grey (`Q`) kerb line, not a pack
+  border.
+- **The Main Block forecourt paving** (`paving`, still red-brown) is now small-scale (4x2px bricks)
+  and low-contrast (one joint tone, `æ`, about 10% darker than the face `Æ`, plus a light `ǽ`
+  highlight pixel per brick) -- no highlight/shadow bevel, so it reads as a jointed floor, not
+  individually-lit blocks.
+- **The Mechanical/Library Block "fence" look:** `bitsPillar` (the old decorative column, placed 2
+  tiles out from the door) is no longer drawn wherever the new portico columns already exist
+  (`showPortico`) -- the double-up was the actual cause, not the walkway texture.
+- **The sign band is a composed prefab now** (`bitsSignSeg0..N`, `SIGN_FONT_4X6`,
+  `tools/make-assets.js`): a tight 4x6 font, 3 characters per 16px tile (was 1 character per tile),
+  navy on the same cream fascia, centred over the portico only (9 tiles for "BITS PILANI, DUBAI
+  CAMPUS"), not the whole facade run.
+- **The entrance is a real composed portico** (`tools/campus/build-campus.js` `PORTICO_WIDE`/
+  `PORTICO_NARROW`, a column table read left-to-right: column / column / terracotta frame
+  (`bitsPorticoFrame`) / glass (`bitsPorticoGlassTop`/`Mid`/`Base`, with a lighter reflection streak,
+  `Œ`) / door / door / glass / frame / column / column) spanning the window+body+base rows, plus a
+  new wide 3-row staircase (`bitsStep1/2/3`, ground layer, walkable) and a forecourt plaza at least a
+  few tiles deep before any road. The Library/Mechanical Blocks get `PORTICO_NARROW` (frame+glass+door
+  only, no separate columns, no lettering) -- the "clean smaller entrance" the coordinator asked for.
+- **3D feel for every building** (`bitsFacadeCap`/`bitsFacadeWindow`/`bitsFacadeBase`, redrawn again):
+  a 2-row parapet highlight + terracotta coping band, a window sill + a shadow band under it, a
+  genuinely darker plinth course (not just a thin shadow line), and a new `bitsFacadeShadow` tile (a
+  flat 25%-black overlay, real alpha, non-solid) placed on the ground one row south of every BITS
+  building's own front run.
+- **A real geometry fix, not just art:** the Main Block's real drawn door sits much closer to the
+  loop road and the entrance parking than `coreFrontV`'s own estimate assumed (an L-shaped building's
+  front run doesn't always sit on its bounding box's naive edge) -- `loopBox.v1` and `parkingV0`
+  (`tools/campus/build-campus.js`) are now floored against the *real* door position
+  (`mainDoor[1]`) instead, at the cost of a shallower entrance-parking lot than round 1 had (this
+  specific campus's gate-to-core corridor turns out to be only ~14 tiles deep once a real forecourt
+  and the loop road both need room in it -- see MEMORY.md for the trade-off).
+
 ## Interior kit
 
 Added 2026-09-17 for the building interiors (P3, [INTERIORS_PLAN.md](INTERIORS_PLAN.md)). 32 tiles

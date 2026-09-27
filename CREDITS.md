@@ -47,11 +47,13 @@ require. The raw packs are not in this repository; download them again if you ne
 docs/plans/2026-09-26-premium-pass.md)
 
 - **RPG Urban Pack** by **Kenney Vleugels** ([kenney.nl](https://kenney.nl),
-  `assets/vendor/kenney-rpg-urban-pack/`) -- CC0 1.0 (public domain). **In use**: `walkway`'s plain
-  fill (replacing Roguelike Modern City's plainPaver, FB-0028's "look like brick walls" fix) plus its
-  own edge/corner border tiles (`walkwayEdgeT/B/L/R`, `walkwayCornerTL/TR/BL/BR`), and the new campus
-  props `lampPost`, `bench`, `bin`, `planter`, `lowFence`, `bollard` -- see `tools/make-assets.js`'s
-  `URBAN` table.
+  `assets/vendor/kenney-rpg-urban-pack/`) -- CC0 1.0 (public domain). **In use**: the campus props
+  `lampPost`, `bench`, `bin`, `planter`, `lowFence`, `bollard` -- see `tools/make-assets.js`'s `URBAN`
+  table. **No longer used** for `walkway`/`walkwayEdge*`/`walkwayCorner*` or the Main Block forecourt
+  `paving`: coordinator review round 2 (2026-09-27) found the recolored pack fill still read as brick
+  (FB-0028/FB-0029), so both are now fully hand-drawn palette fills (light warm concrete for ordinary
+  walkways, a low-contrast 4x2px running-bond for the forecourt only) -- see docs/STYLE_GUIDE.md
+  "Coordinator review round 2".
 - **Ninja Adventure -- Asset Pack** by **Pixel-boy and AAA**
   ([pixel-boy.itch.io/ninja-adventure-asset-pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack),
   `assets/vendor/ninja-adventure/`) -- CC0 1.0, attribution appreciated but not required. **In use**:

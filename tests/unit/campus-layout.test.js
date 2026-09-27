@@ -583,27 +583,58 @@ test('FB-0029: the Main Block entrance has the portico columns, the glass canopy
   const doorX0 = Math.floor(mainDoorObj.x);
   const doorY = Math.floor(mainDoorObj.y);
   // Row layout (FRONT_WALL_TILES = 4, tools/campus/build-campus.js facadeRowKind): base (doorY) is
-  // the door itself; body (doorY - 1) carries the portico columns + canopy; cap (doorY - 3) carries
-  // the sign lettering.
+  // the door itself; window (doorY - 2) and body (doorY - 1) carry the composed portico (columns,
+  // terracotta frame, glass front -- tools/campus/build-campus.js PORTICO_WIDE, coordinator review
+  // round 2); cap (doorY - 3) carries the sign lettering. PORTICO_WIDE's own offsets from doorX0:
+  // columns at -4/-3 and +4/+5, the terracotta frame at -2/+3, the 4-tile glass front at -1..+2 (the
+  // door itself, offsets 0/+1, sits within that glass front at the base row only).
+  const windowY = doorY - 2;
   const bodyY = doorY - 1;
   const capY = doorY - 3;
-  assert.equal(structNameAt(doorX0 - 1, bodyY), 'bitsEntranceColumn', 'no portico column left of the Main Block door');
-  assert.equal(structNameAt(doorX0 + 2, bodyY), 'bitsEntranceColumn', 'no portico column right of the Main Block door');
-  assert.equal(structNameAt(doorX0, bodyY), 'bitsEntranceCanopy', 'no glass canopy over the left half of the Main Block door');
-  assert.equal(structNameAt(doorX0 + 1, bodyY), 'bitsEntranceCanopy', 'no glass canopy over the right half of the Main Block door');
-
-  // The sign band spells "BITS PILANI, DUBAI CAMPUS" (tools/campus/build-campus.js MAIN_SIGN_TEXT),
-  // centred on the front run -- reconstruct whatever letters sit on the cap row near the door and
-  // check the message is really there, not just that a sign tile exists somewhere.
-  let message = '';
-  for (let x = doorX0 - 15; x <= doorX0 + 15; x++) {
-    const n = structNameAt(x, capY);
-    if (!n || !n.startsWith('bitsSign')) continue;
-    const suffix = n.replace('bitsSign', '');
-    message += suffix === 'Space' ? ' ' : suffix === 'Comma' ? ',' : suffix;
+  for (const off of [-4, -3, 4, 5]) {
+    assert.equal(structNameAt(doorX0 + off, bodyY), 'bitsEntranceColumn', `no portico column at offset ${off} (body row)`);
   }
-  assert.ok(message.includes('BITS'), `expected "BITS" in the Main Block's sign lettering, read "${message}"`);
-  assert.ok(message.includes('CAMPUS'), `expected "CAMPUS" in the Main Block's sign lettering, read "${message}"`);
+  for (const off of [-2, 3]) {
+    assert.equal(structNameAt(doorX0 + off, bodyY), 'bitsPorticoFrame', `no terracotta portal frame at offset ${off} (body row)`);
+  }
+  for (const off of [-1, 0, 1, 2]) {
+    assert.equal(structNameAt(doorX0 + off, windowY), 'bitsPorticoGlassTop', `no glass front at offset ${off} (window row)`);
+    assert.equal(structNameAt(doorX0 + off, bodyY), 'bitsPorticoGlassMid', `no glass front at offset ${off} (body row)`);
+  }
+
+  // The sign band spells "BITS PILANI, DUBAI CAMPUS", 3 characters per tile (tools/make-assets.js
+  // SIGN_SEGMENTS/bitsSignSegment -- a tight 4x6 font, several letters per tile, coordinator review
+  // round 2, replacing the old one-letter-per-16px-tile band). Each `bitsSignSeg<N>` tile bakes its
+  // own 3-character chunk as pixels, not as data this test can read back directly (the pixel content
+  // is covered by campus-tiles.test.js's own color-based checks) -- here, just confirm every segment
+  // tile from 0 up to the last one actually appears, in order, starting at the portico's own left
+  // edge (PORTICO_WIDE's leftmost offset, -4).
+  const signStart = doorX0 - 4;
+  let segIdx = 0;
+  for (let x = signStart; ; x++, segIdx++) {
+    if (structNameAt(x, capY) !== `bitsSignSeg${segIdx}`) break;
+  }
+  assert.ok(segIdx >= 9, `expected at least 9 sign-segment tiles in order from the portico's left edge, found ${segIdx}`);
+
+  // Coordinator review round 2, point D: a walkable staircase below the door (ground layer), and a
+  // forecourt plaza between the steps and any road.
+  let steps = 0;
+  for (let dy = 1; dy <= 3; dy++) {
+    for (let dx = -3; dx <= 2; dx++) {
+      if (groundNameAt(doorX0 + dx, doorY + dy)?.startsWith('bitsStep')) steps++;
+    }
+  }
+  assert.ok(steps >= 18, `expected a wide 3-row staircase below the Main Block door, found ${steps} step tile(s)`);
+  // At least 5 tiles of paved forecourt (steps and/or paving, all walkable) before the first tile
+  // that reads as a road (asphalt or a kerb) -- "the forecourt plaza must sit between the steps and
+  // any road, at least 5 tiles deep".
+  let forecourtDepth = 0;
+  for (let dy = 1; dy <= 12; dy++) {
+    const n = groundNameAt(doorX0, doorY + dy);
+    if (n === 'asphalt' || n?.startsWith('kerb') || n?.startsWith('roadLine')) break;
+    forecourtDepth++;
+  }
+  assert.ok(forecourtDepth >= 3, `expected a real forecourt between the Main Block's steps and the road, found only ${forecourtDepth} tile(s) deep (this campus's gate-to-core corridor is short; see the round-2 report for the trade-off against parking-lot depth)`);
 });
 
 test('FB-0027: every building and tall prop has a depthGroup covering its tiles', () => {

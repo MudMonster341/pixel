@@ -118,13 +118,17 @@ test("FB-0028: the walkway's plain fill has no border baked in (a path doesn't r
   assert.ok(!('#c8c8c8' in counts) && !('#ffffff' in counts), 'walkway should not have its own border baked into every tile');
 });
 
+// Coordinator review round 2 (2026-09-27): the edge tiles' own border is now a plain 2px light-grey
+// kerb line ('#c8c8c8', this game's existing "light stone" tone -- Q in tools/make-assets.js's
+// PALETTE) on top of the same concrete fill as plain `walkway`, not a pack-sourced paver border.
 test('FB-0028: the walkway network has dedicated edge/corner tiles for its true outward border', () => {
   for (const name of ['walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR', 'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR']) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);
     assert.equal(tile.solid, false, `${name} should stay walkable`);
     const counts = colorCounts(name);
-    assert.ok('#e6ded0' in counts || '#8c8478' in counts, `${name} has no stone border color`);
+    assert.ok('#c8c8c8' in counts, `${name} has no light-grey kerb line`);
+    assert.ok('#d9d1c3' in counts, `${name} should still be the same concrete fill as plain walkway`);
   }
 });
 
@@ -287,6 +291,55 @@ test('the Main Block entrance tiles exist, are distinct from the ordinary entran
 test('every tile name this pass added is present in assets/tiles.json', () => {
   const addedNames = ['bitsEntranceGrandL', 'bitsEntranceGrandR'];
   for (const name of addedNames) assert.ok(tileInfoFor(name), `missing "${name}" in assets/tiles.json`);
+});
+
+// ---------- coordinator review round 2 (2026-09-27) ----------
+
+test('FB-0029: the compact sign band is navy lettering on a light fascia, not a flat tile', () => {
+  const counts = colorCounts('bitsSignSeg0');
+  assert.ok('#1a3a6b' in counts, 'bitsSignSeg0 has no navy lettering color');
+  assert.ok('#f2ddb8' in counts, 'bitsSignSeg0 has no light fascia band');
+  assert.ok(counts['#1a3a6b'] >= 6, `expected a real glyph (several navy pixels), found only ${counts['#1a3a6b'] || 0}`);
+});
+
+test('FB-0029: the entrance glass reads as glazing (a reflection tone), not a flat dark fill', () => {
+  for (const name of ['bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase']) {
+    const counts = colorCounts(name);
+    assert.ok('#2f3a44' in counts, `${name} is missing the dark glass base color`);
+    assert.ok('#4a5a68' in counts, `${name} is missing the lighter reflection streak`);
+  }
+});
+
+test('FB-0028: ordinary walkways are light warm concrete, not brick, and stay a subtle multi-tone slab', () => {
+  const counts = colorCounts('walkway');
+  assert.ok('#d9d1c3' in counts, 'walkway is missing its concrete base tone');
+  assert.ok(!('#b06b4a' in counts) && !('#9d6249' in counts), 'walkway should not use the forecourt paver colors (it should read as concrete, not brick)');
+});
+
+test("point E: every building's facade has a distinct parapet/coping roof band, a darker plinth, and a cast-shadow tile", () => {
+  const capCounts = colorCounts('bitsFacadeCap');
+  assert.ok('#f2ddb8' in capCounts && '#cf8a6c' in capCounts, 'bitsFacadeCap is missing a distinct parapet highlight + terracotta coping');
+  const baseCounts = colorCounts('bitsFacadeBase');
+  assert.ok('#6b7280' in baseCounts, 'bitsFacadeBase is missing its cool baseboard');
+  const shadowTile = tileInfoFor('bitsFacadeShadow');
+  assert.ok(shadowTile, 'missing bitsFacadeShadow');
+  assert.equal(shadowTile.solid, false, 'bitsFacadeShadow should stay walkable (a ground tint, not an obstacle)');
+});
+
+test('point D: the composed portico prefab tiles exist, are solid except the walkable glass base and steps, and the steps are ground-layer (never solid)', () => {
+  for (const name of ['bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid']) {
+    const tile = tileInfoFor(name);
+    assert.ok(tile, `missing "${name}"`);
+    assert.equal(tile.solid, true, `${name} should be solid (a wall/glass surface)`);
+  }
+  const glassBase = tileInfoFor('bitsPorticoGlassBase');
+  assert.ok(glassBase, 'missing bitsPorticoGlassBase');
+  assert.equal(glassBase.solid, false, 'bitsPorticoGlassBase should stay walkable (the door-connecting spur legitimately reaches it, see its own comment in tools/make-assets.js)');
+  for (const name of ['bitsStep1', 'bitsStep2', 'bitsStep3']) {
+    const tile = tileInfoFor(name);
+    assert.ok(tile, `missing "${name}"`);
+    assert.equal(tile.solid, false, `${name} should be walkable`);
+  }
 });
 
 // ---------- general kit hygiene ----------

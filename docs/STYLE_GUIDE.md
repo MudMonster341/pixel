@@ -128,6 +128,9 @@ pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per
   corner pillars, the glass front under the red arch -- with the same forced-perspective road/step
   technique the gate scene already used. Triggered by a map object exactly like Gate 2's own trigger
   (tools/campus/build-campus.js section 17), the first time she reaches the Main Block's real door.
+  **Not updated by the 2026-09-26 premium pass** (out of this pass's scope: `tools/make-cutscenes.js`,
+  not `tools/make-assets.js`/`tools/campus/`) -- this illustration still shows the old red arch,
+  now inconsistent with the corrected map entrance below. Worth a follow-up pass.
 
 ## Speech bubbles and interaction
 
@@ -366,12 +369,31 @@ small round handle.
   the pack's own sheet doesn't show a building corner at all (it's an interior kit), so there was
   nothing to copy there; the 3/4-view "shadowed side face" rule (this file's own "Layering" section)
   already covers it.
-- The Main Block specifically gets a real **red arch** (`archRed`, `#9c3a28`) across its 2-tile
-  entrance instead of the ordinary thin salmon trim -- the one building confirmed from real photos as
-  "glass front under a red arch" (docs/research/bits-dubai-campus.md "Look (from photos)"). Two
-  dedicated tile names (`bitsEntranceGrandL`/`bitsEntranceGrandR`) carry this so ordinary buildings
-  (Library, Mechanical, hostels) keep the plain entrance look -- `tools/campus/layout.js`'s
-  `grand: true` on the Main Block's own entry picks which one `tools/campus/build-campus.js` uses.
+- **Corrected 2026-09-26 (premium pass, FB-0029):** this section used to describe a real red arch
+  (`archRed`, `#9c3a28`) across the Main Block's entrance. `docs/research/campus-visual-reference.md`
+  (built from the owner's own photo plus two independent Wikimedia angles) found the real entrance is
+  a **terracotta portal frame around a dark glass double door with a projecting glass canopy**, not a
+  red arch -- `archRed` is retired (no tile uses it any more). The Main Block gets:
+  - A **terracotta portal frame** (the existing `&` trim colour, `#cf8a6c`) framing a **dark glass**
+    (`*`, `#2f3a44`) double door, with a centre mullion where its two tiles meet, still on the same
+    2-tile entrance and still with light stone steps at its base -- `bitsEntranceGrandL`/
+    `bitsEntranceGrandR` (`bitsEntranceGrand()` in `tools/make-assets.js`), plus a new "open" tile
+    variant each (`bitsEntranceGrandLOpen`/`...ROpen`, a dark empty doorway) named on the door object's
+    `openTiles` property for the door-entry animation (ADR 0015).
+  - Two **portico columns** (`bitsEntranceColumn`) flanking the door and a **glass canopy**
+    (`bitsEntranceCanopy`) over it, one row up (the facade's "body" band) -- `tools/campus/
+    build-campus.js`'s `showPortico`, also given (without the lettering below) to the Library and
+    Mechanical Blocks' own entrances, a smaller version of the same language.
+  - The **"BITS Pilani, Dubai Campus" sign band**, real pixel lettering (a tiny 5x7 font,
+    `SIGN_FONT_5X7`/`bitsSignGlyph()`) generated as one tile per character actually used
+    (`bitsSignB`, `bitsSignI`, ...), navy (`#1a3a6b`, confirmed by the photos, not gold) on the cream
+    fascia -- `tools/campus/build-campus.js`'s `MAIN_SIGN_TEXT` centres the real message across
+    whatever width the front run actually is, the cap band above the canopy.
+
+  Two dedicated tile names (`bitsEntranceGrandL`/`bitsEntranceGrandR`) still carry the door itself so
+  ordinary buildings (hostels) keep the plain entrance look -- `tools/campus/layout.js`'s `grand: true`
+  on the Main Block's own entry (and `portico: true` on Library/Mechanical, columns+canopy only) picks
+  which look `tools/campus/build-campus.js` uses.
   **Routing never paints over a wall, and the front reads as a building, not a roof plain
   (2026-09-21 coordinator review):** the entrance avenue and walkway-network junctions used to be
   drawn *after* the building (`tools/campus/build-campus.js` sections 11-12) and reached right up to
@@ -417,8 +439,8 @@ roof, corners and an entrance:
   `bitsRoofTR`: parapet edge pieces, so a roof reads as having a raised edge instead of a flat tint.
 - `bitsEntranceL` / `bitsEntranceR`: a 2-tile-wide glass entrance with light stone steps at its base
   (`bitsDoor`, the existing single-tile door, keeps working for the current generator's one-tile
-  doors). `bitsEntranceGrandL` / `bitsEntranceGrandR`: the Main Block's own red-arch variant, see
-  the addendum above.
+  doors). `bitsEntranceGrandL` / `bitsEntranceGrandR`: the Main Block's own terracotta-portal-and-
+  glass-canopy variant (corrected 2026-09-26, no longer a red arch), see the addendum above.
 - `bitsPillar`: a decorative column for a colonnade entrance, redrawn with the same outline/trim/base
   banding as the wall.
 - `otherWallPlain` / `otherWall` (existing, redrawn to match), `otherWallEndL` / `otherWallEndR`,
@@ -481,6 +503,127 @@ gap between cars, leaving the middle of the lot open as a driving aisle. A parke
 16x16 tile (2 m) here, smaller than a real car's actual footprint -- a deliberate simplification, the
 same scale compromise every other single-tile prop in this kit (`rock`, `flowerbed`, a tree trunk)
 already makes.
+
+### Premium pass campus kit additions (2026-09-26, docs/plans/2026-09-26-premium-pass.md)
+
+- **`walkway` (FB-0028, "the map pavements... look like brick walls"):** the fill is now Kenney RPG
+  Urban Pack's own borderless plaza-path tile (`URBAN.plazaFill`), recolored onto the reference paver
+  hue (`remapPlaza`), instead of the Modern City sidewalk paver with a light-grey border baked into
+  the top and bottom of *every* tile -- on a 3-tile-wide path that border repeated every row in both
+  directions, striping the whole network like mortar joints in a wall (the literal complaint). A
+  border now exists only at the network's true outward edge, as its own tiles: `walkwayEdgeT`/`B`/`L`/
+  `R` (a straight border, one authored piece rotated per side) and `walkwayCornerTL`/`TR`/`BL`/`BR`
+  (the corner, top+left authored, rotated per corner) -- `tools/campus/build-campus.js` stamps these
+  in place of a plain `walkway` cell only where it actually borders lawn/lawn2/sand, the same "kerb
+  only at the edge" shape the road kerb tiles already use, and cleans up any lone 1-tile fragment
+  (no paved neighbour on any side) back to lawn rather than leaving a dead-end stub.
+- **The Main Block forecourt:** the existing hand-drawn `paving` tile (red-brown interlocking pavers,
+  `remapPaver` retuned this pass towards `#B06B4A`/`#8C5236`, the reference photos' own tones) now
+  also covers a dedicated plaza rectangle at the Main Block's own door, framed by the road kerb tiles,
+  instead of the same grey-tan `walkway` running all the way to the door.
+- **Campus props (Kenney RPG Urban Pack, none of these existed before):** `lampPost`, `bench`, `bin`,
+  `planter` (a flower box), `lowFence` (a low decorative railing run), `bollard` (a striped barrier) --
+  placed along the entrance avenue, at the Main Block's own steps, and flanking Gate 2 and the gate
+  parking lots (`tools/campus/build-campus.js` section 15b).
+- **Flag poles (Ninja Adventure, animated, static first frame for now):** `flagPoleYellow`/`Blue`/
+  `Red`, a row of them on the Main Block forecourt (the owner's own reference photo).
+- **Trees and palms (FB-0025 "our shape, its fill" technique, continued):** the canopy fill for both
+  is now Ninja Adventure instead of Sprout Lands/hand-drawn palette -- `treeCanopy*` samples its
+  Nature tileset's own round tree, `palmCanopy*` samples its Desert tileset's potted-palm fronds
+  (cropped to fronds only; our own trunk/neck/outline shape is unchanged), both still remapped onto
+  the existing `remapDryLeaves` ramp. **Placement rule corrected:** palms are now only planted at the
+  entrance avenue and flanking the Main Block's own steps -- the campus-wide random scatter
+  (`scatterTrees`) plants ordinary round shade trees exclusively now, matching
+  `docs/research/campus-visual-reference.md`'s finding that palms are an entrance/plaza landmark
+  accent, not an everyday avenue tree.
+- **The Main Block entrance (FB-0029):** see "How our buildings are built" above, corrected entry.
+- **`depthGroup` objects (FB-0027, ADR 0015):** every building, tree, palm, lamp post, flag pole and
+  signboard now emits a `depthGroup` object (`{x, y, width, height}`, base line = bottom edge) into
+  the map's objects layer -- data for the y-sorted depth engine ADR 0015 describes, built separately;
+  a map without a consumer for these still renders exactly as it did before this pass.
+
+### Coordinator review round 2 (2026-09-27): the round-1 pass above didn't clear the bar
+
+The owner compared the round-1 shots against `owner-main-block-entrance.png` directly and found the
+walkway still read as brick (same pattern, same scale, just recoloured), the Mechanical Block's
+portico columns doubled up with the older `bitsPillar` decoration into a "fence" look, the sign
+lettering was one huge letter per 16px tile running the whole facade, and the entrance was still a
+2-tile door in a flat wall with the road immediately behind it. Round 2 replaces most of round 1's
+own art rather than layering on top of it:
+
+- **`walkway` (again):** the Kenney Urban Pack plaza-path tile is dropped entirely -- it's still a
+  brick pattern at any hue. Ordinary walkways are now hand-drawn light warm **concrete** (`Å`/`å`/`ą`
+  in `PALETTE`, Pokemon HGSS/BW city-sidewalk style): a flat base, a faint speckle, and a 1px joint
+  line only on the tile's own top/left edge (a 16px slab grid, not a brick bond). `walkwayEdge*`/
+  `walkwayCorner*` are the same concrete plus a plain 2px light-grey (`Q`) kerb line, not a pack
+  border.
+- **The Main Block forecourt paving** (`paving`, still red-brown) is now small-scale (4x2px bricks)
+  and low-contrast (one joint tone, `æ`, about 10% darker than the face `Æ`, plus a light `ǽ`
+  highlight pixel per brick) -- no highlight/shadow bevel, so it reads as a jointed floor, not
+  individually-lit blocks.
+- **The Mechanical/Library Block "fence" look:** `bitsPillar` (the old decorative column, placed 2
+  tiles out from the door) is no longer drawn wherever the new portico columns already exist
+  (`showPortico`) -- the double-up was the actual cause, not the walkway texture.
+- **The sign band is a composed prefab now** (`bitsSignSeg0..N`, `SIGN_FONT_4X6`,
+  `tools/make-assets.js`): a tight 4x6 font, 3 characters per 16px tile (was 1 character per tile),
+  navy on the same cream fascia, centred over the portico only (9 tiles for "BITS PILANI, DUBAI
+  CAMPUS"), not the whole facade run.
+- **The entrance is a real composed portico** (`tools/campus/build-campus.js` `PORTICO_WIDE`/
+  `PORTICO_NARROW`, a column table read left-to-right: column / column / terracotta frame
+  (`bitsPorticoFrame`) / glass (`bitsPorticoGlassTop`/`Mid`/`Base`, with a lighter reflection streak,
+  `Œ`) / door / door / glass / frame / column / column) spanning the window+body+base rows, plus a
+  new wide 3-row staircase (`bitsStep1/2/3`, ground layer, walkable) and a forecourt plaza at least a
+  few tiles deep before any road. The Library/Mechanical Blocks get `PORTICO_NARROW` (frame+glass+door
+  only, no separate columns, no lettering) -- the "clean smaller entrance" the coordinator asked for.
+- **3D feel for every building** (`bitsFacadeCap`/`bitsFacadeWindow`/`bitsFacadeBase`, redrawn again):
+  a 2-row parapet highlight + terracotta coping band, a window sill + a shadow band under it, a
+  genuinely darker plinth course (not just a thin shadow line), and a new `bitsFacadeShadow` tile (a
+  flat 25%-black overlay, real alpha, non-solid) placed on the ground one row south of every BITS
+  building's own front run.
+- **A real geometry fix, not just art:** the Main Block's real drawn door sits much closer to the
+  loop road and the entrance parking than `coreFrontV`'s own estimate assumed (an L-shaped building's
+  front run doesn't always sit on its bounding box's naive edge) -- `loopBox.v1` and `parkingV0`
+  (`tools/campus/build-campus.js`) are now floored against the *real* door position
+  (`mainDoor[1]`) instead, at the cost of a shallower entrance-parking lot than round 1 had (this
+  specific campus's gate-to-core corridor turns out to be only ~14 tiles deep once a real forecourt
+  and the loop road both need room in it -- see MEMORY.md for the trade-off).
+
+### Coordinator review round 3 (2026-09-27): "one coherent free kit" -- rebuilt on Kenney RPG Urban Pack
+
+Round 2 fixed colors (flat palette fills tuned to the right hexes); the owner's side-by-side photo
+comparison found flat fills still read as a box with no material, and separately found the avenue's
+own kerb tiles -- a code path entirely separate from `walkway()` -- were still blitting Modern City's
+brick paver recolored to salmon. Owner decision: free packs only. The whole outdoor look (ground and
+every BITS building) is now composed from real crops of the Kenney RPG Urban Pack sheet
+(`assets/vendor/kenney-rpg-urban-pack/Tilemap/tilemap.png`, 27x18 tiles at a 17px pitch), recolored
+onto the same BITS palette (sand `#e3c09b`, terracotta `#b5583c`, light parapet `#f2ddb8`) rather than
+hand-drawn flat fills. See `tools/make-assets.js`'s `SIDEWALK`/`BLDG` tables and `remapBitsWall`/
+`remapBitsWallBase`/`remapBitsWindow`/`remapBitsDoorFrame`/`remapLightStone`/`remapBitsColumn`.
+
+- **Sidewalks/kerb:** `walkway`/`walkwayEdge*`/`walkwayCorner*` now blit the sheet's own
+  concrete-plaza 9-slice (a light blue-grey slab with a warm tan kerb border built into its edge/
+  corner pieces), unrecolored. `kerbEdge()` (every road-facing sidewalk tile, avenue included) now
+  just calls the same `walkwayEdge`/`walkwayCorner` -- previously a separate code path
+  (`atlasKerbSide`/`atlasKerbBand`, now removed) still recoloring Modern City's brick paver to salmon,
+  which is the real reason the avenue still read as brick after round 2. The forecourt `paving` is
+  untouched (the brief's one deliberate brick exception).
+- **Buildings:** `bitsFacadeCap`/`Window`/`Body`/`Base` blit a real wall-with-coping crop instead of a
+  flat fill, recolored by a hue-then-luminance split (brick body -> sand; tan coping/plinth -> light
+  parapet on the cap, a genuinely darker cool plinth on the base) since the sheet's own brick and trim
+  tones overlap in luminance. The window band adds a real tan arched window on top. Thin roofline/
+  panel/ground-line accents stay flat palette fills.
+- **The Main Block entrance:** the portico's glass panels and the real double door blit the sheet's
+  own wide glass door/window crops (frame recolored terracotta, glass left exactly as drawn -- "a big
+  glass entrance", not a flat `*` fill). Columns (`bitsPillar`/`bitsEntranceColumn`, unified into one
+  `bitsColumnTile`) compose the sheet's own free-standing pillar prop onto a wall backdrop, recolored
+  terracotta -- the same "backdrop then prop" pattern `lampPost` already used onto grass. Steps
+  (`bitsStep1/2/3`) blit the sheet's own 3-tread staircase, recolored to a neutral light stone.
+- **Palms/round trees:** native Ninja Adventure colors now (no recolor) -- round 2's muted
+  `remapDryLeaves` ramp made the palm read as "murky and dark".
+- **Flags:** a real 2-tile pole (`flagPoleYellow/Blue/Red` draw the lower pole shaft, unchanged names;
+  new `flagTopYellow/Blue/Red`, overhead like a tree canopy, draw the shaft continuing up plus the
+  Ninja flag enlarged and mounted at the top) -- the old single-tile version "read as a little axe".
+- **Props:** added `busStopSign` (a native-blue plaque-on-a-pole sign) near Gate 2.
 
 ## Interior kit
 

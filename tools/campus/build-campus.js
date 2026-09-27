@@ -21,6 +21,30 @@ const MPT = layout.metersPerTile;
 // plaza actually starts) and BITS_FOOTPRINTS' routing obstacles.
 const FRONT_WALL_TILES = 4;
 
+// premium pass round 2 (2026-09-27, coordinator review): the composed entrance prefab. The message
+// and its per-tile chunking are data here too (mirrored from tools/make-assets.js's own
+// MAIN_SIGN_TEXT/SIGN_CHARS_PER_TILE, which is what actually generated the `bitsSignSeg0..N` tiles --
+// duplicated rather than imported since make-assets.js is a standalone script, not a module this one
+// requires) -- SIGN_SEGMENT_COUNT is only used to know how many segment tiles exist.
+const SIGN_CHARS_PER_TILE = 3;
+const SIGN_SEGMENT_COUNT = Math.ceil('BITS PILANI, DUBAI CAMPUS'.length / SIGN_CHARS_PER_TILE);
+
+// The portico's own column table, read left-to-right as offsets from the door's own left tile
+// (doorX0): 'column' = a full portico column (bitsEntranceColumn), 'frame' = the terracotta portal
+// pier (bitsPorticoFrame), 'glass' = the dark glass front (bitsPorticoGlassTop/Mid/Base per row),
+// 'door' = the double door itself (doorX0/doorX1). PORTICO_WIDE (10 columns) is the Main Block's own
+// grand entrance; PORTICO_NARROW (6 columns, no outer columns) is the smaller version the coordinator
+// asked for on the Library/Mechanical Blocks -- "a clean smaller entrance (canopy + glass door)".
+const PORTICO_WIDE = [
+  { off: -4, kind: 'column' }, { off: -3, kind: 'column' }, { off: -2, kind: 'frame' },
+  { off: -1, kind: 'glass' }, { off: 0, kind: 'door' }, { off: 1, kind: 'door' },
+  { off: 2, kind: 'glass' }, { off: 3, kind: 'frame' }, { off: 4, kind: 'column' }, { off: 5, kind: 'column' },
+];
+const PORTICO_NARROW = [
+  { off: -2, kind: 'frame' }, { off: -1, kind: 'glass' }, { off: 0, kind: 'door' }, { off: 1, kind: 'door' },
+  { off: 2, kind: 'glass' }, { off: 3, kind: 'frame' },
+];
+
 const outFlag = process.argv.indexOf('--out');
 const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : null;
 const MAP_OUT = outDir ? path.join(outDir, 'campus.json') : path.join(ROOT, 'assets', 'maps', 'campus.json');
@@ -38,6 +62,15 @@ const REQUIRED_TILES = [
   'bitsRoof', 'bitsRoofT', 'bitsRoofL', 'bitsRoofR', 'bitsRoofTL', 'bitsRoofTR', 'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR', 'bitsEntranceL', 'bitsEntranceR', 'bitsEntranceGrandL', 'bitsEntranceGrandR', 'bitsPillar', 'bitsDoor',
   'otherRoof', 'otherRoofT', 'otherRoofL', 'otherRoofR', 'otherRoofTL', 'otherRoofTR', 'otherWallPlain', 'otherWall', 'otherWallEndL', 'otherWallEndR',
   'fenceH', 'fenceV', 'fenceCornerTL', 'fenceCornerTR', 'fenceCornerBL', 'fenceCornerBR', 'fenceGate',
+  // premium pass (2026-09-26): Part 1 walkway edges, Part 2 props, Part 3 the Main Block entrance.
+  'walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR', 'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR',
+  'lampPost', 'bench', 'bin', 'planter', 'lowFence', 'bollard', 'flagPoleYellow', 'flagPoleBlue', 'flagPoleRed',
+  'bitsEntranceColumn', 'bitsEntranceCanopy', 'bitsEntranceGrandLOpen', 'bitsEntranceGrandROpen',
+  'bitsSignB', 'bitsSignI', 'bitsSignT', 'bitsSignS', 'bitsSignP', 'bitsSignL', 'bitsSignA', 'bitsSignN', 'bitsSignD', 'bitsSignU', 'bitsSignC', 'bitsSignM', 'bitsSignComma', 'bitsSignSpace',
+  // premium pass round 2 (2026-09-27): the composed entrance prefab and the general 3D-feel shadow.
+  'bitsFacadeShadow', 'bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase', 'bitsStep1', 'bitsStep2', 'bitsStep3',
+  // premium pass round 3 (2026-09-27): the flag's overhead top-of-pole tile, and a bus stop sign prop.
+  'flagTopYellow', 'flagTopBlue', 'flagTopRed', 'busStopSign',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -500,6 +533,16 @@ const roofOwner = new Int32Array(W * H).fill(-1);
 // leaving a gap where it would have crossed.
 const wallOwner = new Int32Array(W * H).fill(-1);
 
+// premium pass (2026-09-26, Part 3/FB-0027): every tall thing (a building, tree, palm, lamp post,
+// flag pole or sign) emits a `depthGroup` rectangle (ADR 0015 format, base line = bottom edge) into
+// the objects layer for the depth-sorting engine built separately. Declared early (before
+// drawBuilding, section 9, which places the first signboards) since both that section and the
+// tree/prop placement further down (15/15b) need it; emitted as objects in section 17.
+const depthGroups = [];
+function addDepthGroup(name, x, y, width, height) {
+  depthGroups.push({ name, x, y, width, height });
+}
+
 function forRectFrame(u0, v0, u1, v1, fn) {
   const x0 = Math.max(0, gx(Math.min(u0, u1)));
   const y0 = Math.max(0, gy(Math.min(v0, v1)));
@@ -700,6 +743,12 @@ function drawBuilding(b, index) {
   // a hostel a working door with no interior to send the player to would be worse than no door.
   const entranceL = b.grand ? TILE.bitsEntranceGrandL : TILE.bitsEntranceL;
   const entranceR = b.grand ? TILE.bitsEntranceGrandR : TILE.bitsEntranceR;
+  // premium pass (FB-0029/ADR 0015): the Main Block's wide glass double door has an "open" tile
+  // variant for the door-entry animation (stepping in shows the door open before she disappears
+  // behind the building's base line) -- only the Main Block has one today (b.grand), an ordinary
+  // entrance keeps looking exactly as it did.
+  const entranceLOpen = b.grand ? TILE.bitsEntranceGrandLOpen : null;
+  const entranceROpen = b.grand ? TILE.bitsEntranceGrandROpen : null;
   for (const run of runs) {
     const doorBasis = run.clear || run; // the door only ever goes in the clear part of the run (see clearSpan above)
     // Clamped to doorBasis.x1 - 1 so doorX1 (= doorX0 + 1) never lands one past the clear span's own
@@ -708,6 +757,13 @@ function drawBuilding(b, index) {
     const doorX1 = doorX0 + 1;
     const isFrontVisual = bits && run === frontRun && wideEnough(run);
     const isFront = isFrontVisual && b.door;
+    // premium pass (2026-09-26, FB-0029): the Main Block ("grand") and, at a smaller scale (no
+    // lettering), the Library/Mechanical Blocks ("portico") get real entrance architecture instead of
+    // the plain wall/window band either side of the door -- two portico columns flanking the door and
+    // a glass canopy above it, only when the front is drawn at the full FRONT_WALL_TILES depth (a
+    // building squeezed to the depth-3 fallback has no "body" row to put them in, and quietly keeps
+    // the plain look instead).
+    const showPortico = isFrontVisual && (b.grand || b.portico) && candidateDepth === FRONT_WALL_TILES;
     // Only the chosen front run is drawn deep (candidateDepth: FRONT_WALL_TILES, or 3 if a close
     // neighbour forced the fallback above); every other run keeps the original, shallower b.wallTiles
     // (see FRONT_WALL_TILES's own comment above).
@@ -717,6 +773,11 @@ function drawBuilding(b, index) {
       if (!inGrid(run.x0, wy)) break;
       const isBottomRow = k === depth;
       const kind = isFrontVisual ? facadeRowKind(k, depth) : null;
+      // premium pass round 2 (2026-09-27): the portico's own column table for this row (window/body/
+      // base only -- the cap row is handled separately, below, since it's either the sign band or a
+      // plain facade cap depending on b.grand/b.portico). A lookup by absolute x, built once per row.
+      const porticoTable = showPortico && kind !== 'cap' ? (b.grand ? PORTICO_WIDE : PORTICO_NARROW) : null;
+      const porticoByX = porticoTable ? new Map(porticoTable.map((c) => [doorX0 + c.off, c.kind])) : null;
       for (let x = run.x0; x <= run.x1; x++) {
         // roofOwner: never draw a wall over another building's roof. wallOwner: never draw a wall
         // over another building's *already-drawn* wall either -- two buildings close enough that
@@ -724,7 +785,15 @@ function drawBuilding(b, index) {
         // is 4 tiles deep instead of 2 (coordinator review, 2026-09-21) -- discovered because
         // Mechanical Block's entrance was silently overwritten by a neighbour's own wall drawn after
         // it in building order.
-        if (!inGrid(x, wy) || roofOwner[wy * W + x] !== -1 || (wallOwner[wy * W + x] !== -1 && wallOwner[wy * W + x] !== index)) continue;
+        // premium pass (FB-0029): the portico sits exactly where the real OSM footprint has a small
+        // entrance-recess bump-out (a second rect of the same L-shaped building, its own roof reaching
+        // a little further south right beside the door) -- ordinarily a wall row never draws over ANY
+        // roof, even the same building's own (the general rule just above), but here that "roof" IS
+        // the portico's own footprint, so this one case (only portico-table columns, only when index
+        // matches -- never another building's roof) is allowed through.
+        const isPorticoCell = porticoByX && porticoByX.has(x);
+        const roofBlocked = roofOwner[wy * W + x] !== -1 && !(isPorticoCell && roofOwner[wy * W + x] === index);
+        if (!inGrid(x, wy) || roofBlocked || (wallOwner[wy * W + x] !== -1 && wallOwner[wy * W + x] !== index)) continue;
         let tile;
         if (isFrontVisual) {
           if (x === run.x0) tile = FACADE_END_L[kind];
@@ -734,6 +803,27 @@ function drawBuilding(b, index) {
         else if (x === run.x1) tile = wallEndR;
         else tile = (x - run.x0) % 4 === 2 ? wallWindow : wallPlain;
         if (isFrontVisual && isBottomRow && (x === doorX0 || x === doorX1)) tile = x === doorX0 ? entranceL : entranceR;
+        // premium pass round 2: the composed portico -- columns, the terracotta frame, and the dark
+        // glass front (one variant per row so 3 stacked tiles don't look identical) replace the plain
+        // facade band across the portico's own width; the door itself (base row, handled above) stays
+        // the existing bitsEntranceGrandL/R. The Main Block's sign-band lettering replaces the plain
+        // cap row, but only across the portico's own width now, not the whole facade run.
+        if (isPorticoCell) {
+          const porticoKind = porticoByX.get(x);
+          if (porticoKind === 'column') tile = TILE.bitsEntranceColumn;
+          else if (porticoKind === 'frame') tile = TILE.bitsPorticoFrame;
+          else if (porticoKind === 'glass') {
+            tile = kind === 'window' ? TILE.bitsPorticoGlassTop : kind === 'body' ? TILE.bitsPorticoGlassMid : TILE.bitsPorticoGlassBase;
+          }
+          // porticoKind === 'door': the base row's entranceL/R (or the window/body rows' glass,
+          // below) already carries the door -- nothing to override at window/body for a door column
+          // beyond the glass fallthrough.
+          if (porticoKind === 'door' && kind !== 'base') tile = kind === 'window' ? TILE.bitsPorticoGlassTop : TILE.bitsPorticoGlassMid;
+        } else if (isFrontVisual && b.grand && kind === 'cap') {
+          const signStart = doorX0 - 4; // PORTICO_WIDE's own leftmost offset -- see that table above
+          const segIdx = x - signStart;
+          if (segIdx >= 0 && segIdx < SIGN_SEGMENT_COUNT) tile = TILE[`bitsSignSeg${segIdx}`];
+        }
         structures[wy * W + x] = tile;
         // wallOwner (declared with roofOwner, section 8): every road/walkway paving helper below
         // refuses to paint over a cell owned here, and the routing that picks a path in the first
@@ -745,9 +835,18 @@ function drawBuilding(b, index) {
     }
     if (isFrontVisual) {
       const doorY = run.y + depth;
-      if (structOnLawn(doorX0 - 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX0 - 2)] = index;
-      if (structOnLawn(doorX1 + 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX1 + 2)] = index;
-      if (structOnLawn(doorX0 - 1, doorY + 1, TILE.signboard)) wallOwner[(doorY + 1) * W + (doorX0 - 1)] = index;
+      // Coordinator review round 2 (2026-09-27): "white posts around a brick patch read as a pen or
+      // fence" -- showPortico already draws its own portico columns one tile in from the door
+      // (bitsEntranceColumn); the older bitsPillar decoration two tiles further out doubled up with
+      // them into exactly that fenced-in look. Skip the old pillars wherever the new portico exists.
+      if (!showPortico) {
+        if (structOnLawn(doorX0 - 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX0 - 2)] = index;
+        if (structOnLawn(doorX1 + 2, doorY, TILE.bitsPillar)) wallOwner[doorY * W + (doorX1 + 2)] = index;
+      }
+      if (structOnLawn(doorX0 - 1, doorY + 1, TILE.signboard)) {
+        wallOwner[(doorY + 1) * W + (doorX0 - 1)] = index;
+        addDepthGroup('signboard', doorX0 - 1, doorY + 1, 1, 1); // FB-0027
+      }
       if (isFront) b.doorCell = [doorX0, doorY];
       // Remembered (in tile coordinates) so BITS_FOOTPRINTS (built once all buildings are drawn,
       // just below) can add this front wall band as a routing obstacle -- the door's own 2 columns
@@ -757,7 +856,45 @@ function drawBuilding(b, index) {
       // the way it already does for a building's roof -- wallOwner stops the paint, but leaves a gap
       // instead of a route, which is what broke several buildings' reachability while this was being
       // built (2026-09-21).
-      b.frontBand = { y0: run.y + 1, y1: doorY, x0: run.x0, x1: run.x1, doorX0, doorX1, entranceL, entranceR };
+      b.frontBand = { y0: run.y + 1, y1: doorY, x0: run.x0, x1: run.x1, doorX0, doorX1, entranceL, entranceR, entranceLOpen, entranceROpen };
+      // premium pass round 2 (2026-09-27): every portico-table column at the window/body rows (the
+      // base row's door/glass is already re-stamped just above) -- recorded here so they can be
+      // re-stamped alongside the door itself, below (a run drawn later in this same building's own
+      // `runs` list, e.g. a side wing whose shallower depth happens to land on this exact row, can
+      // otherwise overwrite them the same way an ordinary paving pass could overwrite the door -- the
+      // re-stamp step already exists for that reason, this just widens what it covers).
+      if (showPortico) {
+        const table = b.grand ? PORTICO_WIDE : PORTICO_NARROW;
+        const cells = [];
+        for (const rowKind of ['window', 'body']) {
+          const y = rowKind === 'window' ? doorY - 2 : doorY - 1;
+          for (const { off, kind } of table) {
+            const x = doorX0 + off;
+            let tile;
+            if (kind === 'column') tile = TILE.bitsEntranceColumn;
+            else if (kind === 'frame') tile = TILE.bitsPorticoFrame;
+            else tile = rowKind === 'window' ? TILE.bitsPorticoGlassTop : TILE.bitsPorticoGlassMid; // 'glass' or 'door'
+            cells.push([x, y, tile]);
+          }
+        }
+        // The base row's own glass panels either side of the door (the door tiles themselves are
+        // already covered by the plain doorX0/doorX1 re-stamp just above).
+        for (const { off, kind } of table) {
+          if (kind !== 'glass') continue;
+          cells.push([doorX0 + off, doorY, TILE.bitsPorticoGlassBase]);
+        }
+        b.frontBand.portico = { cells };
+        // Claim wallOwner for every one of these cells now, even the ones the main loop above
+        // skipped over (the same recess-roof conflict FB-0029's own fix already covers) -- section 12
+        // (the pedestrian walkway network) runs after drawBuilding but before the re-stamp above, and
+        // without this it can legitimately paint a walkway tile into a cell that only becomes solid
+        // once the re-stamp runs, isolating that tile (found as a real regression: 2 walkway tiles
+        // stranded right beside the Main Block's own wider glass base panels).
+        for (const [x, y] of cells) wallOwner[y * W + x] = index;
+        for (const { off, kind } of table) {
+          if (kind === 'glass') wallOwner[doorY * W + (doorX0 + off)] = index;
+        }
+      }
     }
   }
 }
@@ -1121,7 +1258,21 @@ const PK = layout.entranceParking;
 const loopClearance = layout.loopRoad.widthMeters + MPT * 2; // the loop strip itself, plus a little lawn before the core's front wall
 const parkingV1 = roundaboutCenter[1] - roundaboutOuterHalf - MPT; // just north of the roundabout
 const parkingDepth = Math.min(30, Math.max(10, gateToCoreDepth * 0.3));
-const parkingV0 = Math.max(coreFrontV + loopClearance, parkingV1 - parkingDepth);
+// Coordinator review round 2 (2026-09-27), point D: parkingV0 used the same under-sized
+// coreFrontV-based estimate the loop road's own v1 did, which is why entrance parking (and, through
+// it, the loop road's own clamp) ended up hugging the Main Block door with almost no forecourt --
+// floored against the *real* drawn door position (`mainDoor`, available here since drawBuilding has
+// already run) plus 5 tiles of forecourt and the loop road's own width, same as loopBox.v1 below.
+// Clamped back from parkingV1 (the roundabout's own near edge, fixed) by at least MIN_PARKING_DEPTH:
+// this specific campus's gate-to-core corridor is only ~14 tiles deep, not enough for both a full
+// forecourt and the parking lot's old depth, so a real trade-off (favouring the entrance, per this
+// review's own priority) shrinks the lot rather than removing it outright -- paveRectFrame's own kerb
+// border eats 1 tile top and bottom, so anything under 3 tiles deep shows zero actual parking tiles.
+const MIN_PARKING_DEPTH = MPT * 3;
+const parkingV0 = Math.min(
+  Math.max(coreFrontV + loopClearance, parkingV1 - parkingDepth, mainDoor[1] + MPT * 5 + loopClearance),
+  parkingV1 - MIN_PARKING_DEPTH,
+);
 const westLot = { u0: gate2U - AVENUE_W / 2 - PK.gapMeters - PK.widthMeters, v0: parkingV0, u1: gate2U - AVENUE_W / 2 - PK.gapMeters, v1: parkingV1 };
 const eastLot = { u0: gate2U + AVENUE_W / 2 + PK.gapMeters, v0: parkingV0, u1: gate2U + AVENUE_W / 2 + PK.gapMeters + PK.widthMeters, v1: parkingV1 };
 // Because gate2U sits inside the academic core's own u-range (it's offset off the Main Block's
@@ -1174,7 +1325,18 @@ const loopBox = {
   u0: Math.min(coreBox.u0, Math.max(coreBox.u0 - LOOP.marginMeters - LOOP.widthMeters, fenceFrame.u0 + MPT * 5, westNeighbourU1 + MPT * 3)),
   v0: Math.max(coreBox.v0 - LOOP.marginMeters - LOOP.widthMeters, fenceFrame.v0 + MPT * 5),
   u1: Math.max(coreBox.u1, Math.min(coreBox.u1 + LOOP.marginMeters + LOOP.widthMeters, fenceFrame.u1 - MPT * 5, eastNeighbourU0 - MPT * 3)),
-  v1: Math.min(coreFrontV + loopClearance, parkingV0 - MPT * 2),
+  // Coordinator review round 2 (2026-09-27), point D: "the forecourt plaza must sit between the
+  // steps and any road, at least 5 tiles deep... if the loop road runs right against the facade
+  // there, move that stretch of road south". Measured against the *real* drawn Main Block door
+  // (`mainDoor`, from its actual footprint -- an L-shaped building's front run doesn't always sit
+  // exactly on coreBox's own naive south edge, which is what left only 1 tile of clearance here
+  // before this fix): the loop's own south strip (drawn `widthM` inset from this box's v1, see
+  // drawLoopRoad below) should clear the door by at least 5 tiles (10m) of forecourt -- but never
+  // past `parkingV0 - MPT*2` (the outer Math.min, unchanged from before this fix): the entrance
+  // parking lots sit at a fixed depth of their own, and pushing the loop road out far enough to clear
+  // the door by *more* than that would just move the collision from "the road overlaps the door" to
+  // "the road overlaps the parking lot" instead of solving it.
+  v1: Math.min(Math.max(coreFrontV + loopClearance, mainDoor[1] + MPT * 5 + LOOP.widthMeters), parkingV0 - MPT * 2),
 };
 function drawLoopRoad(box, widthM) {
   paveRectFrame(box.u0, box.v0, box.u1, box.v0 + widthM, 'asphalt', 'h');
@@ -1454,18 +1616,38 @@ function plantTree(cx, topY, kind) {
   overhead[(topY + 1) * W + cx] = TILE[canopy[2]];
   overhead[(topY + 1) * W + cx + 1] = TILE[canopy[3]];
   structures[(topY + 2) * W + cx] = TILE[kind === 'palm' ? 'palmTrunk' : 'treeTrunk'];
+  addDepthGroup(kind === 'palm' ? 'palm' : 'tree', cx, topY, 2, 3);
   return true;
 }
 
-// Date palms lining the entrance avenue.
+// Date palms lining the entrance avenue, and flanking the Main Block steps (docs/research/
+// campus-visual-reference.md: "palms belong at entrances/plazas... a placement rule, not just an
+// asset choice" -- the everyday avenues get ordinary round shade trees instead, below).
 for (let y = gy(mainDoor[1]); y <= gy(fenceFrame.v1) - 3; y += 5) {
   plantTree(gx(gate2U - AVENUE_W / 2) - 3, y, 'palm');
   plantTree(gx(gate2U + AVENUE_W / 2) + 1, y, 'palm');
 }
+if (mainBlock.frontBand) {
+  const { doorX0, doorX1, y1: doorY } = mainBlock.frontBand;
+  // Coordinator review round 2: clear of the wide portico's own columns (doorX0-4/-3 and
+  // doorX1+3/+4). plantTree needs a genuinely open 2x3 lawn patch (its own isLawn/hasTreeClearance
+  // checks), which right beside the steps is hemmed in by the walkway network on both flanks (found
+  // by inspecting the real generated map -- a single hand-picked spot silently failed there) -- try
+  // a short list of candidate spots, nearest the steps first, and take the first that actually plants.
+  const palmCandidates = (xBase, dir) => {
+    const cells = [];
+    for (const dx of [0, 6, 12, 18, 24, 30, 36, 42]) for (const dy of [-1, 2, 5, 8]) cells.push([xBase + dir * dx, doorY + dy]);
+    return cells;
+  };
+  for (const [x, y] of palmCandidates(doorX0 - 7, -1)) if (plantTree(x, y, 'palm')) break;
+  for (const [x, y] of palmCandidates(doorX1 + 5, 1)) if (plantTree(x, y, 'palm')) break;
+}
 
 // Shade trees scattered across the lawn: a deterministic hash so the map is reproducible, jittered
 // (not a visible grid, FB-0015): each cell of a coarse grid gets a tree at a randomised offset
-// within it, instead of every tree sitting on the same grid line.
+// within it, instead of every tree sitting on the same grid line. Premium pass (Part 2): always a
+// round shade tree here now, never a palm -- palms are an entrance/plaza landmark accent (planted
+// explicitly above), not an everyday avenue tree (docs/research/campus-visual-reference.md).
 function hash(x, y) {
   let h = (x * 73856093) ^ (y * 19349663) ^ 20260916;
   h = Math.imul(h ^ (h >>> 16), 2246822519);
@@ -1481,8 +1663,7 @@ function scatterTrees(x0, y0, x1, y1) {
       if (h % 3 !== 0) continue;
       const jx = gx0 + (h >> 2) % (STEP - 2);
       const jy = gy0 + (h >> 5) % (STEP - 2);
-      const kind = (h >> 8) % 5 === 0 ? 'palm' : 'tree';
-      if (plantTree(jx, jy, kind)) treeCount++;
+      if (plantTree(jx, jy, 'tree')) treeCount++;
     }
   }
 }
@@ -1491,6 +1672,43 @@ scatterTrees(gx(fenceFrame.u0) + 3, gy(fenceFrame.v0) + 3, gx(fenceFrame.u1) - 3
   const [cu, cv] = RING_CENTER;
   const r = layout.diacRing.radius;
   scatterTrees(gx(cu - r) + 3, gy(cv - r) + 3, gx(cu + r) - 3, gy(cv + r) - 3);
+}
+
+// ================= 15b. campus props (premium pass, 2026-09-26, Part 2) =================
+// Benches, bins and lamp posts along the entrance avenue; planters at the Main Block's own steps;
+// a row of coloured flags on the forecourt (docs/research/campus-visual-reference.md: "4+ flagpoles
+// in a row... red/gold/purple pennant flags on tall white poles"); bollards flanking Gate 2; a low
+// decorative fence run at each parking lot's near edge. None of these existed before this pass.
+
+// Benches + bins + lamp posts, alternating down both sides of the entrance avenue (lawn just beyond
+// the avenue's own kerb, the same offset the palms already use one tile further out).
+const AVENUE_PROP_KIND = ['lampPost', 'bench', 'bin'];
+for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++) {
+  const kind = AVENUE_PROP_KIND[i % AVENUE_PROP_KIND.length];
+  const leftX = gx(gate2U - AVENUE_W / 2) - 5;
+  const rightX = gx(gate2U + AVENUE_W / 2) + 3;
+  if (structOnLawn(leftX, y, TILE[kind])) { if (kind === 'lampPost') addDepthGroup('lampPost', leftX, y, 1, 1); }
+  if (structOnLawn(rightX, y, TILE[kind])) { if (kind === 'lampPost') addDepthGroup('lampPost', rightX, y, 1, 1); }
+}
+
+// Coordinator review round 2, point D: the staircase/planters/flags are placed in section 16.5,
+// below, after the forecourt paving itself exists (this section runs first, and the forecourt
+// rectangle would otherwise overwrite a staircase placed here).
+
+// Bollards flanking Gate 2's own approach, just inside the fence, plus a bus stop sign a little
+// further in on the same side (coordinator review round 3: "Kenney lamps, benches, bins, bus stop
+// sign near the gate").
+{
+  const gateRow = gy(fenceFrame.v1) - 2;
+  structOnLawn(gx(gate2U - AVENUE_W / 2) - 2, gateRow, TILE.bollard);
+  structOnLawn(gx(gate2U + AVENUE_W / 2) + 2, gateRow, TILE.bollard);
+  structOnLawn(gx(gate2U - AVENUE_W / 2) - 4, gateRow + 2, TILE.busStopSign);
+}
+
+// A low decorative fence along each gate-side parking lot's near (avenue-facing) edge.
+for (const lot of [westLot, eastLot]) {
+  const y = gy(lot.v1);
+  for (let x = gx(lot.u0); x <= gx(lot.u1); x++) structOnLawn(x, y, TILE.lowFence);
 }
 
 // ================= 16. DIAC Park: real paths only =================
@@ -1518,15 +1736,159 @@ for (let y = 0; y < H; y++) {
 }
 
 
+// ================= 16.5 walkway edges + the Main Block forecourt plaza (FB-0028) =================
+// The walkway tile's own fill is now plain (tools/make-assets.js walkway()'s comment: no more baked
+// top+bottom border on every tile, which is what made a 3-tile-wide path stripe itself with a false
+// seam down the middle). A border is added back only at the network's true outward edge -- where a
+// walkway cell actually borders lawn/lawn2/sand -- as its own dedicated tile, the same "kerb only at
+// the edge" shape the road kerb tiles already use. Run once, after every other ground layer edit, so
+// it sees the network's final shape.
+const SOFT_GROUND = new Set(['lawn', 'lawn2', 'sand']);
+const WALKWAY_EDGE_TILE = {
+  T: 'walkwayEdgeT', B: 'walkwayEdgeB', L: 'walkwayEdgeL', R: 'walkwayEdgeR',
+  TL: 'walkwayCornerTL', TR: 'walkwayCornerTR', BL: 'walkwayCornerBL', BR: 'walkwayCornerBR',
+};
+{
+  const isSoft = (x, y) => inGrid(x, y) && SOFT_GROUND.has(tileInfo.tiles[ground[y * W + x]].name);
+  const edits = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (tileInfo.tiles[ground[y * W + x]].name !== 'walkway') continue;
+      let sides = '';
+      if (isSoft(x, y - 1)) sides += 'T';
+      if (isSoft(x, y + 1)) sides += 'B';
+      if (isSoft(x - 1, y)) sides += 'L';
+      if (isSoft(x + 1, y)) sides += 'R';
+      const name = WALKWAY_EDGE_TILE[sides];
+      if (name) edits.push([x, y, TILE[name]]);
+    }
+  }
+  for (const [x, y, tile] of edits) ground[y * W + x] = tile;
+
+  // A genuine dead-end stub -- a lone walkway tile with no paved neighbour on any side at all (a
+  // broken fragment, not a real path anyone could walk along) -- reads as clutter, not a path; turn
+  // it back into lawn instead of leaving a 1-tile paving island (FB-0028: "no dead-end stubs, no
+  // isolated paving islands").
+  const HARD_NEIGHBOUR = new Set(['walkway', 'walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR', 'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR', 'asphalt', 'paving', 'parking'].concat(Object.values(WALKWAY_EDGE_TILE)));
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const name = tileInfo.tiles[ground[y * W + x]].name;
+      if (name !== 'walkway') continue;
+      const hasNeighbour = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+        const nx = x + dx;
+        const ny = y + dy;
+        return inGrid(nx, ny) && HARD_NEIGHBOUR.has(tileInfo.tiles[ground[ny * W + nx]].name);
+      });
+      if (!hasNeighbour) ground[y * W + x] = TILE.lawn;
+    }
+  }
+}
+
+// The Main Block's own forecourt: red-brown interlocking pavers (the existing hand-drawn `paving`
+// tile, already recoloured this pass towards the reference #B06B4A family, see remapPaver's own
+// comment) instead of the same grey-tan walkway everywhere else, framed by the same kerb tiles a road
+// uses -- exactly what the reference photos show (a distinct paved plaza right at the entrance,
+// bordered by a striped kerb). Sized to the door's own width plus a few tiles of approach, not the
+// whole avenue -- the avenue itself stays `walkway` (asphalt-adjacent kerbs already frame it).
+if (mainBlock.frontBand) {
+  const { doorX0, doorX1, y1: doorY } = mainBlock.frontBand;
+  // Coordinator review round 2, point D: "the forecourt plaza must sit between the steps and any
+  // road, at least 5 tiles deep" -- py1 reaches as far as the loop road fix above now allows, but
+  // never into the entrance parking lots (a fixed-depth feature of their own, not derived from the
+  // loop road) -- whichever is closer to the door wins, so this can never overlap real parking tiles
+  // even if a future layout tweak changes their relative distances again.
+  const plazaHalf = 6;
+  const px0 = doorX0 - plazaHalf;
+  const px1 = doorX1 + plazaHalf;
+  const py0 = doorY + 1;
+  const parkingNorthEdge = Math.min(gy(westLot.v0), gy(eastLot.v0));
+  const py1 = Math.min(doorY + 9, parkingNorthEdge - 1);
+  for (let y = py0; y <= py1; y++) {
+    for (let x = px0; x <= px1; x++) {
+      if (!inGrid(x, y) || roofOwner[y * W + x] !== -1 || wallOwner[y * W + x] !== -1) continue;
+      // Never paint over a real road: if the loop road/avenue's own asphalt or kerb already reaches
+      // this far (the Main Block can sit close enough to the loop road that the forecourt's own
+      // depth overlaps it), leave it alone -- the forecourt is meant to replace the plain walkway/
+      // lawn right at the door, not eat into the road network itself (FB-0026's own loop-continuity
+      // guarantee).
+      const existing = tileInfo.tiles[ground[y * W + x]].name;
+      if (existing === 'asphalt' || existing.startsWith('kerb') || existing.startsWith('roadLine') || existing.startsWith('crossing')) continue;
+      const onEdge = x === px0 || x === px1 || y === py0 || y === py1;
+      if (onEdge) {
+        const side = (y === py0 ? 'T' : y === py1 ? 'B' : '') + (x === px0 ? 'L' : x === px1 ? 'R' : '');
+        if (side && TILE[`kerb${side}`] !== undefined) { ground[y * W + x] = TILE[`kerb${side}`]; continue; }
+      }
+      ground[y * W + x] = TILE.paving;
+    }
+  }
+
+  // Coordinator review round 2, point D: the wide 3-row staircase (walkable, ground layer) below the
+  // portico -- placed here, after the forecourt paving above, so it isn't immediately overwritten by
+  // it. Planters at the staircase's own ends, and the flag row further out on the forecourt.
+  const stepX0 = doorX0 - 3;
+  const stepX1 = doorX1 + 3;
+  [[doorY + 1, 'bitsStep1'], [doorY + 2, 'bitsStep2'], [doorY + 3, 'bitsStep3']].forEach(([y, name]) => {
+    for (let x = stepX0; x <= stepX1; x++) {
+      if (inGrid(x, y) && roofOwner[y * W + x] === -1) ground[y * W + x] = TILE[name];
+    }
+  });
+  structOnLawn(stepX0 - 1, doorY + 2, TILE.planter);
+  structOnLawn(stepX1 + 1, doorY + 2, TILE.planter);
+
+  // Coordinator review round 2: this specific campus's gate-to-core corridor turned out to be much
+  // shorter than assumed once the forecourt got its real depth (point D's own fix, above) -- doorY+8
+  // now lands inside the loop road itself. The lawn flanking the forecourt's own west side (still
+  // wide open at this row) is a safer, still-forecourt-adjacent spot for the flag row.
+  // Coordinator review round 3 (2026-09-27): the flag is now a real 2-tile-tall pole (make-assets.js
+  // flagPoleBase/flagPoleTop's own comment) -- flagColors' base name still picks the pole/flag color,
+  // paired with the matching `flagTop*` overhead tile placed one row above the base, the same way
+  // plantTree above places a tree's canopy overhead one row above its trunk.
+  const flagColors = ['flagPoleYellow', 'flagPoleBlue', 'flagPoleRed', 'flagPoleYellow', 'flagPoleBlue'];
+  const flagY = doorY + 3;
+  const flagX0 = doorX0 - 18;
+  flagColors.forEach((name, i) => {
+    const x = flagX0 + i * 2;
+    if (structOnLawn(x, flagY, TILE[name])) {
+      addDepthGroup('flagPole', x, flagY, 1, 1);
+      const topName = 'flagTop' + name.slice('flagPole'.length);
+      if (inGrid(x, flagY - 1)) overhead[(flagY - 1) * W + x] = TILE[topName];
+    }
+  });
+}
+
 // Re-stamp every building's entrance tiles now that all road/walkway/parking painting above has
 // finished: the entrance avenue and the walkway network both terminate right at a door, and a
 // straight paveRectFrame/connectRect segment aimed at that exact point can still paint over the
 // entrance tile itself in passing. Deliberately narrow -- just these 2 cells per building.
 for (const b of buildingList) {
   if (!b.frontBand) continue;
-  const { doorX0, doorX1, y1: doorY, entranceL, entranceR } = b.frontBand;
+  const { doorX0, doorX1, y1: doorY, entranceL, entranceR, portico } = b.frontBand;
   if (inGrid(doorX0, doorY)) structures[doorY * W + doorX0] = entranceL;
   if (inGrid(doorX1, doorY)) structures[doorY * W + doorX1] = entranceR;
+  // premium pass (FB-0029): the portico columns/canopy (drawBuilding's own comment on `b.frontBand.
+  // portico` explains why these specifically need re-stamping -- a different run of the SAME L-shaped
+  // building, drawn later in drawBuilding's own loop, can land on this exact row and overwrite them).
+  if (portico) {
+    for (const [x, y, tile] of portico.cells) {
+      if (inGrid(x, y)) structures[y * W + x] = tile;
+    }
+  }
+}
+
+// Coordinator review round 2 (2026-09-27), point E ("the core complaint" -- 3D feel for every
+// building): a soft cast shadow on the ground right below each facade, real alpha (bitsFacadeShadow,
+// tools/make-assets.js), across the whole front run. Placed last (after every road/walkway/forecourt/
+// staircase edit above, and after the entrance re-stamp) so it sits on top of whatever ground ended
+// up there -- steps, forecourt paving, or plain lawn/walkway alike -- rather than being erased by a
+// later ground-painting pass the way placing it back in drawBuilding was (found the hard way: the
+// walkway network clears `structures` wherever it paints new ground, section 940-ish `fillRectFrame`).
+for (const b of buildingList) {
+  if (!b.frontBand) continue;
+  const { x0, x1, y1: doorY } = b.frontBand;
+  const sy = doorY + 1;
+  for (let x = x0; x <= x1; x++) {
+    if (inGrid(x, sy) && roofOwner[sy * W + x] === -1) structures[sy * W + x] = TILE.bitsFacadeShadow;
+  }
 }
 
 // ================= 17. objects: spawn, gates, doors, cutscene, buildings, areas, signboards =================
@@ -1569,11 +1931,19 @@ rectObjectFrame('cutscene', 'Gate 2 entrance', gate2U - AVENUE_W / 2, fenceFrame
 // back onto campus). world.js resolves `to`/`toId` generically for any Tiled door/stairs object;
 // an unknown `to` map logs a warning and shows a toast instead of crashing.
 for (const b of buildingList.filter((b) => b.doorCell)) {
+  // premium pass (FB-0029/ADR 0015): `openTiles` names the door's own "open" tile variant(s), left to
+  // right across the door's width, for the door-entry animation the engine adds later (ADR 0015: the
+  // door opens, she steps in, then the fade/warp) -- a comma-joined list of tile names since a Tiled
+  // object's properties are flat strings; empty for an ordinary door that has no open variant yet.
+  const openTiles = b.frontBand && b.frontBand.entranceLOpen != null
+    ? [tileInfo.tiles[b.frontBand.entranceLOpen].name, tileInfo.tiles[b.frontBand.entranceROpen].name].join(',')
+    : '';
   pointObject('door', `${b.name} entrance`, b.doorCell[0], b.doorCell[1], [
     { name: 'building', type: 'string', value: b.name },
     { name: 'to', type: 'string', value: b.to },
     { name: 'toId', type: 'string', value: `${b.name} Ground Floor entrance` },
     { name: 'facing', type: 'string', value: 'down' }, // arriving here (exiting the building) faces away from it, into the avenue/plaza
+    { name: 'openTiles', type: 'string', value: openTiles },
   ]);
 }
 
@@ -1613,6 +1983,11 @@ for (const b of buildingList) {
     { name: 'style', type: 'string', value: b.style },
     { name: 'unverified', type: 'bool', value: Boolean(b.unverified) },
   ]);
+  // premium pass (FB-0027): a depthGroup covering this building's own drawn tiles (roof + wall +
+  // facade), base line = its bottom (south) edge -- the front run is drawn FRONT_WALL_TILES deep for
+  // a BITS building (deeper than b.wallTiles, see that constant's own comment), so the group reaches
+  // that far south for one of these, not just b.wallTiles.
+  rectObjectFrame('depthGroup', b.name, box.u0, box.v0, box.u1, box.v1 + (b.isBits ? FRONT_WALL_TILES : b.wallTiles) * MPT);
   const cellsByRow = new Map();
   footprintCells(b, (x, y) => {
     if (!cellsByRow.has(y)) cellsByRow.set(y, []);
@@ -1670,6 +2045,13 @@ for (const b of buildingList) {
       ]);
     });
   }
+}
+
+// premium pass (FB-0027): every tree, palm, lamp post and flag pole planted above (section 15/15b)
+// also gets its own depthGroup -- collected as plain {x, y, width, height} tile rects in `depthGroups`
+// as they were placed, emitted here the same way every other object in this section is.
+for (const g of depthGroups) {
+  rectObjectGrid('depthGroup', g.name, g.x, g.y, g.x + g.width - 1, g.y + g.height - 1);
 }
 
 rectObjectFrame('area', layout.manual.centralLawn.name, ...layout.manual.centralLawn.rect.slice(0, 2), layout.manual.centralLawn.rect[0] + layout.manual.centralLawn.rect[2], layout.manual.centralLawn.rect[1] + layout.manual.centralLawn.rect[3], [{ name: 'kind', type: 'string', value: 'lawn' }]);

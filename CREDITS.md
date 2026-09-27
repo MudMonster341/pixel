@@ -32,16 +32,68 @@ require. The raw packs are not in this repository; download them again if you ne
   redistributed. *Assets - From: Sprout Lands - By: Cup Nooble.*
 - **Roguelike Modern City pack** and **Pixel Vehicle Pack** by **Kenney** ([kenney.nl](https://kenney.nl),
   `assets/vendor/kenney-roguelike-modern-city/` and `assets/vendor/kenney-pixel-vehicle-pack/`) --
-  CC0 1.0 (public domain). **In use**: `walkway`, all 8 kerb tiles, `asphalt`, `roadLineH`/
+  CC0 1.0 (public domain). **In use**: `asphalt`, `roadLineH`/
   `roadLineV`, `crossingH`/`crossingV`, `parking` (asphalt only -- see docs/STYLE_GUIDE.md for why
   the stall lines stay hand-drawn), `lawn`/`lawn2`/`grass`/`grass2`'s flat ground fill, and the
   parked cars (`carSedan`, `carSedanBlue`, `carSuv`, `carVan`) -- see `tools/make-assets.js`'s `PACK`
   table and docs/STYLE_GUIDE.md's "Campus kit" for exactly which tile uses which source rect.
+  **No longer used** for the road-facing `kerb*` tiles as of coordinator review round 3 (2026-09-27):
+  they used to blit this pack's own brick paver-with-gutter-line tile (`PACK.kerbPaver`), recolored to
+  a salmon-brick ramp, as the whole tile -- the actual reason the avenue still read as brick after
+  round 2's separate `walkway()` fix. `kerb*` now reuses the RPG Urban Pack's own concrete sidewalk
+  (see that pack's entry, above) instead; `PACK.kerbPaver`/`PACK.plainPaver` stay defined for
+  reference but nothing calls them any more.
   Kenney's Pixel UI Pack (`assets/vendor/kenney-pixel-ui-pack/`) was surveyed but **not used** --
   worse fit than the existing hand-drawn dialog box.
 - **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0
   1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
   Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).
+
+## Premium pass (added 2026-09-26, see docs/research/asset-packs-2026-09-26.md and
+docs/plans/2026-09-26-premium-pass.md)
+
+- **RPG Urban Pack** by **Kenney Vleugels** ([kenney.nl](https://kenney.nl),
+  `assets/vendor/kenney-rpg-urban-pack/`) -- CC0 1.0 (public domain). Coordinator review round 3
+  (2026-09-27, "one coherent free kit"): this is now the main outdoor kit, not just a source of small
+  props -- round 2's hand-drawn flat fills still read as flat/no-material at the real camera, so both
+  the ground and every BITS building are now composed from real crops of this single sheet, recolored
+  onto the established BITS palette (sand body `#e3c09b`, terracotta trim `#b5583c`, light parapet
+  `#f2ddb8`) via hue/luminance remaps in `tools/make-assets.js` (`remapBitsWall`,
+  `remapBitsWallBase`, `remapBitsWindow`, `remapBitsDoorFrame`, `remapLightStone`,
+  `remapBitsColumn`). **In use**:
+  - the campus props `lampPost`, `bench`, `bin`, `planter`, `lowFence`, `bollard`, and (new)
+    `busStopSign` -- see the `URBAN`/`BUS_STOP_SIGN_SRC` tables;
+  - `walkway`/`walkwayEdge*`/`walkwayCorner*` and every road-facing `kerb*` tile: the sheet's own
+    concrete-plaza 9-slice (fill + edge + corner pieces), used **unrecolored** (the coordinator's own
+    "or only slightly warmed") -- see the `SIDEWALK` table. `kerbEdge` now simply calls the same
+    `walkwayEdge`/`walkwayCorner` functions instead of Modern City's brick paver (see that pack's own
+    entry below), which is what actually explained "the avenue is still salmon brick" surviving round
+    2 -- kerb tiles were a separate, untouched code path;
+  - every BITS building's facade bands (`bitsFacadeCap`/`Window`/`Body`/`Base`), its portico/column
+    tiles (`bitsPillar`, `bitsEntranceColumn`, `bitsPorticoFrame`, `bitsPorticoGlassTop/Mid/Base`), its
+    grand entrance doors (`bitsEntranceGrandL/R` and their `...Open` variants), and its staircase
+    (`bitsStep1/2/3`) -- a wall-with-coping crop for the cap/body/base bands, a tan arched window, a
+    wide glass double door (also reused, recolored, for the portico's own flanking glass panels), a
+    free-standing pillar prop (composed onto a wall backdrop the same way `lampPost` composes onto
+    grass), and a 3-tread staircase crop -- see the `BLDG` table;
+  - the flag's own pole (`FLAG_POLE_SRC`, see the Ninja Adventure entry below for the flag itself).
+  The Main Block forecourt's own `paving` (small-scale, low-contrast red-brown pavers) is unchanged
+  from round 2 and stays hand-drawn -- the coordinator's round 3 brief keeps it as the one deliberate
+  exception ("no brick anywhere on walkable ground except the Main Block forecourt inset").
+- **Ninja Adventure -- Asset Pack** by **Pixel-boy and AAA**
+  ([pixel-boy.itch.io/ninja-adventure-asset-pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack),
+  `assets/vendor/ninja-adventure/`) -- CC0 1.0, attribution appreciated but not required. **In use**:
+  `treeCanopyTL/TR/BL/BR`'s fill (its Nature tileset's own round tree) and `palmCanopyTL/TR/BL/BR`'s
+  fill (its Desert tileset's potted-palm fronds) -- our own hand-drawn trunk/shape/outline is
+  unchanged, only the fill, the same "our shape, its fill" technique FB-0025 used originally.
+  Coordinator review round 3 (2026-09-27): both are now used in the pack's own **native colors** (no
+  recolor at all) -- round 2's `remapDryLeaves` muted ramp made the palm read as "murky and dark"; the
+  owner asked for the pack's own bright colors back for both the palms and the round shade trees.
+  Also **in use**: `flagPoleYellow`/`flagPoleBlue`/`flagPoleRed`'s *top* tile (the new, separate
+  `flagTopYellow`/`flagTopBlue`/`flagTopRed` overhead tiles -- see the Kenney entry above for the pole
+  itself), its animated Flag sprites' first frame, enlarged and mounted on a real 2-tile Kenney pole
+  instead of the pack's own short stick (coordinator review round 3: the old single-tile version "read
+  as a little axe" at this scale).
 
 ## Interior furniture kit (added 2026-09-22, see docs/research/asset-packs.md)
 

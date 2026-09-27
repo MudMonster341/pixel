@@ -251,7 +251,7 @@ test('every enterable BITS building has a door object with a `to` map key', () =
 
 // ---------- BITS building kit addendum (2026-09-21): the Main Block's grand entrance ----------
 
-test('the Main Block entrance tile exists, is the grand (red-arch) variant, and is walkable from the plaza', () => {
+test('the Main Block entrance tile exists, is the grand (terracotta portal) variant, and is walkable from the plaza', () => {
   const door = objects.find((o) => o.type === 'door' && o.props.building === 'Main Block');
   assert.ok(door, 'missing Main Block door object');
   const x = Math.floor(door.x);

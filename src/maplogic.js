@@ -230,3 +230,50 @@ function questObjectiveText(quest) {
   if (quest.stage === 'rewarded') return 'Treasure hunt complete! You got the small box.';
   return '';
 }
+
+// ---------- ADR 0016: in-world cutscene scripts, resolveAnchor() and the onboarding destination ----------
+
+// A script's `move`/`cameraPan`/etc. steps can name a point on the CURRENT map instead of a raw tile
+// coordinate (docs/plans/2026-09-26-premium-pass.md stage 6, decisions/0016): "spawn, gate, the Main
+// Block door object, area/zone objects by name" -- any Tiled object (or a text map's own `mapObjects`,
+// which is always `[]` today, ADR 0015's own note that a map without extra data just renders as
+// before) whose `name` matches exactly. Resolved at *runtime*, not baked into the script, so a later
+// map regeneration that moves a building doesn't silently break every script that walks up to its
+// door -- only a renamed/removed object does, and that's a loud `null` a caller can check for, not a
+// wrong position nobody notices. Returns the object's center in tile units (a point object's own
+// width/height are 0, so `x + width/2` is just `x`), or null if nothing on this map has that name.
+function resolveAnchor(mapObjects, name) {
+  const found = (mapObjects || []).find((o) => o.name === name);
+  if (!found) return null;
+  return { x: found.x + found.width / 2, y: found.y + found.height / 2 };
+}
+
+// The treasure hunt's current objective, as one of OBJECTIVE_ROUTES' own keys (src/objective-routes.js)
+// -- the same branching questObjectiveText() above already uses, just returning an id instead of the
+// sentence a player reads, so FB-0033's destination arrow/minimap marker can look up *where* that
+// objective is without re-deriving "which key is she missing" a second, differently-shaped way. `null`
+// means "no on-screen destination right now" (the reward's already been handed over).
+function objectiveId(quest) {
+  if (quest.stage === 'arrival') return 'find-stall';
+  if (quest.stage === 'hunting') {
+    if (!quest.keys.physicsLab) return 'key-physicsLab';
+    if (!quest.keys.icvl) return 'key-icvl';
+    if (!quest.keys.room195) return 'key-room195';
+    return 'return-stall';
+  }
+  return null;
+}
+
+// The current objective's route step for `mapKey` (src/objective-routes.js OBJECTIVE_ROUTES), or null
+// if either there's no active objective at all (objectiveId() returned null) or the route simply
+// doesn't name a stop on this particular map (she's off the story's route -- exploring campus while
+// the objective is three floors up a building she isn't in, say). world.js turns the returned
+// `{ map, anchor }`/`{ map, npc }`/`{ map, keyStation }` step into actual on-screen tile coordinates
+// (it alone has the live mapObjects/npcs/keyStations to resolve an id/anchor name against); this
+// function only picks *which* step applies, which needs no live scene at all.
+function objectiveTarget(mapKey, quest) {
+  const id = objectiveId(quest);
+  if (!id) return null;
+  const route = OBJECTIVE_ROUTES[id] || [];
+  return route.find((step) => step.map === mapKey) || null;
+}

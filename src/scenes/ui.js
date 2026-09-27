@@ -162,6 +162,10 @@ class UIScene extends Phaser.Scene {
     // Tutorial's own `stage` above), and a J-toggled journal of the clues she's collected so far.
     this.questTracker = new QuestTracker(this);
     this.journal = new JournalPanel(this);
+    // ADR 0016 / FB-0033: the letterbox bars a script's own `letterbox` step slides in/out, and the
+    // always-on destination arrow (Minimap/FullMap get the same marker in their own update() below).
+    this.letterbox = new Letterbox(this);
+    this.onboarding = new Onboarding(this);
 
     // Named so they can be un-subscribed again in shutdown() below -- see the file-header comment.
     this.onMapEntered = (world) => {
@@ -183,8 +187,13 @@ class UIScene extends Phaser.Scene {
     // reaches whichever WorldScene instance is current even if a map change happened in between.
     this.onCutsceneRequested = (key) => {
       const world = this.scene.get('world');
+      if (!world.sys.isActive() || world.transitioning) return;
+      // ADR 0016: new content plays as an in-world script; CUTSCENES (the old letterboxed-illustration
+      // player, src/scenes/cutscene.js) is only reached by a key that predates this ADR and was never
+      // migrated -- none ships with this game anymore, but the fallback costs nothing to keep.
+      if (SCRIPTS[key]) { world.playScript(key, SCRIPTS[key]); return; }
       if (!CUTSCENES[key]) { console.warn(`dialog action requested unknown cutscene "${key}"`); return; }
-      if (world.sys.isActive() && !world.transitioning) world.playCutscene(key);
+      world.playCutscene(key);
     };
     // A dialog `{ minigame: 'id' }` action (src/dialog.js) fires this; handled here for the same
     // reason as cutscenes above (a persistent scene, always reaching whichever WorldScene instance is
@@ -307,6 +316,13 @@ class UIScene extends Phaser.Scene {
     const world = this.scene.get('world');
     if (world.player && world.player.active && world.tileData) this.minimap.update(world, time);
     if (world.player && world.player.active) this.hotbar.updateOverlap(world);
+    // FB-0033: the destination arrow only while she actually has control (not mid-dialog/pause/map,
+    // and not mid-script -- a script's own camera pan already shows her where things are).
+    if (world.player && world.player.active && !this.isBlocking() && !world.transitioning) {
+      this.onboarding.update(world, time);
+    } else {
+      this.onboarding.arrow.setVisible(false);
+    }
   }
 }
 
@@ -428,6 +444,17 @@ class Minimap {
     for (const ks of world.keyStations || []) if (!ks.taken) dot(mx(ks.x), my(ks.y), 3);
     g.fillStyle(0x7fe0ff, 1);
     for (const npc of world.npcs) dot(mx(npc.x), my(npc.y), 4);
+
+    // FB-0033: the same destination the on-screen arrow points to (world.js currentObjectiveAnchor()),
+    // a pulsing gold ring so it reads as "go here" rather than just another dot.
+    const target = world.currentObjectiveAnchor ? world.currentObjectiveAnchor() : null;
+    if (target) {
+      const tx = mx(target.x * TILE + TILE / 2);
+      const ty = my(target.y * TILE + TILE / 2);
+      if (tx >= this.offsetX && ty >= this.offsetY && tx < right && ty < bottom) {
+        g.lineStyle(2, COLORS.gold, 1).strokeCircle(tx, ty, 4 + Math.abs(Math.sin(time / 200)) * 3);
+      }
+    }
 
     g.fillStyle(0x000000, 1);
     dot(mx(world.player.x), my(world.player.y), 6);
@@ -558,6 +585,15 @@ class FullMap {
   update(time) {
     if (!this.visible || !this.world) return;
     const g = this.markers.clear();
+
+    // FB-0033: the same destination the minimap/on-screen arrow point to.
+    const target = this.world.currentObjectiveAnchor ? this.world.currentObjectiveAnchor() : null;
+    if (target) {
+      const tx = this.offsetX + target.x * this.scale;
+      const ty = this.offsetY + target.y * this.scale;
+      g.lineStyle(2, COLORS.gold, 1).strokeCircle(tx, ty, 6 + Math.abs(Math.sin(time / 200)) * 4);
+    }
+
     const px = this.offsetX + (this.world.player.x / TILE) * this.scale;
     const py = this.offsetY + (this.world.player.y / TILE) * this.scale;
     g.fillStyle(0x000000, 1).fillCircle(px, py, 6); // dark ring so the blinking dot reads on any background
@@ -1362,6 +1398,117 @@ class QuestTracker {
     const h = keysY + this.keysText.height + 14 - this.y;
     this.panel.clear();
     drawPanel(this.panel, this.x, this.y, this.w, h);
+  }
+}
+
+// ---------- letterbox bars (ADR 0016): a Pokemon-style story beat's own thin top/bottom bars ----------
+// Lives in UIScene (not WorldScene, which is zoomed 3x -- a screen-fixed bar has to be drawn where the
+// UI's own 960x540, zoom-1 camera is, docs/GAME_FEEL.md "UI canvas"), driven by src/scripts-runtime.js
+// ScriptRunner's `{ letterbox: 'in' | 'out' }` step. `snap()` is the Esc-fast-forward path: no slide,
+// just land on whichever state ('in' fully shown, 'out' fully hidden) the skip is heading towards.
+
+const SCRIPT_LETTERBOX_HEIGHT = 70;
+const SCRIPT_LETTERBOX_SLIDE_MS = 350;
+
+class Letterbox {
+  constructor(scene) {
+    this.scene = scene;
+    this.h = SCRIPT_LETTERBOX_HEIGHT;
+    this.topBar = scene.add.rectangle(GAME_WIDTH / 2, -this.h / 2, GAME_WIDTH, this.h, 0x000000).setDepth(90);
+    this.bottomBar = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT + this.h / 2, GAME_WIDTH, this.h, 0x000000).setDepth(90);
+  }
+
+  playIn(onDone) {
+    this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
+    this.scene.tweens.add({ targets: this.topBar, y: this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeOut' });
+    this.scene.tweens.add({ targets: this.bottomBar, y: GAME_HEIGHT - this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeOut', onComplete: onDone });
+  }
+
+  playOut(onDone) {
+    this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
+    this.scene.tweens.add({ targets: this.topBar, y: -this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeIn' });
+    this.scene.tweens.add({ targets: this.bottomBar, y: GAME_HEIGHT + this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeIn', onComplete: onDone });
+  }
+
+  snap(shown) {
+    this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
+    this.topBar.y = shown ? this.h / 2 : -this.h / 2;
+    this.bottomBar.y = shown ? GAME_HEIGHT - this.h / 2 : GAME_HEIGHT + this.h / 2;
+  }
+}
+
+// ---------- onboarding (FB-0033): a bouncing destination arrow + a "still stuck?" hint toast ----------
+// The quest tracker's own text (src/maplogic.js questObjectiveText()) already says *what* to do; this
+// is the always-visible *where* -- a bouncing arrow over the current objective's door/desk when it's
+// on screen (world.js currentObjectiveAnchor(), src/objective-routes.js), plus the same marker on the
+// minimap/full map (added to Minimap.update()/FullMap.update() below) so she can always see it even
+// off screen. If she hasn't gotten meaningfully closer to it in WANDER_HINT_MS, a gentle toast repeats
+// the objective -- never more than once per that same window, so it can't nag.
+
+const WANDER_HINT_MS = 20_000;
+const WANDER_IMPROVE_PX = 24; // must close the gap by at least this much to count as "making progress"
+
+class Onboarding {
+  constructor(scene) {
+    this.scene = scene;
+    this.arrow = scene.add.graphics().setDepth(90).setVisible(false);
+    this.bestDistance = Infinity;
+    this.stuckSince = null;
+    this.lastKey = null;
+  }
+
+  update(world, time) {
+    const target = world.currentObjectiveAnchor ? world.currentObjectiveAnchor() : null;
+    if (!target) {
+      this.arrow.setVisible(false);
+      this.lastKey = null;
+      return;
+    }
+
+    const px = target.x * TILE + TILE / 2;
+    const py = target.y * TILE + TILE / 2;
+    const cam = world.cameras.main;
+    const view = cam.worldView;
+    const onScreen = px > view.x + 8 && px < view.x + view.width - 8 && py > view.y + 8 && py < view.y + view.height;
+    this.arrow.setVisible(onScreen);
+    if (onScreen) this.drawArrow(cam, px, py, time);
+
+    this.updateWander(world, px, py, time);
+  }
+
+  drawArrow(cam, px, py, time) {
+    // World pixels -> screen pixels: UIScene's own camera is zoom 1 (docs/GAME_FEEL.md "UI canvas"),
+    // so a world-space point has to go through the WORLD camera's own scroll/zoom to land in the right
+    // screen spot, the same conversion the minimap's own `mx`/`my` do in tile-window space.
+    const sx = (px - cam.scrollX) * cam.zoom;
+    const sy = (py - cam.scrollY) * cam.zoom - 34 - Math.abs(Math.sin(time / 220)) * 8;
+    const g = this.arrow.clear();
+    g.fillStyle(0x000000, 0.35).fillTriangle(sx - 7, sy + 2, sx + 7, sy + 2, sx, sy + 14);
+    g.fillStyle(COLORS.gold, 1).fillTriangle(sx - 7, sy, sx + 7, sy, sx, sy + 12);
+  }
+
+  // "If she wanders for ~20s without getting closer, a gentle hint toast repeats the objective"
+  // (docs/plans/2026-09-26-premium-pass.md stage 6): tracks the closest she's been to the current
+  // target since it last changed (a new key/room/map counts as a fresh start, not "already stuck").
+  updateWander(world, px, py, time) {
+    const key = `${world.mapKey}:${Math.round(px)},${Math.round(py)}`;
+    if (key !== this.lastKey) {
+      this.lastKey = key;
+      this.bestDistance = Phaser.Math.Distance.Between(world.player.x, world.player.y, px, py);
+      this.stuckSince = time;
+      return;
+    }
+    const distance = Phaser.Math.Distance.Between(world.player.x, world.player.y, px, py);
+    if (this.bestDistance - distance > WANDER_IMPROVE_PX) {
+      this.bestDistance = distance;
+      this.stuckSince = time;
+      return;
+    }
+    if (this.stuckSince == null) this.stuckSince = time;
+    if (time - this.stuckSince > WANDER_HINT_MS) {
+      this.stuckSince = time; // one nudge per stagnant window, never a nag every frame after
+      this.scene.game.events.emit('toast', questObjectiveText(GameState.quest));
+    }
   }
 }
 

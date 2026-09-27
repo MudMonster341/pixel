@@ -86,7 +86,9 @@ class TitleScene extends Phaser.Scene {
   }
 
   preload() {
-    if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
+    // FB-0032: a live pan over the real campus map (src/scenes/opening-backdrop.js), not the static
+    // Gate 2 illustration this screen used to sit on.
+    preloadCampusPanBackdrop(this);
     if (!this.textures.exists('title-fg')) this.load.image('title-fg', 'assets/cutscenes/title-fg.png');
     // M5 sound: the title screen is reachable before BootScene's own preload() ever runs (Play/
     // Continue is what starts it), so titleMusic needs loading here too -- AudioManager.preload()
@@ -158,20 +160,16 @@ class TitleScene extends Phaser.Scene {
   }
 
   // "A little 3D" (docs/GAME_FEEL.md): two backdrop layers moving at different speeds is what makes
-  // parallax read as depth rather than one flat picture -- the gate illustration pans slowly
-  // (unchanged from before this pass), and a silhouette strip of palms/fence scrolls sideways in
-  // front of it, faster, wrapping seamlessly (two copies side by side, reset once the first is fully
-  // off-screen). The far layer sits under the dim overlay (so the menu stays legible over it); the
-  // near silhouette sits ON TOP of that same overlay instead, at full contrast -- the way a genuinely
-  // nearer layer would actually look darker/crisper than the hazy backdrop behind it, and (found by
-  // looking at the first screenshot of this) the only way the strip doesn't just vanish into the
-  // overlay's own near-black tint.
+  // parallax read as depth rather than one flat picture -- FB-0032 replaced the far layer's own
+  // content (it used to be the static Gate 2 illustration) with a live, slowly panning render of the
+  // real campus map (buildCampusPanBackdrop(), src/scenes/opening-backdrop.js), but the *shape* of
+  // this parallax (a slow far layer dimmed under the overlay, a faster near silhouette strip on top of
+  // it at full contrast) is unchanged from before this pass. The near silhouette sits ON TOP of that
+  // overlay, at full contrast -- the way a genuinely nearer layer would actually look darker/crisper
+  // than the hazy backdrop behind it, and (found by looking at the first screenshot of this) the only
+  // way the strip doesn't just vanish into the overlay's own near-black tint.
   buildBackground() {
-    const tex = this.textures.get('title-bg').getSourceImage();
-    const scale = GAME_WIDTH / tex.width;
-    this.bg = this.add.image(GAME_WIDTH / 2, 0, 'title-bg').setOrigin(0.5, 0).setScale(scale).setAlpha(0.3);
-    const panTo = Math.min(0, -(tex.height * scale - GAME_HEIGHT));
-    this.tweens.add({ targets: this.bg, y: panTo, duration: 22000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.bg = buildCampusPanBackdrop(this, { alpha: 0.3 });
 
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.6).setOrigin(0, 0);
 

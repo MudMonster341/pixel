@@ -1972,6 +1972,16 @@ const STUDENT_B_RECOLOR = {
   '#6c6e85': '#ffd23f', // collar/shirt highlight (Accent gold "base")
 };
 
+// Mustafa, the LUG organiser who meets her at the gate (docs/STORY.md "Opening", ADR 0016 -- a script
+// actor, src/scripts.js SCRIPTS.opening/gate2, not a placed map NPC). Only 4 named characters exist in
+// this pack (Amelia/Adam/Alex/Bob, all already spoken for: the lead/volunteer/student-a/student-b), so
+// this reuses Adam's own body again -- same as the volunteer -- with a warm maroon organiser polo
+// instead of Adam's teal, so the two don't read as the same character recolored twice standing side by
+// side (they never actually do in this game, but the same reasoning as STUDENT_A/B_RECOLOR applies).
+const MUSTAFA_MAROON = '#a33b4a';
+const MUSTAFA_MAROON_HI = '#c8637a';
+const MUSTAFA_RECOLOR = { '#805e8e': MUSTAFA_MAROON, '#9f74a8': MUSTAFA_MAROON_HI };
+
 // ---------- character customisation (M3a, docs/STORY.md "Opening" step 3) ----------
 //
 // The owner's brief asks for clothes-colour swatches (hair/skin "too if the recolour pipeline makes
@@ -2416,6 +2426,7 @@ for (const [id, swatch] of Object.entries(CLOTHES_SWATCHES)) {
 write('npc-volunteer.png', buildCharacter('Adam', ADAM_RECOLOR)); // the LUG volunteer
 write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
+write('npc-mustafa.png', buildCharacter('Adam', MUSTAFA_RECOLOR)); // ADR 0016: the opening's own script actor
 
 // Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
 // 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.

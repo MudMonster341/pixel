@@ -21,6 +21,12 @@
   <script src="src/story.js"></script>
   <script src="src/maps.js"></script>
   <script src="src/cutscenes.js"></script>
+  <!-- ADR 0016 (in-world cutscene scripts): objective-routes.js (FB-0033 onboarding data) and
+       scripts.js (SCRIPTS, content) need nothing but plain data/globals below them; the engine that
+       actually runs a script (scripts-runtime.js) needs world.js's own globals (TILE, toPixel-adjacent
+       helpers), so it loads right after world.js, further down. -->
+  <script src="src/objective-routes.js"></script>
+  <script src="src/scripts.js"></script>
   <script src="src/card.js"></script>
   <script src="src/maplogic.js"></script>
   <script src="src/state.js"></script>
@@ -38,6 +44,7 @@
   <script src="src/minigames/flappy-logic.js"></script>
   <script src="src/minigames/platformer-physics.js"></script>
   <script src="src/scenes/world.js"></script>
+  <script src="src/scripts-runtime.js"></script>
   <script src="src/scenes/ui.js"></script>
   <script src="src/minigames/framework-scene.js"></script>
   <script src="src/minigames/platformer.js"></script>
@@ -49,13 +56,15 @@
        CARD_PHOTOS_DIR/CARD_VIDEO_URL/BOX_VIDEO_URL/buildCardConfig from src/card.js (above). -->
   <script src="src/scenes/box-opening.js"></script>
   <script src="src/scenes/card.js"></script>
+  <!-- FB-0032: the shared "live campus" backdrop for the title screen and the opening's own
+       greeting/name/clothes screens (src/scenes/title.js and intro-greeting/-name/-customize.js). -->
+  <script src="src/scenes/opening-backdrop.js"></script>
   <script src="src/scenes/title.js"></script>
   <!-- M3a opening (docs/STORY.md "Opening"): title's "Play" chains through these before 'boot' --
        all four use DialogBox/drawPanel/uiText/Button/COLORS from ui.js, loaded above. -->
   <script src="src/scenes/intro-greeting.js"></script>
   <script src="src/scenes/intro-name.js"></script>
   <script src="src/scenes/intro-customize.js"></script>
-  <script src="src/scenes/intro-bus.js"></script>
   <script src="src/main.js"></script>
 </body>
 </html>

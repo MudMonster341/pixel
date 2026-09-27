@@ -11,6 +11,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   openTitle, chooseTitleMenu, waitForBoot, state, holdKey, teleport, waitForMap, finishDialog, countItem, pressUntil,
+  skipWorldScript,
 } = require('./helpers');
 
 const isActive = (page, key) => page.evaluate((k) => game.scene.isActive(k), key);
@@ -84,9 +85,12 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   }
   await expect.poll(nameScene).toBe('ZARA');
   await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
-  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
-  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  // ADR 0016: the bus arrival + Mustafa meeting her now play in-world (WorldScene's own script
+  // runner), not a separate 'bus-arrival' scene -- confirm the default clothes, wait for the world to
+  // boot, then skip that opening script straight to its end state.
+  await page.keyboard.press('Enter');
   await waitForBoot(page);
+  await skipWorldScript(page);
 
   let s = await state(page);
   expect(s.map).toBe('campus');

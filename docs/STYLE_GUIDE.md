@@ -588,6 +588,43 @@ own art rather than layering on top of it:
   specific campus's gate-to-core corridor turns out to be only ~14 tiles deep once a real forecourt
   and the loop road both need room in it -- see MEMORY.md for the trade-off).
 
+### Coordinator review round 3 (2026-09-27): "one coherent free kit" -- rebuilt on Kenney RPG Urban Pack
+
+Round 2 fixed colors (flat palette fills tuned to the right hexes); the owner's side-by-side photo
+comparison found flat fills still read as a box with no material, and separately found the avenue's
+own kerb tiles -- a code path entirely separate from `walkway()` -- were still blitting Modern City's
+brick paver recolored to salmon. Owner decision: free packs only. The whole outdoor look (ground and
+every BITS building) is now composed from real crops of the Kenney RPG Urban Pack sheet
+(`assets/vendor/kenney-rpg-urban-pack/Tilemap/tilemap.png`, 27x18 tiles at a 17px pitch), recolored
+onto the same BITS palette (sand `#e3c09b`, terracotta `#b5583c`, light parapet `#f2ddb8`) rather than
+hand-drawn flat fills. See `tools/make-assets.js`'s `SIDEWALK`/`BLDG` tables and `remapBitsWall`/
+`remapBitsWallBase`/`remapBitsWindow`/`remapBitsDoorFrame`/`remapLightStone`/`remapBitsColumn`.
+
+- **Sidewalks/kerb:** `walkway`/`walkwayEdge*`/`walkwayCorner*` now blit the sheet's own
+  concrete-plaza 9-slice (a light blue-grey slab with a warm tan kerb border built into its edge/
+  corner pieces), unrecolored. `kerbEdge()` (every road-facing sidewalk tile, avenue included) now
+  just calls the same `walkwayEdge`/`walkwayCorner` -- previously a separate code path
+  (`atlasKerbSide`/`atlasKerbBand`, now removed) still recoloring Modern City's brick paver to salmon,
+  which is the real reason the avenue still read as brick after round 2. The forecourt `paving` is
+  untouched (the brief's one deliberate brick exception).
+- **Buildings:** `bitsFacadeCap`/`Window`/`Body`/`Base` blit a real wall-with-coping crop instead of a
+  flat fill, recolored by a hue-then-luminance split (brick body -> sand; tan coping/plinth -> light
+  parapet on the cap, a genuinely darker cool plinth on the base) since the sheet's own brick and trim
+  tones overlap in luminance. The window band adds a real tan arched window on top. Thin roofline/
+  panel/ground-line accents stay flat palette fills.
+- **The Main Block entrance:** the portico's glass panels and the real double door blit the sheet's
+  own wide glass door/window crops (frame recolored terracotta, glass left exactly as drawn -- "a big
+  glass entrance", not a flat `*` fill). Columns (`bitsPillar`/`bitsEntranceColumn`, unified into one
+  `bitsColumnTile`) compose the sheet's own free-standing pillar prop onto a wall backdrop, recolored
+  terracotta -- the same "backdrop then prop" pattern `lampPost` already used onto grass. Steps
+  (`bitsStep1/2/3`) blit the sheet's own 3-tread staircase, recolored to a neutral light stone.
+- **Palms/round trees:** native Ninja Adventure colors now (no recolor) -- round 2's muted
+  `remapDryLeaves` ramp made the palm read as "murky and dark".
+- **Flags:** a real 2-tile pole (`flagPoleYellow/Blue/Red` draw the lower pole shaft, unchanged names;
+  new `flagTopYellow/Blue/Red`, overhead like a tree canopy, draw the shaft continuing up plus the
+  Ninja flag enlarged and mounted at the top) -- the old single-tile version "read as a little axe".
+- **Props:** added `busStopSign` (a native-blue plaque-on-a-pole sign) near Gate 2.
+
 ## Interior kit
 
 Added 2026-09-17 for the building interiors (P3, [INTERIORS_PLAN.md](INTERIORS_PLAN.md)). 32 tiles

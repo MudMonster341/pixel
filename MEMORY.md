@@ -742,3 +742,83 @@ checks).
 **Decisions:** none new (no ADR needed -- this is an art/generator-tuning pass, same as round 1).
 **Failures:** none outstanding from this pass; the parking-lot depth trade-off above is a known,
 documented compromise, not a bug.
+
+## 2026-09-27 (later): coordinator review round 3 -- "one coherent free kit" (Kenney RPG Urban Pack)
+
+Round 2's fix was tuning flat palette fills to the right hexes; the coordinator's side-by-side photo
+comparison found flat fills still read as a box with no material, and separately found the avenue's
+own kerb tiles (a completely different code path from `walkway()`) were still blitting Modern City's
+brick paver recolored to salmon -- that's the real reason "the avenue is still salmon brick" survived
+round 2 untouched. Owner decision: **free packs only** (no paid LimeZu Exteriors) -- rebuild the whole
+outdoor look on the Kenney RPG Urban Pack alone (already in `assets/vendor/`), studied by decoding its
+`Tilemap/tilemap.png` sheet directly (27x18 tiles at a 17px pitch) rather than eyeballing `Sample.png`
+-- a small labelled-contact-sheet script (kept out of the repo, in scratch) rendered every cell with
+its own `col,row` burned in, so every source rect below was picked by reading real pixels, not
+guessing from a thumbnail.
+
+- **Sidewalks/kerb (point 1):** found a complete 9-slice concrete-plaza plot on the sheet (cols 8-11,
+  rows 0-5) -- a light blue-grey slab fill with a warm tan kerb border baked into its own edge/corner
+  pieces. `walkway`/`walkwayEdge*`/`walkwayCorner*` now blit this directly, unrecolored (`SIDEWALK`
+  table, `tools/make-assets.js`). The real fix: `kerbEdge()` used to call `atlasKerbSide`/
+  `atlasKerbBand` (Modern City's brick paver, recolored) as a *separate* code path from `walkway()` --
+  now it just calls `walkwayEdge`/`walkwayCorner`, so every road-facing sidewalk edge campus-wide
+  (the avenue included) uses the same real concrete art. Forecourt `paving` is untouched (round 2's
+  low-contrast paver stays, the brief's one deliberate exception).
+- **Buildings (point 2):** `bitsFacadeCap/Window/Body/Base` now blit a real wall-with-coping crop
+  (cols 18, rows 0/2/3) instead of a flat `$` fill, recolored by a hue-then-luminance split
+  (`remapBitsWall`/`remapBitsWallBase`: `r-b > 60` = brick body -> sand `#e3c09b`; else = tan
+  coping/plinth -> light parapet `#f2ddb8` on the cap, a genuinely darker cool plinth on the base) --
+  picked apart this way because the sheet's brick body and its tan coping/plinth trim overlap in
+  luminance, so a plain luminance ramp would have smeared one into the other. The window band adds a
+  real tan arched window (col 13, row 13) on top. Thin roofline/panel/ground-line accents stay flat
+  palette fills (crisp 1px lines read better flat than textured at that scale).
+- **Main Block entrance (point 3):** the portico's glass panels (`bitsPorticoGlassTop/Mid/Base`) and
+  the real double door (`bitsEntranceGrandL/R`) now blit the sheet's own wide glass door/window crops
+  (cols 7-10, rows 13-15), frame recolored terracotta (`remapBitsDoorFrame`: dark navy -> terracotta,
+  glass left exactly as drawn), not a flat `*` fill. Columns (`bitsPillar`/`bitsEntranceColumn`, both
+  now the same `bitsColumnTile`) compose the sheet's own free-standing pillar prop (col 2, rows 10-11,
+  a transparent-margin sprite, same "backdrop then prop" pattern as `lampPost`) onto a wall backdrop,
+  recolored terracotta (`remapBitsColumn`). Steps (`bitsStep1/2/3`) blit the sheet's own 3-tread
+  staircase (col 0, rows 12-14), recolored to a neutral light stone (`remapLightStone`) instead of
+  flat tone fills.
+- **Palms/trees (point 4):** `canopyQuadrantFromAtlas`'s `remap` param is now optional (defaults to
+  identity); `treeCanopyTL/TR/BL/BR` and `palmCanopyTL/TR/BL/BR` no longer pass `remapDryLeaves` --
+  both are native Ninja Adventure colors now (the coordinator's own "murky and dark" complaint about
+  the muted ramp).
+- **Flags (point 5):** was one 16x16 tile (grass + Ninja's own short "flag on a stick" sprite, pole
+  and pennant both squeezed into one tile -- "reads as a little axe" per the coordinator). Now a real
+  2-tile pole: `flagPoleYellow/Blue/Red` (unchanged names, append-only) draw just the lower pole shaft
+  (a plain Kenney sign-pole shaft, `FLAG_POLE_SRC`); three new `flagTopYellow/Blue/Red` tiles (overhead,
+  like a tree canopy) draw the shaft continuing up plus the Ninja flag enlarged and mounted at the
+  top. `build-campus.js`'s flag-placement loop now also sets the matching `flagTop*` tile one row
+  north of each base, the same pattern `plantTree()` already uses for a canopy above a trunk.
+- **Props (point 6):** added `busStopSign` (a native-blue plaque-on-a-pole sign, col 6 row 6),
+  placed near Gate 2 next to the existing bollards.
+- Merged main (`f3006ea`, the depth engine/ADR 0015) at the start of this round; no conflicts.
+
+**A real, hard-to-find bug hit while getting a live screenshot (not a code bug, a *harness* one):**
+teleporting the player via `body.reset()`/direct `x`/`y` assignment to a point a few tiles south of
+the Main Block door -- which looked like open forecourt -- silently re-triggered the door's own
+warp-into-building logic (the same scene object just reloads a different `mapKey`, so
+`scene.scene.getScene('world')` stays valid and gives no error; only `scene.mapKey` reading
+`"main-block-g"` instead of `"campus"` gave it away). The door's trigger zone reaches further out from
+the door tile than the door itself. Lesson for next time: when scripting a screenshot, decouple the
+camera from the player entirely (`cameras.main.stopFollow()` then `centerOn()`) and put the player
+somewhere unambiguously safe, rather than trying to place the player "just outside" a door.
+
+**Build verified:** `npm run assets && npm run campus && npm run interiors` all run clean (no
+placement/reachability errors). Unit tests: 346/346 green (`node --test tests/unit/*.test.js`),
+including the round-2 tests updated for the new pack-sourced pixels (colors are now real Kenney
+tones, not flat hex fills, so several assertions moved from "contains hex X" to "shows N distinct
+tones and doesn't contain brick hex Y" -- see `tests/unit/campus-tiles.test.js`'s round-3 comments).
+
+**Visual QA/screenshots for this round were not done in this session** -- the owner paused the
+screenshot/server/browser workflow partway through debugging a Playwright timing issue (a slow
+darken-then-brighten effect on world-scene load, unrelated to camera fade, needed ~15s of real wait
+before a fresh headless page reached full brightness) and asked for a build-only pass instead: code
+changes, `npm run assets`/`npm run campus`, unit tests, commit, report. Visual review is a separate
+follow-up quality loop per the owner's own instruction.
+
+**Decisions:** none new (an art/generator-tuning pass, same rationale as rounds 1-2).
+**Failures:** none outstanding in the code itself; visual review is deferred to the follow-up loop
+described above, not a bug in this pass.

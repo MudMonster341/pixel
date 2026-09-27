@@ -90,10 +90,15 @@ function state(page) {
       minimapVisible: ui.minimap.visible,
       toast: ui.toast.text.text,
       worldActive: world.sys.isActive(),
-      cutsceneActive: game.scene.isActive('cutscene'),
+      // ADR 0016: a cutscene key now usually runs the in-world script runner (world.scriptRunner),
+      // never a separate 'cutscene' Phaser scene -- but the old CutsceneScene is still a real,
+      // reachable fallback for anything not migrated (src/scenes/ui.js onCutsceneRequested), so both
+      // are checked here, same as before this ADR from any test's point of view.
+      cutsceneActive: game.scene.isActive('cutscene') || Boolean(world.scriptRunner && world.scriptRunner.isRunning),
       cutsceneDialogOpen: (() => {
         const cs = game.scene.getScene('cutscene');
-        return Boolean(cs && cs.dialog && cs.dialog.isOpen);
+        if (cs && cs.dialog && cs.dialog.isOpen) return true;
+        return Boolean(world.scriptRunner && world.scriptRunner.isRunning && ui.dialog.isOpen);
       })(),
       seenCutscenes: [...GameState.seenCutscenes],
       locationBanner: { visible: ui.locationBanner.visible, text: ui.locationBanner.text.text },
@@ -199,6 +204,21 @@ async function openTitle(page, { map, save = false, profile, intro = false, mini
   return { errors };
 }
 
+// ---------- ADR 0016: the in-world cutscene script runner ----------
+
+// Whether WorldScene's own script runner (src/scripts-runtime.js) currently has a script playing --
+// the bus/Mustafa opening, the Gate 2/Main Block entrance beats, or a key-room beat.
+async function worldScriptActive(page) {
+  return page.evaluate(() => Boolean(game.scene.getScene('world').scriptRunner?.isRunning));
+}
+
+// Waits for a script to actually be running (so this never fires "too early", skipping nothing),
+// then presses Esc until it reports finished -- pressUntil's usual re-press-if-it-didn't-take shape.
+async function skipWorldScript(page, { attempts = 10 } = {}) {
+  await expect.poll(() => worldScriptActive(page), { timeout: 10_000 }).toBe(true);
+  await pressUntil(page, 'Escape', async () => !(await worldScriptActive(page)), { attempts });
+}
+
 function titleState(page) {
   return page.evaluate(() => {
     const t = game.scene.getScene('title');
@@ -242,5 +262,5 @@ async function chooseTitleMenu(page, id) {
 
 module.exports = {
   openGame, waitForBoot, state, startGame, holdKey, holdKeys, pressUntil, teleport, waitForMap, finishDialog,
-  countItem, feedbackCli, openTitle, titleState, chooseTitleMenu,
+  countItem, feedbackCli, openTitle, titleState, chooseTitleMenu, worldScriptActive, skipWorldScript,
 };

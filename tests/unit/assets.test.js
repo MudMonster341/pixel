@@ -251,9 +251,29 @@ test('FB-0025: the campus NPCs are recolored distinctly from the lead', () => {
     }
     return set;
   }
-  for (const name of ['npc-volunteer.png', 'npc-student-a.png', 'npc-student-b.png']) {
+  for (const name of ['npc-volunteer.png', 'npc-student-a.png', 'npc-student-b.png', 'npc-mustafa.png']) {
     const npc = colors(name);
     // The lead's signature pink top never appears on an NPC.
     assert.ok(!npc.has('#ff6fb1') && !npc.has('#d94b8f'), `${name} should not use the lead's pink`);
   }
+});
+
+// ADR 0016: Mustafa reuses Adam's body (the same base as the LUG volunteer, the only sensible choice
+// among this pack's 4 named characters, all otherwise spoken for) but must not be recolored identically
+// to him -- otherwise they'd read as the same character, not two different people.
+test('FB-0032/ADR 0016: Mustafa is recolored distinctly from the LUG volunteer (both are Adam)', () => {
+  const { decodePNG } = require('../../tools/lib/png-decode');
+  function colors(name) {
+    const img = decodePNG(fs.readFileSync(path.join(ASSETS, name)));
+    const set = new Set();
+    for (let i = 0; i < img.data.length; i += 4) {
+      if (img.data[i + 3] === 0) continue;
+      set.add(`#${[img.data[i], img.data[i + 1], img.data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`);
+    }
+    return set;
+  }
+  const mustafa = colors('npc-mustafa.png');
+  const volunteer = colors('npc-volunteer.png');
+  assert.ok(!mustafa.has('#2f9e8f') && !mustafa.has('#4fc2ae'), "Mustafa should not use the volunteer's teal");
+  assert.ok(!volunteer.has('#a33b4a') && !volunteer.has('#c8637a'), "the volunteer should not use Mustafa's maroon");
 });

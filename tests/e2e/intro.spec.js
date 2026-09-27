@@ -1,14 +1,25 @@
 // M3a: the opening (docs/STORY.md "Opening", owner brief 2026-09-21) -- title's "Play" chains
-// through Mustafa's greeting, name entry, customisation and the bus arrival before ever reaching the
-// loading screen. `?intro=0` is the default everywhere else (tests/e2e/helpers.js), so this file is
-// the one place that turns it on, the same shape as tests/e2e/title.spec.js does for `?title=0`.
+// through Mustafa's greeting, name entry and customisation before ever reaching the loading screen.
+// `?intro=0` is the default everywhere else (tests/e2e/helpers.js), so this file is the one place
+// that turns it on, the same shape as tests/e2e/title.spec.js does for `?title=0`.
+//
+// ADR 0016 (decisions/0016-cutscenes-play-in-the-game-world.md, FB-0032): the bus arrival and the
+// Gate 2 "Mustafa meets her" beat used to be their own scenes (a separate 'bus-arrival' Phaser scene,
+// then a static-illustration 'cutscene' scene); both now play *inside* WorldScene, as one continuous,
+// in-world script (src/scripts.js SCRIPTS.opening, run by src/scripts-runtime.js ScriptRunner) --
+// there's no more 'bus-arrival' scene to wait for. Every test below that used to wait for it now waits
+// for the world to boot and, if it cares about the script's own content, uses skipWorldScript()/
+// worldScriptActive() (tests/e2e/helpers.js) instead.
 //
 // Every scene change below is driven through pressUntil(), not a bare page.keyboard.press(): this
 // codebase's own ERR-0003 already documents a one-shot keydown occasionally not registering at all
 // under load in exactly this Phaser version, and pressUntil() is its established fix (re-press like
 // an impatient player would, rather than weakening the assertion).
 const { test, expect } = require('@playwright/test');
-const { openGame, openTitle, chooseTitleMenu, waitForBoot, state, teleport, pressUntil } = require('./helpers');
+const {
+  openGame, openTitle, chooseTitleMenu, waitForBoot, state, teleport, pressUntil,
+  worldScriptActive, skipWorldScript,
+} = require('./helpers');
 
 async function startPlayIntoIntro(page, { save, profile } = {}) {
   const { errors } = await openTitle(page, { map: null, intro: true, save, profile });
@@ -102,14 +113,15 @@ test('a chosen clothes colour is saved and visible on her sprite in the world', 
 
   // Cycle to a non-default swatch (index 1, 'sky') and confirm.
   await pressUntil(page, 'ArrowRight', async () => (await page.evaluate(() => GameState.customization.clothes)) === 'sky');
-  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
-
-  // Skip the bus straight through to the world, then check the sprite the game actually shows: not
-  // by filename (Phaser's loader hands the image back as a blob: URL, not the original path) but by
-  // pixel color -- the sky swatch's blue should appear somewhere in her idle frame, and the pink
-  // default's own color should not.
-  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  // ADR 0016: confirming customize hands off to 'boot' -> 'world' directly (playOpening:true); the
+  // bus/Mustafa beat now plays in-world, so skip it straight through rather than waiting on a scene.
+  await page.keyboard.press('Enter');
   await waitForBoot(page);
+  await skipWorldScript(page);
+
+  // Check the sprite the game actually shows: not by filename (Phaser's loader hands the image back
+  // as a blob: URL, not the original path) but by pixel color -- the sky swatch's blue should appear
+  // somewhere in her idle frame, and the pink default's own color should not.
   const textureKey = await page.evaluate(() => game.scene.getScene('world').player.texture.key);
   expect(textureKey).toBe('player');
   const colors = await page.evaluate(() => {
@@ -165,9 +177,9 @@ test('FB-0038: a second new game with a different clothes colour replaces the ol
   await pressUntil(page, 'Escape', () => isActive(page, 'name-entry'));
   await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
   await pressUntil(page, 'ArrowRight', async () => (await page.evaluate(() => GameState.customization.clothes)) === 'sky');
-  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
-  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  await page.keyboard.press('Enter');
   await waitForBoot(page);
+  await skipWorldScript(page);
   expect((await state(page)).map).toBe('campus');
   let colors = await playerIdleColors(page);
   expect(colors).toEqual(expect.arrayContaining(['#3b7dd8'])); // sky swatch top base
@@ -186,9 +198,9 @@ test('FB-0038: a second new game with a different clothes colour replaces the ol
   await pressUntil(page, 'Escape', () => isActive(page, 'name-entry'));
   await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
   await pressUntil(page, 'ArrowRight', async () => (await page.evaluate(() => GameState.customization.clothes)) === 'mint');
-  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival'));
-  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
+  await page.keyboard.press('Enter');
   await waitForBoot(page);
+  await skipWorldScript(page);
 
   colors = await playerIdleColors(page);
   expect(colors).toEqual(expect.arrayContaining(['#3d8a3f'])); // mint swatch top base -- the new sheet
@@ -198,27 +210,91 @@ test('FB-0038: a second new game with a different clothes colour replaces the ol
   expect(await page.evaluate(() => game.anims.exists('walk-down'))).toBe(true);
 });
 
-test('the bus sequence blocks input and Esc skips it, ending with her outside the gate', async ({ page }) => {
+// ---------- ADR 0016: the opening plays in-world (replaces the old separate 'bus-arrival' scene) ----------
+
+test('ADR 0016: the full opening (bus + Mustafa) blocks input, then Esc skips it cleanly with no soft-lock', async ({ page }) => {
   await startPlayIntoIntro(page);
   await pressUntil(page, 'Escape', () => isActive(page, 'name-entry')); // skip greeting
   await pressUntil(page, 'Enter', () => isActive(page, 'customize')); // accept default name
-  await pressUntil(page, 'Enter', () => isActive(page, 'bus-arrival')); // accept default clothes
+  await page.keyboard.press('Enter'); // accept default clothes -> boot -> world
 
-  // No world/ui scene exists yet at all -- nothing for movement keys to reach.
-  expect(await isActive(page, 'world')).toBe(false);
-  await page.keyboard.press('d');
-  await page.waitForTimeout(100);
-  expect(await isActive(page, 'world')).toBe(false);
-  expect(await isActive(page, 'bus-arrival')).toBe(true);
-
-  await pressUntil(page, 'Escape', async () => !(await isActive(page, 'bus-arrival')));
   await waitForBoot(page);
-  const s = await state(page);
-  expect(s.map).toBe('campus');
-  expect(s.ready).toBe(true);
+  // The script is already running by the time the world exists (playOpeningSequence(), world.js
+  // create()) -- movement input has nothing to act on while it does.
+  await expect.poll(() => worldScriptActive(page)).toBe(true);
+  const before = await state(page);
+  await page.keyboard.down('d');
+  await page.waitForTimeout(250);
+  await page.keyboard.up('d');
+  expect((await state(page)).x).toBe(before.x);
+  expect((await state(page)).y).toBe(before.y);
+
+  await skipWorldScript(page);
+  const after = await state(page);
+  expect(after.map).toBe('campus');
+  expect(after.ready).toBe(true); // input unlocked, no soft-lock
 });
 
-test('the Main Block entrance cutscene plays once, the first time she reaches the door', async ({ page }) => {
+test('ADR 0016: the full opening ends with her on the avenue, input unlocked, the objective set, and Mustafa present', async ({ page }) => {
+  await startPlayIntoIntro(page);
+  await pressUntil(page, 'Escape', () => isActive(page, 'name-entry'));
+  await pressUntil(page, 'Enter', () => isActive(page, 'customize'));
+  await page.keyboard.press('Enter');
+  await waitForBoot(page);
+  await skipWorldScript(page);
+
+  const s = await state(page);
+  expect(s.map).toBe('campus');
+  expect(s.ready).toBe(true); // input unlocked
+  expect(s.quest.stage).toBe('arrival');
+  expect(s.tile).toBeTruthy(); // "on the avenue": a real, walkable position was reached, not left mid-tween
+
+  // Mustafa is a real, present script actor (ADR 0016: he stays, decorative, ADR 0016 scope -- see
+  // src/scripts.js's own comment on MUSTAFA_MEETS_HER_CORE).
+  const mustafa = await page.evaluate(() => {
+    const w = game.scene.getScene('world');
+    const actor = w.scriptRunner.actors.get('mustafa');
+    return actor ? { visible: actor.sprite.visible, active: actor.sprite.active } : null;
+  });
+  expect(mustafa).toEqual({ visible: true, active: true });
+
+  // The objective is on screen: the quest tracker text is non-empty and matches the current stage.
+  const objective = await page.evaluate(() => {
+    const ui = game.scene.getScene('ui');
+    return ui.questTracker.objective.text;
+  });
+  expect(objective.length).toBeGreaterThan(0);
+  expect(objective).toContain('LUG stall');
+
+  // She can actually move now (input is genuinely unlocked, not just `ready` reporting true).
+  await page.keyboard.down('s');
+  await page.waitForTimeout(200);
+  await page.keyboard.up('s');
+  expect((await state(page)).y).toBeGreaterThan(s.y);
+});
+
+test('ADR 0016: the fast path (?intro=0, walking up to Gate 2 under her own steam) plays the same Mustafa beat once', async ({ page }) => {
+  // Reaches the world directly (title/intro off, cutscenes on) -- exercising the Gate 2 trigger
+  // itself, the same split boot.spec.js/campus.spec.js already use for "reach the world fast".
+  await openGame(page, { map: null, cutscene: true });
+  const trigger = await page.evaluate(() => game.scene.getScene('world').mapObjects
+    .find((o) => o.type === 'cutscene' && o.props.cutscene === 'gate2'));
+  expect(trigger).toBeTruthy();
+
+  await teleport(page, Math.floor(trigger.x + trigger.width / 2), Math.floor(trigger.y + trigger.height / 2));
+  await expect.poll(async () => (await state(page)).cutsceneActive).toBe(true);
+  await skipWorldScript(page);
+  expect((await state(page)).seenCutscenes).toContain('gate2');
+
+  // Doesn't replay: stepping out and back into the same trigger does nothing a second time.
+  await teleport(page, Math.floor(trigger.x), Math.floor(trigger.y - 10));
+  await page.waitForTimeout(150);
+  await teleport(page, Math.floor(trigger.x + trigger.width / 2), Math.floor(trigger.y + trigger.height / 2));
+  await page.waitForTimeout(300);
+  expect((await state(page)).cutsceneActive).toBe(false);
+});
+
+test('the Main Block entrance beat plays once, the first time she reaches the door', async ({ page }) => {
   // Reaches the world directly (title/intro off, cutscenes on) -- exercising the trigger itself
   // rather than the opening chain, the same split boot.spec.js/campus.spec.js already use for
   // "reach the world fast" vs. title.spec.js's "exercise the title flow".
@@ -229,12 +305,9 @@ test('the Main Block entrance cutscene plays once, the first time she reaches th
 
   await teleport(page, Math.floor(trigger.x + trigger.width / 2), Math.floor(trigger.y + trigger.height / 2));
   await expect.poll(async () => (await state(page)).cutsceneActive).toBe(true);
-  const active = await page.evaluate(() => game.scene.getScene('cutscene').cutsceneKey);
-  expect(active).toBe('entrance');
 
   // Skip it, then confirm it doesn't replay when she stands there again.
-  await page.keyboard.press('Escape');
-  await expect.poll(async () => (await state(page)).cutsceneActive, { timeout: 5000 }).toBe(false);
+  await skipWorldScript(page);
   await teleport(page, Math.floor(trigger.x), Math.floor(trigger.y));
   await teleport(page, Math.floor(trigger.x + trigger.width / 2), Math.floor(trigger.y + trigger.height / 2));
   await page.waitForTimeout(300);

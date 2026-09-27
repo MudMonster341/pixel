@@ -6,7 +6,13 @@ const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPTS = [
-  'src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js',
+  'src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js',
+  // ADR 0016 (in-world cutscene scripts): pure data, no Phaser -- src/objective-routes.js (FB-0033
+  // onboarding routing) and src/scripts.js (SCRIPTS, the new cutscene content) load fine here, unlike
+  // src/scripts-runtime.js (the engine that runs them), which needs a real Phaser scene and is only
+  // exercised by the e2e specs.
+  'src/objective-routes.js', 'src/scripts.js',
+  'src/maplogic.js', 'src/state.js', 'src/save.js',
   // M5 sound (docs/ROADMAP.md): the SOUNDS registry + AudioManager (src/audio.js) are pure data/logic
   // -- AudioManager.game stays null under this sandbox (nothing ever calls .init()), so every method
   // that touches Phaser is a guarded no-op, safe to load here the same as everything else in this list.
@@ -104,6 +110,12 @@ function loadGameData() {
     depthGroupAt: get('depthGroupAt'),
     parseOpenTiles: get('parseOpenTiles'),
     questObjectiveText: get('questObjectiveText'),
+    // ADR 0016 / FB-0033 (in-world scripts + onboarding destination routing)
+    resolveAnchor: get('resolveAnchor'),
+    objectiveId: get('objectiveId'),
+    objectiveTarget: get('objectiveTarget'),
+    OBJECTIVE_ROUTES: get('OBJECTIVE_ROUTES'),
+    SCRIPTS: get('SCRIPTS'),
     minigamesEnabled: get('minigamesEnabled'),
     audioEnabled: get('audioEnabled'),
     MINIGAMES: get('MINIGAMES'),

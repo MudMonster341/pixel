@@ -33,20 +33,19 @@ class CustomizeScene extends Phaser.Scene {
       const key = `preview-${option.id}`;
       if (!this.textures.exists(key)) this.load.spritesheet(key, `assets/player-${option.id}.png`, sheet);
     }
-    if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
+    preloadCampusPanBackdrop(this);
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#12131a').fadeIn(250, 0, 0, 0);
+    this.cameras.main.setBackgroundColor('#12131a');
     this.finished = false;
     const startId = (GameState.customization && GameState.customization.clothes) || 'pink';
     this.index = Math.max(0, CLOTHES_OPTIONS.findIndex((o) => o.id === startId));
 
-    // Same dimmed gate backdrop as the rest of the opening chain (docs/GAME_FEEL.md).
-    const tex = this.textures.get('title-bg').getSourceImage();
-    const bgScale = GAME_WIDTH / tex.width;
-    this.add.image(GAME_WIDTH / 2, -(tex.height * bgScale - GAME_HEIGHT) * 0.4, 'title-bg').setOrigin(0.5, 0).setScale(bgScale).setAlpha(0.18);
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.7).setOrigin(0, 0);
+    // FB-0032: the same live campus pan the rest of the opening chain sits on, crossfaded in.
+    buildCampusPanBackdrop(this, { alpha: 0.18 });
+    this.dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.9).setOrigin(0, 0);
+    this.tweens.add({ targets: this.dim, fillAlpha: 0.7, duration: 200 });
 
     uiText(this, GAME_WIDTH / 2, 48, `Nice to meet you, ${(GameState.playerName || '').toUpperCase()}!`, 16, COLORS.highlight).setOrigin(0.5);
     uiText(this, GAME_WIDTH / 2, 78, 'Pick your look:', 12, COLORS.text).setOrigin(0.5);
@@ -125,6 +124,10 @@ class CustomizeScene extends Phaser.Scene {
     this.finished = true;
     notifyStateChanged();
     this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('bus-arrival'));
+    // ADR 0016: the bus arrival (and the Gate 2 "Mustafa meets her" beat right after it) now play
+    // in-world, as part of WorldScene's own script runner (src/scripts.js SCRIPTS.opening) -- there's
+    // no separate 'bus-arrival' scene left to hand off to; `playOpening` rides through 'boot'
+    // (src/main.js BootScene) to WorldScene.init(), which starts that script once it's actually created.
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('boot', { playOpening: true }));
   }
 }

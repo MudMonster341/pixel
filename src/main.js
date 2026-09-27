@@ -22,6 +22,12 @@ class BootScene extends Phaser.Scene {
     super('boot');
   }
 
+  // ADR 0016: `playOpening` (from CustomizeScene's own hand-off, src/scenes/intro-customize.js) rides
+  // along through the loading screen to WorldScene.init() -- see finish() below.
+  init(data) {
+    this.playOpening = Boolean(data && data.playOpening);
+  }
+
   preload() {
     this.loadStartedAt = Date.now();
     uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 'BITS DUBAI', 16, COLORS.highlight).setOrigin(0.5);
@@ -71,6 +77,14 @@ class BootScene extends Phaser.Scene {
     this.load.spritesheet('npc-volunteer', 'assets/npc-volunteer.png', charSheet);
     this.load.spritesheet('npc-student-a', 'assets/npc-student-a.png', charSheet);
     this.load.spritesheet('npc-student-b', 'assets/npc-student-b.png', charSheet);
+    // Mustafa (ADR 0016, the M3a opening): a script actor (src/scripts.js SCRIPTS.opening/gate2), not
+    // a placed map NPC, but the same recolored-sheet pipeline either way -- loaded here alongside every
+    // other character sheet so it's always ready by the time WorldScene's script runner spawns him.
+    this.load.spritesheet('npc-mustafa', 'assets/npc-mustafa.png', charSheet);
+    // The bus (ADR 0016, SCRIPTS.opening's own bus arrival): a plain image, not a character sheet --
+    // tools/make-cutscenes.js still draws assets/cutscenes/bus.png (the retired src/scenes/intro-bus.js
+    // BusArrivalScene used the same art; that scene file is gone, the PNG and its generator aren't).
+    this.load.image('bus', 'assets/cutscenes/bus.png');
     this.load.spritesheet('items', 'assets/items.png', sheet);
     // 2 frames: 0 = "E" (talk), 1 = "!" (something new to say, see src/dialog.js hasNewDialog()).
     this.load.spritesheet('prompt', 'assets/prompt.png', sheet);
@@ -90,7 +104,7 @@ class BootScene extends Phaser.Scene {
     // between scenes on the very first frame, so this loading screen simply hands off instantly.
     const finish = () => {
       this.scene.launch('ui');
-      this.scene.start('world', continueSpawnData());
+      this.scene.start('world', { ...continueSpawnData(), playOpening: this.playOpening });
     };
     if (!titleEnabled()) { finish(); return; } // the fast test/dev path: no manufactured delay
     const remaining = MIN_LOADING_MS - (Date.now() - this.loadStartedAt);
@@ -134,14 +148,17 @@ function startGame() {
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
-    // M3a opening (docs/STORY.md "Opening"): title's own "Play" chains through these four scenes
-    // (src/scenes/intro-*.js) before ever reaching 'boot' -- see title.js startPlay(). Registered
-    // here like every other scene; only the first array entry auto-starts (see the comment above).
-    // Mini-game scenes (docs/ROADMAP.md M4, src/minigames/): each id in MINIGAMES maps to one of
-    // these by `sceneKey` (src/scenes/world.js launchMinigame()) -- registering the class here is all
-    // a new one needs beyond its own file and a MINIGAMES entry.
+    // M3a opening (docs/STORY.md "Opening"): title's own "Play" chains through these three scenes
+    // (src/scenes/intro-*.js) before ever reaching 'boot' -- see title.js startPlay(). ADR 0016 moved
+    // the bus arrival (and the Gate 2 "Mustafa meets her" beat right after it) into WorldScene's own
+    // in-world script runner (src/scripts-runtime.js, src/scripts.js SCRIPTS.opening) -- there's no
+    // more separate 'bus-arrival' scene to register; CustomizeScene now hands off straight to 'boot'.
+    // Registered here like every other scene; only the first array entry auto-starts (see the comment
+    // above). Mini-game scenes (docs/ROADMAP.md M4, src/minigames/): each id in MINIGAMES maps to one
+    // of these by `sceneKey` (src/scenes/world.js launchMinigame()) -- registering the class here is
+    // all a new one needs beyond its own file and a MINIGAMES entry.
     scene: [
-      first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, BusArrivalScene, WorldScene, UIScene,
+      first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, WorldScene, UIScene,
       CutsceneScene, PlatformerScene, FlappyScene, TetrisScene,
       // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off straight to
       // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see

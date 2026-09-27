@@ -19,20 +19,20 @@ class GreetingScene extends Phaser.Scene {
 
   preload() {
     if (!this.textures.exists('mustafa-portrait')) this.load.image('mustafa-portrait', 'assets/cutscenes/mustafa.png');
-    if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
+    preloadCampusPanBackdrop(this);
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#12131a').fadeIn(250, 0, 0, 0);
+    this.cameras.main.setBackgroundColor('#12131a');
     this.finished = false;
 
-    // The same dimmed gate illustration the title screen sits on (docs/GAME_FEEL.md), reused rather
-    // than left as bare navy -- she's still standing at the gate for this whole conversation, and a
-    // flat black backdrop behind the portrait read as unfinished, not "a little 3D".
-    const tex = this.textures.get('title-bg').getSourceImage();
-    const scale = GAME_WIDTH / tex.width;
-    this.add.image(GAME_WIDTH / 2, -(tex.height * scale - GAME_HEIGHT) * 0.4, 'title-bg').setOrigin(0.5, 0).setScale(scale).setAlpha(0.25);
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.55).setOrigin(0, 0);
+    // FB-0032: the same live campus pan the title screen sits on (opening-backdrop.js), not a cut to a
+    // different, static picture -- she's still standing at the gate for this whole conversation.
+    // No cameras.main.fadeIn() here (dim.setAlpha() below is this scene's own crossfade-in instead,
+    // "not a black flash" -- see this.dim's own comment).
+    buildCampusPanBackdrop(this, { alpha: 0.22 });
+    this.dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.9).setOrigin(0, 0);
+    this.tweens.add({ targets: this.dim, fillAlpha: 0.55, duration: 200 });
 
     // A soft vignette panel behind the portrait so it doesn't float on bare navy (STYLE_GUIDE.md
     // "Panels"), plus a drop shadow under the portrait itself (docs/GAME_FEEL.md "a little 3D").
@@ -69,8 +69,12 @@ class GreetingScene extends Phaser.Scene {
   finish() {
     if (this.finished) return;
     this.finished = true;
-    this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('name-entry'));
+    // FB-0032: a crossfade (this scene's own foreground dims out over the same live campus backdrop
+    // the next scene will also be showing), not a cut to black -- "no cut to a different picture".
+    this.tweens.add({
+      targets: this.dim, fillAlpha: 0.9, duration: 200,
+      onComplete: () => this.scene.start('name-entry'),
+    });
   }
 
   update(time, delta) {

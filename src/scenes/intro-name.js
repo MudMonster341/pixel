@@ -30,21 +30,20 @@ class NameEntryScene extends Phaser.Scene {
 
   preload() {
     if (!this.textures.exists('mustafa-portrait')) this.load.image('mustafa-portrait', 'assets/cutscenes/mustafa.png');
-    if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
+    preloadCampusPanBackdrop(this);
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#12131a').fadeIn(250, 0, 0, 0);
+    this.cameras.main.setBackgroundColor('#12131a');
     this.finished = false;
     this.name = (GameState.playerName || '').toUpperCase();
     this.touched = false; // clears the pre-filled default on the first keypress -- see typeChar()
 
-    // Same dimmed gate backdrop as the greeting screen (docs/GAME_FEEL.md), for visual continuity
-    // across the whole opening chain rather than a flat navy void behind the keyboard.
-    const tex = this.textures.get('title-bg').getSourceImage();
-    const bgScale = GAME_WIDTH / tex.width;
-    this.add.image(GAME_WIDTH / 2, -(tex.height * bgScale - GAME_HEIGHT) * 0.4, 'title-bg').setOrigin(0.5, 0).setScale(bgScale).setAlpha(0.18);
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.7).setOrigin(0, 0);
+    // FB-0032: the same live campus pan every screen in this opening sits on, crossfaded in (not a
+    // cut) from whatever alpha the previous screen's own dim rectangle left off at.
+    buildCampusPanBackdrop(this, { alpha: 0.18 });
+    this.dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.9).setOrigin(0, 0);
+    this.tweens.add({ targets: this.dim, fillAlpha: 0.7, duration: 200 });
 
     this.add.image(96, 90, 'mustafa-portrait').setScale(0.9);
     uiText(this, 170, 60, 'Mustafa', 12, COLORS.highlight);
@@ -166,8 +165,11 @@ class NameEntryScene extends Phaser.Scene {
     GameState.playerName = trimmed.length ? trimmed : GameState.playerName;
     notifyStateChanged();
     this.finished = true;
-    this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('customize'));
+    // FB-0032: crossfade, not a cut to black -- see intro-greeting.js's own comment on this pattern.
+    this.tweens.add({
+      targets: this.dim, fillAlpha: 0.9, duration: 200,
+      onComplete: () => this.scene.start('customize'),
+    });
   }
 
   update(time) {

@@ -19,6 +19,11 @@ const FOOTSTEP_INTERVAL_INDOOR_MS = 380;
 const OVERHEAD_DEPTH = 1_000_000;
 const INTERACT_RANGE = 24;
 const PICKUP_RANGE = 10;
+// ADR 0016: how close she has to walk to a key station's desk for its own "walking in" beat to fire --
+// bigger than INTERACT_RANGE, since the point is catching her entering the room, not standing on the
+// desk (docs/STORY.md beat 8). Maps each key station id to its own SCRIPTS key (src/scripts.js).
+const ROOM_BEAT_RANGE = 90;
+const KEY_ROOM_SCRIPT = { physicsLab: 'keyRoomPhysicsLab', icvl: 'keyRoomIcvl', room195: 'keyRoomRoom195' };
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
 // Frame layout (ADR 0013, FB-0043): 4 real rows (down/up/left/right, no mirroring -- was 3 rows with
 // "right" drawn as a mirrored "left", which turned out to be mirroring the wrong art entirely, see
@@ -80,6 +85,10 @@ class WorldScene extends Phaser.Scene {
     // plays the matching arrival animation when this is set, and leaves her exactly at `this.spawn`
     // with no animation at all when it's null, unchanged from every build before this one.
     this.viaWarpKind = data.viaWarpKind || null;
+    // ADR 0016 (the M3a opening rework, FB-0032): set only by BootScene's own hand-off from
+    // CustomizeScene's "Continue" -- see src/main.js continueSpawnData()/BootScene -- when the full
+    // opening chain (not `?intro=0`, not "Continue" a save) actually ran. Consumed once, in create().
+    this.playOpening = Boolean(data.playOpening);
     this.transitioning = false;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
     // Cached warpPoints() (perf: this used to be rebuilt twice a frame, doorAssist() and checkWarps()
@@ -125,6 +134,17 @@ class WorldScene extends Phaser.Scene {
     this.input.keyboard.addCapture('SPACE');
     for (const key of ['E', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
 
+    // ADR 0016: the in-world cutscene script runner (src/scripts-runtime.js). Esc fast-forwards
+    // whatever's currently playing straight to its end state -- registered here (not left to
+    // UIScene's own Esc handler) because UIScene.worldHasControl() already refuses to act at all while
+    // a script has `this.transitioning` set, the same as it does mid-door-walk; a script's own skip
+    // has to be reachable by Esc regardless of that gate, the same way onInteractKey() above already
+    // reaches past it for dialog.
+    this.scriptRunner = new ScriptRunner(this);
+    this.input.keyboard.on('keydown-ESC', (event) => {
+      if (!event.repeat && this.scriptRunner.isRunning) this.scriptRunner.skip();
+    });
+
     // Silently note whichever area/zone/building the spawn point is already inside (P4's location
     // banner), so arriving there doesn't fire a second, redundant banner right after the map's own
     // "map-entered" one below announces the map by name.
@@ -147,6 +167,11 @@ class WorldScene extends Phaser.Scene {
     // update() tick after this still skips movement/warps/etc. -- exactly like a departure's own fade
     // already does, just for the walk-out instead of the walk-in.
     if (this.viaWarpKind) this.playDoorArrival(this.viaWarpKind);
+
+    // ADR 0016 / docs/STORY.md "Opening": the full M3a chain's own bus-arrival-then-Mustafa-meets-her
+    // beat, only on a genuinely fresh arrival at the campus's own default spawn (never on a debug
+    // `?map=`/mid-game reload -- see the guards below, and playOpeningSequence()'s own comment).
+    if (this.playOpening && this.mapKey === 'campus' && !this.viaWarpKind) this.playOpeningSequence();
   }
 
   buildMap() {
@@ -387,6 +412,7 @@ class WorldScene extends Phaser.Scene {
     this.checkWarps();
     this.checkAreas();
     this.checkCutscene();
+    this.checkKeyRoomBeats();
     this.syncGameState();
   }
 
@@ -403,11 +429,17 @@ class WorldScene extends Phaser.Scene {
   onInteractKey(event) {
     // this.sys.isActive() is false while a cutscene has this scene paused (Phaser still delivers
     // keyboard events to paused scenes, since they're not tied to the update loop).
-    if (event.repeat || this.transitioning || !this.sys.isActive()) return;
+    if (event.repeat || !this.sys.isActive()) return;
     const ui = this.scene.get('ui');
     if (!ui.tutorial) return;
-    if (ui.dialog.isOpen) ui.dialog.advance();
-    else if (!ui.isBlocking()) this.interact();
+    // ADR 0016: a script's own `say` step (src/scripts-runtime.js) reuses this exact dialog box, so
+    // advancing it has to work even while `this.transitioning` is set for the whole script -- the same
+    // reasoning Esc's own skip already follows (see the keydown-ESC handler right above create()'s own
+    // door-departure comment on this flag). Starting a *new* conversation (interact()) still isn't
+    // allowed mid-script/mid-door-walk, only reading the lines already on screen.
+    if (ui.dialog.isOpen) { ui.dialog.advance(); return; }
+    if (this.transitioning || ui.isBlocking()) return;
+    this.interact();
   }
 
   movePlayer(blocked, time, delta) {
@@ -984,9 +1016,12 @@ class WorldScene extends Phaser.Scene {
     }
   }
 
-  // Gate 2 welcome cutscene (P4): a Tiled rectangle object, `type: 'cutscene'` with a `cutscene`
-  // property naming a key in CUTSCENES (src/cutscenes.js). Plays once per session (GameState.
-  // seenCutscenes) and can be turned off with ?cutscene=0 (tests that would otherwise walk through it).
+  // Gate 2 / Main Block entrance cutscene triggers (P4, ADR 0016): a Tiled rectangle object,
+  // `type: 'cutscene'` with a `cutscene` property naming a key -- SCRIPTS (src/scripts.js, the
+  // in-world script runner) if one exists there, else CUTSCENES (src/cutscenes.js, the retired
+  // static-illustration player) as a fallback for anything never migrated. Plays once per session
+  // (GameState.seenCutscenes) and can be turned off with ?cutscene=0 (tests that would otherwise walk
+  // through it).
   checkCutscene() {
     if (!cutscenesEnabled()) return;
     const feetX = this.player.body.center.x / TILE;
@@ -994,7 +1029,69 @@ class WorldScene extends Phaser.Scene {
     const trigger = objectAt(this.mapObjects, ['cutscene'], feetX, feetY);
     const key = trigger && trigger.props.cutscene;
     if (!notSeenCutscene(key, GameState.seenCutscenes)) return;
-    this.playCutscene(key);
+    if (SCRIPTS[key]) this.playScript(key, SCRIPTS[key]);
+    else this.playCutscene(key);
+  }
+
+  // ADR 0016: runs an in-world script (src/scripts-runtime.js ScriptRunner), the same play-once
+  // bookkeeping playCutscene() below already does for the old static-illustration player -- a script
+  // never pauses/launches another scene, so there's nothing else to hand off to or resume here.
+  playScript(key, steps) {
+    GameState.seenCutscenes.add(key);
+    this.game.events.emit('cutscene-seen', key); // src/save.js autosaves soon after
+    this.scriptRunner.run(steps);
+  }
+
+  // The full M3a opening's own bus-arrival-then-Mustafa-meets-her beat (docs/STORY.md "Opening",
+  // src/scripts.js SCRIPTS.opening) -- started once, right here, instead of waiting for her to walk
+  // into the Gate 2 trigger the way the fast path does, since she has no control to walk anywhere with
+  // yet. Marks 'gate2' seen up front (not after the script finishes) so the Gate 2 trigger she's about
+  // to be walked past by that same script -- her first real steps land a few tiles beyond it, same as
+  // before this ADR -- can never fire a second, redundant copy of the same beat right behind it.
+  playOpeningSequence() {
+    GameState.seenCutscenes.add('gate2');
+    this.game.events.emit('cutscene-seen', 'gate2');
+    this.scriptRunner.run(SCRIPTS.opening);
+  }
+
+  // The 3 key-room beats (docs/STORY.md beat 8, ADR 0016): unlike the Gate 2/entrance triggers, no
+  // Tiled trigger object names these -- a key station's own desk (already map data, src/maps.js
+  // `keyStations`) doubles as the trigger, firing once she's within ROOM_BEAT_RANGE of it (wider than
+  // INTERACT_RANGE: "walking in" reads as approaching the desk from across the room, not standing right
+  // on top of it) and hasn't taken that key yet. Keyed the same way as any other cutscene
+  // (`GameState.seenCutscenes`, `keyRoom:<id>`) so a reload never replays it.
+  checkKeyRoomBeats() {
+    if (!cutscenesEnabled()) return;
+    for (const ks of this.keyStations || []) {
+      if (ks.taken) continue;
+      const key = `keyRoom:${ks.def.id}`;
+      if (GameState.seenCutscenes.has(key)) continue;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, ks.x, ks.y);
+      if (distance > ROOM_BEAT_RANGE) continue;
+      const scriptKey = KEY_ROOM_SCRIPT[ks.def.id];
+      if (!scriptKey || !SCRIPTS[scriptKey]) continue;
+      this.playScript(key, SCRIPTS[scriptKey]);
+    }
+  }
+
+  // FB-0033 (onboarding): where the always-on destination arrow/minimap marker should point right now,
+  // in tile coordinates on THIS map -- null if the current objective's route (src/objective-routes.js)
+  // doesn't name a stop here (she's off-route) or the named anchor/npc/key station can't be resolved.
+  // src/scenes/ui.js Minimap/FullMap/Onboarding all call this directly rather than recomputing the
+  // routing themselves.
+  currentObjectiveAnchor() {
+    const step = objectiveTarget(this.mapKey, GameState.quest);
+    if (!step) return null;
+    if (step.anchor) return resolveAnchor(this.mapObjects, step.anchor);
+    if (step.npc) {
+      const npc = (this.npcs || []).find((n) => n.def.id === step.npc);
+      return npc ? { x: npc.x / TILE, y: npc.y / TILE } : null;
+    }
+    if (step.keyStation) {
+      const ks = (this.keyStations || []).find((k) => k.def.id === step.keyStation);
+      return ks ? { x: ks.x / TILE, y: ks.y / TILE } : null;
+    }
+    return null;
   }
 
   // Pauses the world (so the player can't move or re-trigger anything) and hands off to the

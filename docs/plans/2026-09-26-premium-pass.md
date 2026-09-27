@@ -53,7 +53,14 @@ branches; 5 and 7 are not started. Details and how to resume: [HANDOFF.md](../..
 Owner decision 2026-09-27: free packs only; the outdoor kit is Kenney's RPG Urban Pack (CC0),
 recoloured to the campus palette.
 
-## Stages (in order; each ends with `npm test` green, the game checked, and a commit)
+## Process change (owner, 2026-09-27): build everything first, then test once
+
+Feature-by-feature full test runs were too slow. From now on: agents build features and run only
+the unit tests plus their own spec/screenshots; the coordinator merges each after reviewing the diff
+and screenshots, without pushing. When all features are in, one full `npm test` round on a quiet
+machine, one fix round, then push. New tests are still written with each feature.
+
+## Stages (in order)
 
 | # | Stage | Feedback | Notes |
 |---|---|---|---|

@@ -686,3 +686,29 @@ see above).
 
 **Next:** the owner's full playthrough should now include music/sfx/volume; cutscenes for the three
 key rooms are still the next real feature.
+
+## 2026-09-27 — Premium pass paused at the owner's request
+
+**Did since the last entry:**
+- Merged `feature/audio` (music, SFX, volume settings, audio packs credited in-game) and the depth
+  engine (ADR 0015: depth groups, feet-based depth, door entry/exit, locked-door rattle, camera lerp,
+  running dust, cached warp points). Both pushed; main `f3006ea`, 337 unit + 132 e2e green.
+- Campus art: rounds 1 and 2 rejected at review (walkways still read as brick; the entrance read as a
+  flat box; murky palm; flags read as axes). Asked the owner about buying LimeZu Modern Exteriors
+  ($2.50): **declined, free only**. Round 3 switched the outdoor kit to Kenney's RPG Urban Pack (CC0),
+  a complete matching modern-city set recoloured to the campus palette. Paused mid-round.
+- Stage 6 (in-world cutscenes, ADR 0016) started in parallel; paused mid-way.
+- On pause: both agents stopped and their work committed as unreviewed WIP on their branches
+  (`worktree-agent-a3b2fc0b219dea823` @ c02913f, `worktree-agent-a459f3366dea619e6` @ e3eb7b6); stray
+  test servers stopped; the scheduled loop **disabled**; `.session-active` removed; HANDOFF.md,
+  CONTEXT.md, ROADMAP.md and the plan updated with exact resume steps.
+
+**Why:** the owner asked to pause everything and bring the docs up to date.
+
+**Decisions:** free packs only (owner); Kenney RPG Urban Pack is the outdoor base kit.
+
+**Failures:** usage limits stopped agents four times (resumed each time, no work lost). Pushing while
+two agents ran e2e suites failed three times (timeouts, corrupted trace zips); each passed on a quiet
+machine. Rule: push only when no other tests are running.
+
+**Next:** see HANDOFF.md "How to resume".

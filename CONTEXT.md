@@ -2,7 +2,7 @@
 
 **New session? Read [HANDOFF.md](HANDOFF.md) first.**
 
-**Last updated:** 2026-09-26 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-09-27 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -17,29 +17,19 @@ on a stable architecture that can grow. The campus map is the most important pie
 the design and technical choices. The owner plays each version, reports feedback in-game, and will
 explain the story once the base map is done.
 
-## Current state
-- **Works (all covered by tests, 2026-09-17; 136 unit + 59 browser tests):**
-  - **Campus C2** ([ADR 0009](decisions/0009-campus-from-osm-straightened-and-cleaned.md)): generated from OpenStreetMap again.
-    - Layout: the campus strip along D54, the hostel row, real building shapes simplified into straight rectangles.
-    - Around the campus: the real DIAC Park and roundabout.
-    - Paths and roads: kerbed roads and D54, 3-tile walkways that go around buildings.
-    - Gate 2 + Side Gate, trees/palms with canopies, tennis courts with a thin net, name signboards.
-  - **Interiors** ([docs/INTERIORS_PLAN.md](docs/INTERIORS_PLAN.md)): 1 m per tile, with furniture by room type and doors/stairs linking both ways.
-    - Main Block ground to 3rd floor; Library Block and Mechanical Block ground + 1st floor.
-    - Rooms named after the virtual tour.
-    - No running indoors.
-  - **Gate 2 welcome cutscene** (plays once, Esc skips, `?cutscene=0` disables it), location banner, full-screen map (click the minimap or press N).
-  - Gameplay: compact see-through hotbar, held items (keycard, phone, ID card, notebook, laptop, coffee, apple, sword), Shift to run.
-  - Test maps (`?map=meadow`): meadow + Tomas's house, pickups, NPC dialog, tutorial checklist.
-- **Dev tooling:**
-  - `npm test` runs before every push and on GitHub Actions.
-  - `npm run qa:shots` saves screenshots of every area/room to `qa-shots/` ([docs/QA_PLAN.md](docs/QA_PLAN.md)).
-  - In-game feedback overlay (O key or yellow button).
-  - The owner plays a stable copy: worktree `../2D_pixel_game-play`, launch config "play", feedback still saved to this repo.
-- **Open questions for the owner:** where the real main entrance (Gate 2) is (asked in FB-0022); the second gate's name.
-- **Not yet:** ES modules, flags/scripts, saving, backpack, dialog choices, the story (the owner explains it after the base map).
-- **Next:** the owner verifies FB-0018 to FB-0022, then entrance position, interior polish from feedback, then the Foundation phase of GAME_PLAN.md.
-
+## Current state (2026-09-27, paused by the owner)
+- **The whole game is playable start to finish:** title -> opening (Mustafa's greeting, name, clothes,
+  bus) -> campus -> Main Block -> the LUG volunteer -> three key rooms, each won through a mini-game
+  (platformer, flyer, Tetris; skip offered after 3 losses) -> the reward box -> the birthday card.
+- **Merged in the premium pass so far:** the FB-0035..0043 bug batch, music + sound + volume settings,
+  and the depth engine (y-sorted depth groups, Pokémon door entry/exit, feet-based sorting, camera
+  lerp). 337 unit + 132 e2e tests, all green, pushed (`f3006ea`).
+- **In flight, unreviewed, on branches:** the campus art rebuild on Kenney's RPG Urban Pack (stage 4)
+  and in-world cutscenes + the new opening + onboarding markers (stage 6). See HANDOFF.md.
+- **Next:** review/merge those two, rebuild the interiors (the foyer per the owner's photo), then the
+  finishing stage (temporary card, UI kit, performance, QA, README).
+- **Waiting on the owner:** verify the fixed feedback items in-game (press O); the real key-room
+  locations; the card's photos and messages.
 ## Where this is going (updated 2026-09-22)
 The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in an animated
 **birthday card** ([STORY.md](docs/STORY.md)), target 2-4 weeks from 2026-09-20.
@@ -75,8 +65,7 @@ npm run assets            # regenerate assets/ after editing tools/make-assets.j
 npm run campus            # regenerate assets/maps/campus.json after editing tools/campus/layout.js
 npm run feedback          # feedback items waiting on the agent (docs/FEEDBACK.md)
 ```
-First time on a new machine: `npm install && npx playwright install chromium`. The game itself
-needs no install, just Node and internet (Phaser from cdnjs, font from Google Fonts).
+First time on a new machine: `npm install && npx playwright install chromium`. The game itself needs no install and runs offline (Phaser and the font are vendored).
 Debugging: `game.scene.getScene('world')` and `GameState` in the browser console.
 
 ## Where things live

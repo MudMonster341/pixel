@@ -1,8 +1,8 @@
 # Handoff — read this first
 
-**Written 2026-09-26.** Everything a fresh session needs to pick this up and keep going. Read this,
-then [CONTEXT.md](CONTEXT.md), the last entries of [MEMORY.md](MEMORY.md), and
-[docs/ROADMAP.md](docs/ROADMAP.md).
+**Written 2026-09-27, when the owner paused all work.** Everything a fresh session needs to pick this
+up. Read this, then [CONTEXT.md](CONTEXT.md), the last entries of [MEMORY.md](MEMORY.md), and the
+premium-pass plan [docs/plans/2026-09-26-premium-pass.md](docs/plans/2026-09-26-premium-pass.md).
 
 ## What this is
 
@@ -14,84 +14,65 @@ follow it, don't invent story.
 Phaser 3 from local files, plain script tags, **no build step** for the game itself. Node is only for
 dev tooling. Delivered as a Windows .exe ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
 
-## How the work runs (keep this going)
+## Status: PAUSED (2026-09-27)
 
-- **A scheduled task, "Pixel game: work the roadmap", runs every 3 hours** and does one roadmap task
-  ([ADR 0011](decisions/0011-autonomous-roadmap-loop.md)). It reads the docs, checks the feedback
-  inbox first, briefs a Sonnet agent, reviews, tests, ticks the box, commits and pushes. It only
-  fires while the Claude app is open; a missed run fires at the next launch.
-- **Sonnet subagents write all the code.** The coordinator plans, briefs, reviews diffs, runs tests,
-  looks at screenshots, updates docs and commits. This is the owner's rule.
-- **Usage limits interrupt agents often.** When that happens, resume the same agent with SendMessage
-  ("the limit has reset, continue where you left off") — its uncommitted work is still in the tree.
-  Keep the tree committed between tasks so an interrupted run never loses anything.
-- **Owner feedback beats the roadmap.** In-game O overlay → `npm run feedback` → fix with a test
-  named `FB-XXXX: ...` → `node tools/feedback.js fix FB-XXXX --test "<test>" "<what changed>"`.
+The owner asked to pause everything. As of the pause:
+- No agents or servers are running.
+- The scheduled task "Pixel game: work the roadmap" is **disabled**. Re-enable it only when the owner
+  asks.
+- `main` = `origin/main` = `f3006ea` (plus this docs commit). All tests green: 337 unit, 132 e2e.
+- The two in-flight stages are saved as **unreviewed WIP commits on their own branches** (below).
+  They are not merged. Review them before merging; don't assume they're good.
 
-## Current state (2026-09-26)
+## The premium pass (started 2026-09-26)
 
-**The game is playable start to finish**: title → Mustafa's greeting → name entry → clothes choice →
-bus arrival → gate cutscene → campus → Main Block → the volunteer → three key rooms with a mini-game
-each → back to the volunteer → reward box → birthday card → title.
+The owner played the finished game and asked for a complete quality pass. Their chat feedback is
+tracked as FB-0027..FB-0034; the code-review findings are FB-0035..FB-0043. The plan has 7 stages:
 
-- `main` is at `674de43`, **one commit ahead of origin** (see "Known problems" — the push is blocked
-  by a failing test, and `--no-verify` is forbidden).
-- Tests: **306 unit, 91 e2e**. One e2e test fails repeatably (below); the rest pass.
-- Branches: `feature/audio` (sound, parked), plus merged-and-kept `feature/intro`,
-  `feature/cutscene`, `feature/interiors`, `feedback/gameplay`.
+| # | Stage | State |
+|---|---|---|
+| 1 | Bug batch (FB-0035..0043) | **Merged + pushed.** HUD keys gated during cutscenes/mini-games, toast queue + tutorial fix, honest credits, clothes-colour reload, hints by missing key, overwrite-save confirm, journal redraw/scroll, `take` action (volunteer collects the keys), mini-game input polish, real left/right sprite rows (ERR-0007) |
+| 1b | Music, sound, volume (`feature/audio`) | **Merged + pushed** |
+| 2 | Research | **Done.** [campus-visual-reference.md](docs/research/campus-visual-reference.md) (32 photos, per-space build specs), [asset-packs-2026-09-26.md](docs/research/asset-packs-2026-09-26.md). Ninja Adventure (CC0) downloaded for palms/trees/flags/FX/UI |
+| 3 | Depth engine ([ADR 0015](decisions/0015-depth-groups-and-door-entry.md)) | **Merged + pushed.** Y-sorted depth groups, feet-based depth, Pokémon door entry/exit, locked-door rattle, camera lerp, running dust |
+| 4 | Campus art (FB-0027/0028/0029) | **WIP, unreviewed**, branch `worktree-agent-a3b2fc0b219dea823` (last commit `c02913f`). Round 3: rebuilding the outdoor look on Kenney's RPG Urban Pack (CC0): concrete sidewalks, BITS buildings from Kenney parts recoloured to sand/terracotta, glass-front Main Block entrance with columns + canopy + compact navy sign, bright palms, flag poles, bus stop. Rounds 1-2 were rejected at review (still read as brick; the entrance read as a box). It stopped just after saving 5 screenshots it hadn't reviewed yet |
+| 5 | Interiors rebuild, foyer per the owner's photo (FB-0030/0031) | Not started (waits on stage 4: both change `assets/tiles.png`) |
+| 6 | In-world cutscenes + opening + onboarding ([ADR 0016](decisions/0016-cutscenes-play-in-the-game-world.md), FB-0032/0033) | **WIP, unreviewed**, branch `worktree-agent-a459f3366dea619e6` (last commit `e3eb7b6`). Script runner in WorldScene, new opening on the live campus, Mustafa NPC (npc-mustafa.png), destination markers. Stopped mid-way through the entrance/key-room beats. It was asked to list every new dialogue line for the owner's approval |
+| 7 | Finish: temporary card, UI kit, performance, QA at window sizes, README for the recipient (FB-0034) | Not started |
 
-### Done
+**Owner decisions in this pass:** free art packs only (declined buying LimeZu Modern Exteriors,
+2026-09-27); downloading free packs is approved; the keys leave the bag when handed in.
 
-| Area | What exists |
-|---|---|
-| Opening | Title screen ("BITS DUBAI / The LUG Treasure Hunt") with drawn buttons and parallax, Mustafa's greeting with a portrait, name entry (typing + on-screen keyboard), clothes-colour customisation with live preview, the bus arrival at the gate, the Gate 2 and Main Block entrance cutscenes |
-| Campus | Layout v3 from satellite: entrance lower-right, roundabout inside the gate, parking both sides, loop road, sports field west, hostels, DIAC Park and ring road. Roads, kerbs, crossings and pavements from Kenney; greenery from Sprout Lands; BITS facades built by us in the packs' style |
-| Interiors | 8 floors (Main G–3, Library G–1, Mechanical G–1), furnished from free packs, rooms named from the virtual tour, stairs and doors both ways, no running indoors. Foyer has the LUG stall nook |
-| Story | The volunteer (greets by the player's name, hints by key count, hands over the box), three keys as interactables, doors locked outside the story route, quest tracker, journal (J) |
-| Mini-games | Platformer (Physics Lab), flappy (ICVL), Tetris (Room 195), each themed, with intro card, HUD, retry, and **skip offered after 3 losses** so the gift can't be blocked |
-| Ending | Reward box opening, then the animated birthday card (photo slideshow, typed messages, confetti), "THE END", back to the title, plus "Watch the Card Again" |
-| Systems | Saving (versioned, profile-ready), data-driven dialog with conditions/actions/choices, E and ! interaction bubbles, location banner, full-screen map (N), minimap, hotbar with held items, running (Shift) |
-| Packaging | Phaser and the font vendored (runs offline), Electron wrapper with icon, `npm run pack:win` → `dist/PixelQuest-win32-x64.zip` (110 MB) with PixelQuest.exe. Verified by launching it |
-| Process | Feedback loop, QA screenshots (`npm run qa:shots`), 397 tests, pre-push hook, GitHub Actions |
+### How to resume
+1. Read the plan and this table. `npm run feedback` first (owner feedback beats the plan).
+2. The worktrees live in `.claude/worktrees/agent-*` (gitignored), each on its own branch with
+   junctions to the main repo's `node_modules` and gitignored vendor packs. If a worktree is gone,
+   the branch still exists: `git worktree add .claude/worktrees/<name> <branch>`.
+3. Stage 4: open its screenshots (`docs/research/premium-pass/` on that branch), compare with
+   `docs/research/reference/owner-main-block-entrance.png`, and either send it back or merge it.
+   Then stage 5.
+4. Stage 6: finish the entrance/key-room beats, run the full suite, review the flow in the browser,
+   show the owner the new dialogue lines, then merge.
+5. Give parallel agents separate e2e ports (`E2E_PORT=4174/4175/...`). Push only when no other tests
+   are running: a loaded machine makes the e2e suite time out (seen three times, ERR-0002/0003 family).
 
-### Known problems (fix these first)
+## How the work runs
 
-1. **`tests/e2e/tutorial.spec.js` "completing every step finishes the tutorial" fails repeatably on
-   `main`** (not a flake — 2/2 and 3/3 runs). The "Tutorial complete!" toast never replaces "You got
-   the Old Sword!". It first appeared during the audio work but reproduces on `main` without it, so
-   it predates that branch. **This blocks every push**, because the pre-push hook runs the tests and
-   `--no-verify` is not allowed. Fix the cause (likely `Tutorial.finish()`'s delayed toast in
-   `src/scenes/ui.js`, or a toast being overwritten), not the test.
-2. **`feature/audio` is parked** (music, sound effects, volume settings, 321 unit tests). Merge it
-   once problem 1 is fixed and its own run is clean.
-3. **A stray `dist2/` folder** is locked by Windows and can't be deleted from this session. It's
-   gitignored and harmless; delete it manually when Windows releases it.
-4. **`robustness.spec.js` "walking into every edge"** still fails about 1 run in 4 under load
-   (ERR-0002/0003 family).
+- **Sonnet subagents write all the code.** The coordinator plans, briefs, reviews diffs and
+  screenshots, runs tests, updates docs and commits. This is the owner's rule.
+- **Usage limits interrupt agents often.** Resume the same agent with SendMessage ("the limit has
+  reset, continue where you left off"); its uncommitted work is still in its worktree.
+- **Owner feedback beats the plan.** In-game O overlay → `npm run feedback` → fix with a test named
+  `FB-XXXX: ...` → `node tools/feedback.js fix FB-XXXX --test "<test>" "<what changed>"`.
+- The scheduled loop respects a `.session-active` lock file (docs/ROADMAP.md) while a live session
+  drives the work. The loop is currently disabled anyway.
 
-### Left to do, in MVP order
+## Waiting on the owner
 
-1. Fix the tutorial toast bug, push, merge `feature/audio`.
-2. **A full playthrough by the owner**, with feedback through the O overlay. Everything else waits on
-   what that finds.
-3. Cutscenes for the three key rooms (Physics Lab, ICVL, Room 195).
-4. The owner's card content: photos in `assets/card/photos/`, names and messages in
-   `assets/card/card.json`, optional `video.mp4`.
-5. Optional video cutscenes from the owner's clips ([prompts](docs/research/cutscene-video-prompts.md)),
-   with the drawn stills as fallback.
-6. Polish: transitions everywhere, idle animations, footstep dust, small campus props (benches, bins,
-   a bus stop, signage), a UI kit pass.
-7. Final QA: strict UI tests at several window sizes, keyboard-only reachability, the flake in (4),
-   and a README for the person receiving the game.
-
-### Waiting on the owner
-
-- **Verify the 12 fixed feedback items** in the in-game Inbox (press O).
-- **Where the Physics Lab, the ICVL and Room 195 really are.** They're on plausible floors, guessed,
-  because no floor plans are published (checked: official site, prospectus PDF, Wikipedia, 2GIS, Google).
-- **Where the real main entrance (Gate 2) is** — assumed from satellite imagery.
-- **The card's content** (photos, recipient name, messages).
-- Whether the keys should leave the bag when handed in.
+- **Verify the fixed items** in the in-game Inbox (press O): FB-0023, FB-0024, FB-0035..FB-0043.
+- **Where the Physics Lab, the ICVL and Room 195 really are** (guessed floors today).
+- **The card's content** (photos, recipient name, messages) in `assets/card/`.
+- Approval of any new dialogue lines stage 6 writes.
 
 ## How to run it
 
@@ -106,32 +87,31 @@ npm run qa:shots          # screenshots of every area and room into qa-shots/
 npm run feedback          # feedback waiting on the agent
 ```
 
-The owner plays a **stable copy** served from the worktree `../2D_pixel_game-play` (launch config
-"play"), so in-progress edits in the main tree never break their session. Update it with
-`git -C ../2D_pixel_game-play checkout --detach main` and restart the server.
+The owner plays a **stable copy** from the worktree `../2D_pixel_game-play` (launch config "play").
+Update it with `git -C ../2D_pixel_game-play checkout --detach main` and restart the server.
 
 ## Rules that must not be broken
 
 - **Sonnet agents write the code**; the coordinator reviews, tests and commits.
 - **Never** `--no-verify`, `--force`, or weaken a test to make it pass.
-- **Art comes from packs** ([ADR 0012](decisions/0012-third-party-asset-packs.md)); we draw only what
-  no pack covers. Never hand-edit generated PNGs or maps — change the tools and regenerate.
-- **The game is non-commercial and must never be sold** (LimeZu and Sprout Lands licences). Credit
-  stays in [CREDITS.md](CREDITS.md) and on the title screen.
-- **Raw asset packs are gitignored**; only generated art ships.
+- **Art comes from free packs** ([ADR 0012](decisions/0012-third-party-asset-packs.md)); we draw only
+  what no pack covers. Never hand-edit generated PNGs or maps — change the tools and regenerate.
+- **The game is non-commercial and must never be sold** (LimeZu and Sprout Lands licences). Credits
+  stay in [CREDITS.md](CREDITS.md) and in the in-game Credits screen.
+- **Raw non-redistributable packs are gitignored**; only generated art ships.
 - Tile names and indices stay stable when art changes, so maps and tests keep working.
 - Don't invent story: [docs/STORY.md](docs/STORY.md) is the script, the owner writes the rest.
 - Every decision gets written down: an ADR in `decisions/`, plus CONTEXT.md and a dated MEMORY.md entry.
 
 ## Map of the repo
 
-- `src/` — game code: `main.js` (boot), `scenes/` (title, world, ui, cutscene, box-opening, card),
-  `minigames/`, `dialog.js`, `story.js`, `save.js`, `audio.js` (on the audio branch), `maplogic.js`, `state.js`
-- `tools/` — generators: `make-assets.js` (all tiles and sprites), `make-cutscenes.js`,
+- `src/` — game code: `main.js` (boot), `scenes/` (title, world, ui, cutscene, intro-*, box-opening,
+  card), `minigames/`, `audio.js`, `dialog.js`, `story.js`, `save.js`, `maplogic.js`, `state.js`
+- `tools/` — generators: `make-assets.js` (tiles and sprites), `make-audio.js`, `make-cutscenes.js`,
   `make-card-art.js`, `make-minigame-art.js`, `make-icon.js`, `campus/`, `interiors/`, `qa-shots.js`,
   `feedback*.js`, `lib/png*.js`
-- `assets/` — generated art and maps (committed), `vendor/` (raw packs, gitignored), `card/` (owner's, gitignored)
-- `docs/` — STORY, ROADMAP, GAME_FEEL, STYLE_GUIDE, ARCHITECTURE, CAMPUS_MAP_PLAN, INTERIORS_PLAN,
-  QA_PLAN, TESTING, FEEDBACK, `research/`, `plans/`
-- `decisions/` — ADRs 0001–0014 · `ERRORS.md` — ERR-0001 to ERR-0006, failures and their rules
+- `assets/` — generated art, audio and maps (committed), `vendor/` (raw packs; the non-redistributable
+  ones gitignored), `card/` (owner's content, gitignored)
+- `docs/` — STORY, ROADMAP, GAME_FEEL, STYLE_GUIDE, ARCHITECTURE, plans/, research/
+- `decisions/` — ADRs 0001–0016 · `ERRORS.md` — ERR-0001 to ERR-0007
 - `electron/`, `build/` — packaging · `tests/unit`, `tests/e2e`

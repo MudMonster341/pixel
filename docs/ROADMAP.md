@@ -17,6 +17,10 @@ class pixel art, proper UI boxes, animations, and genuinely good game feel.
 
 ## How this file is used
 
+> **Paused by the owner (2026-09-27).** The scheduled loop is disabled and all work is stopped.
+> The current plan is the premium pass ([docs/plans/2026-09-26-premium-pass.md](plans/2026-09-26-premium-pass.md));
+> its state and how to resume are in [HANDOFF.md](../HANDOFF.md). The unchecked boxes below predate it.
+>
 > **Live-session lock (2026-09-26).** If a file named `.session-active` exists in the repo root and
 > was modified in the last 6 hours, a live session is driving the work (the premium pass,
 > [docs/plans/2026-09-26-premium-pass.md](plans/2026-09-26-premium-pass.md)). A scheduled run must

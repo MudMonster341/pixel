@@ -46,6 +46,13 @@ Reference photos: [entrance](../research/reference/owner-main-block-entrance.png
 6. **Onboarding:** after the bus, Mustafa meets her at the gate and walks her to the path; the goal
    is always on screen (tracker, minimap marker, a guide arrow when she hesitates).
 
+## Status at the pause (2026-09-27)
+
+Stages 1, 1b, 2 and 3 are merged and pushed. Stages 4 and 6 are unreviewed WIP on their own
+branches; 5 and 7 are not started. Details and how to resume: [HANDOFF.md](../../HANDOFF.md).
+Owner decision 2026-09-27: free packs only; the outdoor kit is Kenney's RPG Urban Pack (CC0),
+recoloured to the campus palette.
+
 ## Stages (in order; each ends with `npm test` green, the game checked, and a commit)
 
 | # | Stage | Feedback | Notes |

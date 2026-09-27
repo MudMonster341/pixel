@@ -77,6 +77,7 @@ class FlappyScene extends MinigameBaseScene {
       this.hoverPrompt.setVisible(false);
     }
     this.vy = flappyFlap();
+    AudioManager.play('minigameFlap');
   }
 
   spawnPipesUpTo(limitX) {

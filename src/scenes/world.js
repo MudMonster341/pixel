@@ -4,6 +4,16 @@
 const WALK_SPEED = 80; // pixels per second
 const RUN_SPEED = 140; // pixels per second, holding Shift outdoors (FB-0017)
 const RUN_ANIM_SCALE = RUN_SPEED / WALK_SPEED; // walk animation plays faster while running
+
+// M5 sound: footsteps (docs/ROADMAP.md rule 3 -- "soft, rate-limited, different indoors"). A
+// different sample set and a softer volume indoors (src/audio.js SOUNDS), a faster cadence while
+// running (running is never possible indoors anyway, FB-0017, so FOOTSTEP_INTERVAL_INDOOR never
+// needs its own "running" variant).
+const FOOTSTEP_OUTDOOR_SOUNDS = ['footstepOutdoor1', 'footstepOutdoor2', 'footstepOutdoor3', 'footstepOutdoor4'];
+const FOOTSTEP_INDOOR_SOUNDS = ['footstepIndoor1', 'footstepIndoor2', 'footstepIndoor3', 'footstepIndoor4'];
+const FOOTSTEP_INTERVAL_WALK_MS = 300;
+const FOOTSTEP_INTERVAL_RUN_MS = 190;
+const FOOTSTEP_INTERVAL_INDOOR_MS = 380;
 // Depth for the "overhead" Tiled layer (tree canopies, ADR 0008): always above every character,
 // whose depth is set to their own y each frame (a few thousand px at most on the biggest map).
 const OVERHEAD_DEPTH = 1_000_000;
@@ -83,6 +93,10 @@ class WorldScene extends Phaser.Scene {
     // "map-entered" one below announces the map by name.
     this.currentAreaName = this.areaHere()?.name || null;
     this.game.events.emit('map-entered', this);
+    // M5 sound: crossfades (never cuts) to the outdoor/indoor bed for whichever map this is -- a
+    // no-op if the same one's already playing (AudioManager.playMusic()), so moving between two
+    // outdoor maps (or reloading the same map) never restarts or glitches the music.
+    AudioManager.playMusic(this.def.indoors ? 'indoorMusic' : 'overworldMusic');
 
     // In-fiction hints (FB-0023/0024, docs/GAME_FEEL.md): "WASD to move" the moment she's placed
     // into a controllable world, "Shift to run" the moment she's somewhere running is even possible.
@@ -302,6 +316,10 @@ class WorldScene extends Phaser.Scene {
     if (moved > 0) this.game.events.emit('player-moved', moved);
 
     const moving = dx !== 0 || dy !== 0;
+    if (moving) {
+      const interval = this.def.indoors ? FOOTSTEP_INTERVAL_INDOOR_MS : (running ? FOOTSTEP_INTERVAL_RUN_MS : FOOTSTEP_INTERVAL_WALK_MS);
+      AudioManager.playThrottled(this.nextFootstepSound(), 'footstep', interval, time);
+    }
     if (!moving) {
       // Idle animation (ADR 0013), not a hard stop-on-a-frame: a slow blink/bob, STYLE_GUIDE's
       // "gentle life" rule for a character that's just standing there.
@@ -334,6 +352,9 @@ class WorldScene extends Phaser.Scene {
           x: Math.floor(o.x), y: Math.floor(o.y), to: o.props.to, spawnAt: o.props.toId, name: o.name,
           locked: isDoorLocked(rule, GameState.quest.stage),
           lockedReason: (rule && rule.reason) || 'Locked for the event',
+          // M5 sound (checkWarps() below): a Tiled 'stairs' object gets the warp/stairs sfx, a 'door'
+          // (or a plain text-map warp, which has no `type` at all) gets the door-open sfx.
+          type: o.type,
         };
       });
     return [...(this.def.warps || []), ...objectWarps];
@@ -400,6 +421,16 @@ class WorldScene extends Phaser.Scene {
       .setPosition(x + offset.x, y + offset.y + bob)
       .setDepth(p.depth + (offset.front ? 1 : -1))
       .setVisible(true);
+  }
+
+  // Cycles through the 4 outdoor/indoor footstep samples (src/audio.js SOUNDS) so it's never the
+  // exact same one twice in a row -- called every moving frame regardless of whether the throttle in
+  // AudioManager.playThrottled() actually lets this particular one play, which is harmless (just a
+  // counter) and keeps the cycle from bunching up around whichever sample happened to play last.
+  nextFootstepSound() {
+    const set = this.def.indoors ? FOOTSTEP_INDOOR_SOUNDS : FOOTSTEP_OUTDOOR_SOUNDS;
+    this.footstepCycle = ((this.footstepCycle ?? -1) + 1) % set.length;
+    return set[this.footstepCycle];
   }
 
   nearestNpc() {
@@ -542,6 +573,7 @@ class WorldScene extends Phaser.Scene {
       if (GameState.inventory.add(pickup.def.item)) {
         pickup.taken = true;
         GameState.collected.add(pickup.def.id);
+        AudioManager.play('itemPickup');
         pickup.shadow.destroy();
         this.tweens.killTweensOf(pickup.sprite);
         this.tweens.add({
@@ -589,6 +621,7 @@ class WorldScene extends Phaser.Scene {
       if (this.lockedWarned !== warp.name) {
         this.lockedWarned = warp.name;
         this.game.events.emit('toast', warp.lockedReason);
+        AudioManager.play('lockedDoorThud');
       }
       return;
     }
@@ -612,6 +645,7 @@ class WorldScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.player.anims.stop();
     this.prompt.setVisible(false);
+    AudioManager.play(warp.type === 'stairs' ? 'warpStairs' : 'doorOpen');
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt }));
   }

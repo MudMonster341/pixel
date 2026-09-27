@@ -26,7 +26,7 @@ const { FEEDBACK_DIR } = require('./paths');
 // save tests, ...) see a key change hands the instant she wins it, without having to actually play a
 // platformer/flyer/Tetris session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
 // turn the real thing back on.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false } = {}) {
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -40,6 +40,11 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (!title) params.set('title', '0');
   if (!intro) params.set('intro', '0');
   if (!minigames) params.set('minigames', '0');
+  // `?audio=0` (src/maplogic.js audioEnabled()): skips decoding several MB of real music on every
+  // single test's fresh page load (docs/ROADMAP.md M5) -- a pure performance switch, since every
+  // AudioManager method already no-ops safely with nothing loaded. tests/e2e/audio.spec.js passes
+  // `audio: true` for the handful of tests that care whether real files actually load and play.
+  if (!audio) params.set('audio', '0');
   await page.goto(`/?${params.toString()}`);
   await waitForBoot(page);
   return { errors };
@@ -176,7 +181,7 @@ function feedbackCli(args) {
 // do: most title-flow specs want Play to land straight on 'boot', same as before the M3a opening
 // (Mustafa's greeting/name entry/customisation/bus arrival) existed. tests/e2e/intro.spec.js passes
 // `intro: true` to exercise that chain of scenes itself.
-async function openTitle(page, { map, save = false, profile, intro = false, minigames = false } = {}) {
+async function openTitle(page, { map, save = false, profile, intro = false, minigames = false, audio = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -188,6 +193,7 @@ async function openTitle(page, { map, save = false, profile, intro = false, mini
   if (profile) params.set('profile', profile);
   if (!intro) params.set('intro', '0');
   if (!minigames) params.set('minigames', '0');
+  if (!audio) params.set('audio', '0'); // src/maplogic.js audioEnabled(), see openGame()'s own comment
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   return { errors };

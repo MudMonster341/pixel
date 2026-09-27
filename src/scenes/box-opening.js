@@ -37,6 +37,10 @@ class BoxOpeningScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#1a1610');
     this.cameras.main.fadeIn(250, 0, 0, 0);
+    // M5 sound: the warm ending bed starts right here, so it's already settled in by the time the
+    // card itself begins (src/scenes/card.js's own playMusic() call is then just a no-op confirming
+    // it's still the right track).
+    AudioManager.playMusic('cardMusic');
 
     this.input.keyboard.on('keydown-ESC', (event) => {
       if (!event.repeat) this.onEsc();
@@ -141,6 +145,7 @@ class BoxOpeningScene extends Phaser.Scene {
   // a guess). Lifting it clear of the box entirely, with only a modest tilt, sidesteps the geometry
   // problem outright and reads as "the lid comes off" rather than "the lid folds back".
   openLid() {
+    AudioManager.play('boxOpen');
     this.tweens.add({
       targets: this.lid, angle: -8, duration: 140, ease: 'Sine.easeOut',
       onComplete: () => {

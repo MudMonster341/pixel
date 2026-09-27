@@ -25,6 +25,10 @@
   <script src="src/maplogic.js"></script>
   <script src="src/state.js"></script>
   <script src="src/save.js"></script>
+  <!-- M5 sound (docs/ROADMAP.md): needs GameState (state.js) and notifyStateChanged (state.js) above;
+       everything below (dialog's key-awarded sfx, world.js, ui.js, the mini-games, the ending) calls
+       into it, so it loads before all of them. -->
+  <script src="src/audio.js"></script>
   <script src="src/dialog.js"></script>
   <!-- Mini-games (docs/ROADMAP.md M4): the pure data/logic files first (framework-data.js's MINIGAMES
        registry is read by world.js/ui.js below), then the Phaser scene shell and each game, which

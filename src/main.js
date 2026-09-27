@@ -77,6 +77,11 @@ class BootScene extends Phaser.Scene {
     for (const def of Object.values(MAPS)) {
       if (def.tiled) this.load.tilemapTiledJSON(`map-${def.tiled}`, `assets/maps/${def.tiled}.json`);
     }
+    // M5 sound (docs/ROADMAP.md): every registered sound (src/audio.js SOUNDS), preloaded alongside
+    // everything else -- never lets a missing file throw (preload()'s own 'loaderror' handler).
+    // `?audio=0` skips this (src/maplogic.js audioEnabled()): every AudioManager method already
+    // no-ops safely when nothing was loaded, so this is a pure performance switch for tests.
+    if (audioEnabled()) AudioManager.preload(this);
   }
 
   create() {
@@ -144,6 +149,10 @@ function startGame() {
       BoxOpeningScene, CardScene,
     ], // later scenes draw on top
   });
+  // M5 sound: wires the master-mute/volume settings and the browser-autoplay gesture handling
+  // (docs/ROADMAP.md M5 rule 5) to this real Phaser.Game -- never called under node:test, where
+  // AudioManager.game simply stays null and every method that touches it is a guarded no-op.
+  AudioManager.init(window.game);
   if (saveEnabled()) initAutosave(window.game, currentProfile());
 }
 

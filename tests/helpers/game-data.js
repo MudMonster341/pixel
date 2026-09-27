@@ -7,6 +7,10 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPTS = [
   'src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js', 'src/maplogic.js', 'src/state.js', 'src/save.js',
+  // M5 sound (docs/ROADMAP.md): the SOUNDS registry + AudioManager (src/audio.js) are pure data/logic
+  // -- AudioManager.game stays null under this sandbox (nothing ever calls .init()), so every method
+  // that touches Phaser is a guarded no-op, safe to load here the same as everything else in this list.
+  'src/audio.js',
   // Mini-game pure data/logic (docs/ROADMAP.md M4): no Phaser scenes here, so these load fine into
   // this same sandbox -- src/minigames/framework-scene.js and the 3 game scenes need a real browser
   // and are never loaded by unit tests.
@@ -101,6 +105,7 @@ function loadGameData() {
     parseOpenTiles: get('parseOpenTiles'),
     questObjectiveText: get('questObjectiveText'),
     minigamesEnabled: get('minigamesEnabled'),
+    audioEnabled: get('audioEnabled'),
     MINIGAMES: get('MINIGAMES'),
     recordAttempt: get('recordAttempt'),
     minigameProgress: get('minigameProgress'),
@@ -144,6 +149,8 @@ function loadGameData() {
     keyStationDialog: get('keyStationDialog'),
     saveGame: get('saveGame'),
     loadGame: get('loadGame'),
+    snapshotState: get('snapshotState'),
+    applyState: get('applyState'),
     peekSave: get('peekSave'),
     hasSaveFile: get('hasSaveFile'),
     listProfiles: get('listProfiles'),
@@ -154,6 +161,11 @@ function loadGameData() {
     buildCardConfig: get('buildCardConfig'),
     renderCardText: get('renderCardText'),
     DEFAULT_CARD_MESSAGES: get('DEFAULT_CARD_MESSAGES'),
+    // M5 sound
+    SOUNDS: get('SOUNDS'),
+    AUDIO_CATEGORIES: get('AUDIO_CATEGORIES'),
+    AudioManager: get('AudioManager'),
+    clampVolume: get('clampVolume'),
     localStorage,
     tileInfo: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8')),
   };

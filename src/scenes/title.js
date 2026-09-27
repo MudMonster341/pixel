@@ -37,7 +37,10 @@ const MENU_TOP_MIN = 180; // never crowds the "LUG Treasure Hunt" subtitle above
 // named there for something actually wired into the game (`grep` the packs list below against that
 // file's own headings before editing either one) -- not restated from memory. Sprout Lands' free-tier
 // licence spells out an exact required line ("credit required... Assets - From: Sprout Lands - By:
-// Cup Nooble"), kept verbatim rather than paraphrased.
+// Cup Nooble"), kept verbatim rather than paraphrased. The "Audio:" section (merged in with
+// feature/audio, docs/ROADMAP.md M5) follows the same rule for CREDITS.md's own "Character, icon,
+// and audio survey" section: Kenney's CC0 packs don't strictly require credit, but this game already
+// credits Kenney's other CC0 art above for consistency, so the audio ones get the same treatment.
 // Kept as short, individually pre-wrapped lines (each comfortably under this panel's own wrap width)
 // rather than long paragraphs left for Phaser's word-wrap to break up on its own -- the exact
 // required phrases (the Sprout Lands credit line especially) must never be split mid-sentence across
@@ -68,6 +71,12 @@ const CREDITS_LINES = [
   'Pixel Seating by Molly "Cougarmint" Willits --',
   'auditorium seats, CC-BY 3.0.',
   '',
+  'Audio:',
+  'RPG/UI Audio & Jingles by Kenney Vleugels --',
+  'footsteps, menu sfx, jingles (kenney.nl). CC0.',
+  '15 Melodic RPG Chiptunes by Aureolus_Omicron --',
+  'title, overworld, mini-game and card music. CC0.',
+  '',
   'A gift, never sold.',
 ];
 
@@ -79,6 +88,11 @@ class TitleScene extends Phaser.Scene {
   preload() {
     if (!this.textures.exists('title-bg')) this.load.image('title-bg', 'assets/cutscenes/gate2.png');
     if (!this.textures.exists('title-fg')) this.load.image('title-fg', 'assets/cutscenes/title-fg.png');
+    // M5 sound: the title screen is reachable before BootScene's own preload() ever runs (Play/
+    // Continue is what starts it), so titleMusic needs loading here too -- AudioManager.preload()
+    // skips anything already cached, so this and BootScene's later call never double-load a file.
+    // `?audio=0` skips it (src/maplogic.js audioEnabled()), same as BootScene.
+    if (audioEnabled()) AudioManager.preload(this);
   }
 
   create() {
@@ -107,13 +121,17 @@ class TitleScene extends Phaser.Scene {
     // revealed, the menu's own buttons own clicks instead (see buildMenu() above).
     this.input.on('pointerdown', () => { if (this.stage === 'intro') this.showMenu(); });
 
-    // FB-0037/FB-0040: while Credits is open, Up/Down scroll its (possibly-clipped) content; while
-    // the "start a new game?" confirm is open, they move its No/Yes highlight instead. Both checks
-    // come before moveMenu() so the title menu's own highlight never moves underneath an open overlay.
+    // FB-0037/FB-0040/M5 sound: while the "start a new game?" confirm is open, Up/Down move its
+    // No/Yes highlight; while the (shared) Controls/Sound panel is open, they move its highlighted
+    // settings row; while Credits is open, they scroll its (possibly-clipped) content. All three
+    // checks come before moveMenu() so the title menu's own highlight never moves underneath an open
+    // overlay -- and the three overlays are never open at once (each only opens from the plain menu),
+    // so this priority order never actually has to arbitrate between two of them at the same time.
     for (const key of ['UP', 'W']) {
       this.input.keyboard.on(`keydown-${key}`, (e) => {
         if (e.repeat) return;
         if (this.newGameConfirm.visible) this.moveNewGameConfirm(-1);
+        else if (this.controls.visible) this.controls.moveSetting(-1);
         else if (this.credits.visible) this.scrollCredits(-1);
         else this.moveMenu(-1);
       });
@@ -122,9 +140,18 @@ class TitleScene extends Phaser.Scene {
       this.input.keyboard.on(`keydown-${key}`, (e) => {
         if (e.repeat) return;
         if (this.newGameConfirm.visible) this.moveNewGameConfirm(1);
+        else if (this.controls.visible) this.controls.moveSetting(1);
         else if (this.credits.visible) this.scrollCredits(1);
         else this.moveMenu(1);
       });
+    }
+    // M5 sound: Left/Right adjust the highlighted setting row while the Controls panel's open --
+    // otherwise unused by the title menu itself (it's Up/Down + Enter only), so no collision.
+    for (const key of ['LEFT', 'A']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.controls.visible) this.controls.adjustSetting(-1); });
+    }
+    for (const key of ['RIGHT', 'D']) {
+      this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.controls.visible) this.controls.adjustSetting(1); });
     }
     for (const key of ['ENTER', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat) this.onConfirm(); });
     this.input.keyboard.on('keydown-ESC', (e) => { if (!e.repeat) this.onCancel(); });
@@ -182,10 +209,15 @@ class TitleScene extends Phaser.Scene {
 
   // "PRESS ENTER" and the menu are never both on screen (owner feedback: showing both said the same
   // thing twice) -- this is the one-way switch between them.
+  // M5 sound (docs/ROADMAP.md rule 5): this keypress/click is the natural first real gesture almost
+  // every player makes, so it's where the title music actually starts -- Phaser's own SoundManager
+  // queues the play() call if the browser's autoplay lock hasn't lifted yet at this exact instant and
+  // flushes it the moment it does, so this never needs to check "am I unlocked yet" itself.
   showMenu() {
     this.stage = 'menu';
     this.pressEnter.setVisible(false);
     this.menuButtons.forEach((button) => button.setVisible(true));
+    AudioManager.playMusic('titleMusic');
   }
 
   // Continue only shows up when a save actually exists (docs/GAME_FEEL.md); its own label says
@@ -275,8 +307,14 @@ class TitleScene extends Phaser.Scene {
   scrollCredits(direction) {
     const c = this.credits;
     if (!c.maxScroll) return;
-    c.scroll = Phaser.Math.Clamp(c.scroll + direction * 3 * 13, 0, c.maxScroll);
+    const next = Phaser.Math.Clamp(c.scroll + direction * 3 * 13, 0, c.maxScroll);
+    if (next === c.scroll) return; // already at the top/bottom -- nothing moved, so no sound either
+    c.scroll = next;
     c.body.setY(c.viewY - c.scroll);
+    // M5 sound: the same menuMove tick every other keyboard-driven highlight/scroll in this game
+    // plays (moveMenu(), ControlsPanel.moveSetting(), moveNewGameConfirm() below) -- a scrolling
+    // panel is still "moving the highlight" in spirit, just over content instead of a menu row.
+    AudioManager.play('menuMove');
   }
 
   closeCredits() {
@@ -288,6 +326,7 @@ class TitleScene extends Phaser.Scene {
     if (this.stage !== 'menu' || this.controls.visible || this.credits.visible || this.newGameConfirm.visible) return;
     this.menuIndex = (this.menuIndex + direction + this.menuItems.length) % this.menuItems.length;
     this.refreshMenu();
+    AudioManager.play('menuMove');
   }
 
   refreshMenu() {
@@ -315,6 +354,7 @@ class TitleScene extends Phaser.Scene {
   }
 
   confirmMenu() {
+    AudioManager.play('menuConfirm');
     const item = this.menuItems[this.menuIndex];
     // FB-0040: "Play" used to silently reset the game state (and, the moment autosave next fired,
     // overwrite whatever save already existed) with no way to back out. Continue/Watch the Card Again
@@ -383,6 +423,7 @@ class TitleScene extends Phaser.Scene {
     const c = this.newGameConfirm;
     c.index = (c.index + direction + c.items.length) % c.items.length;
     this.refreshNewGameConfirm();
+    AudioManager.play('menuMove'); // M5 sound: the same tick moveMenu()/ControlsPanel.moveSetting() use
   }
 
   refreshNewGameConfirm() {
@@ -397,6 +438,10 @@ class TitleScene extends Phaser.Scene {
   }
 
   resolveNewGameConfirm(startNewGame) {
+    // M5 sound: every way this panel resolves (Yes, No, or Esc-as-No) is a real, deliberate choice
+    // the player just made -- the same menuConfirm DialogBox.confirmChoice() plays regardless of
+    // which choice was picked, not just a "successful" one.
+    AudioManager.play('menuConfirm');
     this.closeNewGameConfirm();
     if (startNewGame) this.startPlay(false);
     // 'No': just closes, back to the menu exactly as it was -- no game state touched.

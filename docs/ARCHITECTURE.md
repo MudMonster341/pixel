@@ -248,6 +248,44 @@ Every map object has the same basic shape: `{ id, type, x, y, when?, ... }`. `x`
 Opened chests, taken pickups and one-off triggers are recorded in GameState by `id`, so they stay
 done after a map change or a reload.
 
+## Depth groups and door entry (ADR 0015)
+
+Every building, tree and piece of tall furniture that should draw in front of the player when she's
+behind it, and behind her when she's in front, is a **depth group** -- a rectangle (tiles) the map's
+own data declares. The engine (`src/scenes/world.js` `buildDepthGroups()`) bakes each one's tiles into
+a single static image at map load and sorts it against every character by feet, never by hand-tuned
+per-tile depth.
+
+- **Tiled maps** (the campus, interiors): a `depthGroup`-typed object on any object layer, the usual
+  `{ x, y, width, height }` rect in pixels (tiles once read through `tiledObjects()`), plus an
+  optional `baseOffset` property (rows above the rect's own bottom edge where the base line sits --
+  default 0, the rect's literal bottom row). Baked from every tile layer except `ground` (so ground
+  itself never bakes into a group and always stays the flat, always-under-everyone base).
+- **Text maps** (meadow/house, `src/maps.js`): a `depthGroups: [{ x, y, width, height, baseOffset? }]`
+  array on the map def -- the same shape, since a text map only ever has the one merged tile layer
+  (structures already stamped onto ground), the whole rect bakes as a single unit.
+- **A tile inside more than one group belongs to the smallest** (`src/maplogic.js` `depthGroupAt()`,
+  pure and unit-tested) -- e.g. a lamp post's own tiny rect over the corner of a bigger building's.
+  A tile outside every group is left completely alone: not baked, not hidden, no collision change.
+- **A map with no `depthGroup` data renders exactly as it did before this ADR** -- the campus has none
+  yet (a parallel art branch adds them); nothing here is required for a map to keep working.
+- **Depth is feet, not sprite anchor**: the player's and every NPC's depth is the bottom of their
+  physics body (`PLAYER_FEET_OFFSET`/`npc.body.bottom`, `src/scenes/world.js`), so a group's own depth
+  (its base line in pixels) sorts against her the same way any other object with feet would.
+
+**Door entry.** A `door`/`stairs` warp (Tiled object, or a text map's own `warps` entry -- both
+resolved into one shape by `world.js` `getWarpPoints()`) may carry an `openTiles` property: a
+comma-separated list of tile names (`assets/tiles.json`), one per door tile, left to right starting
+at the door's own tile. Missing/empty is fine -- the walk-in/out still happens, just with no overlay
+to show (the campus art branch adds real tile names later; nothing here requires them yet). Stepping
+onto an unlocked door: input locks, the door's own sound plays and its `openTiles` overlay shows (if
+any), she walks one tile further in (still animating) so her feet cross the group's own base line and
+she's hidden behind it, *then* the screen fades and the map changes. Arriving through a door plays the
+same shape in reverse -- `src/maplogic.js` `doorTileFromSpawn()` (spawn point + facing, inverted) finds
+which door tile she's arriving through without any extra per-map data. A locked door never opens: it
+rattles in place and the usual toast shows, same throttle as everywhere else (once per approach).
+Stairs get the same walk-in/out shape, just shorter, with no overlay.
+
 ## Naming
 
 - **ids:** kebab-case, globally unique, prefixed by map: `meadow-chest-1`, `house-sign`.

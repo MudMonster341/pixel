@@ -33,3 +33,34 @@ test('the frame rate holds up while walking the campus for a few seconds', async
   // (e.g. an accidental O(n^2) added to the per-frame update), not ordinary machine variance.
   expect(fps).toBeGreaterThan(20);
 });
+
+// ADR 0015 (FB-0027, depth groups): the real campus has no `depthGroup` objects yet (a parallel art
+// branch adds them), so this injects 250 synthetic ones into the loaded Tiled JSON itself -- proving
+// the baking pass (src/scenes/world.js buildDepthGroups()) stays cheap at a realistic-or-bigger group
+// count, on the actual 534x341-tile map, not just on the small meadow/house test maps. Bounded by
+// "tiles inside a group" x "groups", never by map size, so this should track the plain load above.
+test('FB-0027: baking 250 synthetic depth groups does not visibly slow the campus load', async ({ page }) => {
+  await page.route('**/assets/maps/campus.json', async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    const objectLayer = json.layers.find((layer) => layer.type === 'objectgroup');
+    const nextId = Math.max(0, ...objectLayer.objects.map((o) => o.id)) + 1;
+    for (let i = 0; i < 250; i++) {
+      objectLayer.objects.push({
+        id: nextId + i, name: `synthetic-group-${i}`, type: 'depthGroup', class: 'depthGroup',
+        x: (i % 20) * 4 * 16, y: Math.floor(i / 20) * 4 * 16, width: 3 * 16, height: 3 * 16,
+        rotation: 0, visible: true, properties: [],
+      });
+    }
+    await route.fulfill({ response, json });
+  });
+
+  const start = Date.now();
+  await openGame(page, { map: null });
+  const loadMs = Date.now() - start;
+  console.log(`[perf] campus load time with 250 synthetic depth groups: ${loadMs}ms`);
+  expect(loadMs).toBeLessThan(15_000); // same generous budget as the plain campus load above
+
+  const groupCount = await page.evaluate(() => game.scene.getScene('world').depthGroups.length);
+  expect(groupCount).toBeGreaterThanOrEqual(250);
+});

@@ -30,10 +30,26 @@ const PLAYER_IDLE = { down: 0, up: CHAR_COLS, left: 2 * CHAR_COLS, right: 3 * CH
 // Legacy 3-frame sheet (Tomas/Guide's 'npc' texture, unchanged hand-drawn art, no walk cycle): one
 // static idle frame per direction, same numbering it always had.
 const NPC_FRAME = { down: 0, up: 1, left: 2, right: 2 };
-// A door/stairs object's `facing` property is the direction the player faces once they arrive AT
-// that object (see docs/INTERIORS_PLAN.md "door object format"). Spawning one tile further along
-// that direction lands the player just past the threshold, not standing on the trigger tile itself.
-const DIRECTION_OFFSET = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+// DIRECTION_OFFSET now lives in src/maplogic.js (doorTileFromSpawn() needs it too, in reverse) --
+// spawning one tile further along a door/stairs object's own `facing` lands the player just past the
+// threshold, not standing on the trigger tile itself (docs/INTERIORS_PLAN.md "door object format").
+
+// ADR 0015 (depth groups and door entry): the player's depth sorts by her feet, not her sprite's own
+// anchor -- the body's bottom edge sits this many px below the sprite origin (see createPlayer()'s
+// own comment on the (origin + 8) invariant every spawn point/door/warp trigger is authored against).
+const PLAYER_FEET_OFFSET = 8;
+// Timings (docs/GAME_FEEL.md "nothing is a flat instant cut", ADR 0015's own "Pokemon style" brief):
+// a door's walk-in/out is a full, readable step; stairs get a shorter one since there's no doorway to
+// clear. The door itself (if it has `openTiles`) opens just before she starts walking, at roughly
+// half the walk's own duration -- and the fade that follows a departure is the existing 250ms
+// (unchanged, docs/STYLE_GUIDE.md).
+const DOOR_WALK_MS = 250;
+const STAIRS_WALK_MS = 150;
+const DOOR_RATTLE_MS = 200;
+// Footstep dust (ADR 0015): a puff roughly every couple of steps while running outdoors, not every
+// frame -- 220ms is a little faster than one full run-animation cycle (12fps, 6 frames ~ 500ms) so it
+// reads as "every other step", not a fixed clock unrelated to her stride.
+const DUST_INTERVAL_MS = 220;
 
 // Where the held item sits relative to the player's center, per facing (FB-0002). Y values carry a
 // +4 shift from their old 16x16-frame numbers (ADR 0013): the sprite's origin moved from (8,8) to
@@ -59,8 +75,19 @@ class WorldScene extends Phaser.Scene {
     // Set when a Tiled door/stairs object sent the player here (instead of a concrete `spawn`):
     // the name of the object to land in front of, resolved once `this.mapObjects` exists (buildMap).
     this.spawnAt = data.spawnAt || null;
+    // Set when a warp (not the initial boot/continue/`?map=` debug entry) sent the player here (ADR
+    // 0015): 'door' or 'stairs', matching the warp's own `kind` (see getWarpPoints()) -- create()
+    // plays the matching arrival animation when this is set, and leaves her exactly at `this.spawn`
+    // with no animation at all when it's null, unchanged from every build before this one.
+    this.viaWarpKind = data.viaWarpKind || null;
     this.transitioning = false;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
+    // Cached warpPoints() (perf: this used to be rebuilt twice a frame, doorAssist() and checkWarps()
+    // both calling it) -- only the `locked` flags ever change after map load, and only when the quest
+    // stage does, so getWarpPoints() below recomputes just those instead of the whole array.
+    this._warpPointsCache = null;
+    this._warpStage = null;
+    this.dustAccum = 0; // footstep dust puff timer (outdoors, while running)
   }
 
   preload() {
@@ -81,7 +108,17 @@ class WorldScene extends Phaser.Scene {
 
     const { widthInPixels: width, heightInPixels: height } = this.map;
     this.physics.world.setBounds(0, 0, width, height);
-    this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height).startFollow(this.player, true).fadeIn(250, 0, 0, 0);
+    // Camera feel (ADR 0015): smooth follow (a real lerp, not the instant snap `startFollow`'s own
+    // default lerp of 1 was giving it before) with roundPixels (unchanged, also set globally in
+    // src/main.js's game config) so tiles/characters never shimmer sub-pixel. `centerOn` right after
+    // is the "camera settle" -- without it, a freshly restarted scene's camera starts at its own
+    // default scroll and would visibly glide/pan onto the player over the first several frames of
+    // the fade-in, reading as its own little cut; centering once, immediately, means the lerp only
+    // ever has to catch up to *real* movement from here on, never a warp's own teleport.
+    this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height)
+      .startFollow(this.player, true, 0.18, 0.18)
+      .centerOn(this.player.x, this.player.y)
+      .fadeIn(250, 0, 0, 0);
 
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT');
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
@@ -104,6 +141,12 @@ class WorldScene extends Phaser.Scene {
     // these on every map load (not just the very first) is harmless -- they only ever display once.
     this.game.events.emit('hint', 'move');
     if (!this.def.indoors) this.game.events.emit('hint', 'run');
+
+    // ADR 0015 arrival: plays *after* everything above (so map-entered/hints fire immediately, the
+    // same instant they always have) but sets `this.transitioning = true` itself, so the very first
+    // update() tick after this still skips movement/warps/etc. -- exactly like a departure's own fade
+    // already does, just for the walk-out instead of the walk-in.
+    if (this.viaWarpKind) this.playDoorArrival(this.viaWarpKind);
   }
 
   buildMap() {
@@ -134,6 +177,15 @@ class WorldScene extends Phaser.Scene {
         const spawn = this.mapObjects.find((o) => o.type === 'spawn');
         this.spawn = { x: Math.floor(spawn.x), y: Math.floor(spawn.y), facing: spawn.props.facing };
       }
+      // ADR 0015: `depthGroup` objects (a Tiled object layer, rect in tiles as tiledObjects() always
+      // gives them). Baked from the non-ground layers only -- 'ground' itself is never part of a
+      // group, it stays a static, always-under-everything base the same way it always has.
+      this.buildDepthGroups(
+        this.mapObjects
+          .filter((o) => o.type === 'depthGroup')
+          .map((o) => ({ x: o.x, y: o.y, width: o.width, height: o.height, baseOffset: Number(o.props.baseOffset) || 0 })),
+        this.solidLayers.filter((l) => l.layer.name !== 'ground').concat(this.overheadLayer ? [this.overheadLayer] : []),
+      );
       return;
     }
 
@@ -141,6 +193,75 @@ class WorldScene extends Phaser.Scene {
     this.map = this.make.tilemap({ data: this.tileData, tileWidth: TILE, tileHeight: TILE });
     this.solidLayers = [this.map.createLayer(0, this.map.addTilesetImage('tiles'), 0, 0).setCollision(solid)];
     this.mapObjects = [];
+    // ADR 0015: text maps (meadow/house) get the same thing as a plain `depthGroups` array on the
+    // map def (src/maps.js) -- there's only ever the one merged layer here (ground and structures
+    // stamped together, buildTileGrid()), so the whole rect bakes as a unit; a tile outside every
+    // group is untouched, same as the Tiled path above.
+    this.buildDepthGroups(
+      (this.def.depthGroups || []).map((g) => ({ x: g.x, y: g.y, width: g.width, height: g.height, baseOffset: g.baseOffset || 0 })),
+      this.solidLayers,
+    );
+  }
+
+  // Bakes each group's visible tiles (from `bakeLayers`) into one static image (a RenderTexture,
+  // ADR 0015), positioned and sized to the group's own rect, at a depth matching its base line in
+  // pixels -- then hides (never removes, never touches collision) the original tiles it just copied,
+  // smallest-group-wins (src/maplogic.js depthGroupAt()), so a tile inside more than one group is
+  // only ever baked/hidden once, by the smallest. A map with no groups at all does nothing here,
+  // rendering exactly as before this ADR.
+  buildDepthGroups(groupDefs, bakeLayers) {
+    this.depthGroups = [];
+    if (!groupDefs.length) return;
+    this.ensureTileFrames();
+
+    // Bounded by "tiles actually inside a group" x "groups" x "layers baked" -- never by the whole
+    // map, which is what keeps this cheap even at the 250-synthetic-group performance budget
+    // (tests/e2e/performance.spec.js): a RenderTexture per group, each tile blitted in by its own
+    // registered frame (ensureTileFrames()) at its position local to the group's own rect.
+    for (const group of groupDefs) {
+      const px = group.x * TILE;
+      const py = group.y * TILE;
+      const rt = this.add.renderTexture(px, py, group.width * TILE, group.height * TILE).setOrigin(0, 0);
+      for (let ty = group.y; ty < group.y + group.height; ty++) {
+        for (let tx = group.x; tx < group.x + group.width; tx++) {
+          for (const layer of bakeLayers) {
+            const tile = layer.getTileAt(tx, ty);
+            if (tile) rt.drawFrame('tiles', tile.index - 1, (tx - group.x) * TILE, (ty - group.y) * TILE);
+          }
+        }
+      }
+      const depth = (group.y + group.height - group.baseOffset) * TILE;
+      rt.setDepth(depth);
+      this.depthGroups.push({ ...group, rt, depth });
+    }
+
+    // Hide the tiles just baked, smallest-group-wins (src/maplogic.js depthGroupAt()) -- a tile
+    // inside more than one group is only ever baked/hidden by the smallest; Tile.visible, never the
+    // tile's index, so collision (already set up via setCollision() in buildMap()) is untouched.
+    for (const group of this.depthGroups) {
+      for (let ty = group.y; ty < group.y + group.height; ty++) {
+        for (let tx = group.x; tx < group.x + group.width; tx++) {
+          if (depthGroupAt(this.depthGroups, tx, ty) !== group) continue; // a smaller group owns it
+          for (const layer of bakeLayers) {
+            const tile = layer.getTileAt(tx, ty);
+            if (tile) tile.visible = false;
+          }
+        }
+      }
+    }
+  }
+
+  // Registers one Phaser texture frame per tile (assets/tiles.json order, tileInfo.columns per row)
+  // on the 'tiles' texture -- loaded as a single plain image (BootScene), not a spritesheet, since a
+  // Tiled tileset doesn't need Phaser's own frame slicing to work as a tilemap. Depth groups (and the
+  // door overlay/rattle below) need individual tile frames to blit/display standalone, so this adds
+  // them once, lazily, the first time any map actually needs one -- a no-op on every later map load
+  // (the TextureManager, and the frames on it, persist across a scene restart).
+  ensureTileFrames() {
+    const tex = this.textures.get('tiles');
+    if (tex.has(0)) return;
+    const cols = this.tileInfo.columns;
+    this.tileInfo.tiles.forEach((_, i) => tex.add(i, 0, (i % cols) * TILE, Math.floor(i / cols) * TILE, TILE, TILE));
   }
 
   createAnimations() {
@@ -188,7 +309,8 @@ class WorldScene extends Phaser.Scene {
     // the-object rule pickups already follow (STYLE_GUIDE.md "Drop shadows"), just repositioned every
     // frame in movePlayer() instead of being static. Depth sits one below the player's own so it
     // never draws over her feet.
-    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 9, 12, 4, 0x000000, 0.28).setDepth(this.player.y - 1);
+    this.playerShadow = this.add.ellipse(this.player.x, this.player.y + 9, 12, 4, 0x000000, 0.28)
+      .setDepth(this.player.y + PLAYER_FEET_OFFSET - 1);
   }
 
   createNpcs() {
@@ -205,13 +327,15 @@ class WorldScene extends Phaser.Scene {
       if (def.character) npc.body.setSize(10, 6).setOffset(3, 14);
       else npc.body.setSize(12, 8).setOffset(2, 12);
       npc.setImmovable(true);
-      npc.setDepth(npc.y);
+      // ADR 0015: depth by feet (body.bottom), not sprite anchor -- computed once here since NPCs
+      // never move, unlike the player's own per-frame p.y + PLAYER_FEET_OFFSET (movePlayer()).
+      npc.setDepth(npc.body.bottom);
       npc.def = def;
       npc.idleFrames = idleFrames;
       this.physics.add.collider(this.player, npc);
       // Same ground shadow as the player (see createPlayer()); NPCs don't move yet, so a static
       // shadow needs no per-frame update.
-      this.add.ellipse(npc.x, npc.y + 9, 12, 4, 0x000000, 0.28).setDepth(npc.y - 1);
+      this.add.ellipse(npc.x, npc.y + 9, 12, 4, 0x000000, 0.28).setDepth(npc.body.bottom - 1);
       return npc;
     });
     // Interaction bubble (docs/STYLE_GUIDE.md "Speech bubbles"): frame 0 = "E" (something to say),
@@ -257,7 +381,7 @@ class WorldScene extends Phaser.Scene {
 
     const ui = this.scene.get('ui');
     const blocked = !ui.tutorial || ui.isBlocking();
-    this.movePlayer(blocked, time);
+    this.movePlayer(blocked, time, delta);
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
@@ -286,7 +410,7 @@ class WorldScene extends Phaser.Scene {
     else if (!ui.isBlocking()) this.interact();
   }
 
-  movePlayer(blocked, time) {
+  movePlayer(blocked, time, delta) {
     const k = this.keys;
     const p = this.player;
     let dx = 0;
@@ -307,8 +431,9 @@ class WorldScene extends Phaser.Scene {
       if (steer !== null) velocity.x = steer;
     }
     p.setVelocity(velocity.x, velocity.y);
-    p.setDepth(p.y);
-    this.playerShadow.setPosition(p.x, p.y + 9).setDepth(p.y - 1);
+    // ADR 0015: depth by feet, not the sprite's own anchor -- see PLAYER_FEET_OFFSET's own comment.
+    p.setDepth(p.y + PLAYER_FEET_OFFSET);
+    this.playerShadow.setPosition(p.x, p.y + 9).setDepth(p.y + PLAYER_FEET_OFFSET - 1);
     p.anims.timeScale = running ? RUN_ANIM_SCALE : 1;
 
     const moved = Phaser.Math.Distance.Between(this.lastPosition.x, this.lastPosition.y, p.x, p.y);
@@ -333,31 +458,68 @@ class WorldScene extends Phaser.Scene {
       p.anims.play(`walk-${this.facing}`, true);
     }
 
+    // Footstep dust (ADR 0015): a small puff at her feet every so often while actually running
+    // outdoors -- never indoors (running itself is already off indoors, FB-0017, so this piggybacks
+    // on that same `running` flag), never while merely idling with Shift held (guarded by `moving`).
+    if (running && moving) {
+      this.dustAccum = (this.dustAccum || 0) + delta;
+      if (this.dustAccum >= DUST_INTERVAL_MS) {
+        this.dustAccum = 0;
+        spawnDustPuff(this, p.x, p.y + 9);
+      }
+    } else {
+      this.dustAccum = 0;
+    }
+
     this.updateHeldItem(time, moving);
   }
 
   // Every warp trigger point on this map, in one shape: text-map `warps` entries (already
-  // {x,y,to,spawn}) plus Tiled `door`/`stairs` objects with a `to` property (campus buildings,
-  // interior stairs). Used by both doorAssist (below) and checkWarps.
+  // {x,y,to,spawn}, ADR 0015 `kind: 'door'` -- nothing in this game uses a text-map stairs) plus
+  // Tiled `door`/`stairs` objects with a `to` property (campus buildings, interior stairs). Used by
+  // both doorAssist (below) and checkWarps, through the cached getWarpPoints() below -- call this
+  // directly only to rebuild the cache from scratch (map load, or a stage change).
   // `locked`/`lockedReason` (roadmap M1 "Blocked doors", docs/STORY.md "Rules for the world") come
   // from the map def's own `doorLocks` (src/maps.js), matched by the object's exact Tiled name --
   // see src/maplogic.js doorLockRule()/isDoorLocked(). A text-map `warps` entry is never locked
-  // (nothing in this game gates the meadow/house test maps).
-  warpPoints() {
+  // (nothing in this game gates the meadow/house test maps). `openTiles` (ADR 0015) is parsed once
+  // here too (src/maplogic.js parseOpenTiles()) -- null when the property's missing, so every caller
+  // downstream already gets the "no property -> no overlay, walk-in still happens" fallback for free.
+  computeWarpPoints() {
+    const textWarps = (this.def.warps || []).map((w) => ({
+      ...w, kind: w.kind || 'door', locked: false, lockedReason: null, _rule: null,
+      openTiles: parseOpenTiles(w.openTiles),
+    }));
     const objectWarps = (this.mapObjects || [])
       .filter((o) => (o.type === 'door' || o.type === 'stairs') && o.props.to)
       .map((o) => {
         const rule = doorLockRule(this.def.doorLocks, o.name);
         return {
-          x: Math.floor(o.x), y: Math.floor(o.y), to: o.props.to, spawnAt: o.props.toId, name: o.name,
-          locked: isDoorLocked(rule, GameState.quest.stage),
+          x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, to: o.props.to, spawnAt: o.props.toId,
+          name: o.name, kind: o.type, openTiles: parseOpenTiles(o.props.openTiles),
+          locked: isDoorLocked(rule, GameState.quest.stage), _rule: rule,
           lockedReason: (rule && rule.reason) || 'Locked for the event',
           // M5 sound (checkWarps() below): a Tiled 'stairs' object gets the warp/stairs sfx, a 'door'
           // (or a plain text-map warp, which has no `type` at all) gets the door-open sfx.
           type: o.type,
         };
       });
-    return [...(this.def.warps || []), ...objectWarps];
+    return [...textWarps, ...objectWarps];
+  }
+
+  // Cached per docs/plans/2026-09-26-premium-pass.md's own performance note: this used to be rebuilt
+  // (a fresh array, fresh objects) twice a frame -- doorAssist() and checkWarps() both calling
+  // warpPoints() directly. The only thing that can change after map load is which doors are locked,
+  // and only when the quest stage changes, so that's the only recompute this does on a cache hit.
+  getWarpPoints() {
+    if (!this._warpPointsCache) {
+      this._warpPointsCache = this.computeWarpPoints();
+      this._warpStage = GameState.quest.stage;
+    } else if (this._warpStage !== GameState.quest.stage) {
+      this._warpStage = GameState.quest.stage;
+      for (const w of this._warpPointsCache) w.locked = isDoorLocked(w._rule, GameState.quest.stage);
+    }
+    return this._warpPointsCache;
   }
 
   // Doors are one or two tiles wide, so walking at one slightly off-center would snag on the wall.
@@ -365,7 +527,7 @@ class WorldScene extends Phaser.Scene {
   doorAssist(dy, speed) {
     const body = this.player.body;
     const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
-    const warp = this.warpPoints().find(
+    const warp = this.getWarpPoints().find(
       (w) => w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE,
     );
     if (!warp) return null;
@@ -608,7 +770,7 @@ class WorldScene extends Phaser.Scene {
     const body = this.player.body;
     const tileX = Math.floor(body.center.x / TILE);
     const tileY = Math.floor((body.bottom - 1) / TILE);
-    const warp = this.warpPoints().find((w) => w.x === tileX && w.y === tileY);
+    const warp = this.getWarpPoints().find((w) => w.x === tileX && w.y === tileY);
     if (!warp) {
       this.lockedWarned = null;
       return;
@@ -616,12 +778,14 @@ class WorldScene extends Phaser.Scene {
 
     // Locked (roadmap M1 "Blocked doors", docs/STORY.md): a toast, not a silent wall -- thrown once
     // per approach (the same "warned" throttle updatePickups() uses for a full bag), not every frame
-    // she stands on the tile.
+    // she stands on the tile. ADR 0015: a locked *door* also rattles (never opens); stairs never had
+    // an overlay/rattle to begin with, so they're unaffected -- just the toast, same as before.
     if (warp.locked) {
       if (this.lockedWarned !== warp.name) {
         this.lockedWarned = warp.name;
         this.game.events.emit('toast', warp.lockedReason);
         AudioManager.play('lockedDoorThud');
+        if (warp.kind === 'door') this.rattleDoor(warp);
       }
       return;
     }
@@ -641,13 +805,162 @@ class WorldScene extends Phaser.Scene {
       return;
     }
 
+    // ADR 0015: `transitioning = true` here (not just once the fade actually starts) is what keeps
+    // mashing Esc/any other key from ever double-warping or soft-locking -- update() (and every
+    // one-shot keydown handler, onInteractKey()) bails out immediately while this is true, for the
+    // whole walk-in + fade, exactly as it already did for the plain fade before this ADR.
     this.transitioning = true;
     this.player.setVelocity(0, 0);
-    this.player.anims.stop();
     this.prompt.setVisible(false);
-    AudioManager.play(warp.type === 'stairs' ? 'warpStairs' : 'doorOpen');
-    this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt }));
+    this.playDoorDeparture(warp);
+  }
+
+  // ADR 0015 "Pokemon style" door entry, departure half: she keeps walking (the walk animation stays
+  // on, one tile further in the direction she was already heading), *then* the screen fades and the
+  // map actually changes -- never an instant cut the moment her feet cross the trigger tile. Stairs
+  // get the same shape, just shorter and with no door overlay (there's nothing to open/close).
+  playDoorDeparture(warp) {
+    const facing = this.facing;
+    // The door/stairs sound plays right here, at the moment the door actually opens (audio merge,
+    // src/audio.js) -- not at the old fadeOut point, since that's now a full walk-in later.
+    AudioManager.play(warp.kind === 'stairs' ? 'warpStairs' : 'doorOpen');
+    const overlay = warp.kind === 'door' ? this.showDoorOverlay(warp) : null;
+    this.walkThroughDoor(facing, warp.kind, () => {
+      this.player.anims.stop();
+      this.cameras.main.fadeOut(250, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        if (overlay) overlay.destroy();
+        this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt, viaWarpKind: warp.kind });
+      });
+    });
+  }
+
+  // ADR 0015 door entry, arrival half (the reverse of playDoorDeparture): she appears hidden in the
+  // doorway (the tile the departing warp was triggered from, derived from her own spawn point +
+  // facing -- src/maplogic.js doorTileFromSpawn(), the exact inverse of resolveSpawnAt()'s forward
+  // math) and walks out to her real spawn point, door overlay open then closed behind her. Called
+  // from create() only when `viaWarpKind` was actually set (a real warp sent her here, not the
+  // initial boot/continue/`?map=` debug entry) -- `this.transitioning` blocks input for exactly as
+  // long as this takes, the same way a departure's own fade does.
+  playDoorArrival(kind) {
+    this.transitioning = true;
+    const facing = this.spawn.facing || this.facing;
+    const doorTile = doorTileFromSpawn(this.spawn, facing);
+    this.player.setPosition(toPixel(doorTile.x), toPixel(doorTile.y));
+    this.player.body.reset(this.player.x, this.player.y);
+    this.syncDoorVisuals();
+
+    // The SAME warp data the departure side would have used, just read from this (the arrival) map's
+    // own getWarpPoints() -- a door's `openTiles` is authored per side, so this is deliberately not
+    // just "whatever the departing scene passed along".
+    const warp = this.getWarpPoints().find((w) => w.x === doorTile.x && w.y === doorTile.y) || null;
+    const overlay = kind === 'door' && warp ? this.showDoorOverlay(warp) : null;
+    // The same door/stairs sound as the departure side (src/audio.js), played again here since this
+    // is a second, real "the door opens" moment -- she appears behind a closed door and it opens for
+    // her to walk out, the reverse of playDoorDeparture()'s own opening beat above.
+    AudioManager.play(kind === 'stairs' ? 'warpStairs' : 'doorOpen');
+    this.walkThroughDoor(facing, kind, () => {
+      if (overlay) overlay.destroy();
+      this.transitioning = false;
+    }, { x: toPixel(this.spawn.x), y: toPixel(this.spawn.y) });
+  }
+
+  // Shared walk animation for both halves above: plays the walk cycle in `facing` while tweening the
+  // player exactly one tile further that way (or straight to `to`, for the arrival side, which walks
+  // from the doorway back to her real spawn point -- not always exactly one tile, e.g. the house's
+  // own half-tile-centered doorway). Keeps depth/shadow/held-item in sync every tick via
+  // syncDoorVisuals(), since `this.transitioning` skips the normal movePlayer() path entirely for
+  // this whole sequence.
+  walkThroughDoor(facing, kind, onComplete, to) {
+    const p = this.player;
+    const [dx, dy] = DIRECTION_OFFSET[facing] || [0, 0];
+    const targetX = to ? to.x : p.x + dx * TILE;
+    const targetY = to ? to.y : p.y + dy * TILE;
+    const duration = kind === 'stairs' ? STAIRS_WALK_MS : DOOR_WALK_MS;
+    p.anims.play(`walk-${facing}`, true);
+    this.tweens.add({
+      targets: p,
+      x: targetX,
+      y: targetY,
+      duration,
+      ease: 'Linear',
+      onUpdate: () => {
+        p.body.reset(p.x, p.y);
+        this.syncDoorVisuals();
+      },
+      onComplete,
+    });
+  }
+
+  // Keeps the player's depth/shadow/held-item current during a scripted door-sequence tween, the
+  // same bookkeeping movePlayer() does every frame normally -- needed here because `this.transitioning`
+  // makes update() skip movePlayer() entirely for the whole sequence.
+  syncDoorVisuals() {
+    const p = this.player;
+    p.setDepth(p.y + PLAYER_FEET_OFFSET);
+    this.playerShadow.setPosition(p.x, p.y + 9).setDepth(p.y + PLAYER_FEET_OFFSET - 1);
+    this.updateHeldItem(this.time.now, true);
+  }
+
+  // The depth an open-door overlay (or a rattle) should draw at: just above whichever depth group
+  // covers the door's own tile (src/maplogic.js depthGroupAt(), the exact same "smallest wins" rule
+  // buildDepthGroups() baked the group images with) -- falling back to the door row's own base line
+  // if it isn't inside any group at all (a text map door with no depth group declared, say).
+  doorOverlayDepth(warp) {
+    const group = depthGroupAt(this.depthGroups || [], warp.x, warp.y);
+    return (group ? group.depth : (warp.y + 1) * TILE) + 1;
+  }
+
+  // A single door tile's art as a floating Image, using its own registered frame on the 'tiles'
+  // texture (ensureTileFrames(), called here defensively since a map with a door but no depth group
+  // at all would otherwise never have registered them) -- shared by showDoorOverlay() (the
+  // `openTiles` art) and rattleDoor() (whatever's already there).
+  tileImage(px, py, tileIndex) {
+    this.ensureTileFrames();
+    return this.add.image(px, py, 'tiles', tileIndex).setOrigin(0, 0);
+  }
+
+  // ADR 0015: the open-doorway overlay, shown over a door's own tile(s) while she walks through --
+  // null (no overlay at all) when the warp has no `openTiles` (the graceful fallback: the walk-in/out
+  // still happens regardless, docs/plans/2026-09-26-premium-pass.md "your code must work with [real
+  // openTiles] data when it lands"). Tiles are laid out left to right starting at the warp's own tile.
+  showDoorOverlay(warp) {
+    if (!warp.openTiles) return null;
+    const depth = this.doorOverlayDepth(warp);
+    const images = warp.openTiles
+      .map((name, i) => {
+        const index = this.tileInfo.tiles.findIndex((t) => t.name === name);
+        if (index === -1) {
+          console.warn(`"${warp.name || warp.to}": unknown openTiles tile "${name}"`);
+          return null;
+        }
+        return this.tileImage((warp.x + i) * TILE, warp.y * TILE, index).setDepth(depth);
+      })
+      .filter(Boolean);
+    return { destroy: () => images.forEach((img) => img.destroy()) };
+  }
+
+  // Locked door feedback (ADR 0015): the door itself shakes a couple of px for ~200ms -- using
+  // whatever tile is *actually* there right now (read straight off the live layer, not `openTiles`),
+  // so this works even for a door with no `openTiles` authored at all, unlike showDoorOverlay() above.
+  rattleDoor(warp) {
+    const doorWidth = Math.max(1, Math.round(warp.width || 1));
+    const depth = this.doorOverlayDepth(warp);
+    // Reversed: prefer a non-ground layer (e.g. 'structures', where a door's own art actually lives)
+    // over 'ground' happening to also have a tile painted at the same spot underneath it.
+    const layer = [...this.solidLayers].reverse().find((l) => l.getTileAt(warp.x, warp.y));
+    if (!layer) return;
+    const images = [];
+    for (let i = 0; i < doorWidth; i++) {
+      const tile = layer.getTileAt(warp.x + i, warp.y);
+      if (!tile) continue;
+      images.push(this.tileImage((warp.x + i) * TILE, warp.y * TILE, tile.index - 1).setDepth(depth));
+    }
+    if (!images.length) return;
+    this.tweens.add({
+      targets: images, x: '+=2', duration: Math.round(DOOR_RATTLE_MS / 5), yoyo: true, repeat: 4,
+      onComplete: () => images.forEach((img) => img.destroy()),
+    });
   }
 
   // The named area/zone object (if any) the player's feet are currently inside, smallest match wins

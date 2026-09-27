@@ -58,8 +58,25 @@ an animated entry sequence driven by the door's own map object.
   without `depthGroup` objects renders exactly as before.
 - Anything placed in a depth group can't change at runtime (it's baked). Animated props stay
   separate sprites.
-- Revisit if baking cost shows up in load time on the campus (83+ groups), for example by baking
-  lazily as groups come into view.
+- Baking cost turned out not to need revisiting: each group only ever touches its own tiles (never
+  the whole map), so it's bounded by "tiles inside a group" x "groups", not by map size at all.
+  Measured with 250 synthetic groups injected into the real campus JSON
+  (`tests/e2e/performance.spec.js`): +200-300ms over a ~900ms plain load, on top of the campus's own
+  eventual 83+ real ones. Lazy baking (as groups come into view) is not needed.
+- The door object's property that names its open-doorway art is called **`openTiles`** here (a
+  comma-separated list of `assets/tiles.json` tile names, one per door tile, left to right from the
+  door's own tile), not `openFrames` as an earlier draft of this ADR said -- "tiles", because that's
+  literally what's shown (a tilemap-tileset lookup, not a sprite-sheet animation frame). Missing/empty
+  is a supported, tested state: the walk-in/out still happens, with no overlay to show, so the engine
+  doesn't have to wait for the art branch's own data to land.
+- `doorTileFromSpawn()` (the arrival side's "which door did I come through") is the exact inverse of
+  the existing `resolveSpawnAt()` math (`target + DIRECTION_OFFSET[facing]`, now reversed), rounded to
+  the nearest whole tile -- needed because a spawn can sit on a half-tile (the house's own doorway,
+  centered between two 1-wide door tiles) while the door itself is always a whole one.
+- The player's/NPCs' depth switched from the sprite's own anchor (`y`) to the physics body's bottom
+  edge (feet) as part of this same change, since a depth group's own base line is a pixel position on
+  the ground, not a sprite-center height -- sorting the two against anything but "feet" would be
+  comparing different things.
 
 ## Links
 - Related: [ADR 0008](0008-campus-as-straight-schematic-plan.md) (the overhead layer this extends),

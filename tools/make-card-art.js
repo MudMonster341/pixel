@@ -123,11 +123,22 @@ const C = {
   // ramp set rather than inventing a new palette per scene, so all 5 slides still read as "this game".
   stone: '#cbb98a', stoneShade: '#b39c68',
   wallBeige: '#f0e6cf', wallShade: '#c9b483',
-  archRed: '#c1443b', archRedDeep: '#8a2a24',
   glass: '#8fd0e6', glassDeep: '#5aa0c0',
   clothDark: '#241d38', clothGlow: '#3a3260',
   silver: '#c7d0da', silverShade: '#98a3ae',
   bronze: '#c98a4b', bronzeShade: '#96602f',
+  // Quality loop, "Card and ending" run 1: card-temp-1 (the entrance slide) redrawn to match the real
+  // Main Block (docs/research/reference/owner-main-block-entrance.png), not a generic red-arch
+  // building -- these are the exact hexes the outdoor campus art already uses for that same building
+  // (tools/make-assets.js palette keys $/%/&/*/wallHi/Ñ/stepLight-Mid-Dark/Œ), copied over rather than
+  // referenced so this generator keeps its own standalone palette (this file's own header comment).
+  sandWall: '#e6cba4', sandWallShade: '#cfae86', sandWallHi: '#f2ddb8',
+  terracotta: '#cf8a6c',
+  glassDark: '#2f3a44', glassReflect: '#4a5a68',
+  navy: '#1a3a6b',
+  stepLight: '#e8e4d8', stepMid: '#d6d0c0', stepDark: '#c2bbaa',
+  frondLight: '#8fc463', frondDark: '#4f7a30',
+  trunkDark: '#5a3418', trunkRing: '#7a4a24',
 };
 
 // ---------- the reward box: base + lid drawn separately so the lid can hinge open in the scene ----------
@@ -246,14 +257,24 @@ function buildFrame() {
 // 2026-09-22: the placeholder photo must be obviously a placeholder, not just a pretty filler
 // image) -- same glyph style as tools/make-cutscenes.js's own GLYPHS, but that file is a different
 // generator with its own letters; duplicated here rather than shared, the same way each tools/make-
-// *.js file already keeps its own Img class (see this file's header comment). ----------
+// *.js file already keeps its own Img class (see this file's header comment). Extended with
+// B/I/S/D/A (quality loop, "Card and ending" run 1) so buildTempEntrance() below can stamp "BITS
+// DUBAI" in navy on the entrance facade -- the real sign reads "BITS Pilani, Dubai Campus"
+// (docs/research/reference/owner-main-block-entrance.png), but at this thumbnail's own scale the
+// full phrase would be unreadable mush; the short form is legible and still unmistakably this
+// campus. ----------
 
 const PLACEHOLDER_GLYPHS = {
+  A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
+  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'],
   E: ['#####', '#....', '#....', '###..', '#....', '#....', '#####'],
   H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  I: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '#####'],
   O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
   P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
   R: ['####.', '#...#', '#...#', '####.', '#..#.', '#...#', '#...#'],
+  S: ['.####', '#....', '#....', '.###.', '....#', '....#', '####.'],
   T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
   U: ['#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
   Y: ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'],
@@ -331,37 +352,91 @@ function buildPlaceholderPhoto() {
 const TEMP_W = FRAME_WINDOW.x1 - FRAME_WINDOW.x0 + 1; // 200
 const TEMP_H = FRAME_WINDOW.y1 - FRAME_WINDOW.y0 + 1; // 140
 
-// Slide 1: the Main Block entrance -- steps, pillars, the glass front under a red arch (docs/STORY.md
-// beat 3), the same forced-perspective narrowing-toward-the-back idea docs/GAME_FEEL.md's cutscene
-// art already uses, sketched small rather than reusing tools/make-cutscenes.js's own (much bigger,
-// differently-scaled) entrance art.
+// A thick tapering line, tracing a point along it with an ellipse whose radius shrinks toward the
+// far end -- the cheapest way to fake a straight-ish palm frond in an Img with no line-width support
+// of its own (see Img.rect/ellipse above, both axis-aligned-only primitives).
+function thickTaperLine(img, x0, y0, x1, y1, width, hex, alpha = 1) {
+  const dist = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  const steps = Math.max(1, Math.round(dist * 1.6));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const w = Math.max(1, width * (1 - t * 0.65));
+    img.ellipse(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w, w * 0.55, hex, alpha);
+  }
+}
+
+// A small pixel date palm (docs/research/reference/owner-main-block-entrance.png: tall palms frame
+// the entrance either side) -- a leaning trunk with ring shadows, and 7 fronds fanned out from the
+// crown using thickTaperLine() above, 2 of them a lighter tone so the canopy reads as more than one
+// flat silhouette.
+function drawTempPalm(img, baseX, baseY, height) {
+  const lean = Math.round(height * 0.08);
+  const topX = baseX + lean;
+  const topY = baseY - height;
+  thickTaperLine(img, baseX, baseY, topX, topY, 2.6, C.trunkDark);
+  for (let t = 0.15; t < 0.95; t += 0.16) {
+    const rx = Math.round(baseX + (topX - baseX) * t);
+    const ry = Math.round(baseY + (topY - baseY) * t);
+    img.px(rx, ry, C.trunkRing);
+  }
+  const frondLen = height * 0.46;
+  const dirs = [
+    [-1, -0.1], [-0.85, -0.85], [-0.3, -1], [0.05, -1], [0.4, -0.95], [0.85, -0.75], [1, -0.05],
+  ];
+  dirs.forEach(([dx, dy], i) => {
+    const len = Math.hypot(dx, dy);
+    const light = i === 2 || i === 4;
+    thickTaperLine(
+      img, topX, topY, topX + (dx / len) * frondLen * (light ? 0.85 : 1), topY + (dy / len) * frondLen * (light ? 0.85 : 1),
+      light ? 2 : 3.2, light ? C.frondLight : C.frondDark, light ? 0.9 : 1,
+    );
+  });
+}
+
+// Slide 1: the Main Block entrance (docs/STORY.md beat 3). Quality loop, "Card and ending" run 1:
+// the first version invented a generic red-arch building; redrawn to actually match the real
+// entrance (docs/research/reference/owner-main-block-entrance.png) using the exact palette the
+// outdoor campus art already settled on for this same building (tools/make-assets.js
+// bitsEntranceGrand/bitsSignGlyph): a sand facade, a terracotta portal frame around a tall mullioned
+// glass front, navy lettering on the facade above it, light stone steps, and palms either side.
 function buildTempEntrance() {
   const img = new Img(TEMP_W, TEMP_H);
-  img.rect(0, 0, TEMP_W - 1, 68, C.sky);
-  img.rect(0, 56, TEMP_W - 1, 68, C.skyHaze);
-  img.rect(0, 69, TEMP_W - 1, TEMP_H - 1, C.stone);
-  for (let x = 0; x < TEMP_W; x += 18) img.rect(x, 100, x, TEMP_H - 1, C.stoneShade, 0.35); // plaza seams
-  // Steps, narrowing toward the entrance (near) from the plaza (far).
-  const steps = [C.wallShade, C.wallBeige, '#f7edd2'];
+  img.rect(0, 0, TEMP_W - 1, 46, C.sky);
+  img.rect(0, 38, TEMP_W - 1, 46, C.skyHaze);
+  // Sand facade, full width, with a cream cap band along the roofline (tools/make-assets.js wallHi).
+  img.rect(0, 40, TEMP_W - 1, 116, C.sandWall);
+  img.rect(0, 40, TEMP_W - 1, 46, C.sandWallHi);
+  img.rect(0, 110, TEMP_W - 1, 116, C.sandWallShade); // a soft baseline shade where the wall meets the steps
+  // Navy lettering on the facade, directly above the portal -- "BITS Pilani, Dubai Campus" in the
+  // real photo; the short form here is legible at this thumbnail's own scale (see the glyph comment).
+  const sign = 'BITS DUBAI';
+  const signScale = 1;
+  placeholderText(img, sign, TEMP_W / 2 - placeholderTextWidth(sign, signScale) / 2, 58, C.navy, signScale);
+  // The terracotta portal frame, centred, around the glass front.
+  const doorX0 = TEMP_W / 2 - 32, doorX1 = TEMP_W / 2 + 32;
+  img.rect(doorX0 - 6, 70, doorX1 + 6, 116, C.terracotta);
+  img.rect(doorX0 - 6, 70, doorX1 + 6, 74, C.sandWallHi, 0.3); // a soft light catch along the frame's own top edge
+  // The glass front: dark panes with terracotta mullions and a faint sky reflection streak.
+  img.rect(doorX0, 74, doorX1, 116, C.glassDark);
+  img.rect(doorX0, 74, doorX1, 1 + 74, C.terracotta); // top mullion
+  img.rect(TEMP_W / 2 - 1, 74, TEMP_W / 2 + 1, 116, C.terracotta); // centre mullion, splits the pane in two
+  for (let y = 82; y < 116; y += 11) img.rect(doorX0 + 2, y, doorX1 - 2, y, C.glassReflect, 0.5);
+  img.outlineRect(doorX0 - 6, 70, doorX1 + 6, 116);
+  // Light stone steps, narrowing toward the plaza (near) from the portal (far) -- forced perspective,
+  // matching every other cutscene illustration in this game (docs/GAME_FEEL.md).
+  const steps = [C.stepDark, C.stepMid, C.stepLight];
   steps.forEach((hex, i) => {
-    const inset = i * 12;
-    const y0 = 100 - i * 11;
-    img.rect(58 + inset, y0, TEMP_W - 59 - inset, y0 + 10, hex);
+    const inset = i * 10;
+    const y0 = 116 + i * 8;
+    img.rect(46 + inset, y0, TEMP_W - 47 - inset, y0 + 7, hex);
+    // A tread-edge shadow line under each step -- the 3 stone tones are close together on purpose
+    // (matching the real building's own light stone, not a high-contrast cartoon staircase), so
+    // without this they blur into one wash rather than reading as distinct treads.
+    img.rect(46 + inset, y0 + 6, TEMP_W - 47 - inset, y0 + 7, C.stoneShade, 0.4);
   });
-  // Pillars either side of the glass front.
-  for (const px of [64, TEMP_W - 65]) {
-    img.rect(px - 7, 26, px + 7, 100, C.wallShade);
-    img.rect(px - 7, 26, px, 100, C.wallBeige);
-    img.outlineRect(px - 7, 26, px + 7, 100);
-  }
-  // Glass front with faint pane lines.
-  img.rect(78, 30, TEMP_W - 79, 100, C.glassDeep);
-  for (let y = 34; y < 100; y += 9) img.rect(78, y, TEMP_W - 79, y, C.glass, 0.45);
-  img.outlineRect(78, 30, TEMP_W - 79, 100);
-  // The red arch over the door.
-  img.rect(70, 18, TEMP_W - 71, 30, C.archRed);
-  img.ellipse(TEMP_W / 2, 18, 30, 13, C.archRed);
-  img.outlineRect(70, 12, TEMP_W - 71, 30, C.archRedDeep);
+  // Palms flanking the entrance (tall enough to overlap the facade, per the reference photo).
+  drawTempPalm(img, 20, 137, 96);
+  drawTempPalm(img, TEMP_W - 22, 137, 88);
   img.outlineRect(0, 0, TEMP_W - 1, TEMP_H - 1);
   return img;
 }

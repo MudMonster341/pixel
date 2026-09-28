@@ -915,3 +915,36 @@ src/scenes/card.js (both preload blocks kept).
 
 **Next:** Phase B, the quality loop: rate category by category, starting with Outdoor art (1) and
 Interior art (2).
+
+## 2026-09-29 — Quality loop, category 10 "Card and ending", run 1 fixes
+
+**Did:** three bugs from the scorecard's first "Card and ending" rating (5/10):
+- The title's "soft glow" was a second, offset copy of the title text -- read as a rendering error,
+  not a glow. Replaced with `buildTitleGlow()` (`src/scenes/card.js`): three low-alpha ellipses (same
+  faked-radial-gradient technique as `box-opening.js`'s `buildVignette()`) pulsing behind the title,
+  no text duplicated anywhere.
+- `card-temp-1` (the entrance temp slide) still drew an invented red-arch building. Redrawn
+  (`tools/make-card-art.js` `buildTempEntrance()`) to match the real Main Block
+  (`docs/research/reference/owner-main-block-entrance.png`) using the exact palette the outdoor
+  campus art already settled on for this building: sand facade, terracotta portal frame around a
+  mullioned dark-glass front, navy lettering ("BITS DUBAI" -- the full "BITS Pilani, Dubai Campus"
+  wouldn't be legible at this thumbnail's scale, so the glyph set (5 new letters: B/I/S/D/A) only
+  covers the short form), light stone steps with tread-shadow lines, and two palms (new
+  `drawTempPalm()`/`thickTaperLine()` helpers) flanking it.
+- The message box read as a second, unrelated UI panel (ui.js's usual dark navy dialog box) sitting
+  under the photo frame's warm paper. `src/scenes/card.js` now draws its own cream "note paper" panel
+  (`drawNotePanel()`) under the message, hides DialogBox's own panel by alpha (not visibility --
+  `open()` would just turn it back on), and recolors the typed text to a warm dark ink
+  (`#4a3520`) instead of the game's usual near-white.
+- Regenerated `assets/cutscenes/card-temp-1..5.png` (`npm run assets`); only slide 1 actually changed.
+
+**Why:** docs/quality/scorecard.md "Card and ending" run 1 (rated 5/10) — coordinator's brief named
+all three bugs explicitly, including the reference photo to redraw slide 1 against.
+
+**Decisions:** none new (no ADR).
+
+**Failures:** none.
+
+**Next:** re-rate "Card and ending" (a fresh qa-shots/manual look at the card) once the next full test
+round runs; this branch (`quality/card-1`) built under the session's "build only" rule -- unit tests
+only (427 passed), no server/browser/e2e run yet.

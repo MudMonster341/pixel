@@ -6,21 +6,39 @@ building. Target: 8+ in every area.
 
 | # | Category | Score | Last rated | Top issues |
 |---|---|---|---|---|
-| 1 | Outdoor art | 5 | 2026-09-28 (run 2) | entrance steps read as flat brown bars; Hostel A shot still shows only a field (no hostel, no player); Mechanical shadow still a grey band |
-| 2 | Interior art | 4 | 2026-09-28 (run 2) | floor is a loud high-contrast checker; foyer staircase still vertical rails; ICVL a solid grid of desks with no aisles; Physics Lab a uniform warehouse grid |
+| 1 | Outdoor art | 6 | 2026-09-29 (run 3) | no forecourt: steps meet the road directly; no life (no students); location banner covers the Main Block sign; hostel areas named "BITS Pilani, Dubai Campus" |
+| 2 | Interior art | 5 | 2026-09-29 (run 3) | foyer clean but bland; chandelier reads as a gold plus sign; plants sit on brick tiles; Physics Lab benches still a uniform grid; no people |
 | 3 | Characters and depth | — | — | |
-| 4 | UI and menus | — | — | (seen in cutscene-02-dialog.png: the first-time hint banner draws on top of the dialog box; minimap + tracker stay visible during cutscenes; the dialog box is clipped by the letterbox bar; full rating waits on qa:shots completing) |
+| 4 | UI and menus | 5 | 2026-09-29 (run 1) | title backdrop is a dark blurry schematic (1px/tile map scaled up); location banner overlaps the Main Block sign; run-1 cutscene overlaps fixed (merged, re-test next) |
 | 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
 | 6 | Cutscenes | — | — | (the in-world Gate 2 beat looks good; qa:shots times out waiting for the Gate 2 script to end) |
 | 7 | Mini-games | — | — | |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
-| 10 | Card and ending | — | — | (temp slide card-temp-1 draws the old red arch; must match the real terracotta portal + glass canopy) |
+| 10 | Card and ending | 5 | 2026-09-29 (run 1) | title glow draws as a ghosted double of the text; temp entrance slide still shows the red arch; photo frame and message box read as two unrelated boxes |
 | 11 | Performance and stability | — | — | (e2e timeouts only under parallel load) |
 
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Outdoor art (run 3) — overall 6 (was 5)
+- **Main Block front: 7.** Now reads as the entrance: the BITS lettering, windowed facade, tall mullioned glass front, double door and light stone steps. But the steps drop straight onto the sidewalk and road (no forecourt), and the location banner covers the sign.
+- **Gate 2: 7.** Palm, pillar, booth, short barrier, planters: reads as a gate.
+- **Hostels: 5.** The building and the player now show; the area label says "BITS Pilani, Dubai Campus" instead of the hostel's name.
+- **Everywhere: 5.** Still no life (no students walking, no parked bikes); large plain areas.
+
+### 2026-09-29 — Interior art (run 3) — overall 5 (was 4)
+- **Foyer: 5.** Real stair treads now and a calm floor, but bland: white stripes for columns, the chandelier reads as a gold plus sign, the reception desk and sofas are tiny, and it's empty of people.
+- **ICVL: 6.** Reads as a computer lab (monitor rows, chairs, cabinets, instructor desk); plants sit on brick-tile pedestals.
+- **Physics Lab: 5.** Benches with equipment, stools, shelves, fume hood; still a uniform grid, sparse wall decoration.
+
+### 2026-09-29 — UI and menus (run 1) — overall 5
+- **Title: 4.** Buttons fine; the "live campus" backdrop is the 1px-per-tile map scaled up: a dark, blurry schematic, not the game world.
+- **Pause: 6.** Clean, readable, consistent.
+- **HUD: 5.** The location banner sits over the Main Block's own sign; area names fall back to the campus name at the hostels. (Cutscene overlap bugs fixed in quality/ui-1, merged; re-test next run.)
+
+### 2026-09-29 — Card and ending (run 1) — overall 5
+- **Card interior: 5.** Warm layout, hearts and cake. But the title glow draws as a ghosted duplicate of the text (looks like a rendering error); the temp "Day one" slide shows the old red arch; the photo frame and message box feel like two unrelated boxes.
 ### 2026-09-28 — Outdoor art (run 2) — overall 5 (was 4)
 - **Main Block front: 5.** The glass front with mullions reads better; the steps now read as two flat brown bars rather than stone treads (no light tread face, too dark, too tall); the camera frame still cuts the building off.
 - **Gate 2: 6.** Barrier arm, pillar and palm present; the barrier runs the whole width like a stripe. Better.

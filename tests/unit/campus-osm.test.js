@@ -318,6 +318,39 @@ test('hostels get a proper BITS entrance front (glass entrance tiles), not a fla
   }
 });
 
+// Quality loop, category 1 run 2 (2026-09-28): "Hostels are still broken in QA... find out
+// definitively: do the hostel buildings get drawn at all on campus.json?" -- confirmed they do
+// (dumping the structures layer inside each hostel's own rect directly): the QA shot's own
+// point/teleport was the real bug (fixed in tools/qa-shots.js: it now searches for a walkable tile
+// south of each hostel's own footprint instead of teleporting onto the footprint's geometric centre,
+// which is the building's own roof). This test guards the "drawn at all" half directly. The
+// threshold is deliberately loose (30% of the *bounding box*, not the true footprint): a hostel's
+// real OSM polygon isn't always the simple rectangle its bounding box implies -- Hostel B's own
+// bbox, for instance, includes 3 rows that are genuinely outside its true footprint and correctly
+// carry a walkway instead (found while calibrating this test; the same "not a rectangle" shape
+// irregularity the entrance test above already documents for Hostel C). 30%/a real tile-count floor
+// still catches a building that's silently 0%-drawn, without flagging legitimately L-shaped ones.
+test('quality loop: every named hostel building has real roof/wall tiles somewhere in its own footprint', () => {
+  const hostelBuildings = objects.filter((o) => o.type === 'building' && o.props.style === 'bits' && /^Hostel /.test(o.name));
+  assert.ok(hostelBuildings.length >= 3, `expected several hostel buildings, found ${hostelBuildings.length}`);
+  for (const hostel of hostelBuildings) {
+    const x0 = Math.floor(hostel.x);
+    const x1 = Math.floor(hostel.x + hostel.width);
+    const y0 = Math.floor(hostel.y);
+    const y1 = Math.floor(hostel.y + hostel.height);
+    let structured = 0;
+    let total = 0;
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        total++;
+        if (structNameAt(x, y)) structured++;
+      }
+    }
+    assert.ok(total > 0, `${hostel.name}'s own bounding box is empty (zero-size?)`);
+    assert.ok(structured >= 40 && structured / total > 0.3, `${hostel.name} has structure tiles on only ${structured}/${total} of its own bounding box -- it may not be drawn at all`);
+  }
+});
+
 // ---------- A cutscene trigger sits just inside Gate 2, spanning the avenue ----------
 
 test('a "gate2" cutscene trigger sits just inside Gate 2, spanning the avenue width', () => {

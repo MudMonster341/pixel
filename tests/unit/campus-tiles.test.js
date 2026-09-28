@@ -416,6 +416,24 @@ test('the entrance steps are flat horizontal treads (no vertical stripe texture)
   assert.notDeepEqual(step2, step3, 'bitsStep2 and bitsStep3 should be distinct tones, not the same tread repeated');
 });
 
+// Quality loop, category 1 run 2 (2026-09-28): "steps now read as two flat dark brown bars...
+// must be LIGHT stone (cream/pale grey like the sidewalk)... no brown." The tread's own dominant
+// (highest-count) tone on each step should be both light (high luminance) and low-saturation/
+// neutral (not a warm brown -- a high red-minus-blue gap is exactly what made the old '-'/'D'/'d'
+// keys read as brown, see PALETTE's own comment on stepLight/Mid/Dark).
+test('the entrance step treads are light stone, not brown', () => {
+  for (const name of ['bitsStep1', 'bitsStep2', 'bitsStep3']) {
+    const counts = colorCounts(name);
+    const [dominantHex] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const r = parseInt(dominantHex.slice(1, 3), 16);
+    const g = parseInt(dominantHex.slice(3, 5), 16);
+    const b = parseInt(dominantHex.slice(5, 7), 16);
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    assert.ok(lum > 170, `${name}'s dominant tone ${dominantHex} (luminance ${lum.toFixed(0)}) is too dark for "light stone"`);
+    assert.ok(r - b < 30, `${name}'s dominant tone ${dominantHex} (r-b=${r - b}) reads as warm/brown, not pale cream-grey`);
+  }
+});
+
 test('the facade cast shadow is a soft translucent gradient, not an opaque bar', () => {
   const { index } = tileByName('bitsFacadeShadow');
   const tx = (index % tileInfo.columns) * TILE;

@@ -1278,19 +1278,19 @@
       "name": "bitsStep1",
       "solid": false,
       "overhead": false,
-      "color": "#b18477"
+      "color": "#bcbbb7"
     },
     {
       "name": "bitsStep2",
       "solid": false,
       "overhead": false,
-      "color": "#a68e6e"
+      "color": "#b0ada7"
     },
     {
       "name": "bitsStep3",
       "solid": false,
       "overhead": false,
-      "color": "#8d7759"
+      "color": "#a29f98"
     },
     {
       "name": "bitsSignSeg0",

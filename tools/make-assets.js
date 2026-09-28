@@ -941,6 +941,59 @@ const SIGN_SEGMENTS = Array.from(
   (_, i) => MAIN_SIGN_TEXT.slice(i * SIGN_CHARS_PER_TILE, i * SIGN_CHARS_PER_TILE + SIGN_CHARS_PER_TILE).padEnd(SIGN_CHARS_PER_TILE, ' '),
 );
 
+// Quality loop, category 1 run 1 (2026-09-28): "lawn tufts repeat on a rigid grid (wallpaper
+// look)" -- lawn2 is one static pre-rendered tile (always the same tuft, same seed), and
+// build-campus.js's old lawnPatch() picked it on a strict 6x6-tile checkerboard, so the exact same
+// tuft stamped out a printed-looking grid. These three extra variants (a 2-tuft cluster, a denser
+// 3-tuft cluster, a single wildflower) give lawnPatch's new deterministic-hash scatter (see that
+// function's own comment in tools/campus/build-campus.js) real variety to pick from, still mostly
+// plain lawn/lawn2 -- "keep large plain areas".
+function lawnTuftCluster(img, x, y, seed, count) {
+  blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+  const r = rng(seed);
+  for (let i = 0; i < count; i++) {
+    blitAtlas(img, x + randInt(r, 0, 8), y + randInt(r, 0, 10), loadAtlas(SPROUT.tuft.atlas), SPROUT.tuft.sx, SPROUT.tuft.sy, 8, 5, { remap: remapDryLeaves });
+  }
+}
+function lawnFlowerSpeck(img, x, y, seed) {
+  blitAtlas(img, x, y, loadAtlas(PACK.grass.atlas), PACK.grass.sx, PACK.grass.sy, 16, 16, { remap: remapGrass });
+  const r = rng(seed);
+  flower(img, x + randInt(r, 2, 13), y + randInt(r, 2, 13), r() < 0.5 ? 'W' : 'P');
+}
+
+// Quality loop, category 1 run 1 (2026-09-28): a proper Gate 2 (point 6 -- "two gate pillars with
+// the BITS sign, a security booth, a barrier arm, and planters with plants"). The pillars reuse
+// bitsColumnTile (the same terracotta column the Main Block portico already uses); this adds the
+// small sign plaque between them, a compact security booth, and a red/white barrier arm.
+function gateSign(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'wallHi'); // cream fascia, matches the Main Block's own sign band
+  img.fill(x, y, TILE, 1, 'K');
+  img.fill(x, y + 13, TILE, 3, '&'); // terracotta base trim, ties it to the rest of the BITS kit
+  [...'BITS'].forEach((ch, i) => {
+    const glyph = SIGN_FONT_4X6[ch] || SIGN_FONT_4X6[' '];
+    const gx = x + i * 4;
+    const gy = y + 4;
+    glyph.forEach((row, ry) => [...row].forEach((c, rx) => { if (c === '#') img.set(gx + rx, gy + ry, 'Ñ'); }));
+  });
+}
+function securityBooth(img, x, y) {
+  img.fill(x, y, TILE, TILE, '$'); // sand wall body, the same BITS wall tone as every other building
+  img.fill(x, y, TILE, 2, 'K'); // flat dark roof cap
+  img.fill(x, y + 2, TILE, 1, 'wallHi'); // parapet highlight line
+  img.fill(x + 3, y + 5, 10, 7, '&'); // terracotta window frame
+  img.fill(x + 4, y + 6, 8, 5, '*'); // glass
+  img.set(x + 6, y + 7, 'W'); // glint
+  img.fill(x, y + 14, TILE, 2, 'baseCool'); // plinth, meets the ground
+}
+function barrierArm(img, x, y) {
+  // A raised red/white boom barrier across the road, on a low post at one end -- reads clearly
+  // enough as "the gate arm" as a flat horizontal bar at this scale (a true diagonal/raised barrier
+  // would need a rotated sprite, more than this pass needs).
+  img.box(x, y + 6, 3, 5, 'K'); // post
+  img.fill(x + 3, y + 7, TILE - 3, 3, '#'); // pale bar body
+  for (let xx = 3; xx < TILE; xx += 4) img.fill(x + xx, y + 7, 2, 3, 'archRed');
+}
+
 // Order here = tile index. The game looks tiles up by name via assets/tiles.json,
 // so reordering is safe; `solid` tiles block the player.
 const TILES = [
@@ -1323,6 +1376,20 @@ const TILES = [
   { name: 'intServerRack', solid: true, draw: intServerRack },
   { name: 'intLabBenchWood', solid: true, draw: intLabBenchWood },
   { name: 'intProjectorScreen', solid: true, draw: intProjectorScreen },
+
+  // Quality loop, category 1 run 1 (2026-09-28): fixes for the "Outdoor art" rating (docs/quality/
+  // scorecard.md). Appended at the very end so every existing tile's name/index stays stable.
+  { name: 'lampPostTop', overhead: true, draw: lampPostTop },
+  { name: 'bitsRoofB', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '+', '=', ',', 1) },
+  { name: 'bitsRoofC', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '+', '=', ',', 2) },
+  { name: 'otherRoofB', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<', '·', 1) },
+  { name: 'otherRoofC', solid: true, draw: (img, x, y) => flatRoof(img, x, y, '~', '<', '·', 2) },
+  { name: 'lawn3', draw: (img, x, y) => lawnTuftCluster(img, x, y, 151, 2) },
+  { name: 'lawn4', draw: (img, x, y) => lawnTuftCluster(img, x, y, 233, 3) },
+  { name: 'lawn5', draw: (img, x, y) => lawnFlowerSpeck(img, x, y, 311) },
+  { name: 'gateSign', solid: true, draw: gateSign },
+  { name: 'securityBooth', solid: true, draw: securityBooth },
+  { name: 'barrierArm', draw: barrierArm },
 ];
 
 // ---------- campus tiles ----------
@@ -1382,12 +1449,30 @@ function fence(img, x, y) {
 
 // `speck` (FB-0022, QA: "roofs read as pavement") scatters a few darker AC-unit/skylight dots over
 // the flat fill, so a big roof reads as a textured rooftop from above rather than a flat colour
-// block that can be mistaken for paving; the parapet edge strip is unchanged.
-function flatRoof(img, x, y, base, edge, speck) {
-  if (speck) speckle(img, x, y, base, speck, 733, 5);
+// block that can be mistaken for paving.
+// Quality loop, category 1 run 1 (2026-09-28): this used to *also* draw a 1px `edge` line along its
+// own top+left every time, unconditionally -- meaning every plain interior roof tile (not just the
+// real building-edge tiles, bitsRoofEdge/otherRoofEdge below, which already draw their own edge
+// line deliberately) carried a border, so a big flat roof was a literal grid of 1px lines at every
+// tile seam. Removed here; `flatRoof` is pure rooftop texture now, no border.
+// A `variant` (0/1/2) also mixes in a distinct piece of roof clutter -- an AC unit, a hatch, or a
+// vent stack -- so a large roof reads as a mix of real rooftop equipment instead of the exact same
+// speckle pattern repeated at every tile (build-campus.js's drawBuilding picks a variant per cell
+// with the same deterministic per-position hash already used to scatter shade trees).
+function flatRoof(img, x, y, base, edge, speck, variant = 0) {
+  if (speck) speckle(img, x, y, base, speck, 733 + variant * 191, 6);
   else img.fill(x, y, TILE, TILE, base);
-  img.fill(x, y, TILE, 1, edge);
-  img.fill(x, y, 1, TILE, edge);
+  if (variant === 1) {
+    // a squat AC condenser unit: a grey block, a darker top edge, a short ground shadow
+    img.fill(x + 3, y + 9, 5, 4, speck);
+    img.fill(x + 3, y + 9, 5, 1, edge);
+    img.fill(x + 3, y + 13, 5, 1, '%');
+  } else if (variant === 2) {
+    // a roof hatch (a small outlined square) plus a thin vent stack
+    img.box(x + 9, y + 2, 5, 5, edge);
+    img.fill(x + 2, y + 9, 2, 5, speck);
+    img.set(x + 2, y + 8, edge);
+  }
 }
 
 // Sand-beige render, banded per docs/STYLE_GUIDE.md "How our buildings are built" (studied from
@@ -1471,9 +1556,16 @@ function bitsFacadeBase(img, x, y) {
 // The cast shadow a facade throws onto the ground right in front of it -- a flat 25%-black overlay
 // (real alpha, not a palette color) placed by build-campus.js one row south of every BITS building's
 // front run, on top of whatever ground/steps/paving is there. Non-solid: it's a tint, not an object.
+// Quality loop, category 1 run 1 (2026-09-28): a flat 25%-black fill across the *whole* tile drew as
+// an opaque dark grey bar the full width of a building (worst on the wide Mechanical/Library plazas)
+// -- not a shadow, a glitch-looking stripe. Now a soft gradient instead: strongest right at the wall
+// (still well under half-black) fading to fully transparent by the tile's own far edge, so it reads
+// as one soft contact shadow cast onto the ground, not a hard-edged band.
 function bitsFacadeShadow(img, x, y) {
   for (let yy = 0; yy < TILE; yy++) {
-    for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, 0, 0, 0, 64);
+    const alpha = Math.round(56 * (1 - yy / TILE));
+    if (alpha <= 0) continue;
+    for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, 0, 0, 0, alpha);
   }
 }
 
@@ -1988,29 +2080,54 @@ function bitsPorticoFrame(img, x, y) {
 // The glass front's top/mid/base rows -- Kenney's own wide glass panel (BLDG.glassPanel/
 // glassPanelBase, not the door itself: this is the flanking "dark glass front... with reflections"
 // either side of the real double door), frame recolored terracotta, glass left native.
+// Quality loop, category 1 run 1 (2026-09-28): "the glass front is small... make it taller (2+ rows
+// of glass with frame mullions) so the entrance reads from the forecourt" -- the window+body rows
+// already give 2 rows of glass, but the Kenney crop's own frame reads faint at this camera; a
+// deliberate terracotta mullion (a full frame border, plus a centre divider on the top row) makes
+// each tile read unmistakably as "a framed glass pane", not a flat blue rectangle.
 function bitsPorticoGlassTop(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(BLDG.glassPanel.atlas), BLDG.glassPanel.sx, BLDG.glassPanel.sy, 16, 16, { remap: remapBitsDoorFrame });
   img.fill(x, y, TILE, 2, 'K'); // canopy underside shadow -- reads as an overhang above the glass
+  img.fill(x, y, 1, TILE, '&'); // left mullion
+  img.fill(x + TILE - 1, y, 1, TILE, '&'); // right mullion
+  img.fill(x + 7, y + 2, 2, TILE - 2, '&'); // centre mullion, splitting the pane in two
 }
 function bitsPorticoGlassMid(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(BLDG.glassPanel.atlas), BLDG.glassPanel.sx, BLDG.glassPanel.sy, 16, 16, { remap: remapBitsDoorFrame });
+  img.fill(x, y, TILE, 1, '&'); // top mullion, meets the top row's own frame
+  img.fill(x, y, 1, TILE, '&');
+  img.fill(x + TILE - 1, y, 1, TILE, '&');
+  img.fill(x + 7, y, 2, TILE, '&');
 }
 // The glass front's base row (either side of the actual door, not the door itself): Kenney's own
 // glass-with-a-sill crop, so the ground line reads as a real ledge instead of a flat color band.
 function bitsPorticoGlassBase(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(BLDG.glassPanelBase.atlas), BLDG.glassPanelBase.sx, BLDG.glassPanelBase.sy, 16, 16, { remap: remapBitsDoorFrame });
+  img.fill(x, y, TILE, 1, '&');
+  img.fill(x, y, 1, TILE, '&');
+  img.fill(x + TILE - 1, y, 1, TILE, '&');
+  img.fill(x + 7, y, 2, TILE, '&');
 }
 
 // The wide 3-row light-stone staircase in front of the portico (ground layer, walkable): Kenney's own
 // 3-tread staircase crop (BLDG.step1/2/3, top to bottom), recolored to a neutral light stone so the
 // steps read as their own material against both the sand wall above and the sidewalk below.
-function bitsStepTread(img, x, y, src) {
-  img.fill(x, y, TILE, TILE, '-'); // light-stone backdrop for the tread crop's own transparent corners
-  blitAtlas(img, x, y, loadAtlas(src.atlas), src.sx, src.sy, 16, 16, { remap: remapLightStone });
+// Quality loop, category 1 run 1 (2026-09-28): the Kenney staircase crop used above read as "a row
+// of tall grey vertical panels -- window blinds or a fence", not steps -- that source art is a
+// side-on staircase silhouette (vertical ridges), the wrong perspective for a top-down tread. Hand-
+// drawn instead: each tread is a flat light-stone face (top ~10px) with a 1px nosing shadow and a
+// shallow shadowed riser band (~5px) below it -- no vertical lines at all, so three of these stacked
+// read as shallow horizontal steps the full width of the entrance (build-campus.js widens the step
+// run to the forecourt's own width, removing the bare paver strip that used to flank a narrower run).
+function bitsStepTread(img, x, y, faceKey) {
+  img.fill(x, y, TILE, 10, faceKey); // the tread's own light top face
+  img.fill(x, y + 10, TILE, 1, '%'); // nosing shadow, the tread's own front edge
+  img.fill(x, y + 11, TILE, 5, 'baseCool'); // riser, in shadow
+  img.fill(x, y + 11, TILE, 1, 'K'); // crisp dark line where the riser meets the tread above
 }
-function bitsStep1(img, x, y) { bitsStepTread(img, x, y, BLDG.step1); }
-function bitsStep2(img, x, y) { bitsStepTread(img, x, y, BLDG.step2); }
-function bitsStep3(img, x, y) { bitsStepTread(img, x, y, BLDG.step3); }
+function bitsStep1(img, x, y) { bitsStepTread(img, x, y, '-'); }
+function bitsStep2(img, x, y) { bitsStepTread(img, x, y, 'D'); }
+function bitsStep3(img, x, y) { bitsStepTread(img, x, y, 'd'); }
 
 // A tight 4x6 pixel font (the coordinator's "1px spacing... several letters per tile" -- the old
 // 5x7-one-tile-per-character version spelled the message across the *whole* facade). 4 wide + 1px
@@ -2057,9 +2174,22 @@ function bitsSignSegment(img, x, y, text3) {
 // props, then blits the pack sprite on top in its own bright colors (no recolor -- the owner asked
 // for "more vibrant", and these already read well next to the campus palette, the same call already
 // made for the parked cars in FB-0025).
+// Quality loop, category 1 run 1 (2026-09-28): the Kenney sheet's curved-arm street lamp
+// (URBAN.lampPost) reads as "a sideways hammer" at this scale -- the bent arm and lamp head sit at
+// roughly the same height as the pole's own width, with nothing reading as clearly vertical. Redrawn
+// as a real 2-tile-tall lamp instead, the same base/overhead split as the round-3 flag pole:
+// `lampPost` (unchanged name) draws just the lower pole shaft on the ground; a new `lampPostTop`
+// (overhead, like a tree canopy) draws the shaft continuing up to a small hand-drawn glowing globe
+// on a bracket. build-campus.js's avenue-prop loop places both.
 function lampPost(img, x, y) {
   grass(img, x, y, 151);
-  blitAtlas(img, x, y, loadAtlas(URBAN.lampPost.atlas), URBAN.lampPost.sx, URBAN.lampPost.sy, 16, 16);
+  blitAtlas(img, x, y, loadAtlas(FLAG_POLE_SRC.atlas), FLAG_POLE_SRC.sx, FLAG_POLE_SRC.sy, 16, 16, { remap: remapLightStone });
+}
+function lampPostTop(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(FLAG_POLE_SRC.atlas), FLAG_POLE_SRC.sx, FLAG_POLE_SRC.sy, 16, 16, { remap: remapLightStone });
+  img.fill(x + 5, y + 3, 6, 2, 'K'); // bracket, dark, reads as a clear horizontal break from the pole
+  img.box(x + 6, y + 5, 4, 4, 'Y'); // the globe itself, warm lamp-glow yellow
+  img.set(x + 7, y + 6, 'W'); // glint
 }
 function bench(img, x, y) {
   grass(img, x, y, 152);

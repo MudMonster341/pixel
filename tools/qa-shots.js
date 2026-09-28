@@ -118,27 +118,37 @@ async function shootOutdoors(browser) {
   const mainDoor = find('door', (o) => o.props.building === 'Main Block');
   const libraryDoor = find('door', (o) => o.props.building === 'Library Block');
   const mechDoor = find('door', (o) => o.props.building === 'Mechanical Block');
-  // "Just outside the door": the nearest walkable tile south of it (never the door's own tile --
-  // landing exactly there re-triggers the door's own warp, sending the shot straight back inside),
-  // not a fixed offset -- a few real BITS buildings sit only a tile or two apart (ADR 0009), so a
-  // fixed +2 can land inside a neighbouring building's own wall instead of the plaza (QA: this is
-  // exactly how the "wrong area name at the Mechanical Block" bug was found and screenshotted).
-  const front = await page.evaluate((doors) => {
+  const track = area('Athletics Track');
+  const tennis = area('Tennis Courts');
+  const otherCourts = area('Courts');
+  const parking = area('Student Parking');
+  const diacPark = area('DIAC Park');
+  const hostels = objects.filter((o) => o.type === 'area' && o.props.kind === 'hostel');
+  const campusZone = area('BITS Pilani, Dubai Campus');
+  // Quality loop, category 1 run 1 (2026-09-28): "the Hostel A shot shows no hostel" and "the player
+  // isn't visible" in the hostel/parking/track shots -- both had the same cause. `areaCenter()` is the
+  // geometric centre of the *whole* Tiled area rectangle; for a hostel that rectangle is the
+  // building's own footprint (roof included), so the shot used to teleport both the camera and the
+  // player onto the roof itself -- a solid tile, above the depth engine's own "in front of/behind a
+  // building" line, so the player's sprite drew *behind* the roof (invisible) and the camera saw
+  // nothing but uniform roof texture (unrecognisable as "a building"). Every area-based point below
+  // now searches for the nearest real walkable ground tile to its own target first (the same search
+  // "just outside a door" already used, generalised to take a plain {x, y} instead of a door object,
+  // and a wider search box so a large building/field still finds real ground) -- for a hostel, from a
+  // point just south of its own footprint (so the shot reads as "standing in front of the building",
+  // the same framing every other BITS building gets), for the sports fields/parking/DIAC park, from
+  // their own already-open centre (should already be walkable; this is a safety net against a stray
+  // fence/net/stand tile sitting exactly on the centre point).
+  const nearestWalkable = await page.evaluate((targets) => {
     const world = game.scene.getScene('world');
-    const nearestWalkable = (door) => {
-      if (!door) return null;
-      const dx = Math.floor(door.x);
-      const dy = Math.floor(door.y);
+    return targets.map((t) => {
+      if (!t) return null;
+      const dx = Math.floor(t.x);
+      const dy = Math.floor(t.y);
       let best = null;
       let bestDist = Infinity;
-      // oy starts at 1, not 0: this is meant to find a tile *south* of the door (see the comment
-      // above), but oy=0 (beside the door, same row) used to be included too and could tie on
-      // squared distance with a true south tile -- since ties don't overwrite, whichever one the
-      // loop order reached first silently won, occasionally landing the shot awkwardly beside the
-      // door instead of in front of it (found via the Main Block front screenshot, BITS building
-      // kit addendum 2026-09-21).
-      for (let oy = 1; oy <= 6; oy++) {
-        for (let ox = -4; ox <= 4; ox++) {
+      for (let oy = t.oy0; oy <= t.oy1; oy++) {
+        for (let ox = -t.oxAbs; ox <= t.oxAbs; ox++) {
           const x = dx + ox;
           const y = dy + oy;
           if (!isWalkableTile(world.tileData, world.tileInfo, x, y)) continue;
@@ -149,18 +159,31 @@ async function shootOutdoors(browser) {
           }
         }
       }
-      return best || { x: dx, y: dy + 1 };
-    };
-    return doors.map(nearestWalkable);
-  }, [mainDoor, libraryDoor, mechDoor]);
-  const [mainFront, libraryFront, mechFront] = front;
-  const track = area('Athletics Track');
-  const tennis = area('Tennis Courts');
-  const otherCourts = area('Courts');
-  const parking = area('Student Parking');
-  const diacPark = area('DIAC Park');
-  const hostels = objects.filter((o) => o.type === 'area' && o.props.kind === 'hostel');
-  const campusZone = area('BITS Pilani, Dubai Campus');
+      return best || { x: dx, y: dy + t.oy0 };
+    });
+  }, [
+    // "Just outside the door": south of it, never the door's own tile (landing exactly there
+    // re-triggers the door's own warp, sending the shot straight back inside) -- a few real BITS
+    // buildings sit only a tile or two apart (ADR 0009), so a fixed offset can land inside a
+    // neighbouring building's own wall instead of the plaza (QA: this is exactly how the "wrong area
+    // name at the Mechanical Block" bug was found and screenshotted).
+    mainDoor && { x: mainDoor.x, y: mainDoor.y, oy0: 1, oy1: 6, oxAbs: 4 },
+    libraryDoor && { x: libraryDoor.x, y: libraryDoor.y, oy0: 1, oy1: 6, oxAbs: 4 },
+    mechDoor && { x: mechDoor.x, y: mechDoor.y, oy0: 1, oy1: 6, oxAbs: 4 },
+    // Hostels: search from just south of the building's own footprint (its area rectangle's bottom
+    // edge, not its centre -- see the comment above), a wider box since a hostel row can butt up
+    // against a neighbour on either side.
+    ...hostels.map((h) => ({ x: h.x + h.width / 2, y: h.y + h.height, oy0: 1, oy1: 8, oxAbs: 6 })),
+    // Open areas: search outward from their own real centre, small search box (a safety net only).
+    track && { ...areaCenter(track), oy0: -3, oy1: 3, oxAbs: 3 },
+    tennis && { ...areaCenter(tennis), oy0: -3, oy1: 3, oxAbs: 3 },
+    otherCourts && { ...areaCenter(otherCourts), oy0: -3, oy1: 3, oxAbs: 3 },
+    parking && { ...areaCenter(parking), oy0: -3, oy1: 3, oxAbs: 3 },
+    diacPark && { ...areaCenter(diacPark), oy0: -3, oy1: 3, oxAbs: 3 },
+  ]);
+  const [mainFront, libraryFront, mechFront, ...rest] = nearestWalkable;
+  const hostelPoints = rest.slice(0, hostels.length);
+  const [trackPoint, tennisPoint, courtsPoint, parkingPoint, diacParkPoint] = rest.slice(hostels.length);
 
   const points = [
     ['spawn', spawn],
@@ -169,13 +192,13 @@ async function shootOutdoors(browser) {
     ['main-block-front', mainFront],
     ['library-block-front', libraryFront],
     ['mechanical-block-front', mechFront],
-    ['athletics-track', track && areaCenter(track)],
-    ['tennis-courts', tennis && areaCenter(tennis)],
-    ['courts', otherCourts && areaCenter(otherCourts)],
-    ['student-parking', parking && areaCenter(parking)],
+    ['athletics-track', trackPoint],
+    ['tennis-courts', tennisPoint],
+    ['courts', courtsPoint],
+    ['student-parking', parkingPoint],
     ['side-gate', sideGate],
-    ['diac-park', diacPark && areaCenter(diacPark)],
-    ...hostels.map((h) => [`hostel-${slugify(h.name)}`, areaCenter(h)]),
+    ['diac-park', diacParkPoint],
+    ...hostels.map((h, i) => [`hostel-${slugify(h.name)}`, hostelPoints[i]]),
   ];
 
   // D54 and the DIAC ring have no named Tiled object (they're drawn tiles only, ADR 0009) --
@@ -269,35 +292,55 @@ async function shootCutscene(browser) {
   await page.waitForTimeout(150); // let its slide-in tween settle
   await shoot(page, 'ui-location-banner');
 
+  // Quality loop, category 1 run 1 (2026-09-28): this used to wait on `game.scene.isActive('cutscene')`
+  // -- a separate Phaser scene the old static-illustration cutscene player launched. ADR 0016 replaced
+  // that (for the Gate 2 welcome) with an in-world script run by WorldScene's own `scriptRunner`
+  // (src/scripts-runtime.js) -- there's no 'cutscene' scene to become active any more, so that wait
+  // never resolved and the whole qa-shots run hung/crashed here. Waits on `scriptRunner.isRunning`
+  // instead, and every wait below has a timeout and degrades to a warning instead of hanging if
+  // something about the new flow's timing doesn't match (already seen this session, ?cutscene=0, a
+  // future script rewrite, etc.) -- a missed shot, never a crashed run.
   const trigger = (await mapObjects(page)).find((o) => o.type === 'cutscene');
-  await teleport(page, trigger.x + trigger.width / 2, trigger.y + trigger.height / 2);
-  await page.waitForFunction(() => game.scene.isActive('cutscene'));
+  if (!trigger) {
+    log('WARNING: no cutscene trigger object found on the campus map, skipping the Gate 2 script shots');
+  } else {
+    await teleport(page, trigger.x + trigger.width / 2, trigger.y + trigger.height / 2);
+    const started = await page.waitForFunction(() => game.scene.getScene('world').scriptRunner.isRunning, { timeout: 5000 }).then(() => true).catch(() => false);
+    if (!started) {
+      log('WARNING: the Gate 2 script never started (already seen this session, or ?cutscene=0) -- skipping its shots');
+    } else {
+      // First frame: letterbox in, Mustafa spawning in and walking up -- give it a moment to settle
+      // into a representative frame rather than catching the very first tween tick.
+      await page.waitForTimeout(500);
+      await shoot(page, 'cutscene-01-script');
 
-  // First frame: the letterbox bars and the gate illustration, before the dialog box appears.
-  await page.waitForFunction(() => {
-    const cs = game.scene.getScene('cutscene');
-    return cs.image.alpha >= 1;
-  });
-  await shoot(page, 'cutscene-01-image');
+      // The message box, mid-typewriter (same dialog box every conversation uses, ADR 0016).
+      const gotDialog = await page.waitForFunction(() => game.scene.getScene('ui').dialog.isOpen, { timeout: 8000 }).then(() => true).catch(() => false);
+      if (gotDialog) {
+        await page.waitForTimeout(300);
+        await shoot(page, 'cutscene-02-dialog');
+      } else {
+        log('WARNING: the Gate 2 script never opened a dialog box in time, skipping cutscene-02-dialog');
+      }
 
-  // The message box, mid-typewriter.
-  await page.waitForFunction(() => {
-    const cs = game.scene.getScene('cutscene');
-    return cs.dialog && cs.dialog.isOpen;
-  });
-  await page.waitForTimeout(300);
-  await shoot(page, 'cutscene-02-dialog');
-
-  // Advance to the end and capture control handed back to the world.
-  for (let i = 0; i < 20; i++) {
-    const active = await page.evaluate(() => game.scene.isActive('cutscene'));
-    if (!active) break;
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(150);
+      // Advance to the end (Enter both dismisses a dialog line and, per WorldScene's own Esc/Enter
+      // handling gated on scriptRunner.isRunning, is safe to press between steps too) and capture
+      // control handed back to the world.
+      for (let i = 0; i < 30; i++) {
+        const running = await page.evaluate(() => game.scene.getScene('world').scriptRunner.isRunning);
+        if (!running) break;
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(150);
+      }
+      const finished = await page.waitForFunction(() => !game.scene.getScene('world').scriptRunner.isRunning, { timeout: 5000 }).then(() => true).catch(() => false);
+      if (finished) {
+        await page.waitForTimeout(200);
+        await shoot(page, 'cutscene-03-control-returned');
+      } else {
+        log('WARNING: the Gate 2 script never finished in time, skipping cutscene-03-control-returned');
+      }
+    }
   }
-  await page.waitForFunction(() => !game.scene.isActive('cutscene'));
-  await page.waitForTimeout(200);
-  await shoot(page, 'cutscene-03-control-returned');
 
   // The full-screen map (FB-0018, N or the minimap click) while we have a page open on the campus.
   await page.keyboard.press('n');

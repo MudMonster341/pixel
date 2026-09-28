@@ -397,3 +397,74 @@ test('the original 44 tile names keep their positions (map tile indices stay sta
     assert.equal(tileInfo.tiles[i].name, name, `tile index ${i} should still be "${name}"`);
   });
 });
+
+// ---------- quality loop, category 1 run 1 (2026-09-28): "Outdoor art" fixes ----------
+
+test('the entrance steps are flat horizontal treads (no vertical stripe texture), each a distinct light-stone tone', () => {
+  // The old Kenney staircase crop this replaced was a vertical-ridge side-on silhouette -- reading
+  // as "grey blinds", per the scorecard. A real horizontal tread should have at most a handful of
+  // distinct tones (light face, nosing shadow, riser), not many (a vertical-ridge crop samples many
+  // slightly different tones across its own width).
+  for (const name of ['bitsStep1', 'bitsStep2', 'bitsStep3']) {
+    const counts = colorCounts(name);
+    assert.ok(Object.keys(counts).length <= 6, `${name} should be a flat few-tone tread, found ${Object.keys(counts).length} tones`);
+  }
+  const step1 = colorCounts('bitsStep1');
+  const step2 = colorCounts('bitsStep2');
+  const step3 = colorCounts('bitsStep3');
+  assert.notDeepEqual(step1, step2, 'bitsStep1 and bitsStep2 should be distinct tones, not the same tread repeated');
+  assert.notDeepEqual(step2, step3, 'bitsStep2 and bitsStep3 should be distinct tones, not the same tread repeated');
+});
+
+test('the facade cast shadow is a soft translucent gradient, not an opaque bar', () => {
+  const { index } = tileByName('bitsFacadeShadow');
+  const tx = (index % tileInfo.columns) * TILE;
+  const ty = Math.floor(index / tileInfo.columns) * TILE;
+  const alphaAt = (yy) => png.rgba[((ty + yy) * png.width + tx) * 4 + 3];
+  const topAlpha = alphaAt(0);
+  const bottomAlpha = alphaAt(TILE - 1);
+  assert.ok(topAlpha > 0 && topAlpha < 128, `bitsFacadeShadow's own top row should be a soft tint (found alpha ${topAlpha}), not opaque or invisible`);
+  assert.ok(bottomAlpha < topAlpha, 'bitsFacadeShadow should fade out towards its far edge, not stay a flat bar');
+});
+
+test('a large flat roof mixes at least 3 distinct rooftop-clutter variants, not one texture stamped everywhere', () => {
+  for (const [a, b, c] of [['bitsRoof', 'bitsRoofB', 'bitsRoofC'], ['otherRoof', 'otherRoofB', 'otherRoofC']]) {
+    for (const name of [a, b, c]) assert.ok(tileInfoFor(name), `missing "${name}"`);
+    const countsA = colorCounts(a);
+    const countsB = colorCounts(b);
+    const countsC = colorCounts(c);
+    assert.notDeepEqual(countsA, countsB, `${a} and ${b} should look different (real rooftop variety)`);
+    assert.notDeepEqual(countsB, countsC, `${b} and ${c} should look different (real rooftop variety)`);
+  }
+});
+
+test('lawn has tuft/flower variants for a non-repeating scatter, distinct from plain lawn/lawn2', () => {
+  for (const name of ['lawn3', 'lawn4', 'lawn5']) assert.ok(tileInfoFor(name), `missing "${name}"`);
+  const lawn = colorCounts('lawn');
+  for (const name of ['lawn2', 'lawn3', 'lawn4', 'lawn5']) {
+    assert.notDeepEqual(colorCounts(name), lawn, `${name} should look different from plain lawn`);
+  }
+});
+
+test('the lamp post is a real 2-tile-tall pole: a base tile plus an overhead top tile with a distinct lamp head', () => {
+  const base = tileInfoFor('lampPost');
+  const top = tileInfoFor('lampPostTop');
+  assert.ok(base, 'missing lampPost');
+  assert.ok(top, 'missing lampPostTop');
+  assert.equal(base.solid, true, 'lampPost (the pole\'s own base) should be solid');
+  assert.equal(top.overhead, true, 'lampPostTop should be an overhead tile (like a tree canopy), not a ground/structure tile');
+  const topCounts = colorCounts('lampPostTop');
+  assert.ok('#ffd23f' in topCounts, 'lampPostTop is missing its warm lamp-glow colour');
+});
+
+test('Gate 2 has real gate furniture: pillars, a sign, a security booth, and a barrier arm', () => {
+  for (const name of ['gateSign', 'securityBooth']) {
+    const tile = tileInfoFor(name);
+    assert.ok(tile, `missing "${name}"`);
+    assert.equal(tile.solid, true, `${name} should be solid`);
+  }
+  const barrier = tileInfoFor('barrierArm');
+  assert.ok(barrier, 'missing barrierArm');
+  assert.equal(barrier.solid, false, 'barrierArm sits on the avenue itself and must never block the player');
+  assert.ok('#9c3a28' in colorCounts('barrierArm'), 'barrierArm should show its red stripe colour (archRed)');
+});

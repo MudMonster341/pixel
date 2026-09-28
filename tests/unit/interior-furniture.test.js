@@ -74,6 +74,10 @@ const EXPECTED_FURNITURE_BY_KIND = {
   discussion: ['table'],
   workshop: ['intMachine', 'intLabBench'],
   service: ['intDesk'],
+  // FB-0030/0031 (premium pass stage 5): the ICVL/Physics Lab key rooms get their own dedicated
+  // furniture, distinct from the shared 'lab'/'labHeavy' kinds above.
+  labIcvl: ['intIcvlBench', 'intServerRack'],
+  labPhysics: ['intLabBenchWood'],
 };
 
 function roomsByKind(json) {
@@ -107,7 +111,12 @@ for (const key of KEYS) {
   });
 }
 
-test('Main Block foyer specifically has a reception desk, seating, a plant, a noticeboard, and the decorative staircase + LUG Stall nook', () => {
+// FB-0030/0031 (premium pass stage 5): the foyer rebuilt per the owner's own photo
+// (docs/research/reference/owner-main-block-foyer.png) -- marble floor + runner, columns, a
+// twin-flight staircase converging on a landing, a chandelier, the wordmark, reception desk +
+// seating, potted palms, and the LUG Stall nook behind the stairs. Supersedes the old single
+// straight `intStairsUp` block this test used to check for.
+test('Main Block foyer specifically has a reception desk, seating, a plant, a noticeboard, the marble floor + runner, columns, a twin staircase + landing, a chandelier, the wordmark, and the LUG Stall nook', () => {
   const json = maps['main-block-g'];
   const objs = json.layers.find((l) => l.type === 'objectgroup').objects;
   const foyer = objs.find((o) => o.type === 'area' && o.name === 'Foyer');
@@ -115,22 +124,31 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
   const struct = json.layers.find((l) => l.name === 'structures').data;
   const ground = json.layers.find((l) => l.name === 'ground').data;
   const W = json.width;
-  const x0 = Math.round(foyer.x / 16), y0 = Math.round(foyer.y / 16);
-  const x1 = x0 + Math.round(foyer.width / 16) - 1, y1 = y0 + Math.round(foyer.height / 16) - 1;
+  // The area object is the room's *interior* (Floor.interior(), one tile in from the wall ring) --
+  // widen by 1 on every side so the scan also covers the wall row the wordmark is mounted on.
+  const x0 = Math.round(foyer.x / 16) - 1, y0 = Math.round(foyer.y / 16) - 1;
+  const x1 = x0 + Math.round(foyer.width / 16) + 1, y1 = y0 + Math.round(foyer.height / 16) + 1;
   const found = new Set();
+  const groundFound = new Set();
   let stairsTiles = 0;
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const sgid = struct[y * W + x];
       if (sgid) found.add(tileInfo.tiles[sgid - 1].name);
       const ggid = ground[y * W + x];
-      if (ggid && tileInfo.tiles[ggid - 1].name === 'intStairsUp') stairsTiles++;
+      if (ggid) groundFound.add(tileInfo.tiles[ggid - 1].name);
+      if (sgid && ['intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'].includes(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
     }
   }
-  for (const name of ['intReceptionDesk', 'intSofa', 'plant', 'intNoticeboard']) {
+  for (const name of ['intReceptionDesk', 'intSofa', 'plant', 'intNoticeboard', 'intColumn']) {
     assert.ok(found.has(name), `expected the Foyer to include "${name}", found [${[...found]}]`);
   }
-  assert.ok(stairsTiles >= 6, `expected a real block of decorative staircase tiles in the Foyer, found ${stairsTiles}`);
+  for (const name of ['intFloorMarble', 'intFloorMarbleRunner', 'intChandelier']) {
+    assert.ok(groundFound.has(name), `expected the Foyer's ground layer to include "${name}", found [${[...groundFound]}]`);
+  }
+  assert.ok(stairsTiles >= 6, `expected a real block of twin-staircase/landing tiles in the Foyer, found ${stairsTiles}`);
+  const wordmarkTiles = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`).filter((n) => found.has(n));
+  assert.ok(wordmarkTiles.length >= 8, `expected the "BITS Pilani, Dubai Campus" wordmark on the Foyer's mezzanine fascia, found [${wordmarkTiles}]`);
   const stall = objs.find((o) => o.type === 'area' && o.name === 'LUG Stall');
   assert.ok(stall, 'expected a "LUG Stall" area object on main-block-g (docs/STORY.md: "an event stall behind the stairs")');
   assert.equal(stall.properties?.find((p) => p.name === 'kind')?.value, 'stall');

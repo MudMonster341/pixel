@@ -55,8 +55,8 @@ const MAPS = {
       id: 'lug-volunteer',
       name: 'LUG Volunteer',
       character: 'volunteer',
-      x: 57,
-      y: 62, // the nook behind the foyer's decorative staircase (docs/INTERIORS_PLAN.md "LUG Stall")
+      x: 13,
+      y: 9, // the nook behind the foyer's staircase (FB-0030/0031, docs/INTERIORS_PLAN.md "LUG Stall")
       facing: 'down',
       dialog: STORY.volunteer,
     }],
@@ -68,9 +68,10 @@ const MAPS = {
     doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'] }],
     keyStations: [
       // Coordinates sit exactly on a real furniture tile in each room (checked against the
-      // generated map, docs/INTERIORS_PLAN.md): ICVL's is a lab bench, Room 195's is the teacher's desk.
-      { id: 'icvl', name: STORY.keyStations.icvl.name, item: STORY.keyStations.icvl.item, x: 50, y: 34, dialog: keyStationDialog('icvl') },
-      { id: 'room195', name: STORY.keyStations.room195.name, item: STORY.keyStations.room195.item, x: 61, y: 34, dialog: keyStationDialog('room195') },
+      // generated map, docs/INTERIORS_PLAN.md): ICVL's is a computer bench, Room 195's is the
+      // teacher's desk (FB-0030/0031 compact redesign).
+      { id: 'icvl', name: STORY.keyStations.icvl.name, item: STORY.keyStations.icvl.item, x: 5, y: 5, dialog: keyStationDialog('icvl') },
+      { id: 'room195', name: STORY.keyStations.room195.name, item: STORY.keyStations.room195.item, x: 24, y: 5, dialog: keyStationDialog('room195') },
     ],
   },
   'main-block-2': {
@@ -87,7 +88,8 @@ const MAPS = {
     tiled: 'main-block-3',
     indoors: true,
     keyStations: [
-      { id: 'physicsLab', name: STORY.keyStations.physicsLab.name, item: STORY.keyStations.physicsLab.item, x: 114, y: 34, dialog: keyStationDialog('physicsLab') },
+      // On a wood-topped physics-lab bench (FB-0030/0031 compact redesign).
+      { id: 'physicsLab', name: STORY.keyStations.physicsLab.name, item: STORY.keyStations.physicsLab.item, x: 5, y: 5, dialog: keyStationDialog('physicsLab') },
     ],
   },
   'library-block-g': { name: 'Library Block · Ground Floor', tiled: 'library-block-g', indoors: true },

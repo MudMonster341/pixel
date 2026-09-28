@@ -1369,6 +1369,84 @@
       "solid": true,
       "overhead": false,
       "color": "#609d70"
+    },
+    {
+      "name": "intFloorMarble",
+      "solid": false,
+      "overhead": false,
+      "color": "#e9dec1"
+    },
+    {
+      "name": "intFloorMarbleRunner",
+      "solid": false,
+      "overhead": false,
+      "color": "#caba90"
+    },
+    {
+      "name": "intColumn",
+      "solid": true,
+      "overhead": false,
+      "color": "#cfcabe"
+    },
+    {
+      "name": "intFoyerStairsL",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdc4ab"
+    },
+    {
+      "name": "intFoyerStairsR",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdc4ab"
+    },
+    {
+      "name": "intFoyerLanding",
+      "solid": true,
+      "overhead": false,
+      "color": "#e0d7c0"
+    },
+    {
+      "name": "intChandelier",
+      "solid": false,
+      "overhead": false,
+      "color": "#e3d5af"
+    },
+    {
+      "name": "intGlassDoorOpen",
+      "solid": false,
+      "overhead": false,
+      "color": "#424f5b"
+    },
+    {
+      "name": "intDoorClosed",
+      "solid": true,
+      "overhead": false,
+      "color": "#856244"
+    },
+    {
+      "name": "intIcvlBench",
+      "solid": true,
+      "overhead": false,
+      "color": "#566481"
+    },
+    {
+      "name": "intServerRack",
+      "solid": true,
+      "overhead": false,
+      "color": "#263454"
+    },
+    {
+      "name": "intLabBenchWood",
+      "solid": true,
+      "overhead": false,
+      "color": "#a48364"
+    },
+    {
+      "name": "intProjectorScreen",
+      "solid": true,
+      "overhead": false,
+      "color": "#c1b4a3"
     }
   ]
 }

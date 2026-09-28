@@ -280,21 +280,24 @@ test('quality loop: the roundabout island has a real kerb ring around it (not ju
 
 // Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the
 // BITS sign, a security booth, a barrier arm, and planters with plants".
-test('quality loop: Gate 2 has real gate furniture (pillars, a barrier arm) straddling the avenue', () => {
+test('quality loop: Gate 2 has real gate furniture (pillars, a short barrier arm) straddling the avenue', () => {
   const gate2 = gates.find((g) => /Gate 2/.test(g.name));
   const y = Math.floor(gate2.y) - 1;
   let sawPillar = false;
-  let sawBarrier = false;
   let sawPlanter = false;
+  let barrierTiles = 0;
   for (let x = Math.floor(gate2.x) - 10; x <= gate2.x + 10; x++) {
     const s = structNameAt(x, y) || structNameAt(x, y + 1);
     if (s === 'bitsPillar') sawPillar = true;
-    if (s === 'barrierArm') sawBarrier = true;
+    if (structNameAt(x, y) === 'barrierArm') barrierTiles++;
     if (s === 'planter') sawPlanter = true;
   }
   assert.ok(sawPillar, 'no gate pillar (bitsPillar) found straddling Gate 2\'s own approach');
-  assert.ok(sawBarrier, 'no barrier arm found across Gate 2\'s own approach');
   assert.ok(sawPlanter, 'no planter found near Gate 2 (should be real plants, not bare ground)');
+  // Quality loop run 2 (2026-09-28): "the barrier spans the full width like a stripe... make it a
+  // short arm (3-4 tiles)" -- not a wall across both lanes.
+  assert.ok(barrierTiles >= 1, 'no barrier arm found across Gate 2\'s own approach');
+  assert.ok(barrierTiles <= 4, `barrierArm spans ${barrierTiles} tiles, expected a short 3-4 tile arm, not the full avenue width`);
 });
 
 test('FB-0026: parking areas lie on both sides of the entrance road', () => {

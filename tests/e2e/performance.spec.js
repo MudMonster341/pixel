@@ -4,7 +4,7 @@
 // collapses), not a tight performance budget. Both numbers are logged so a human can eyeball the
 // trend over time even though the assertion itself stays generous.
 const { test, expect } = require('@playwright/test');
-const { openGame, startGame, holdKey } = require('./helpers');
+const { openGame, startGame, holdKey, waitForMap } = require('./helpers');
 
 test('the campus loads promptly', async ({ page }) => {
   const start = Date.now();
@@ -34,11 +34,12 @@ test('the frame rate holds up while walking the campus for a few seconds', async
   expect(fps).toBeGreaterThan(20);
 });
 
-// ADR 0015 (FB-0027, depth groups): the real campus has no `depthGroup` objects yet (a parallel art
-// branch adds them), so this injects 250 synthetic ones into the loaded Tiled JSON itself -- proving
-// the baking pass (src/scenes/world.js buildDepthGroups()) stays cheap at a realistic-or-bigger group
-// count, on the actual 534x341-tile map, not just on the small meadow/house test maps. Bounded by
-// "tiles inside a group" x "groups", never by map size, so this should track the plain load above.
+// ADR 0015 (FB-0027, depth groups): the campus art rebuild has since given the real campus its own
+// ~244 real `depthGroup` objects (buildings, trees, palms, signboards, ...) -- this test predates
+// that and still injects 250 MORE synthetic ones on top of them, proving the baking pass (src/
+// scenes/world.js buildDepthGroups()) stays cheap at a realistic-or-bigger group count, on the
+// actual 534x341-tile map, not just on the small meadow/house test maps. Bounded by "tiles inside a
+// group" x "groups", never by map size, so this should track the plain load above.
 test('FB-0027: baking 250 synthetic depth groups does not visibly slow the campus load', async ({ page }) => {
   await page.route('**/assets/maps/campus.json', async (route) => {
     const response = await route.fetch();
@@ -63,4 +64,46 @@ test('FB-0027: baking 250 synthetic depth groups does not visibly slow the campu
 
   const groupCount = await page.evaluate(() => game.scene.getScene('world').depthGroups.length);
   expect(groupCount).toBeGreaterThanOrEqual(250);
+});
+
+// Regression for a real bug this same round found: buildDepthGroups() baked each tile with
+// RenderTexture.drawFrame(), which does its own beginDraw()/batchDrawFrame()/endDraw() (a full
+// render-target bind/flush/unbind) *per call* -- fine for a handful of calls, but the real campus's
+// ~244 groups (~28k baked cells across 2 layers, ~56k individual blits) measured at 5+ real seconds
+// of synchronous main-thread work, on *every* load and *every* door/stairs transition landing back
+// on campus (`this.scene.restart()` re-runs buildMap() -> buildDepthGroups() from scratch) -- a
+// multi-second freeze on every door in and out of a building, and (since tests/e2e/helpers.js's
+// `waitForMap()` only polls 5s) the root cause behind several e2e failures that looked unrelated
+// (interiors.spec.js's Main Block round trip, scripts.spec.js/story.spec.js's fuller playthroughs).
+// The fix batches each group's blits with beginDraw()/batchDrawFrame()/endDraw() instead -- one real
+// draw per group, not one per tile. The test above's generous 15s full-page-load budget already
+// included this cost without ever isolating it, so it stayed green throughout; this measures
+// buildDepthGroups() itself, on the real (unmodified) campus map, against a budget that's still a
+// generous multiple of the ~100-200ms it actually takes post-fix, but nowhere near the old 5s+.
+test('the real campus depth groups (art rebuild, ~244 of them) bake in well under a second', async ({ page }) => {
+  await openGame(page, { map: null }); // first boot, unpatched/unmeasured -- just gets a live 'world' scene
+  await startGame(page);
+
+  // Patch *after* the scene already exists (avoids racing WorldScene's own first create(), which
+  // can run before an injected addInitScript gets a chance to reach into the scene manager), then
+  // force exactly the real-world case this bug hid in: a scene restart landing back on campus
+  // (`this.scene.restart()`, the same call every door/stairs warp makes) rebuilds the map, and with
+  // it every depth group, from scratch -- measure *that* run, not the initial boot.
+  await page.evaluate(() => {
+    const world = game.scene.getScene('world');
+    const orig = world.buildDepthGroups.bind(world);
+    world.buildDepthGroups = (...args) => {
+      const t0 = performance.now();
+      const r = orig(...args);
+      window.__depthGroupMs = performance.now() - t0;
+      return r;
+    };
+    world.scene.restart({ map: 'campus' });
+  });
+  await waitForMap(page, 'campus');
+
+  const ms = await page.evaluate(() => window.__depthGroupMs);
+  console.log(`[perf] campus buildDepthGroups() time (on scene restart): ${ms}ms`);
+  expect(ms).not.toBeUndefined();
+  expect(ms).toBeLessThan(2_000);
 });

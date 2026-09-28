@@ -252,3 +252,96 @@ already exists for exactly this) and check where the identifying pixels (face, a
 detail) actually land before writing the mapping down. "It moved but looks backwards/mirrored" for a
 character sprite specifically → suspect a mislabeled or wrongly-mirrored source column before assuming
 a simple `flipX`/velocity-sign bug.
+
+## ERR-0008 — Any door/stairs into a building crashed WorldScene.create() the first time it ran (2026-09-28)
+
+**Symptom:** After merging the Main Block interiors rebuild (40x40 floors) alongside the campus art
+rebuild, `npm test`'s first full round found campus.spec.js's "walk up to the Main Block entrance"
+and interiors.spec.js's "walking into the Main Block..." both timing out in `waitForMap()`
+(tests/e2e/helpers.js), never actually reaching `main-block-g`. A `pageerror` the test wasn't
+printing (added a temporary listener to see it) showed the real failure: `TypeError: Cannot read
+properties of undefined (reading 'width')` inside Phaser's own `GetTileAt`, called from
+`WorldScene.buildDepthGroups` (src/scenes/world.js), thrown during `create()` -- i.e. the *first*
+frame of the interior map, before the player/camera/input setup after it ever ran. The scene was
+left permanently inactive (`world.sys.isActive()` false, `player.active` false), which every test
+after that point read as "never arrives" since `waitForMap()`'s own `ready` check requires both.
+
+**Context:** ADR 0015's depth groups bake every non-`ground` tile layer, including the `overhead`
+layer (tree canopies, ADR 0008) when the current map's own Tiled data has one -- `buildMap()` only
+ever *assigns* `this.overheadLayer` inside `if (overheadDef) { ... }`; there is no matching `else`
+branch, and `init()` (which runs on every `this.scene.restart()`, since `WorldScene` restarts *in
+place*, not as a fresh instance) never reset it either. The campus has tree canopies (an `overhead`
+layer); every interior (the newly-rebuilt Main Block floors included) does not.
+
+**Root cause:** walking from the campus (which sets `this.overheadLayer` to a real, live
+`TilemapLayer`) through a door into any interior (which never reassigns it, since that map has no
+`overhead` layer of its own) left `this.overheadLayer` pointing at the *previous* map's now-destroyed
+layer object -- `this.scene.restart()` tears down every display object from the old `create()` run,
+but a plain instance property survives on the same, reused `WorldScene` instance. `buildDepthGroups()`
+still unconditionally included it in `bakeLayers` (`this.overheadLayer ? [this.overheadLayer] : []`
+read the stale truthy reference) and called `.getTileAt()` on it, which reached into the destroyed
+layer's internals and threw. Any interior reached directly from the campus hit this on its very first
+load; interiors.spec.js's floor-to-floor stairs (interior → interior, both without `overhead`) never
+did, which is why only the entry step failed.
+
+**Fix:** `init()` now sets `this.overheadLayer = null` unconditionally, every restart, so
+`buildMap()`'s own `if (overheadDef)` is the *only* thing that can make it non-null again -- a map
+without that layer always starts this field clean instead of inheriting whatever the previous map
+left behind.
+
+**Recognise it next time:** a scene that restarts *in place* (`scene.restart()`, not a fresh
+instance) and has a field only ever assigned inside a conditional branch (`if (someLayerExists) {
+this.x = ... }`, no `else`) → that field can leak the previous run's now-destroyed value into a run
+where the condition is false. `init()` must reset every such field unconditionally, the same way
+`buildMap()`'s *un*conditional fields (`this.map`, `this.solidLayers`, `this.mapObjects`, ...) never
+have this problem simply by always being reassigned. A crash inside `create()` itself (not a gameplay
+bug reachable later) reads, from the outside, as "the scene never became active/ready" -- exactly
+what a `waitForMap()`/`waitForBoot()` timeout looks like -- so check for an uncaught `pageerror`
+before assuming a slow transition or a bad door/spawn placement.
+
+## ERR-0009 — Every door out of a building froze for 5+ real seconds; most e2e tests were quietly this slow the whole time (2026-09-28)
+
+**Symptom:** Once ERR-0008's crash was fixed, interiors.spec.js's Main Block round trip still failed
+`waitForMap('campus')` at its final step (walking back out onto campus) -- but this time not from a
+crash: `state(page).ready` genuinely became true, just roughly 5.3 real seconds after
+`tests/e2e/helpers.js`'s `waitForMap()` had already given up at its 5s poll timeout. The same
+underlying cost was hiding in plain sight in every other test too (added timing instrumentation
+around `buildMap()`/`buildDepthGroups()` to confirm): the real campus map's *first* load (every
+single spec's `openGame()`) paid the exact same ~5.3s, just absorbed inside Playwright's much longer
+default timeouts, so nothing before this looked broken -- it just made the whole suite unnecessarily
+slow.
+
+**Context:** The campus art rebuild (FB-0027/0028/0029) gave the real campus map 244 real
+`depthGroup` objects (buildings, trees, palms, signboards, ...), ~28k tiles baked across 2 layers
+(~56k individual tile blits) by `WorldScene.buildDepthGroups()` (ADR 0015, src/scenes/world.js).
+tests/e2e/performance.spec.js's own synthetic-250-groups test predates this and still passed
+throughout, because its budget (15s for a *whole page load*, including real asset decode) was
+generous enough to swallow the cost without anyone isolating it.
+
+**Root cause:** each tile blit called `RenderTexture.drawFrame()`, which is a convenience method that
+does its own `beginDraw()`/`batchDrawFrame()`/`endDraw()` -- a full render-target bind, draw, flush
+and unbind -- *per call*. That's negligible for a handful of calls (a single group, or the old
+"campus has no real groups yet" state this code was originally written and budgeted for), but at
+~56k individual calls it measured at 5.3+ real seconds of synchronous main-thread work, every single
+time `buildMap()` runs: the initial page load, *and* every `this.scene.restart()` a door/stairs warp
+makes when it lands back on campus, since that re-runs `buildMap()` -> `buildDepthGroups()` from
+scratch. For a real player this is a multi-second freeze on every door out of any building onto
+campus, not just a test-timing artifact.
+
+**Fix:** batch each group's own blits instead of flushing per tile: one `rt.beginDraw()` before the
+group's nested tile loop, `rt.batchDrawFrame()` (identical signature to `drawFrame()`, just deferred)
+inside it, one `rt.endDraw()` after. Same pixels, same tile-frame API, no visible behaviour change --
+measured at ~100-200ms for the real campus's 244 groups afterward (confirmed by reverting the fix
+and re-running: 5522ms without it, in `tests/e2e/performance.spec.js`'s new
+"bake in well under a second" test, which asserts a 2s budget -- generous, but nowhere near the old
+5s+). This also shaved several seconds off nearly every e2e test's own `openGame()`, since campus is
+the default start map for most specs.
+
+**Recognise it next time:** any code that calls a Phaser `RenderTexture`'s `draw()`/`drawFrame()` (or
+`stamp()`) in a loop, especially one bounded by map/content size rather than a small fixed count →
+check whether `beginDraw()`/`batchDraw()`/`batchDrawFrame()`/`endDraw()` exist on that Phaser version
+(they've existed since 3.60) and batch the loop instead of calling the single-shot convenience method
+per iteration. A "severe regression" performance test with a generous, whole-page-load budget (here,
+15s) can hide a real per-operation regression indefinitely if nothing isolates the specific operation
+that got expensive -- prefer measuring the specific expensive call directly, with a tighter budget,
+alongside (not instead of) the coarser end-to-end smoke test.

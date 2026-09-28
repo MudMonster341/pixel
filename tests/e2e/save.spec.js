@@ -46,7 +46,16 @@ test('FB-M1-save: ?save=0 starts fresh and never touches the stored save', async
   await startGame(page);
   await holdKey(page, 'w', 800);
   await page.evaluate(() => GameState.inventory.add('coffee'));
-  await expect.poll(async () => Boolean(await savedState(page, profile))).toBe(true);
+  // A save already exists at this point regardless -- the boot-time `map-entered` autosave (src/
+  // save.js initAutosave()) fires and lands well before this line ever runs, always. Polling for
+  // mere *existence* passed instantly on that stale, pre-walk write and captured it as `savedBefore`
+  // -- then the next line's openGame() (a real navigation) triggered the 'pagehide' flush of the
+  // walk+coffee debounce that was *still pending* at that instant (AUTOSAVE_DEBOUNCE_MS hadn't
+  // elapsed since the last `player-moved`/inventory `changed` event), landing the true post-walk
+  // save a moment later -- after `savedBefore` had already been read, so the final equality check
+  // compared against the wrong baseline. Poll for the coffee item actually being in the save instead,
+  // the same "wait for the real value settle" fix as ERR-0002 (docs/TESTING.md rule 5).
+  await expect.poll(async () => countItem((await savedState(page, profile))?.inventory.slots || [], 'coffee')).toBe(1);
   const savedBefore = await savedState(page, profile);
 
   // openGame()'s default is already save:false (?save=0); spelled out here for clarity.

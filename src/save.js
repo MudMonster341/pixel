@@ -186,11 +186,30 @@ function listProfiles() {
 }
 
 function deleteProfile(profile) {
+  // FB-M1-save regression (interiors/onboarding round): cancel a pending autosave for this exact
+  // profile *first*. Without this, deleting the profile the running game is actually autosaving
+  // (e.g. right before navigating away) left the debounced write (AUTOSAVE_DEBOUNCE_MS, still
+  // in-flight from a `player-moved`/`state-changed`/etc. burst a moment earlier) armed; a reload's
+  // own 'pagehide'/'beforeunload' flush (below) then treated it as "an already-scheduled save this
+  // page still owes", wrote it, and silently resurrected the very save this call just removed. The
+  // flush's own comment already documented this exact guarantee ("can't resurrect a profile ...
+  // just removed a moment ago with nothing left pending") -- it just wasn't true yet, since nothing
+  // told the pending timer the profile it was about to write no longer exists.
+  cancelPendingAutosave(profile);
   try {
     localStorage.removeItem(saveKey(profile));
   } catch (error) {
     console.warn(`save.js: could not delete profile "${profile}"`, error);
   }
+}
+
+// Set by initAutosave() below to the one currently-running autosave loop's own cancel hook (there's
+// only ever one live game/page at a time, for `currentProfile()`) -- null before boot and in every
+// unit test, which call saveGame()/loadGame()/deleteProfile() directly with no autosave loop running.
+let activeAutosave = null;
+
+function cancelPendingAutosave(profile) {
+  if (activeAutosave && activeAutosave.profile === profile) activeAutosave.cancel();
 }
 
 // Autosave: listens for the events that mean progress happened, and writes at most once per short
@@ -207,6 +226,13 @@ function initAutosave(game, profile = currentProfile()) {
       timer = null;
       saveGame(profile);
     }, AUTOSAVE_DEBOUNCE_MS);
+  };
+  activeAutosave = {
+    profile,
+    cancel: () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
   };
   game.events.on('map-entered', schedule);
   game.events.on('state-changed', schedule); // GameState.notifyStateChanged(): flags/quest

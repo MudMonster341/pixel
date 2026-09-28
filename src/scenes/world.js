@@ -91,6 +91,16 @@ class WorldScene extends Phaser.Scene {
     this.playOpening = Boolean(data.playOpening);
     this.transitioning = false;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
+    // buildMap() only ever *assigns* this.overheadLayer when the new map's own Tiled data actually
+    // has an 'overhead' layer (tree canopies, ADR 0008) -- it never clears it otherwise. Since
+    // WorldScene restarts in place (`this.scene.restart()`, not a fresh instance), a stale reference
+    // to the OLD map's now-destroyed overhead TilemapLayer survived into the new map's own
+    // buildDepthGroups() bake list whenever the new map had no overhead layer of its own (every
+    // interior, e.g. the campus -> Main Block door): calling .getTileAt() on that destroyed layer
+    // threw ("Cannot read properties of undefined (reading 'width')"), which aborted create() before
+    // the player/camera/input setup below it ever ran -- the scene was left permanently inactive,
+    // looking like a soft-lock on any door/stairs into a map without tree canopies.
+    this.overheadLayer = null;
     // Cached warpPoints() (perf: this used to be rebuilt twice a frame, doorAssist() and checkWarps()
     // both calling it) -- only the `locked` flags ever change after map load, and only when the quest
     // stage does, so getWarpPoints() below recomputes just those instead of the whole array.
@@ -243,18 +253,35 @@ class WorldScene extends Phaser.Scene {
     // map, which is what keeps this cheap even at the 250-synthetic-group performance budget
     // (tests/e2e/performance.spec.js): a RenderTexture per group, each tile blitted in by its own
     // registered frame (ensureTileFrames()) at its position local to the group's own rect.
+    //
+    // Perf fix (campus art rebuild, FB-0027/0029): the real campus map ships 244 real depthGroup
+    // objects (buildings, trees, palms, signboards, ...) totalling ~28k baked cells across 2 layers,
+    // ~56k individual blits. `RenderTexture.drawFrame()` is a convenience wrapper that does its own
+    // `beginDraw()`/`batchDrawFrame()`/`endDraw()` (a full render-target bind/flush/unbind) *per
+    // call* -- fine for a handful of calls (the old 0-real-group campus, or a single group), ruinous
+    // at this volume: measured at 5+ real seconds of synchronous main-thread work building the
+    // campus's depth groups alone, on every load *and* every door/stairs transition that lands back
+    // on campus (`this.scene.restart()` re-runs buildMap() -> buildDepthGroups() from scratch) --
+    // easily blowing past tests/e2e/helpers.js's 5s `waitForMap()` poll (interiors.spec.js's Main
+    // Block round trip, scripts.spec.js/story.spec.js's fuller playthroughs) and, for a real player,
+    // a multi-second freeze on every single door in and out of a building. `beginDraw()` once per
+    // group's RenderTexture and `batchDrawFrame()` (identical signature to `drawFrame()`, just
+    // deferred) for every tile, `endDraw()` once at the end, batches the whole group into one real
+    // draw instead of one per tile -- same pixels, same tile-frame API, no visible behaviour change.
     for (const group of groupDefs) {
       const px = group.x * TILE;
       const py = group.y * TILE;
       const rt = this.add.renderTexture(px, py, group.width * TILE, group.height * TILE).setOrigin(0, 0);
+      rt.beginDraw();
       for (let ty = group.y; ty < group.y + group.height; ty++) {
         for (let tx = group.x; tx < group.x + group.width; tx++) {
           for (const layer of bakeLayers) {
             const tile = layer.getTileAt(tx, ty);
-            if (tile) rt.drawFrame('tiles', tile.index - 1, (tx - group.x) * TILE, (ty - group.y) * TILE);
+            if (tile) rt.batchDrawFrame('tiles', tile.index - 1, (tx - group.x) * TILE, (ty - group.y) * TILE);
           }
         }
       }
+      rt.endDraw();
       const depth = (group.y + group.height - group.baseOffset) * TILE;
       rt.setDepth(depth);
       this.depthGroups.push({ ...group, rt, depth });

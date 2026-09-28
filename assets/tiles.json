@@ -678,7 +678,7 @@
       "name": "intFloorClassroom",
       "solid": false,
       "overhead": false,
-      "color": "#d1c2a1"
+      "color": "#a87d55"
     },
     {
       "name": "intFloorCarpet",
@@ -1374,43 +1374,43 @@
       "name": "intFloorMarble",
       "solid": false,
       "overhead": false,
-      "color": "#e9dec1"
+      "color": "#cdc3ab"
     },
     {
       "name": "intFloorMarbleRunner",
       "solid": false,
       "overhead": false,
-      "color": "#caba90"
+      "color": "#b0a48a"
     },
     {
       "name": "intColumn",
       "solid": true,
       "overhead": false,
-      "color": "#cfcabe"
+      "color": "#d0c8b9"
     },
     {
       "name": "intFoyerStairsL",
       "solid": true,
       "overhead": false,
-      "color": "#cdc4ab"
+      "color": "#c6bfae"
     },
     {
       "name": "intFoyerStairsR",
       "solid": true,
       "overhead": false,
-      "color": "#cdc4ab"
+      "color": "#c6bfae"
     },
     {
       "name": "intFoyerLanding",
       "solid": true,
       "overhead": false,
-      "color": "#e0d7c0"
+      "color": "#ebe5d6"
     },
     {
       "name": "intChandelier",
       "solid": false,
-      "overhead": false,
-      "color": "#e3d5af"
+      "overhead": true,
+      "color": "#cbae68"
     },
     {
       "name": "intGlassDoorOpen",
@@ -1447,6 +1447,48 @@
       "solid": true,
       "overhead": false,
       "color": "#c1b4a3"
+    },
+    {
+      "name": "intWallCap",
+      "solid": true,
+      "overhead": false,
+      "color": "#c9c5bc"
+    },
+    {
+      "name": "intWallFace",
+      "solid": true,
+      "overhead": false,
+      "color": "#cec8bb"
+    },
+    {
+      "name": "intWallFaceEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#d4ccba"
+    },
+    {
+      "name": "intWallFaceEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#c8c0b1"
+    },
+    {
+      "name": "intWallWindow",
+      "solid": true,
+      "overhead": false,
+      "color": "#a2988f"
+    },
+    {
+      "name": "intFloorTiled",
+      "solid": false,
+      "overhead": false,
+      "color": "#dbd29c"
+    },
+    {
+      "name": "intFloorLabLight",
+      "solid": false,
+      "overhead": false,
+      "color": "#8d8482"
     }
   ]
 }

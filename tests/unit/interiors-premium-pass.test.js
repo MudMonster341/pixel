@@ -156,3 +156,78 @@ for (const [key, mapKey] of Object.entries(SCRIPT_MAP)) {
     }
   });
 }
+
+// ---------- Quality loop, Interior art run 1 (docs/quality/scorecard.md, 2026-09-28) ----------
+// The owner's rating: "3/10... a big pale empty floor... 1-tile vertical wall strips (no 3/4 top
+// edge + face)". Two promises this round specifically made, checked directly against the generated
+// maps so a later regeneration can't silently regress them: every story room is densely furnished
+// (not a "sparse quarter-filled grid"), and every Main Block room's own walls are a real 2-tile-tall
+// cap-then-face, not a single flat tile.
+
+// A room's own `area` object is its *interior* (Floor.interior(), one tile in from the wall ring) --
+// exactly the rectangle the brief's "less than ~40% plain floor" means "of any room's floor".
+function plainFloorRatio(json, areaName) {
+  const struct = json.layers.find((l) => l.name === 'structures').data;
+  const objs = json.layers.find((l) => l.type === 'objectgroup').objects;
+  const area = objs.find((o) => o.type === 'area' && o.name === areaName);
+  if (!area) throw new Error(`no area object named "${areaName}"`);
+  const x0 = Math.round(area.x / 16), y0 = Math.round(area.y / 16);
+  const x1 = x0 + Math.round(area.width / 16) - 1, y1 = y0 + Math.round(area.height / 16) - 1;
+  let total = 0, plain = 0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      total++;
+      if (!struct[y * json.width + x]) plain++;
+    }
+  }
+  return plain / total;
+}
+
+const DENSE_STORY_ROOMS = {
+  'main-block-1': ['ICVL', 'Room 195'],
+  'main-block-3': ['Physics Lab'],
+};
+
+for (const [mapKey, names] of Object.entries(DENSE_STORY_ROOMS)) {
+  for (const name of names) {
+    test(`Quality loop (Interior art run 1): ${mapKey}'s "${name}" is densely furnished (under 40% plain floor)`, () => {
+      const json = loadMapJson(mapKey);
+      const ratio = plainFloorRatio(json, name);
+      assert.ok(ratio < 0.4, `${mapKey}: "${name}" is ${(ratio * 100).toFixed(1)}% plain floor, expected under 40%`);
+    });
+  }
+}
+
+// Every Main Block room built with `wallKit: 'roomBuilder'` (tools/interiors/plans.js) gets a real
+// LimeZu Room_Builder face on its own wall ring (`intWallFace`/`intWallFaceEndL`/`intWallFaceEndR`),
+// and at least some of its top wall has a matching `intWallCap` bled in one row above it
+// (Floor.capTopWall()) -- together a genuine "top edge, then a 2nd tile of coloured face" instead of
+// one flat hand-drawn tile. The foyer specifically has full clearance above its own top wall (open
+// canvas, nothing built north of it), so its cap coverage should be complete, not just partial.
+const MAIN_BLOCK_KEYS = ['main-block-g', 'main-block-1', 'main-block-2', 'main-block-3'];
+
+for (const key of MAIN_BLOCK_KEYS) {
+  test(`Quality loop (Interior art run 1): ${key} uses the real Room_Builder wall face (2-tile-tall: a cap row above a face row)`, () => {
+    const json = loadMapJson(key);
+    const struct = json.layers.find((l) => l.name === 'structures').data;
+    const names = new Set();
+    for (const gid of struct) if (gid) names.add(tileNames[gid - 1]);
+    assert.ok(names.has('intWallFace'), `${key}: expected the Room_Builder wall face (intWallFace) somewhere on this floor`);
+    assert.ok(names.has('intWallCap'), `${key}: expected a wall cap (intWallCap) bled in above at least one wall on this floor`);
+  });
+}
+
+test('Quality loop (Interior art run 1): the Foyer\'s entire top wall has a full-width cap row (intWallCap) above it -- a genuine 2-tile-tall wall, not a single flat tile', () => {
+  const json = loadMapJson('main-block-g');
+  const struct = json.layers.find((l) => l.name === 'structures').data;
+  const objs = json.layers.find((l) => l.type === 'objectgroup').objects;
+  const foyer = objs.find((o) => o.type === 'area' && o.name === 'Foyer');
+  const x0 = Math.round(foyer.x / 16), x1 = x0 + Math.round(foyer.width / 16) - 1;
+  const capRow = Math.round(foyer.y / 16) - 2; // one row above the outer wall ring itself
+  let capTiles = 0;
+  for (let x = x0; x <= x1; x++) {
+    const gid = struct[capRow * json.width + x];
+    if (gid && tileNames[gid - 1] === 'intWallCap') capTiles++;
+  }
+  assert.equal(capTiles, x1 - x0 + 1, `expected every one of the Foyer's ${x1 - x0 + 1} top-wall columns to have an intWallCap, found ${capTiles}`);
+});

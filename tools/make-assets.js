@@ -125,7 +125,12 @@ const PALETTE = {
   // shadow + a darker inlay "runner" band down the centre), black wrought-iron railing (not the
   // fence's grey '<'), cool-white columns, warm chandelier brass/glow, and the ICVL's royal-blue
   // cabinetry, all sampled from the reference photo/spec, not reused from an unrelated hue.
-  marbleLight: '#f2e9d2', marbleFleck: '#e8ddbf', marbleShadow: '#c9bb94', marbleRunner: '#b8a473',
+  // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28: "the marble reads as
+  // sand") -- cooled and desaturated from the first pass's warmer, more golden tones, which read as
+  // desert sand once combined with a speckle dither. A genuinely dark, cool taupe for the runner
+  // (not a golden tan) so it reads as a stone inlay, not a sand path.
+  marbleLight: '#f2ede0', marbleFleck: '#dfd6c2', marbleShadow: '#b9ac8e', marbleRunner: '#8f8264',
+  marbleRunnerDark: '#786d54',
   ironRail: '#2a2a32',
   columnBody: '#efe9da', columnShade: '#d8d0bd',
   chandelierGold: '#e8c46a', chandelierGlow: '#fff6df',
@@ -629,6 +634,41 @@ const LAB_PACK = {
 // "Pixel Seating" by Molly "Cougarmint" Willits, CC-BY 3.0, assets/vendor/pixel-seating/: a single
 // theatre seat, front view -- already close to this game's own red seat ramp, so no recolor needed.
 const SEATING_CHAIR = 'pixel-seating/Chair1_front.png';
+
+// Quality loop, Interior art run 1 (docs/quality/scorecard.md 2026-09-28, "3/10... 1-tile vertical
+// wall strips... the marble reads as sand"): LimeZu's own Room_Builder sheet, not mined before this
+// pass (only its furniture sheet, Interiors_free_16x16.png, was) -- real 3/4-view walls (a light
+// "cap" row where the wall meets the ceiling, then a genuinely 2-tile-tall coloured face row below
+// it) and real floor textures, instead of every wall/floor being a single hand-drawn 16x16 tile.
+// Coordinates found the same way as every other pack mined in this file: decoding the sheet and
+// measuring grid cells directly (see MEMORY.md), not guessed from the README thumbnail. The sheet's
+// own layout: 8 wall colourways stacked vertically, each 2 rows tall (a light cap row, then a
+// coloured face row), 3 tileable columns wide; a separate floor-texture block to the right, each
+// pattern also 2 rows tall (2 closely-related variants) x 3 (or, for the plainer "noise" family, 6)
+// columns wide.
+const ROOM_BUILDER = 'limezu-modern-interiors-free/Modern tiles_Free/Interiors_free/16x16/Room_Builder_free_16x16.png';
+function rb(col, row) {
+  return { atlas: ROOM_BUILDER, sx: col * 16, sy: row * 16, sw: 16, sh: 16 };
+}
+const RB = {
+  wallCreamCap: rb(0, 7), wallCreamFace: rb(0, 8), // the palest of the 8 colourways -- closest to the owner's cream/white foyer walls
+  floorStoneCap: rb(11, 11), floorStoneFace: rb(11, 12), // a plain light stone/slab floor with a subtle panel seam -- the "polished stone" candidate
+  floorTiled: rb(11, 7), // a cream tile with a raised cross/waffle pattern -- a genuinely *tiled* floor for corridors
+  floorWood: rb(0, 12), // the first wood-plank wall colourway's own face row, reused flat as a wood floor (real plank-grain pixels, not a hand-drawn ramp)
+  floorLight: rb(14, 5), // the palest "noise" floor variant -- a light, low-contrast tile for labs
+};
+// The cream wall family, recoloured onto this game's own marble ramp (the exact 3-tone palette the
+// foyer floor below also uses, so the walls and floor read as one coherent cream-stone hall instead
+// of two unrelated materials) -- sampled range (MEMORY.md: decoded and measured directly) covers
+// this crop's own light-tan bands, 61-248, its outline sitting right at the bottom of that range.
+const remapMarbleWall = remapShaded(['marbleShadow', 'marbleFleck', 'marbleLight'].map((k) => PALETTE[k]), { loLum: 120, hiLum: 230, outlineBelow: 90, lineAbove: 500 });
+// The floor crop's own tonal range is much narrower (155-173, a subtle panel-seam shade, not a full
+// light-to-dark ramp) -- a tight loLum/hiLum window tuned to that exact range so the seam still
+// shows as a visible light/dark contrast instead of collapsing into one flat colour.
+const remapMarbleFloor = remapShaded(['marbleShadow', 'marbleFleck', 'marbleLight'].map((k) => PALETTE[k]), { loLum: 152, hiLum: 176, outlineBelow: 0, lineAbove: 500 });
+// The runner: the same floor crop's own seam structure, mapped onto a darker taupe ramp instead of a
+// flat fill, so the inlay band still reads as stone (with real pack pixels), just a shade darker.
+const remapMarbleRunner = remapShaded(['marbleRunnerDark', 'marbleRunner', 'marbleShadow'].map((k) => PALETTE[k]), { loLum: 152, hiLum: 176, outlineBelow: 0, lineAbove: 500 });
 
 // Scales an arbitrary sw x sh crop from `atlas` down (nearest-neighbor, aspect preserved) to fit
 // inside maxW x maxH, then sits it on the tile's own base line (bottom-aligned, like a piece of
@@ -1316,13 +1356,25 @@ const TILES = [
   { name: 'intFoyerStairsL', solid: true, draw: intFoyerStairsL },
   { name: 'intFoyerStairsR', solid: true, draw: intFoyerStairsR },
   { name: 'intFoyerLanding', solid: true, draw: intFoyerLanding },
-  { name: 'intChandelier', draw: intChandelier },
+  { name: 'intChandelier', overhead: true, draw: intChandelier },
   { name: 'intGlassDoorOpen', draw: intGlassDoorOpen },
   { name: 'intDoorClosed', solid: true, draw: intDoorClosed },
   { name: 'intIcvlBench', solid: true, draw: intIcvlBench },
   { name: 'intServerRack', solid: true, draw: intServerRack },
   { name: 'intLabBenchWood', solid: true, draw: intLabBenchWood },
   { name: 'intProjectorScreen', solid: true, draw: intProjectorScreen },
+
+  // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28): real LimeZu
+  // Room_Builder walls (2 tiles tall: a cap + a face) and floors, replacing the hand-drawn 1-tile
+  // wall strips and the sand-reading "marble". Appended at the very end so every existing tile's
+  // name/index stays stable.
+  { name: 'intWallCap', solid: true, draw: intWallCap },
+  { name: 'intWallFace', solid: true, draw: intWallFace },
+  { name: 'intWallFaceEndL', solid: true, draw: intWallFaceEndL },
+  { name: 'intWallFaceEndR', solid: true, draw: intWallFaceEndR },
+  { name: 'intWallWindow', solid: true, draw: intWallWindow },
+  { name: 'intFloorTiled', draw: intFloorTiled },
+  { name: 'intFloorLabLight', draw: intFloorLabLight },
 ];
 
 // ---------- campus tiles ----------
@@ -1422,6 +1474,39 @@ function bitsWallEnd(img, x, y, side) {
   const x0 = side === 'L' ? 0 : TILE - w;
   img.fill(x + x0, y, w, TILE, '%');
   img.fill(x + x0, y, w, 2, '=');
+}
+
+// Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28: "1-tile vertical wall
+// strips (no 3/4 top edge + face)"): real LimeZu Room_Builder wall crops (RB.wallCreamCap/Face),
+// recoloured onto the marble ramp so the Main Block's own walls match its floor. Two physical tiles
+// tall -- `intWallCap` is placed one row *above* the room's own wall-ring row (Floor.capTopWall(),
+// tools/interiors/build-interiors.js, only where that row is still open void), `intWallFace` is the
+// wall-ring row itself -- a genuine "top edge, then a face" instead of one tile squeezing both bands
+// into 16px. Distinct tile names from `bitsWallPlain`/`bitsWall`/`bitsWallEndL`/`bitsWallEndR` (which
+// Library/Mechanical Block still use, untouched) so this is purely additive.
+function intWallCap(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(RB.wallCreamCap.atlas), RB.wallCreamCap.sx, RB.wallCreamCap.sy, 16, 16, { remap: remapMarbleWall });
+}
+function intWallFace(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(RB.wallCreamFace.atlas), RB.wallCreamFace.sx, RB.wallCreamFace.sy, 16, 16, { remap: remapMarbleWall });
+}
+// The wall turning a corner: the same darker side-face shadow strip as bitsWallEnd, over the new
+// marble-toned face instead of the BITS sand wall.
+function intWallFaceEnd(img, x, y, side) {
+  intWallFace(img, x, y);
+  const w = 3;
+  const x0 = side === 'L' ? 0 : TILE - w;
+  img.fill(x + x0, y, w, TILE, 'marbleShadow');
+}
+function intWallFaceEndL(img, x, y) { intWallFaceEnd(img, x, y, 'L'); }
+function intWallFaceEndR(img, x, y) { intWallFaceEnd(img, x, y, 'R'); }
+// A window on an outer wall (quality loop: "windows on outer walls") -- a plain frame + glass, over
+// the new marble-toned face.
+function intWallWindow(img, x, y) {
+  intWallFace(img, x, y);
+  img.fill(x + 3, y + 4, TILE - 6, 9, '&');
+  img.fill(x + 4, y + 5, TILE - 8, 7, '*');
+  img.set(x + 5, y + 6, 'W');
 }
 
 // BITS building kit addendum (2026-09-21, coordinator review): a building's outdoor front reads as
@@ -2123,8 +2208,12 @@ function busStopSign(img, x, y) {
 function intFloorFoyer(img, x, y) {
   forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx + yy * 3) % 9 === 0 ? 'ß' : 'µ'));
 }
+// Quality loop (docs/quality/scorecard.md, Interior art run 1): a real LimeZu Room_Builder wood-plank
+// crop (RB.floorWood -- one of the pack's own wood wall face rows, flat and grain-visible enough to
+// double as a floor) instead of a hand-drawn 2-tone stripe, kept in the pack's own warm tone (no
+// recolor needed, it's already this game's wood hue).
 function intFloorClassroom(img, x, y) {
-  forEachPixel((xx, yy) => img.set(x + xx, y + yy, yy % 4 === 3 ? ']' : '['));
+  blitAtlas(img, x, y, loadAtlas(RB.floorWood.atlas), RB.floorWood.sx, RB.floorWood.sy, 16, 16);
 }
 function intFloorCarpet(img, x, y) {
   forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx + yy) % 5 === 0 ? '}' : '{'));
@@ -2145,6 +2234,19 @@ function intFloorStage(img, x, y) {
 // court, not a patch of grass that wandered inside.
 function intFloorCourt(img, x, y) {
   speckle(img, x, y, '@', '#', 77, 4);
+}
+// Quality loop (docs/quality/scorecard.md, Interior art run 1, "corridors are bare"): a genuinely
+// *tiled* corridor floor -- LimeZu's own cream cross/waffle-pattern tile crop, kept native (it's
+// already a light, low-saturation cream close to this game's existing corridor palette, so no
+// recolor needed) -- replacing the corridor's previous reuse of the plain `intFloorFoyer` fleck tile.
+function intFloorTiled(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(RB.floorTiled.atlas), RB.floorTiled.sx, RB.floorTiled.sy, 16, 16);
+}
+// A light, low-noise lab floor for the ICVL/Physics Lab specifically (docs/research/campus-visual-
+// reference.md: "floor is plain pale vinyl/terrazzo") -- a distinct tile name from the shared
+// `intFloorLabVinyl` Mechanical Block's own labs still use, so that art stays untouched.
+function intFloorLabLight(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(RB.floorLight.atlas), RB.floorLight.sx, RB.floorLight.sy, 16, 16);
 }
 
 // A cleared wall opening: a dark threshold framed in the BITS trim colour, always walkable.
@@ -2367,48 +2469,59 @@ function intMachine(img, x, y) {
 // staircase converging on a landing, walk-behind columns, a chandelier over the landing, and glass
 // entrance doors. tools/interiors/plans.js/build-interiors.js place these as `depthGroup`s (ADR
 // 0015) so she walks behind the staircase/columns/big plants, never over them.
+// Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28: "the marble reads as
+// sand"): a real LimeZu Room_Builder floor crop (RB.floorStoneCap/Face -- a light stone/slab texture
+// with its own panel-seam shading), recoloured onto the marble ramp instead of a hand-drawn speckle,
+// so the panel seams (real pack pixels) read as the photo's floor reflections/joints.
 function intFloorMarble(img, x, y) {
-  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx * 3 + yy * 5) % 11 === 0 ? 'marbleLight' : 'marbleFleck'));
+  blitAtlas(img, x, y, loadAtlas(RB.floorStoneCap.atlas), RB.floorStoneCap.sx, RB.floorStoneCap.sy, 16, 16, { remap: remapMarbleFloor });
 }
 // The dark inlay "runner" band down the centre of the floor from the entrance toward the staircase
-// (visible as a distinct stripe in the owner's photo) -- the same fleck floor either side of a
-// darker centre strip.
+// (visible as a distinct stripe in the owner's photo): the same real crop's *other* row (a slightly
+// different seam pattern), recoloured to the darker end of the same marble ramp.
 function intFloorMarbleRunner(img, x, y) {
-  intFloorMarble(img, x, y);
-  img.fill(x + 3, y, TILE - 6, TILE, 'marbleRunner');
+  blitAtlas(img, x, y, loadAtlas(RB.floorStoneFace.atlas), RB.floorStoneFace.sx, RB.floorStoneFace.sy, 16, 16, { remap: remapMarbleFloor });
+  blitAtlas(img, x + 2, y, loadAtlas(RB.floorStoneFace.atlas), RB.floorStoneFace.sx + 2, RB.floorStoneFace.sy, TILE - 4, TILE, { remap: remapMarbleRunner });
 }
-// A tall, cool-white column (LimeZu Room Builder's own double-height hall columns, per the photo) --
-// a walk-behind `depthGroup` in the plan, not per-tile depth, since the real hall is double-height.
+// A big, tall column (quality loop: "4 big white columns, 2 tiles wide, full height, depthGroups") --
+// build-interiors.js now places 4 of these as a 2-wide x 3-tall solid `depthGroup` block each, so a
+// single tile only ever needs to tile cleanly with its neighbours, not read as "big" on its own.
+// Cool-white body, a shaded right/bottom edge for the 3/4-view read, and a thin fluted centre line.
 function intColumn(img, x, y) {
   img.fill(x, y, TILE, TILE, 'columnBody');
-  img.fill(x + TILE - 4, y, 4, TILE, 'columnShade'); // shaded side face, the 3/4-view read
-  img.fill(x, y, TILE, 1, 'K');
-  img.fill(x, y + TILE - 1, TILE, 1, 'K');
+  img.fill(x + TILE - 5, y, 5, TILE, 'columnShade');
+  img.fill(x, y, TILE, 2, 'wallHi');
+  img.fill(x, y + TILE - 2, TILE, 2, 'K');
+  img.fill(x + 7, y, 1, TILE, 'columnShade');
 }
-// The twin-flight staircase converging on a shared landing (the photo's single biggest gap from the
-// old straight `intStairsUp` run): solid + decorative (walked around, never through, like the
-// existing lift/atrium-void tricks), with the black wrought-iron scroll railing on the outer edge of
-// each flight reading as a contrasting stripe rather than the fence's grey.
-function intFoyerStairsL(img, x, y) {
-  intFloorMarble(img, x, y);
-  for (let i = 0; i < 4; i++) img.fill(x + 1, y + i * 4, TILE - 5, 2, i % 2 ? 'marbleShadow' : 'marbleLight');
-  img.fill(x, y, 2, TILE, 'ironRail');
+// The twin-flight staircase converging on a shared landing (quality loop: "the staircase is a wide
+// central flight of HORIZONTAL treads... draw it as steps, not vertical rails" -- the previous
+// version's vertical-rail fills read as a ladder). Each tread is now a full-width HORIZONTAL band
+// (a light stone tread + a shadowed riser line), climbing north exactly like the existing plain
+// `intStairsFlight` stairwell tiles already do; only a thin 2px black wrought-iron rail sits at the
+// *outer* edge of each flight (left flight's own left edge, right flight's own right edge) so most of
+// the tile still reads as a horizontal step, not a vertical bar.
+function intFoyerTread(img, x, y, railSide) {
+  img.fill(x, y, TILE, TILE, 'marbleFleck');
+  for (let i = 0; i < 4; i++) {
+    const ty = i * 4;
+    img.fill(x, y + ty, TILE, 1, 'marbleShadow'); // riser
+    img.fill(x, y + ty + 1, TILE, 3, i % 2 ? 'marbleLight' : 'marbleFleck'); // tread
+  }
+  if (railSide === 'L') img.fill(x, y, 2, TILE, 'ironRail');
+  else img.fill(x + TILE - 2, y, 2, TILE, 'ironRail');
 }
-function intFoyerStairsR(img, x, y) {
-  intFloorMarble(img, x, y);
-  for (let i = 0; i < 4; i++) img.fill(x + 4, y + i * 4, TILE - 5, 2, i % 2 ? 'marbleShadow' : 'marbleLight');
-  img.fill(x + TILE - 2, y, 2, TILE, 'ironRail');
-}
+function intFoyerStairsL(img, x, y) { intFoyerTread(img, x, y, 'L'); }
+function intFoyerStairsR(img, x, y) { intFoyerTread(img, x, y, 'R'); }
 function intFoyerLanding(img, x, y) {
   img.fill(x, y, TILE, TILE, 'marbleLight');
   img.fill(x, y, TILE, 2, 'marbleShadow');
-  img.fill(x, y + 2, TILE, 1, 'ironRail');
 }
-// The tiered chandelier over the staircase's lower landing: a ground-layer decorative tile (like the
-// existing decorative lift/stairs trick) so it reads as "looking up at it" without blocking the
-// floor underneath.
+// The tiered chandelier over the staircase's lower landing: placed on the `overhead` layer (a real
+// Tiled layer above every character, ADR 0008 -- quality loop: "a chandelier (overhead layer) over
+// the landing", not a ground-layer trick that never actually draws over her), transparent everywhere
+// but the fixture itself.
 function intChandelier(img, x, y) {
-  intFloorMarble(img, x, y);
   img.fill(x + 6, y + 1, 4, 2, 'ironRail');
   img.fill(x + 5, y + 3, 6, 5, 'chandelierGold');
   img.fill(x + 6, y + 8, 4, 3, 'chandelierGold');

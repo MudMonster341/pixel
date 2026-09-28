@@ -18,35 +18,62 @@ const MAIN_H = 40;
 const MAIN_STAIRWELL = { x0: 30, y0: 12, x1: 37, y1: 21 };
 
 function stairwell(floor, name, { up, down } = {}) {
-  floor.addRect('stairwell', { name, type: 'stairwell', ...MAIN_STAIRWELL });
+  floor.addRect('stairwell', { name, type: 'stairwell', wallKit: 'roomBuilder', ...MAIN_STAIRWELL });
   floor.liftFeature('stairwell', MAIN_STAIRWELL.x0 + 1, MAIN_STAIRWELL.y1 - 1);
   if (up) floor.stairsObject('stairwell', { name: `${name} (up)`, to: up.to, toId: up.toId, facing: 'left', dir: 'up', offset: [-2, 0] });
   if (down) floor.stairsObject('stairwell', { name: `${name} (down)`, to: down.to, toId: down.toId, facing: 'right', dir: 'down', offset: [2, 0] });
+}
+
+// Quality loop (docs/quality/scorecard.md, Interior art run 1, "corridors are bare"): a corridor
+// rect furnished directly (corridors are `isCorridor: true`, skipped by the generic furnish() pass)
+// with the props the brief named -- benches, plants, notice boards, bins, spaced every few tiles
+// along its own length, never on the door openings connect() already carved.
+function dressCorridor(floor, rect, { axis }) {
+  const props = ['bench', 'plant', 'intNoticeboard', 'intBin'];
+  const place = (x, y, name) => {
+    floor.placeStructure(x, y, name);
+    if (name === 'plant') floor.depthGroupRect(x, y, x, y); // a "big plant" too, walk-behind (ADR 0015)
+  };
+  if (axis === 'h') {
+    const y = rect.y0 + 1;
+    let i = 0;
+    for (let x = rect.x0 + 2; x <= rect.x1 - 2; x += 3) place(x, y, props[i++ % props.length]);
+  } else {
+    const x = rect.x0 + 1;
+    let i = 0;
+    for (let y = rect.y0 + 2; y <= rect.y1 - 2; y += 3) place(x, y, props[i++ % props.length]);
+  }
 }
 
 const mainBlockG = {
   name: 'Main Block · Ground Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 14, y: 34, facing: 'up' },
+  spawn: { x: 14, y: 18, facing: 'up' },
   build(floor) {
-    // The foyer (FB-0030: "the main reception foyer -- make it look like that", the owner's photo):
-    // glossy marble, columns, a twin staircase to a mezzanine landing, the wordmark, a chandelier,
+    // The foyer (FB-0030: "the main reception foyer -- make it look like that", the owner's photo),
+    // quality-loop-sized to fill the screen at zoom 3 (a 20x12 play area): glossy marble, 4 big
+    // columns, a twin staircase to a full-width mezzanine, the wordmark, an overhead chandelier,
     // reception seating and the LUG Stall nook behind the stairs -- all in the `foyer` furnisher
     // (build-interiors.js FURNISHERS.foyer), since it's one continuous composed room rather than a
-    // grid of repeated props like every other room type.
-    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', x0: 2, y0: 6, x1: 25, y1: 37 });
+    // grid of repeated props like every other room type. `wallKit: 'roomBuilder'` (quality loop,
+    // Interior art run 1): real LimeZu Room_Builder walls (a cap + a 2-tile-tall face) instead of
+    // the flat hand-drawn BITS wall -- Main Block only, Library/Mechanical Block keep the old wall.
+    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', wallKit: 'roomBuilder', x0: 2, y0: 6, x1: 25, y1: 21 });
     floor.exteriorDoor('foyer', 'bottom', {
       name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up',
       openTiles: 'intGlassDoorOpen,intGlassDoorOpen',
     });
+    floor.wallFeature('foyer', 'left', 'intWallWindow');
+    floor.wallFeature('foyer', 'right', 'intWallWindow');
 
     // A short corridor to the rest of the ground floor -- locked, but visible (docs/STORY.md:
     // "everywhere else in the building is blocked off for now") -- and the stairwell up.
-    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 25, y0: 13, x1: 30, y1: 21, isCorridor: true });
+    const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 25, y0: 13, x1: 30, y1: 21, isCorridor: true });
     floor.connect('foyer', 'corridor');
     floor.placeStructure(27, 13, 'intDoorClosed');
     floor.placeStructure(28, 21, 'intDoorClosed');
+    dressCorridor(floor, corridor, { axis: 'v' });
 
     stairwell(floor, 'Main Block Stairs G', { up: { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)' } });
     floor.connect('corridor', 'stairwell');
@@ -62,16 +89,17 @@ const mainBlock1 = {
     // docs/STORY.md key rooms (M3): ICVL (a computing lab, `labIcvl`) and Room 195 (a classroom),
     // both off one corridor -- see docs/INTERIORS_PLAN.md "Story rooms" for why they're here (no
     // sourced real floor plan for either).
-    floor.addRect('icvl', { name: 'ICVL', type: 'labIcvl', x0: 3, y0: 3, x1: 16, y1: 14 });
-    floor.addRect('room195', { name: 'Room 195', type: 'classroom', x0: 18, y0: 3, x1: 29, y1: 14 });
+    floor.addRect('icvl', { name: 'ICVL', type: 'labIcvl', wallKit: 'roomBuilder', x0: 3, y0: 3, x1: 16, y1: 14 });
+    floor.addRect('room195', { name: 'Room 195', type: 'classroom', wallKit: 'roomBuilder', x0: 18, y0: 3, x1: 29, y1: 14 });
 
-    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
+    const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
     floor.connect('icvl', 'corridor');
     floor.connect('room195', 'corridor');
     // A couple of locked classroom doors further down the corridor -- visible, not walkable
     // (docs/STORY.md: only the route to the 3 key rooms stays open).
     floor.placeStructure(10, 21, 'intDoorClosed');
     floor.placeStructure(22, 21, 'intDoorClosed');
+    dressCorridor(floor, corridor, { axis: 'h' });
 
     stairwell(floor, 'Main Block Stairs 1', {
       down: { to: 'main-block-g', toId: 'Main Block Stairs G (up)' },
@@ -89,7 +117,7 @@ const mainBlock2 = {
   build(floor) {
     // No key here -- a transit corridor/landing between the 1st and 3rd floors, with a lounge
     // corner and notice boards (FURNISHERS.lounge) so it doesn't read as bare hallway.
-    floor.addRect('landing', { name: 'Landing', type: 'lounge', x0: 3, y0: 12, x1: 30, y1: 21 });
+    floor.addRect('landing', { name: 'Landing', type: 'lounge', wallKit: 'roomBuilder', x0: 3, y0: 12, x1: 30, y1: 21 });
 
     stairwell(floor, 'Main Block Stairs 2', {
       down: { to: 'main-block-1', toId: 'Main Block Stairs 1 (up)' },
@@ -107,10 +135,11 @@ const mainBlock3 = {
   build(floor) {
     // docs/STORY.md key room: "the Physics Lab, 3rd floor" -- one corridor leading straight to it,
     // matching the story's own "she goes up and to the right."
-    floor.addRect('physicsLab', { name: 'Physics Lab', type: 'labPhysics', x0: 3, y0: 3, x1: 20, y1: 17 });
+    floor.addRect('physicsLab', { name: 'Physics Lab', type: 'labPhysics', wallKit: 'roomBuilder', x0: 3, y0: 3, x1: 20, y1: 17 });
 
-    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 3, y0: 17, x1: 30, y1: 21, isCorridor: true });
+    const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 17, x1: 30, y1: 21, isCorridor: true });
     floor.connect('physicsLab', 'corridor');
+    dressCorridor(floor, corridor, { axis: 'h' });
 
     stairwell(floor, 'Main Block Stairs 3', { down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });
     floor.connect('corridor', 'stairwell');

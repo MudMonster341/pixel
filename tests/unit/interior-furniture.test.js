@@ -123,6 +123,8 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
   assert.ok(foyer, 'expected a "Foyer" area object on main-block-g');
   const struct = json.layers.find((l) => l.name === 'structures').data;
   const ground = json.layers.find((l) => l.name === 'ground').data;
+  const overheadLayer = json.layers.find((l) => l.name === 'overhead');
+  const overhead = overheadLayer ? overheadLayer.data : [];
   const W = json.width;
   // The area object is the room's *interior* (Floor.interior(), one tile in from the wall ring) --
   // widen by 1 on every side so the scan also covers the wall row the wordmark is mounted on.
@@ -130,6 +132,7 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
   const x1 = x0 + Math.round(foyer.width / 16) + 1, y1 = y0 + Math.round(foyer.height / 16) + 1;
   const found = new Set();
   const groundFound = new Set();
+  const overheadFound = new Set();
   let stairsTiles = 0;
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
@@ -137,15 +140,18 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
       if (sgid) found.add(tileInfo.tiles[sgid - 1].name);
       const ggid = ground[y * W + x];
       if (ggid) groundFound.add(tileInfo.tiles[ggid - 1].name);
+      const ogid = overhead[y * W + x];
+      if (ogid) overheadFound.add(tileInfo.tiles[ogid - 1].name);
       if (sgid && ['intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'].includes(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
     }
   }
   for (const name of ['intReceptionDesk', 'intSofa', 'plant', 'intNoticeboard', 'intColumn']) {
     assert.ok(found.has(name), `expected the Foyer to include "${name}", found [${[...found]}]`);
   }
-  for (const name of ['intFloorMarble', 'intFloorMarbleRunner', 'intChandelier']) {
+  for (const name of ['intFloorMarble', 'intFloorMarbleRunner']) {
     assert.ok(groundFound.has(name), `expected the Foyer's ground layer to include "${name}", found [${[...groundFound]}]`);
   }
+  assert.ok(overheadFound.has('intChandelier'), `expected the Foyer's overhead layer to include "intChandelier", found [${[...overheadFound]}]`);
   assert.ok(stairsTiles >= 6, `expected a real block of twin-staircase/landing tiles in the Foyer, found ${stairsTiles}`);
   const wordmarkTiles = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`).filter((n) => found.has(n));
   assert.ok(wordmarkTiles.length >= 8, `expected the "BITS Pilani, Dubai Campus" wordmark on the Foyer's mezzanine fascia, found [${wordmarkTiles}]`);

@@ -70,7 +70,9 @@ const MAPS = {
       // Coordinates sit exactly on a real furniture tile in each room (checked against the
       // generated map, docs/INTERIORS_PLAN.md): ICVL's is a computer bench, Room 195's is the
       // teacher's desk (FB-0030/0031 compact redesign).
-      { id: 'icvl', name: STORY.keyStations.icvl.name, item: STORY.keyStations.icvl.item, x: 5, y: 5, dialog: keyStationDialog('icvl') },
+      // Quality loop run 2 (2026-09-28): ICVL's own desk grid moved to make room for real aisles +
+      // a walkway (docs/quality/scorecard.md "Interior art run 2"), so the first bench is now here.
+      { id: 'icvl', name: STORY.keyStations.icvl.name, item: STORY.keyStations.icvl.item, x: 6, y: 6, dialog: keyStationDialog('icvl') },
       { id: 'room195', name: STORY.keyStations.room195.name, item: STORY.keyStations.room195.item, x: 24, y: 5, dialog: keyStationDialog('room195') },
     ],
   },

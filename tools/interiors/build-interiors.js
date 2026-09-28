@@ -43,6 +43,10 @@ const REQUIRED_TILES = [
   // Room_Builder walls (cap + face) and floors.
   'intWallCap', 'intWallFace', 'intWallFaceEndL', 'intWallFaceEndR', 'intWallWindow',
   'intFloorTiled', 'intFloorLabLight',
+  // Quality loop, Interior art run 2 (2026-09-28): plain stair treads, the chandelier's other 3
+  // quadrants, and the ICVL/Physics Lab's extra furniture variety.
+  'intFoyerTreadPlain', 'intChandelierTR', 'intChandelierBL', 'intChandelierBR', 'intChair',
+  'intIcvlCabinet', 'intFumeHood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -449,6 +453,12 @@ const FURNISHERS = {
     // as steps, not vertical rails") rising to a landing, a full-width mezzanine balcony railing
     // right behind it, and the LUG Stall nook beyond -- solid, so she walks *around* it, never
     // through it.
+    // Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "it STILL draws as long vertical
+    // dark lines... draw it as a block of horizontal treads... rails only as a thin line at the two
+    // outer edges... No vertical stripes inside the block"). One continuous wide staircase now (no
+    // left/right flight split), 4 tread rows rising to the landing: `intFoyerTreadPlain` for every
+    // inner column, and the rail tile (`intFoyerStairsL`/`R`, now a *edge-only* rail -- see
+    // tools/make-assets.js) only at the block's own true leftmost/rightmost column.
     const landingY0 = iy0 + 3;
     const landingY1 = landingY0 + 1;
     const flightY0 = landingY1 + 1;
@@ -458,10 +468,13 @@ const FURNISHERS = {
     const midX = cx - 1;
     floor.paintFloor(stairsX0, landingY0, stairsX1, landingY1, 'intFloorMarble');
     for (let y = landingY0; y <= landingY1; y++) for (let x = stairsX0; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerLanding');
-    floor.paintFloor(stairsX0, flightY0, midX, flightY1, 'intFloorMarble');
-    floor.paintFloor(midX + 1, flightY0, stairsX1, flightY1, 'intFloorMarble');
-    for (let y = flightY0; y <= flightY1; y++) for (let x = stairsX0; x <= midX; x++) floor.placeStructure(x, y, 'intFoyerStairsL');
-    for (let y = flightY0; y <= flightY1; y++) for (let x = midX + 1; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerStairsR');
+    floor.paintFloor(stairsX0, flightY0, stairsX1, flightY1, 'intFloorMarble');
+    for (let y = flightY0; y <= flightY1; y++) {
+      for (let x = stairsX0; x <= stairsX1; x++) {
+        const tile = x === stairsX0 ? 'intFoyerStairsL' : x === stairsX1 ? 'intFoyerStairsR' : 'intFoyerTreadPlain';
+        floor.placeStructure(x, y, tile);
+      }
+    }
     floor.depthGroupRect(stairsX0, landingY0, stairsX1, flightY1);
 
     // The mezzanine balcony: a black wrought-iron railing spanning the *entire* back wall (quality
@@ -472,10 +485,14 @@ const FURNISHERS = {
     put(ix0 + 2, landingY0 - 1, 'plant');
     put(ix1 - 2, landingY0 - 1, 'plant');
 
-    // The chandelier hangs over the lower landing, on the `overhead` layer (quality loop: "a
+    // The chandelier hangs over the lower landing, on the `overhead` layer (quality loop run 1: "a
     // chandelier (overhead layer) over the landing") -- always drawn above her, never a ground tile
-    // she could stand "in".
+    // she could stand "in". Quality loop run 2 ("chandelier bigger, 2x2 tiles, overhead, so it
+    // reads"): a 2x2 block of its own 4 quadrant tiles, not a single 16px fixture.
     floor.placeOverhead(midX, flightY0, 'intChandelier');
+    floor.placeOverhead(midX + 1, flightY0, 'intChandelierTR');
+    floor.placeOverhead(midX, flightY0 + 1, 'intChandelierBL');
+    floor.placeOverhead(midX + 1, flightY0 + 1, 'intChandelierBR');
 
     // The wordmark, on the wall directly above the mezzanine railing -- reuses the exact
     // "BITS PILANI, DUBAI CAMPUS" bitsSignSeg0..8 tiles already generated for the outdoor facade
@@ -540,39 +557,75 @@ const FURNISHERS = {
   // of desks with monitors, no blue cabinetry or poster wall") -- 3-4 full rows of benches (not just
   // the top/bottom edge), a server-rack corner (2 tiles, its own depthGroup) and a poster wall
   // covering most of the front wall.
+  // Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "Over-corrected: a solid wall-to-wall
+  // grid of identical blue desks, no aisles, she stands among them... about 50% walkable floor").
+  // 4 desk rows (monitors + a chair alternating) with a 1-tile aisle between each, blue cabinets
+  // along the left wall, a 1-tile walkway along the right wall (plus the always-clear ring beyond
+  // it -- 2 tiles of walking space along that side), a teacher/instructor desk + whiteboard at the
+  // front, and server racks in the front-right corner.
   labIcvl: (put, ix0, iy0, ix1, iy1, ctx) => {
-    // Quality loop (docs/quality/scorecard.md, Interior art run 1: "target less than ~40% plain
-    // floor") -- desks packed side by side (stepX 1) in every row (stepY 1): a genuinely dense
-    // computer lab, not a sparse quarter-filled grid. The 1-tile walkway ring furnish() always
-    // leaves around the room's own walls (Floor.furnish()'s own double-inset) is what keeps every
-    // desk still reachable/walkable-past, even with no internal aisle.
-    rowGrid(put, ix0, iy0, ix1, iy1, 'intIcvlBench', { stepX: 1, stepY: 1 });
+    const mid = Math.round((ix0 + ix1) / 2);
+    put(mid, iy0, 'intTeacherDesk');
+    // Cabinets along the rest of the front wall too, either side of the teacher's desk.
+    for (let x = ix0; x <= ix1 - 2; x++) if (x !== mid) put(x, iy0, 'intIcvlCabinet');
+    const deskRows = [iy0 + 1, iy0 + 3, iy0 + 5, iy0 + 7].filter((y) => y <= iy1);
+    const aisleRows = [iy0 + 2, iy0 + 4, iy0 + 6].filter((y) => y <= iy1);
+    for (const y of deskRows) {
+      put(ix0, y, 'intIcvlCabinet'); // blue cabinets along the left wall
+      for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, (x - ix0) % 2 === 1 ? 'intIcvlBench' : 'intChair');
+      // ix1 itself stays clear: a walkway down the right side, alongside the ring furnish() always
+      // leaves just beyond it.
+    }
+    for (const y of aisleRows) {
+      put(ix0 + 3, y, 'plant');
+      put(ix0 + 6, y, 'plant');
+      put(ix0 + 8, y, 'intBin');
+    }
     if (ctx && ctx.floor) {
       const rackX0 = ix1 - 1, rackX1 = ix1;
-      for (let x = rackX0; x <= rackX1; x++) put(x, iy0, 'intServerRack');
+      put(rackX0, iy0, 'intServerRack');
+      put(rackX1, iy0, 'intServerRack');
       ctx.floor.depthGroupRect(rackX0, iy0, rackX1, iy0);
+      ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
       const r = ctx.floor.get(ctx.id);
-      for (let x = r.x0 + 1; x <= r.x1 - 1; x += 2) ctx.floor.placeStructure(x, r.y0, 'intNoticeboard');
+      for (let x = r.x0 + 1; x <= r.x1 - 1; x += 3) ctx.floor.placeStructure(x, r.y0, 'intNoticeboard');
     }
   },
   // The Physics Lab (docs/research/campus-visual-reference.md "6. Physics/science lab") -- quality
-  // loop: "3 long lab benches with equipment, shelves of apparatus, a sink/fume hood, a whiteboard".
-  // 3 full-width bench rows (wood-topped, `intLabBenchWood`, kept separate from the shared `lab`
-  // type's metal-topped bench so Mechanical Block's labs are untouched), a rack, a sink and a
-  // whiteboard on the front wall.
+  // loop run 2 ("[was] uniform rows of identical benches, like a warehouse"): exactly 3 long bench
+  // rows (not a repeated grid), each a mix of the 3 differently-topped bench tiles (a scope, flasks,
+  // a laptop) plus stools, clear multi-row aisles between them, apparatus shelves along a wall, a
+  // sink + fume hood, and a whiteboard at the front.
   labPhysics: (put, ix0, iy0, ix1, iy1, ctx) => {
-    // Quality loop ("3 long lab benches... target less than ~40% plain floor"): every row packed
-    // except a walking aisle every 3rd row, so the benches read as long full-width rows (not 3
-    // thin strips in an otherwise empty room) while still leaving room to walk between them.
-    for (let y = iy0; y <= iy1; y++) {
-      if ((y - iy0) % 4 === 3) continue;
-      for (let x = ix0; x <= ix1; x++) put(x, y, 'intLabBenchWood');
+    const benchTiles = ['intLabBenchWood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop'];
+    const benchRows = [iy0, iy0 + 5, iy1].filter((y, i, arr) => arr.indexOf(y) === i && y <= iy1);
+    const stoolRows = new Set();
+    for (const y of benchRows) {
+      for (let x = ix0; x <= ix1; x++) put(x, y, benchTiles[(x - ix0) % benchTiles.length]);
+      // A row of stools on both sides of each bench, where there's room.
+      if (y - 1 >= iy0 && !benchRows.includes(y - 1)) stoolRows.add(y - 1);
+      if (y + 1 <= iy1 && !benchRows.includes(y + 1)) stoolRows.add(y + 1);
     }
+    for (const y of stoolRows) for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, 'intChair');
+    // Apparatus shelves down both walls, in the aisle rows between the bench/stool rows -- tall
+    // furniture, so every rack/tank gets its own walk-behind depthGroup (ADR 0015).
     const midY = Math.round((iy0 + iy1) / 2);
-    put(ix0, midY, 'intLabRack');
+    for (let y = iy0; y <= iy1; y++) {
+      if (benchRows.includes(y) || stoolRows.has(y)) continue;
+      put(ix0, y, 'intLabRack');
+      put(ix0 + 1, y, 'intLabTank');
+      if (ctx && ctx.floor) {
+        ctx.floor.depthGroupRect(ix0, y, ix0, y);
+        ctx.floor.depthGroupRect(ix0 + 1, y, ix0 + 1, y);
+      }
+      if (y !== midY && y !== midY + 1) {
+        put(ix1, y, 'intLabRack');
+        if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix1, y, ix1, y);
+      }
+    }
     put(ix1, midY, 'intSink');
+    put(ix1, midY + 1 <= iy1 ? midY + 1 : midY, 'intFumeHood');
     if (ctx && ctx.floor) {
-      ctx.floor.depthGroupRect(ix0, midY, ix0, midY);
       ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
     }
   },

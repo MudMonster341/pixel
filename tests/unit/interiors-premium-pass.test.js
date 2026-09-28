@@ -157,16 +157,20 @@ for (const [key, mapKey] of Object.entries(SCRIPT_MAP)) {
   });
 }
 
-// ---------- Quality loop, Interior art run 1 (docs/quality/scorecard.md, 2026-09-28) ----------
-// The owner's rating: "3/10... a big pale empty floor... 1-tile vertical wall strips (no 3/4 top
-// edge + face)". Two promises this round specifically made, checked directly against the generated
-// maps so a later regeneration can't silently regress them: every story room is densely furnished
-// (not a "sparse quarter-filled grid"), and every Main Block room's own walls are a real 2-tile-tall
-// cap-then-face, not a single flat tile.
+// ---------- Quality loop, Interior art run 1+2 (docs/quality/scorecard.md, 2026-09-28) ----------
+// Run 1's owner rating: "3/10... a big pale empty floor... 1-tile vertical wall strips (no 3/4 top
+// edge + face)". Run 1's fix (every row/column packed, no aisles) over-corrected: run 2's rating
+// ("Over-corrected: a solid wall-to-wall grid... no aisles, she stands among them... uniform rows of
+// identical benches, like a warehouse") asked for real aisles/a walkway and "about 50% walkable
+// floor" instead of "as dense as possible". Checked directly against the generated maps so a later
+// regeneration can't silently regress either direction: every story room's own walkable share stays
+// inside a 35-60% band (dense, but with real room to walk), and every Main Block room's own walls
+// are a real 2-tile-tall cap-then-face, not a single flat tile.
 
 // A room's own `area` object is its *interior* (Floor.interior(), one tile in from the wall ring) --
-// exactly the rectangle the brief's "less than ~40% plain floor" means "of any room's floor".
-function plainFloorRatio(json, areaName) {
+// exactly the rectangle the brief's "~50% walkable floor" means "of any room's floor". Returns the
+// *walkable* (plain, unfurnished) share, not the furnished share.
+function walkableFloorRatio(json, areaName) {
   const struct = json.layers.find((l) => l.name === 'structures').data;
   const objs = json.layers.find((l) => l.type === 'objectgroup').objects;
   const area = objs.find((o) => o.type === 'area' && o.name === areaName);
@@ -190,10 +194,10 @@ const DENSE_STORY_ROOMS = {
 
 for (const [mapKey, names] of Object.entries(DENSE_STORY_ROOMS)) {
   for (const name of names) {
-    test(`Quality loop (Interior art run 1): ${mapKey}'s "${name}" is densely furnished (under 40% plain floor)`, () => {
+    test(`Quality loop (Interior art run 2): ${mapKey}'s "${name}" has real aisles (35-60% walkable floor)`, () => {
       const json = loadMapJson(mapKey);
-      const ratio = plainFloorRatio(json, name);
-      assert.ok(ratio < 0.4, `${mapKey}: "${name}" is ${(ratio * 100).toFixed(1)}% plain floor, expected under 40%`);
+      const ratio = walkableFloorRatio(json, name);
+      assert.ok(ratio >= 0.35 && ratio <= 0.6, `${mapKey}: "${name}" is ${(ratio * 100).toFixed(1)}% walkable, expected 35-60%`);
     });
   }
 }

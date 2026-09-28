@@ -129,8 +129,14 @@ const PALETTE = {
   // sand") -- cooled and desaturated from the first pass's warmer, more golden tones, which read as
   // desert sand once combined with a speckle dither. A genuinely dark, cool taupe for the runner
   // (not a golden tan) so it reads as a stone inlay, not a sand path.
-  marbleLight: '#f2ede0', marbleFleck: '#dfd6c2', marbleShadow: '#b9ac8e', marbleRunner: '#8f8264',
+  // Quality loop run 2 (2026-09-28: "a high-contrast white-on-tan checker... floors must be LOW
+  // contrast... luminance variation <= ~8%") -- `marbleFleck` moved much closer to `marbleLight`
+  // (was a 9.5% jump, now ~5.6%) so the base floor's own remap (remapMarbleFloor, below) never
+  // reaches for the far darker `marbleShadow` any more; that tone is now reserved for the runner/
+  // stair risers, where strong contrast is the whole point.
+  marbleLight: '#f2ede0', marbleFleck: '#e6e0ce', marbleShadow: '#b9ac8e', marbleRunner: '#8f8264',
   marbleRunnerDark: '#786d54',
+  floorGreyLight: '#dfe0dc', floorGreyFleck: '#d2d4ce', // the corridor's own tight low-contrast pair
   ironRail: '#2a2a32',
   columnBody: '#efe9da', columnShade: '#d8d0bd',
   chandelierGold: '#e8c46a', chandelierGlow: '#fff6df',
@@ -662,13 +668,29 @@ const RB = {
 // of two unrelated materials) -- sampled range (MEMORY.md: decoded and measured directly) covers
 // this crop's own light-tan bands, 61-248, its outline sitting right at the bottom of that range.
 const remapMarbleWall = remapShaded(['marbleShadow', 'marbleFleck', 'marbleLight'].map((k) => PALETTE[k]), { loLum: 120, hiLum: 230, outlineBelow: 90, lineAbove: 500 });
-// The floor crop's own tonal range is much narrower (155-173, a subtle panel-seam shade, not a full
-// light-to-dark ramp) -- a tight loLum/hiLum window tuned to that exact range so the seam still
-// shows as a visible light/dark contrast instead of collapsing into one flat colour.
-const remapMarbleFloor = remapShaded(['marbleShadow', 'marbleFleck', 'marbleLight'].map((k) => PALETTE[k]), { loLum: 152, hiLum: 176, outlineBelow: 0, lineAbove: 500 });
+// Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "a high-contrast white-on-tan checker
+// (graph paper)... floors must be LOW contrast: a near-uniform light cream/grey with only subtle 1px
+// joint lines"). Run 1's floor remap reached across all 3 marble tones (shadow-to-light, a ~40%
+// luminance swing) for a crop whose own tonal range is just two close clusters (155-157 / 171-173) --
+// every "high" pixel snapped to the lightest tone and every "low" pixel to the darkest, which is
+// exactly a checker, not a subtle seam. Two tones only now (`marbleFleck`/`marbleLight`, ~5.6% apart,
+// under the "~8%" ceiling), the same tight loLum/hiLum window so the crop's own two clusters still
+// land on two *different* (if barely) output tones -- a joint line, not a jump.
+const remapMarbleFloor = remapShaded(['marbleFleck', 'marbleLight'].map((k) => PALETTE[k]), { loLum: 152, hiLum: 176, outlineBelow: 0, lineAbove: 500 });
 // The runner: the same floor crop's own seam structure, mapped onto a darker taupe ramp instead of a
-// flat fill, so the inlay band still reads as stone (with real pack pixels), just a shade darker.
+// flat fill, so the inlay band still reads as stone (with real pack pixels), just a shade darker --
+// deliberately higher-contrast than the base floor (the brief's own "strong pattern goes only in a
+// narrow border/inlay band or the runner").
 const remapMarbleRunner = remapShaded(['marbleRunnerDark', 'marbleRunner', 'marbleShadow'].map((k) => PALETTE[k]), { loLum: 152, hiLum: 176, outlineBelow: 0, lineAbove: 500 });
+// The corridor's own tiled floor (quality loop run 2: same "LOW contrast" rule) -- a cooler grey
+// pair instead of marble's cream, matching STYLE_GUIDE's "corridors are grey-flecked, utilitarian".
+// RB.floorTiled's own range (182-235) is wider than the stone crop's, so a wider loLum/hiLum window,
+// still landing on only two close output tones.
+const remapCorridorTile = remapShaded(['floorGreyFleck', 'floorGreyLight'].map((k) => PALETTE[k]), { loLum: 182, hiLum: 235, outlineBelow: 0, lineAbove: 500 });
+// The ICVL/Physics Lab's own light floor -- same idea, kept close to its native pale grey (126-149)
+// rather than the noticeably bluer/darker stone/corridor tones, so the 3 room types still read as
+// distinct floor materials at a glance.
+const remapLabFloor = remapShaded(['#d7d9d3', '#e3e4de'], { loLum: 126, hiLum: 149, outlineBelow: 0, lineAbove: 500 });
 
 // Scales an arbitrary sw x sh crop from `atlas` down (nearest-neighbor, aspect preserved) to fit
 // inside maxW x maxH, then sits it on the tile's own base line (bottom-aligned, like a piece of
@@ -1406,10 +1428,15 @@ const TILES = [
   { name: 'intFloorMarble', draw: intFloorMarble },
   { name: 'intFloorMarbleRunner', draw: intFloorMarbleRunner },
   { name: 'intColumn', solid: true, draw: intColumn },
-  { name: 'intFoyerStairsL', solid: true, draw: intFoyerStairsL },
-  { name: 'intFoyerStairsR', solid: true, draw: intFoyerStairsR },
+  // Quality loop run 2 (2026-09-28): these two names now draw the staircase's *rail* edge tiles
+  // (intFoyerStairsRailL/R) instead of a per-tile flight variant -- reusing the existing tile
+  // names/indices rather than adding new ones, per "tile names stay stable, append only".
+  { name: 'intFoyerStairsL', solid: true, draw: intFoyerStairsRailL },
+  { name: 'intFoyerStairsR', solid: true, draw: intFoyerStairsRailR },
   { name: 'intFoyerLanding', solid: true, draw: intFoyerLanding },
-  { name: 'intChandelier', overhead: true, draw: intChandelier },
+  // Quality loop run 2: this name now draws the 2x2 chandelier's own top-left quadrant (see
+  // intChandelierTR/BL/BR, appended further down) instead of a single small 1-tile fixture.
+  { name: 'intChandelier', overhead: true, draw: intChandelierTL },
   { name: 'intGlassDoorOpen', draw: intGlassDoorOpen },
   { name: 'intDoorClosed', solid: true, draw: intDoorClosed },
   { name: 'intIcvlBench', solid: true, draw: intIcvlBench },
@@ -1441,6 +1468,20 @@ const TILES = [
   { name: 'intWallWindow', solid: true, draw: intWallWindow },
   { name: 'intFloorTiled', draw: intFloorTiled },
   { name: 'intFloorLabLight', draw: intFloorLabLight },
+
+  // Quality loop, Interior art run 2 (2026-09-28): the staircase's plain (no-rail) tread, the
+  // chandelier's other 3 quadrants, a chair/stool, a plain ICVL cabinet, and 3 varied-equipment lab
+  // bench tops. Appended at the very end so every existing tile's name/index stays stable.
+  { name: 'intFoyerTreadPlain', solid: true, draw: intFoyerTread },
+  { name: 'intChandelierTR', overhead: true, draw: intChandelierTR },
+  { name: 'intChandelierBL', overhead: true, draw: intChandelierBL },
+  { name: 'intChandelierBR', overhead: true, draw: intChandelierBR },
+  { name: 'intChair', solid: true, draw: intChair },
+  { name: 'intIcvlCabinet', solid: true, draw: intIcvlCabinet },
+  { name: 'intFumeHood', solid: true, draw: intFumeHood },
+  { name: 'intLabBenchScope', solid: true, draw: intLabBenchScope },
+  { name: 'intLabBenchFlask', solid: true, draw: intLabBenchFlask },
+  { name: 'intLabBenchLaptop', solid: true, draw: intLabBenchLaptop },
 ];
 
 // ---------- campus tiles ----------
@@ -2369,13 +2410,13 @@ function intFloorCourt(img, x, y) {
 // already a light, low-saturation cream close to this game's existing corridor palette, so no
 // recolor needed) -- replacing the corridor's previous reuse of the plain `intFloorFoyer` fleck tile.
 function intFloorTiled(img, x, y) {
-  blitAtlas(img, x, y, loadAtlas(RB.floorTiled.atlas), RB.floorTiled.sx, RB.floorTiled.sy, 16, 16);
+  blitAtlas(img, x, y, loadAtlas(RB.floorTiled.atlas), RB.floorTiled.sx, RB.floorTiled.sy, 16, 16, { remap: remapCorridorTile });
 }
 // A light, low-noise lab floor for the ICVL/Physics Lab specifically (docs/research/campus-visual-
 // reference.md: "floor is plain pale vinyl/terrazzo") -- a distinct tile name from the shared
 // `intFloorLabVinyl` Mechanical Block's own labs still use, so that art stays untouched.
 function intFloorLabLight(img, x, y) {
-  blitAtlas(img, x, y, loadAtlas(RB.floorLight.atlas), RB.floorLight.sx, RB.floorLight.sy, 16, 16);
+  blitAtlas(img, x, y, loadAtlas(RB.floorLight.atlas), RB.floorLight.sx, RB.floorLight.sy, 16, 16, { remap: remapLabFloor });
 }
 
 // A cleared wall opening: a dark threshold framed in the BITS trim colour, always walkable.
@@ -2630,34 +2671,53 @@ function intColumn(img, x, y) {
 // `intStairsFlight` stairwell tiles already do; only a thin 2px black wrought-iron rail sits at the
 // *outer* edge of each flight (left flight's own left edge, right flight's own right edge) so most of
 // the tile still reads as a horizontal step, not a vertical bar.
-function intFoyerTread(img, x, y, railSide) {
-  img.fill(x, y, TILE, TILE, 'marbleFleck');
-  for (let i = 0; i < 4; i++) {
-    const ty = i * 4;
-    img.fill(x, y + ty, TILE, 1, 'marbleShadow'); // riser
-    img.fill(x, y + ty + 1, TILE, 3, i % 2 ? 'marbleLight' : 'marbleFleck'); // tread
-  }
-  if (railSide === 'L') img.fill(x, y, 2, TILE, 'ironRail');
-  else img.fill(x + TILE - 2, y, 2, TILE, 'ironRail');
+// Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "it STILL draws as long vertical dark
+// lines. Draw it as a block of horizontal treads: each row of the stair block = one step... rails
+// only as a thin line at the two outer edges... No vertical stripes inside the block"). Run 1's
+// mistake: every tile of the stair block called a per-tile "railSide" variant, so a 2px rail column
+// was redrawn at the *inner* edge of every single tile, not just the block's own true outer edge --
+// tiled side by side across many columns, those per-tile rails read as a row of parallel vertical
+// bars (a ladder). Fixed two ways at once: `intFoyerTread` itself is now a single full-width
+// horizontal step (a light tread over a darker riser line, no vertical marks at all), and the rail
+// is its own separate tile (`intFoyerStairsRailL`/`R`) build-interiors.js places *only* at the
+// staircase block's own leftmost/rightmost column -- see FURNISHERS.foyer.
+function intFoyerTread(img, x, y) {
+  img.fill(x, y, TILE, 11, 'marbleFleck'); // tread (light), the top 11px
+  img.fill(x, y + 11, TILE, 5, 'marbleShadow'); // riser (darker), the bottom 5px
 }
-function intFoyerStairsL(img, x, y) { intFoyerTread(img, x, y, 'L'); }
-function intFoyerStairsR(img, x, y) { intFoyerTread(img, x, y, 'R'); }
+function intFoyerStairsRailL(img, x, y) {
+  intFoyerTread(img, x, y);
+  img.fill(x, y, 2, TILE, 'ironRail');
+}
+function intFoyerStairsRailR(img, x, y) {
+  intFoyerTread(img, x, y);
+  img.fill(x + TILE - 2, y, 2, TILE, 'ironRail');
+}
 function intFoyerLanding(img, x, y) {
   img.fill(x, y, TILE, TILE, 'marbleLight');
   img.fill(x, y, TILE, 2, 'marbleShadow');
 }
-// The tiered chandelier over the staircase's lower landing: placed on the `overhead` layer (a real
-// Tiled layer above every character, ADR 0008 -- quality loop: "a chandelier (overhead layer) over
-// the landing", not a ground-layer trick that never actually draws over her), transparent everywhere
-// but the fixture itself.
-function intChandelier(img, x, y) {
-  img.fill(x + 6, y + 1, 4, 2, 'ironRail');
-  img.fill(x + 5, y + 3, 6, 5, 'chandelierGold');
-  img.fill(x + 6, y + 8, 4, 3, 'chandelierGold');
-  img.set(x + 7, y + 4, 'chandelierGlow');
-  img.set(x + 8, y + 6, 'chandelierGlow');
-  img.set(x + 7, y + 9, 'chandelierGlow');
+// The tiered chandelier over the staircase's lower landing: quality loop run 2 ("chandelier bigger,
+// 2x2 tiles, overhead, so it reads") -- a single 32x32 picture split across 4 tile names
+// (intChandelierTL/TR/BL/BR), each just the pixels that land in its own quadrant of the shared
+// `chandelierPixels` drawing (the same "draw once, crop per tile" idea `bitsSignSegN` already uses
+// for the wordmark). Placed on the `overhead` layer (ADR 0008) by
+// `Floor.placeOverhead()`/FURNISHERS.foyer as a 2x2 block, transparent everywhere but the fixture.
+function chandelierPixels(put) {
+  for (let gy = 0; gy < 8; gy++) { put(15, gy, 'ironRail'); put(16, gy, 'ironRail'); } // chain
+  for (let gx = 6; gx < 26; gx++) for (let gy = 8; gy < 18; gy++) put(gx, gy, 'chandelierGold'); // upper tier
+  for (let gx = 10; gx < 22; gx++) for (let gy = 18; gy < 27; gy++) put(gx, gy, 'chandelierGold'); // lower tier
+  for (const [gx, gy] of [[9, 11], [22, 11], [15, 9], [16, 9], [12, 21], [19, 21], [15, 25], [16, 25]]) put(gx, gy, 'chandelierGlow');
 }
+function intChandelierQuadrant(img, x, y, qx, qy) {
+  chandelierPixels((gx, gy, key) => {
+    if (gx >= qx * 16 && gx < qx * 16 + 16 && gy >= qy * 16 && gy < qy * 16 + 16) img.set(x + gx - qx * 16, y + gy - qy * 16, key);
+  });
+}
+function intChandelierTL(img, x, y) { intChandelierQuadrant(img, x, y, 0, 0); }
+function intChandelierTR(img, x, y) { intChandelierQuadrant(img, x, y, 1, 0); }
+function intChandelierBL(img, x, y) { intChandelierQuadrant(img, x, y, 0, 1); }
+function intChandelierBR(img, x, y) { intChandelierQuadrant(img, x, y, 1, 1); }
 // The glass double door's own `openTiles` overlay (ADR 0015: shown while she's walking through) --
 // dark glazing with a reflection streak and a top transom bar, reusing the outdoor entrance's own
 // glass/reflection palette keys ('*'/'Œ') rather than inventing a new one.
@@ -2707,6 +2767,54 @@ function intProjectorScreen(img, x, y) {
   bitsWallPlain(img, x, y);
   img.fill(x + 3, y + 2, TILE - 6, 10, 'Q');
   img.fill(x + 3, y + 2, TILE - 6, 1, 'o');
+}
+
+// ---------- Quality loop, Interior art run 2 (docs/quality/scorecard.md, 2026-09-28) ----------
+// "Over-corrected [ICVL] into a solid wall-to-wall grid... no aisles"; "[Physics Lab] uniform rows
+// of identical benches, like a warehouse" -- both key rooms get real aisles now (FURNISHERS.labIcvl/
+// labPhysics, build-interiors.js) and enough distinct pieces (a chair, a plain cabinet, a fume hood,
+// 3 differently-topped lab benches) that the rooms don't read as one tile repeated.
+// A simple stool/chair -- "each desk row has monitors and chairs".
+function intChair(img, x, y) {
+  img.fill(x + 5, y + 5, 6, 6, 'o');
+  img.fill(x + 5, y + 5, 6, 1, 'O');
+  img.fill(x + 5, y + 11, 1, 3, 'K');
+  img.fill(x + 10, y + 11, 1, 3, 'K');
+}
+// A plain blue cabinet (no monitor) -- "blue cabinets along a wall", distinct from `intIcvlBench`
+// (a bench *with* a monitor on top).
+function intIcvlCabinet(img, x, y) {
+  img.fill(x + 1, y + 2, TILE - 2, 13, 'icvlBlue');
+  img.fill(x + 1, y + 2, TILE - 2, 1, 'icvlBlueHi');
+  img.fill(x + 4, y + 6, 1, 8, 'K');
+  img.fill(x + 11, y + 6, 1, 8, 'K');
+  img.set(x + 5, y + 9, 'chandelierGlow');
+  img.set(x + 10, y + 9, 'chandelierGlow');
+}
+// A fume hood beside the Physics Lab's sink ("a sink + fume hood") -- a light cabinet with a dark
+// vent recess and an extraction duct along the top.
+function intFumeHood(img, x, y) {
+  img.box(x + 1, y + 1, TILE - 2, 13, 'Q');
+  img.fill(x + 3, y + 3, TILE - 6, 8, '*');
+  img.fill(x + 1, y, TILE - 2, 1, 'o');
+}
+// 3 differently-topped lab benches ("each with varied equipment on top -- scopes, flasks, a
+// laptop"), each drawn over the same wood-topped bench, the equipment sitting on its own worktop
+// (y+5..y+11) rather than floating above it.
+function intLabBenchScope(img, x, y) {
+  intLabBenchWood(img, x, y);
+  img.fill(x + 6, y + 6, 4, 4, 'o');
+  img.fill(x + 7, y + 4, 2, 3, 'O');
+}
+function intLabBenchFlask(img, x, y) {
+  intLabBenchWood(img, x, y);
+  img.fill(x + 5, y + 7, 2, 3, '@');
+  img.fill(x + 9, y + 6, 2, 4, '!');
+}
+function intLabBenchLaptop(img, x, y) {
+  intLabBenchWood(img, x, y);
+  img.fill(x + 5, y + 6, 7, 4, 'o');
+  img.fill(x + 6, y + 5, 5, 1, 'Q');
 }
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------

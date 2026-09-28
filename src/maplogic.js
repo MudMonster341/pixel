@@ -298,8 +298,25 @@ const HUD_HINT = { w: 320, h: 36 };
 const HUD_HOTBAR_SLOT = 48;
 const HUD_HOTBAR_GAP = 8;
 const HUD_HOTBAR_PAD = 10;
+// src/scenes/ui.js's DialogBox default box and Letterbox bar height -- the single source of truth for
+// both (DialogBox reads hudLayout()'s own `dialogBox` for its default, rather than a second hard-coded
+// copy of these same 4 numbers) so the two can never drift apart the way they did for quality-loop
+// category 4 run 1 (the hint banner drawing over the dialog box, the dialog box itself clipped by the
+// bottom letterbox bar -- both were the dialog box's position/size never having been reserved anywhere
+// else HUD math was computed).
+const DIALOG_BOX = { x: 100, y: 382, w: 760, h: 138 };
+const SCRIPT_LETTERBOX_HEIGHT = 70;
 
-function hudLayout(width, height, slotCount = 5) {
+// `slotCount`: the hotbar's own slot count (GameState.inventory.slots.length in the real game).
+// `dialogOpen`/`letterboxed` (quality-loop category 4 run 1): while a `say` step or an ordinary
+// conversation has the dialog box on screen, the hint banner must never land on top of it (bug 1) --
+// its box is computed relative to `dialogBox` instead of the hotbar whenever `dialogOpen` is true, the
+// same "anchored, never overlapping" guarantee every other HUD box already has. While an in-world
+// script has the letterbox bars up, `dialogBox` itself lifts clear of the bottom bar instead of
+// sitting where the bar would clip it (bug 3) -- every `say` step is always preceded by its own
+// `letterbox: 'in'` step (src/scripts.js), so this is the box every real in-script line actually opens
+// in, not a hypothetical.
+function hudLayout(width, height, slotCount = 5, { dialogOpen = false, letterboxed = false } = {}) {
   const minimap = {
     x: HUD_MARGIN,
     y: HUD_MARGIN,
@@ -320,12 +337,20 @@ function hudLayout(width, height, slotCount = 5) {
   const hotbarH = HUD_HOTBAR_SLOT + HUD_HOTBAR_PAD * 2;
   const hotbar = { x: Math.round((width - hotbarW) / 2), y: height - HUD_MARGIN - hotbarH, w: hotbarW, h: hotbarH };
 
-  const hint = {
-    x: Math.round((width - HUD_HINT.w) / 2),
-    y: hotbar.y - HUD_MARGIN - HUD_HINT.h,
-    w: HUD_HINT.w,
-    h: HUD_HINT.h,
-  };
+  // Bug 3: letterboxed lifts the dialog box clear of the bottom bar (with a small margin) instead of
+  // leaving it at its ordinary y, which the bar would otherwise clip through.
+  const dialogBox = letterboxed
+    ? { ...DIALOG_BOX, y: height - SCRIPT_LETTERBOX_HEIGHT - HUD_MARGIN / 2 - DIALOG_BOX.h }
+    : { ...DIALOG_BOX };
 
-  return { minimap, minimapArea, tracker, trackerExpanded, banner, hotbar, hint };
+  // Bug 1: while the dialog box is on screen (or could appear any moment -- a letterboxed script is
+  // always about to run a `say` step, see the function comment above) the hint sits above *it*, never
+  // the hotbar spot the dialog box itself occupies/replaces -- guaranteed clear by construction, not
+  // just by the temporal gating HintBanner also does (src/scenes/ui.js), the same "by construction,
+  // still tested" rule GAME_FEEL.md rule 2 already uses for every other box here.
+  const reserveForDialog = dialogOpen || letterboxed;
+  const hintY = reserveForDialog ? dialogBox.y - HUD_MARGIN - HUD_HINT.h : hotbar.y - HUD_MARGIN - HUD_HINT.h;
+  const hint = { x: Math.round((width - HUD_HINT.w) / 2), y: hintY, w: HUD_HINT.w, h: HUD_HINT.h };
+
+  return { minimap, minimapArea, tracker, trackerExpanded, banner, hotbar, hint, dialogBox };
 }

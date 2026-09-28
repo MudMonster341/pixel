@@ -27,10 +27,14 @@ function overlaps(a, b) {
 // Pairs that are deliberately allowed to overlap because the two are never actually shown at the same
 // time (the same "share a corner on purpose" shape as trackerExpanded/tracker): the dialog box visually
 // replaces the hotbar the instant it opens (src/scenes/ui.js UIScene.update() -- `hotbar.setVisible
-// (!dialog.isOpen)`), so their *boxes* overlapping in the pure math is expected, not a bug.
+// (!dialog.isOpen)`), so their *boxes* overlapping in the pure math is expected, not a bug. Quality-loop
+// category 4 run 2: the location banner moved to the same top-left corner the minimap occupies
+// (Pokemon-style, a small plate rather than a top-center bar) -- the minimap hides for as long as the
+// banner is on screen (src/scenes/ui.js LocationBanner/Minimap), the same "never shown together" shape.
 const EXEMPT_PAIRS = [
   ['trackerExpanded', 'tracker'],
   ['hotbar', 'dialogBox'],
+  ['minimap', 'banner'],
 ];
 function isExempt(a, b) {
   return EXEMPT_PAIRS.some(([p, q]) => (p === a && q === b) || (p === b && q === a));
@@ -100,6 +104,13 @@ for (const [width, height] of SIZES) {
 test('hudLayout: the minimap is the ~120x90 declutter size, not the old 160x120', () => {
   const { minimap } = hudLayout(960, 540);
   assert.ok(minimap.w <= 160 && minimap.h <= 130, 'minimap should be smaller than the old panel');
+});
+
+test('hudLayout: the location banner is a top-left plate now, not a top-center bar (quality-loop category 4 run 2)', () => {
+  const { banner, minimap } = hudLayout(960, 540);
+  assert.equal(banner.x, 16, 'the banner should be anchored to the top-left corner, same margin as the minimap');
+  assert.equal(banner.y, 16);
+  assert.equal(banner.x, minimap.x, 'the banner and minimap share the same corner (never shown together)');
 });
 
 test('hudLayout: the hotbar box grows with slot count but stays centered', () => {

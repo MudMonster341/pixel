@@ -409,6 +409,7 @@ class Minimap {
     this.parts = [panel, backdrop, this.image, this.markers, this.captionStrip, this.label, hint];
     this.visible = true;
     this.scriptHidden = false; // quality-loop category 4 run 1, bug 2: faded out while a script runs
+    this.bannerShowing = false; // quality-loop category 4 run 2: faded out while the banner slides in/holds/out
     this.onClick = null; // FB-0018: set by UIScene to open the full-screen map
 
     scene.add.zone(this.area.x, this.area.y, this.area.w, this.area.h).setOrigin(0, 0)
@@ -420,7 +421,23 @@ class Minimap {
   // of the M-key `visible` toggle above (both apply; either one hides it).
   setScriptHidden(hidden, instant = false) {
     this.scriptHidden = hidden;
-    fadeParts(this.scene, this.parts, !hidden, instant);
+    this.applyHiddenState(instant);
+  }
+
+  // Called by LocationBanner.show() -- the banner now shares this same top-left corner (Pokemon-style,
+  // quality-loop category 4 run 2), so the minimap gets out of its way for as long as it's on screen
+  // instead of the two competing for the same spot. Always tweened (never instant): unlike a script
+  // interrupt, there's no skip path to land in mid-transition.
+  setBannerShowing(showing) {
+    this.bannerShowing = showing;
+    this.applyHiddenState(false);
+  }
+
+  // Combines both alpha-hiding reasons above (either one hides it) -- `this.visible`'s own hard
+  // setVisible() toggle (the M key) is independent of both and stacks on top the same way it already
+  // did with scriptHidden.
+  applyHiddenState(instant) {
+    fadeParts(this.scene, this.parts, !(this.scriptHidden || this.bannerShowing), instant);
   }
 
   // The map is drawn once into a texture, 1 pixel per tile. Small maps are shown whole and scaled up;
@@ -536,19 +553,23 @@ const BANNER_HOLD_MS = 2000;
 const BANNER_SLIDE_MS = 300;
 
 class LocationBanner {
-  // HUD declutter pass: box comes from hudLayout() (a narrower, unit-tested box that's guaranteed
-  // clear of the quest tracker pill and the minimap -- see hud-layout.test.js).
+  // Quality-loop category 4 run 2: moved from a top-center bar (which sat directly over the Main
+  // Block's own entrance sign in the campus backdrop) to a small top-left plate, Pokemon-style --
+  // sliding in from the *left* edge now, not down from the top, into the same corner the minimap
+  // occupies (hudLayout()'s own `banner`/`minimap` share an x/y on purpose -- see hud-layout.test.js).
+  // The minimap hides for as long as this is on screen (setBannerShowing() below) rather than the two
+  // fighting for the same corner.
   constructor(scene) {
     this.scene = scene;
     const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT);
     const { w, h } = layout.banner;
     this.w = w;
-    this.hiddenY = -h - 8;
-    this.shownY = layout.banner.y;
+    this.hiddenX = -w - 8;
+    this.shownX = layout.banner.x;
 
     const panel = makePanel(scene, 0, 0, w, h);
     this.text = uiText(scene, w / 2, h / 2, '', 10, COLORS.text).setOrigin(0.5);
-    this.container = scene.add.container(layout.banner.x, this.hiddenY, [panel, this.text]).setDepth(80);
+    this.container = scene.add.container(this.hiddenX, layout.banner.y, [panel, this.text]).setDepth(80);
     this.hideTimer = null;
     this.visible = false; // true from show() until the slide-out finishes (tests read this directly)
   }
@@ -558,13 +579,14 @@ class LocationBanner {
     // guarantee the minimap's own caption uses, instead of assuming every real name already fits.
     fitTextInWidth(this.text, name.toUpperCase(), this.w - 24, 6, 10);
     this.visible = true;
+    this.scene.minimap.setBannerShowing(true);
     this.scene.tweens.killTweensOf(this.container);
     if (this.hideTimer) this.hideTimer.remove();
-    this.scene.tweens.add({ targets: this.container, y: this.shownY, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeOut' });
+    this.scene.tweens.add({ targets: this.container, x: this.shownX, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeOut' });
     this.hideTimer = this.scene.time.delayedCall(BANNER_SLIDE_MS + BANNER_HOLD_MS, () => {
       this.scene.tweens.add({
-        targets: this.container, y: this.hiddenY, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeIn',
-        onComplete: () => { this.visible = false; },
+        targets: this.container, x: this.hiddenX, duration: BANNER_SLIDE_MS, ease: 'Cubic.easeIn',
+        onComplete: () => { this.visible = false; this.scene.minimap.setBannerShowing(false); },
       });
     });
   }

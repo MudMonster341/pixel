@@ -6,8 +6,8 @@ building. Target: 8+ in every area.
 
 | # | Category | Score | Last rated | Top issues |
 |---|---|---|---|---|
-| 1 | Outdoor art | 4 | 2026-09-28 | steps read as grey blinds; Mechanical plaza shadow bar; hostels not in shot; lawns tiled like wallpaper; lamp posts read as hammers; gate has no gate |
-| 2 | Interior art | 3 | 2026-09-28 | foyer marble reads as sand, staircase reads as rails/ladder; rooms mostly empty floor; 1-tile strip walls; furniture tiny and sparse |
+| 1 | Outdoor art | 5 | 2026-09-28 (run 2) | entrance steps read as flat brown bars; Hostel A shot still shows only a field (no hostel, no player); Mechanical shadow still a grey band |
+| 2 | Interior art | 4 | 2026-09-28 (run 2) | floor is a loud high-contrast checker; foyer staircase still vertical rails; ICVL a solid grid of desks with no aisles; Physics Lab a uniform warehouse grid |
 | 3 | Characters and depth | — | — | |
 | 4 | UI and menus | — | — | (HUD clutter at the top: minimap, banner, hint and tracker all compete) |
 | 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
@@ -21,6 +21,18 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-28 — Outdoor art (run 2) — overall 5 (was 4)
+- **Main Block front: 5.** The glass front with mullions reads better; the steps now read as two flat brown bars rather than stone treads (no light tread face, too dark, too tall); the camera frame still cuts the building off.
+- **Gate 2: 6.** Barrier arm, pillar and palm present; the barrier runs the whole width like a stripe. Better.
+- **Mechanical front: 5.** Roofs now read as roofs (AC units, vents); the plaza shadow is softer but still a grey band.
+- **Lawns: 6.** Natural now.
+- **Hostels: 2.** Still broken: the Hostel A shot is a striped field, no hostel, no player.
+
+### 2026-09-28 — Interior art (run 2) — overall 4 (was 3)
+- **Foyer: 3.** The new floor is a high-contrast white-on-tan checker (graph paper); the staircase still draws as vertical rails; the chandelier is tiny.
+- **LUG stall: 5.** The wordmark, mezzanine railing, plants and volunteer read well; the checker floor hurts.
+- **ICVL: 3.** Over-corrected: a solid wall-to-wall grid of identical blue desks, no aisles, she stands among them.
+- **Physics Lab: 4.** Uniform rows of identical benches, like a warehouse.
 ### 2026-09-28 — Interior art (run 1) — overall 3
 From the same qa-shots run (indoor-main-block-*.png). Per area:
 - **Foyer: 2.** The "marble" floor reads as speckled sand; the twin staircase draws as long vertical dark rails (a ladder or railway track), not steps; no chandelier, mezzanine plants or wordmark in view; columns are small white blocks floating on the floor. Nothing like the owner's photo.

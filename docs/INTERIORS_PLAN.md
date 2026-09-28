@@ -82,74 +82,95 @@ campus from OSM (ADR 0009) should emit `door` objects in this exact shape at the
 Mechanical Block entrances -- same `to`/`toId`/`facing` properties, any position, and it will work
 with no changes on the interiors side.
 
-## Main Block (4 floors)
+## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28)
 
-Real footprint ~115x102 m (OSM way 224330149); the interior is a simplified rectangle, not the L/
-notch shape the real building may have, scaled up for a walkable 1 m/tile layout with the number of
-real rooms the tour lists. **Canvas: 136x84 tiles**, all 4 floors -- over the ~110x90 target because
-fitting every named room (career services, five-office admin hub, an auditorium suite, a six-room
-sports hub, ICL+incubation, plus the upper floors' 19 labs, 13 clubs, etc.) in a single-corridor
-layout needs the extra length; the corridor itself is what's long, not the building's "footprint" in
-a real sense. Every floor shares one straight spine corridor (`x:4-120, y:42-46`) and one stairwell
-rectangle (`x:72-79, y:34-42`), attached to the spine's top (north) side on every floor.
+**Status (2026-09-28): rebuilt.** The 2026-09-17 layout above (a 136x84 spine-and-rows building
+with ~40 named admin/lab/club rooms) was right-sized per the owner's own words (FB-0031: "we don't
+need a proper map, make it nice as per how a university campus looks from the top") after she played
+it and found it "huge... mostly empty cream floor" (FB-0030/0031). It's now a small, furnished
+Pokemon-style building: the foyer (built to her own photo, FB-0030) + the LUG stall nook + a short
+corridor to the (locked, but visible) rest of the ground floor, then one corridor per upper floor
+carrying docs/STORY.md's 3 key rooms and a couple of transit stops -- **canvas: 40x40 tiles**, all 4
+floors, with one shared stairwell rectangle (`x:30-37, y:12-21`) so stairs still line up between
+floors (tested, `tests/unit/interiors.test.js`). Every anchor the cutscene scripts and onboarding
+routes use (`src/scripts.js`, `src/objective-routes.js`) kept its exact name -- `Main Block Stairs
+<floor> (up)/(down)`, the `lug-volunteer` npc id, the `icvl`/`room195`/`physicsLab` key-station ids
+-- so nothing there needed touching; see `tests/unit/interiors-premium-pass.test.js`, which resolves
+every one of those anchors against the real generated maps.
 
-**Ground floor** (entrance at the bottom of the Foyer, `main-block-g`):
+**Ground floor** (`main-block-g`, entrance at the bottom of the Foyer):
 
 ```
- [Incubation]  [Reception][CareerSvc][Admiss] [Stairs] [AUGSD][Director][DepReg][StudWelf][Telepres]
- [   ICL    ]--------------------------- spine corridor ----------------------------------------
- [MiniMart][Badminton][TableTennis]  [Foyer 2]         [Medical]  [Audi Lobby][Audi]--[Parents Lng]
-                       |            [ Foyer  ]                        |
-                       |         (entrance, south wall)               (Auditorium, stage at far end)
+ .......................................
+ :        [Foyer]         :[Corridor]:
+ :  col   col   col  col  :  x      :[Stairs]
+ :        runner          :  x      :
+ :   [LUG Stall nook]      :........:
+ :  counter   banner       :
+ :........[staircase]......:
+ :   flightL | flightR      :
+ :  sofa            desk    :
+ :........[entrance]........:
 ```
 
-Rooms: Foyer (double-height atrium look: reception desk, sofas, plants, noticeboard) -> Foyer 2 ->
-spine corridor -> Reception; Career Services; the Admissions/AUGSD/Director's Office/Deputy
-Registrar/Student Welfare hub; the Auditorium (with its Lobby and the Parents-Visitor Lounge, stage
-at the south end); the sports hub (Mini Mart, Badminton, Table Tennis -- Prime Medical Centre is
-next to the Foyer instead, its own "Doctor's Room" simplified to a curtained bay inside it, there
-wasn't room for a fully separate one); Telepresence Classroom; Intelligent Computing Lab +
-Incubation Centre. Stairs up + a decorative lift in the stairwell room.
+The **foyer** (`FURNISHERS.foyer`, `tools/interiors/build-interiors.js`) is one continuously
+composed room, not a furniture grid, built to the owner's own photo
+([owner-main-block-foyer.png](research/reference/owner-main-block-foyer.png)) and
+[docs/research/campus-visual-reference.md](research/campus-visual-reference.md) "2. Main reception
+foyer": glossy marble floor (`intFloorMarble`) with a darker centre "runner" band
+(`intFloorMarbleRunner`) from the entrance to the staircase; 5 walk-behind columns
+(`intColumn`, each its own 1x1 `depthGroup`) down both sides; a **twin-flight staircase converging on
+a landing** (`intFoyerStairsL`/`intFoyerStairsR`/`intFoyerLanding`, solid + decorative like the old
+`intStairsUp` block -- walked *around*, never through -- one `depthGroup` over the whole block, ADR
+0015, so she disappears behind it walking into the nook beyond); a mezzanine balcony-edge railing
+(`intAtriumRailing`, reused from the 1st floor's own atrium-void kit) right at the top of the stairs;
+a chandelier (`intChandelier`, a decorative ground-layer tile over the lower landing, the same
+"looking up at it" trick `intLift` uses); the **"BITS Pilani, Dubai Campus" wordmark** on the wall
+above the landing (the exact `bitsSignSeg0..8` tiles already generated for the outdoor facade,
+`tools/make-assets.js` `SIGN_FONT_4X6` -- reused verbatim, not redrawn); a reception desk + sofas +
+noticeboard off to one side (out of the central sightline, per the photo); and potted palms (`plant`,
+each its own `depthGroup`) flanking the entrance and the staircase's base. The **LUG Stall nook**
+(docs/STORY.md: "an event stall behind the stairs") sits behind (north of) the staircase -- a
+counter, the LUG banner (`intNoticeboard`) and a plant, reachable by walking around either side, its
+own named `area` object (`kind: "stall"`) the volunteer NPC (`src/maps.js`) stands inside.
 
-**1st floor** (`main-block-1`): the Connecting Lobby sits directly over the Foyer/Foyer 2 footprint,
-with a railing-bordered atrium void punched into its floor so it visually overlooks the real foyer
-below. Off the spine: **ICVL** and **Room 195** (docs/STORY.md key rooms, M3 -- renamed 2026-09-22
-from two of what were three plain "50 Seater Classroom" rooms; see "Story rooms" below), one more
-50-seat + two 60-seat classrooms, the Locker Area, Counselling Centre (+ its Group Session and
-Therapy rooms), International Student Services, a Meeting Room and a Guest Meeting Room. Stairs down
-to G, up to 2nd.
+A short **corridor** off the foyer's east wall leads to the stairwell up, with two purely decorative
+closed doors (`intDoorClosed`, solid, no warp object) standing in for the rest of the ground floor,
+"locked, but visible" (docs/STORY.md: "everywhere else in the building is blocked off for now").
 
-**2nd floor** (`main-block-2`): department labs off the spine -- EEE (Analog & Digital, Communication
-Systems, Electrical Machines, Instrumentation, Power Electronics), CHEM (Chemical Engineering,
-Petroleum), CS (Computer Lab, Database Systems, Network & Distributed Systems, Signal Processing),
-BIOT (Advanced Molecular Biology, Biotechnology Research, Microbiology), GS (Chemistry -- **Physics
-moved to the 3rd floor**, see below), Civil (Soil Mechanics, Transport Engineering), and
-Thermo-Fluids -- 18 labs total, the tour doesn't say which floor so this is the sensible guess
-("linked from Foyer 2, floor unknown"). Stairs down to 1st, up to 3rd.
+**1st floor** (`main-block-1`): one corridor carrying **ICVL** and **Room 195** (docs/STORY.md key
+rooms, M3 -- see "Story rooms" below for why they're here), each opening directly off it, plus two
+more decorative locked doors further along. Stairs down to G, up to 2nd.
 
-**3rd floor** (`main-block-3`): the clubs corridor (ACM, ACM-W, GDG, MTC, IEEE, IFOR, Supernova,
-Music, Shades Art, SWE, WIE, Chimera, Student Council), the **Physics Lab** (docs/STORY.md key room,
-M3 -- moved here 2026-09-22 from the 2nd floor's GS row, see "Story rooms" below), the Vice
-Chancellor Office, Telepresence Conference Room and two guest/meeting rooms. Stairs down to 2nd (top
-floor, no further stairs).
+**2nd floor** (`main-block-2`): no key here -- a transit corridor/landing (`FURNISHERS.lounge`, a
+sofa corner + two notice boards) between the 1st and 3rd floors. Stairs down to 1st, up to 3rd.
 
-### Story rooms (M3, 2026-09-22, docs/STORY.md)
+**3rd floor** (`main-block-3`): one corridor leading straight to the **Physics Lab** (docs/STORY.md
+key room), matching the story's own "she goes up and to the right." Stairs down to 2nd only (top
+floor).
+
+### Story rooms (M3, 2026-09-22; furniture rebuilt 2026-09-27/28, FB-0030/0031)
 
 The treasure hunt's 3 key rooms had no public floor plan to place them from (docs/STORY.md's own
-"Open questions for the owner" -- still open). Rather than invent new rooms and grow the building
-further, the task made the smallest change that gives each one a real, named, furnished room:
+"Open questions for the owner" -- still open). The 2026-09-22 pass gave each one a real, named room
+without growing the building; the 2026-09-27/28 pass then furnished each to its own reference photo
+(`docs/research/campus-visual-reference.md` "5. Computer lab / ICL" and "6. Physics/science lab") and
+placed the key station on a specific piece of furniture, not just "some tile in the room":
 
-- **Physics Lab**: moved from the 2nd floor's guessed GS (General Studies) row to a new `lab`-type
-  room on the 3rd floor (`tools/interiors/plans.js` `mainBlock3`), matching docs/STORY.md's own "the
-  Physics Lab, 3rd floor" -- the 2nd floor was just as much a guess, so moving it cost nothing real.
-- **ICVL**: one of the 1st floor's three "50 Seater Classroom" rooms, renamed and changed from a
-  `classroom` to a `lab` (bench + computer-bench furniture instead of desks-and-whiteboard) --
-  "ICVL" isn't a real BITS Dubai room name found in research, it's the task's own placeholder for "a
-  computing lab on the 1st floor"; **the owner should confirm or correct this name and location** if
-  the real one is known.
-- **Room 195**: the second of those same three classrooms, renamed only (still a plain classroom) --
-  docs/STORY.md names the room but not its floor; 1st floor (next to ICVL) was chosen for a short,
-  sensible route, not sourced from anything real.
+- **Physics Lab** (3rd floor, `labPhysics` type, `tools/interiors/plans.js` `mainBlock3`): wood-topped
+  benches (`intLabBenchWood`, the same wood-ramp tone as the rest of the kit, over the metal-topped
+  `intLabBench` Mechanical Block's own labs still use) at both ends, a rack (`intLabRack`, its own
+  `depthGroup`) and a sink. Key station: the first bench.
+- **ICVL** (1st floor, `labIcvl` type): royal-blue built-in cabinetry (`intIcvlBench`, distinct from
+  the grey `intComputerBench` shared with Mechanical Block), a server rack (`intServerRack`, each
+  instance its own `depthGroup`) and a poster-covered wall (`intNoticeboard` tiles along the front
+  wall). Key station: the first bench. "ICVL" isn't a real BITS Dubai room name found in research,
+  it's a placeholder for "a computing lab on the 1st floor"; **the owner should confirm or correct
+  this name** if the real one is known.
+- **Room 195** (1st floor, plain `classroom` type): rows of desks, a teacher's desk, a whiteboard
+  *and* a pull-down projector screen (`intProjectorScreen`, new) beside it. Key station: the
+  teacher's desk. Docs/STORY.md names the room but not its floor; 1st floor (next to ICVL) was
+  chosen for a short, sensible route, not sourced from anything real.
 
 All three key stations (a desk/bench interactable, not a floor pickup) and the LUG volunteer's own
 dialog are data in `src/story.js`/`src/maps.js`, not the interior generator -- see docs/STORY.md.
@@ -216,28 +237,38 @@ equipment rack alongside the benches, the auditorium keeps a walkable centre ais
 and canteen/mart/lockers/badminton get the small props (a counter, a vending machine, a water cooler,
 a bin) the owner's brief named.
 
-**The Main Block foyer** (below) got the most attention, being the story's opening scene: a real
-reception desk, ottoman seating and plants near the entrance, a noticeboard, and a *decorative* grand
-staircase a few rows in from the back wall -- walkable, with no warp trigger of its own (the same
-"decoration only" trick `intLift` already used) -- with the space behind it kept clear as a "LUG
-Stall" nook (a named `area` object, `kind: "stall"`) and a small counter prop standing in it, matching
-docs/STORY.md's "an event stall behind the stairs." No NPC or dialogue was added here -- that's a
-separate, later task; this pass only built the room to make that scene possible.
+**FB-0030/0031 (2026-09-27/28): the Main Block foyer rebuild.** 13 new tile names, appended after
+the 2026-09-22 refresh's own additions (so every existing tile keeps its index): `intFloorMarble`/
+`intFloorMarbleRunner` (the glossy marble + centre runner), `intColumn` (the walk-behind hall
+columns), `intFoyerStairsL`/`intFoyerStairsR`/`intFoyerLanding` (the twin staircase + landing,
+replacing the old single `intStairsUp` block), `intChandelier`, `intGlassDoorOpen` (the entrance's
+own `openTiles` overlay), `intDoorClosed` (the "locked, but visible" side-wing/classroom doors --
+solid, no warp object, wall dressing only), `intIcvlBench`/`intServerRack` (ICVL's blue cabinetry),
+`intLabBenchWood` (the Physics Lab's wood-topped benches) and `intProjectorScreen` (Room 195's
+whiteboard-side screen). All hand-drawn in the existing box/fill idiom (no new vendor pack, so
+CREDITS.md needed no changes) -- reaching for the actual LimeZu Room_Builder atlas pieces for these
+(columns, the twin staircase, glass doors) is a follow-up worth doing, not attempted here for time.
+Also new: `Floor.depthGroupRect()`/`placeStructure()`/`placeStructureRow()`
+(`tools/interiors/build-interiors.js`) and an `openTiles` option on `Floor.exteriorDoor()` -- the
+foyer's own staircase/columns/plants are the first interior `depthGroup`s (ADR 0015 previously only
+had campus/text-map examples).
 
 ## Rough spots and simplifications (read before the owner asks "why...")
 
 - **Building shapes are simplified rectangles**, not the real (possibly L-shaped) footprints -- the
   owner's plan explicitly allows this ("interiors may be scaled/cropped a bit to stay playable").
-- **Main Block is 136 tiles wide**, over the ~110 target, because of how many named rooms the real
-  tour lists. The corridor is long; no single room is oversized.
-- **Prime Medical Centre - Doctor's Room** isn't a separate room on the ground floor plan (space);
-  it's a curtained bay inside Prime Medical Centre instead.
-- **Which floor a lab/club/office is really on** is mostly a guess for Main Block's 2nd and 3rd
-  floors -- the virtual tour doesn't say (see `docs/research/bits-dubai-campus.md` and
-  `docs/research/bits-dubai-tour-scenes.json`, "floor unknown"). The Connecting Lobby (1st floor,
-  confirmed) and the ground-floor rooms are the only ones with a source for their floor.
+- **Interior walls are still a single tile tall** (`bitsWallPlain`'s own cap-band + shadow-line
+  treatment reads as "top edge + face" within that one tile, ADR 0015's "Depth groups" doc) rather
+  than a genuine 2-tile-tall wall with doors set into a separate wall-face row, per the letter of the
+  FB-0030/0031 brief -- restructuring every room's own wall-ring math for that is a bigger change than
+  this pass's time allowed; flagged for a follow-up rather than attempted half-done.
+- **The 2026-09-17 admin/lab/club rooms this section used to describe are gone**: FB-0030/0031
+  (2026-09-27/28) right-sized Main Block from a 136x84 spine-and-rows building down to 40x40 per
+  floor (see "Main Block (4 floors)" above) -- the Career Services/AUGSD/EEE-CHEM-CS-BIOT-labs/clubs
+  rooms this bullet list used to caveat no longer exist to have a "which floor" question about.
 - **Furniture is simple by design** (the owner's "empty, furnished simply" decision): one or two
-  pieces per type, repeated in a grid, not hand-decorated per room.
+  pieces per type, repeated in a grid, not hand-decorated per room (the foyer and the 3 key rooms are
+  the deliberate exceptions, FB-0030/0031).
 - **The lift is decorative only** -- it doesn't warp anywhere, per the ground-floor plan's "stairs +
   a lift tile."
 - **The three campus door objects live in the current (pre-ADR-0009) `build-campus.js`**, added in

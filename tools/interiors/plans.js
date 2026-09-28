@@ -3,88 +3,53 @@
 // virtual-tour scene names where known (docs/research/bits-dubai-tour-scenes.json); floors the tour
 // doesn't specify are a sensible guess, noted in the plan doc. Every building's floors share one
 // canvas size and the same stairwell rectangle, so stairs line up between floors.
-const { layoutRow } = require('./layout-helpers');
 
-// ---------- Main Block: 4 floors, one shared spine corridor + stairwell ----------
+// ---------- Main Block: 4 floors, right-sized (FB-0030/0031, premium pass stage 5) ----------
+// Rebuilt compact per the owner's own words (FB-0031: "we don't need a proper map, make it nice as
+// per how a university campus looks from the top"): today's huge 136x84 floors, mostly empty cream
+// floor, are replaced with a small, furnished Pokemon-style building -- the foyer (the flagship
+// room, built to the owner's photo below) + the LUG stall nook + a short corridor to the (locked,
+// but visible) rest of the ground floor; then one corridor per upper floor carrying the 3 key rooms
+// and a couple of transit stops (docs/STORY.md's own room list -- see docs/INTERIORS_PLAN.md "Story
+// rooms" for why ICVL/Room 195/Physics Lab live where they do). Every floor shares one canvas size
+// and one fixed stairwell rectangle (MAIN_STAIRWELL), so stairs line up between floors (tested).
+const MAIN_W = 40;
+const MAIN_H = 40;
+const MAIN_STAIRWELL = { x0: 30, y0: 12, x1: 37, y1: 21 };
 
-const MAIN_W = 136;
-const MAIN_H = 84;
-const MAIN_SPINE = { x0: 4, y0: 42, x1: 120, y1: 46 };
-const MAIN_STAIRWELL = { x0: 72, y0: 34, x1: 79, y1: 42 }; // attaches to the spine's top, same on every floor
-
-function addSpine(floor) {
-  floor.addRect('spine', { type: 'corridor', x0: MAIN_SPINE.x0, y0: MAIN_SPINE.y0, x1: MAIN_SPINE.x1, y1: MAIN_SPINE.y1, isCorridor: true });
-}
-function addStairwell(floor, name, { to, toId, dir, up, down }) {
+function stairwell(floor, name, { up, down } = {}) {
   floor.addRect('stairwell', { name, type: 'stairwell', ...MAIN_STAIRWELL });
-  floor.connect('spine', 'stairwell');
   floor.liftFeature('stairwell', MAIN_STAIRWELL.x0 + 1, MAIN_STAIRWELL.y1 - 1);
   if (up) floor.stairsObject('stairwell', { name: `${name} (up)`, to: up.to, toId: up.toId, facing: 'left', dir: 'up', offset: [-2, 0] });
   if (down) floor.stairsObject('stairwell', { name: `${name} (down)`, to: down.to, toId: down.toId, facing: 'right', dir: 'down', offset: [2, 0] });
-}
-// Attaches every room in `specs` to the spine, on `side` ('top'|'bottom'), starting at `startX`.
-function spineRow(floor, side, startX, specs) {
-  const { rooms } = layoutRow(startX, side === 'top' ? MAIN_SPINE.y0 : MAIN_SPINE.y1, side === 'bottom', specs);
-  for (const r of rooms) {
-    floor.addRect(r.id, r);
-    floor.connect('spine', r.id);
-  }
-  return rooms;
 }
 
 const mainBlockG = {
   name: 'Main Block · Ground Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 56, y: 74, facing: 'up' },
+  spawn: { x: 14, y: 34, facing: 'up' },
   build(floor) {
-    addSpine(floor);
-    addStairwell(floor, 'Main Block Stairs G', { up: { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)' } });
+    // The foyer (FB-0030: "the main reception foyer -- make it look like that", the owner's photo):
+    // glossy marble, columns, a twin staircase to a mezzanine landing, the wordmark, a chandelier,
+    // reception seating and the LUG Stall nook behind the stairs -- all in the `foyer` furnisher
+    // (build-interiors.js FURNISHERS.foyer), since it's one continuous composed room rather than a
+    // grid of repeated props like every other room type.
+    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', x0: 2, y0: 6, x1: 25, y1: 37 });
+    floor.exteriorDoor('foyer', 'bottom', {
+      name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up',
+      openTiles: 'intGlassDoorOpen,intGlassDoorOpen',
+    });
 
-    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', x0: 42, y0: 58, x1: 71, y1: 79 });
-    floor.addRect('foyer2', { name: 'Foyer 2', type: 'lobby', x0: 42, y0: 46, x1: 71, y1: 58 });
-    floor.connect('foyer2', 'foyer');
-    floor.connect('spine', 'foyer2');
-    floor.exteriorDoor('foyer', 'bottom', { name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up' });
+    // A short corridor to the rest of the ground floor -- locked, but visible (docs/STORY.md:
+    // "everywhere else in the building is blocked off for now") -- and the stairwell up.
+    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 25, y0: 13, x1: 30, y1: 21, isCorridor: true });
+    floor.connect('foyer', 'corridor');
+    floor.placeStructure(27, 13, 'intDoorClosed');
+    floor.placeStructure(28, 21, 'intDoorClosed');
 
-    floor.addRect('auditoriumLobby', { name: 'Auditorium Lobby', type: 'lobby', x0: 80, y0: 46, x1: 95, y1: 57 });
-    floor.addRect('auditorium', { name: 'Auditorium', type: 'auditorium', x0: 80, y0: 57, x1: 107, y1: 79 });
-    floor.addRect('parentsLounge', { name: 'Parents-Visitor Lounge', type: 'lounge', x0: 95, y0: 46, x1: 107, y1: 57 });
-    floor.connect('spine', 'auditoriumLobby');
-    floor.connect('auditoriumLobby', 'auditorium');
-    floor.connect('auditoriumLobby', 'parentsLounge');
-    floor.paintFloor(88, 74, 99, 78, 'intFloorStage'); // stage at the far end of the auditorium
-
-    floor.addRect('incubation', { name: 'Incubation Centre', type: 'club', x0: 8, y0: 6, x1: 29, y1: 20 });
-    floor.addRect('icl', { name: 'Intelligent Computing Lab', type: 'lab', x0: 8, y0: 20, x1: 33, y1: 42 });
-    floor.connect('icl', 'incubation');
-    floor.connect('spine', 'icl');
-
-    floor.addRect('reception', { name: 'Reception', type: 'reception', x0: 35, y0: 30, x1: 46, y1: 42 });
-    floor.connect('spine', 'reception');
-
-    spineRow(floor, 'top', 46, [
-      { id: 'careerServices', name: 'Career Services', type: 'office', w: 12 },
-      { id: 'admissions', name: 'Admissions Office', type: 'office', w: 8 },
-    ]);
-    spineRow(floor, 'top', 80, [
-      { id: 'augsd', name: 'Academic Undergraduate Studies Division', type: 'office', w: 9 },
-      { id: 'directors', name: "Director's Office", type: 'office', w: 8 },
-      { id: 'deputyRegistrar', name: 'Deputy Registrar Office', type: 'office', w: 8 },
-      { id: 'studentWelfare', name: 'Student Welfare Division', type: 'office', w: 8 },
-      { id: 'telepresence', name: 'Telepresence Classroom', type: 'classroom', w: 9 },
-    ]);
-
-    // West of Foyer 2 (x < 42), so the sports hub never overlaps the foyer's own footprint.
-    const [miniMart, badminton, tableTennis] = spineRow(floor, 'bottom', 4, [
-      { id: 'miniMart', name: 'Mini Mart', type: 'mart', w: 7 },
-      { id: 'badminton', name: 'Badminton', type: 'badminton', w: 11 },
-      { id: 'tableTennis', name: 'Table Tennis', type: 'tabletennis', w: 7 },
-    ]);
-    floor.connect('badminton', 'tableTennis');
-    // The 9-tile gap between Foyer 2 and the Auditorium Lobby is just enough for the medical centre
-    // (its own "Doctor's Room" is simplified to a curtained bay inside it -- see INTERIORS_PLAN.md).
-    spineRow(floor, 'bottom', 71, [{ id: 'medical', name: 'Prime Medical Centre', type: 'medical', w: 6 }]);
+    stairwell(floor, 'Main Block Stairs G', { up: { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)' } });
+    floor.connect('corridor', 'stairwell');
   },
 };
 
@@ -92,52 +57,27 @@ const mainBlock1 = {
   name: 'Main Block · 1st Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 56, y: 51, facing: 'down' },
+  spawn: { x: 16, y: 18, facing: 'up' },
   build(floor) {
-    addSpine(floor);
-    addStairwell(floor, 'Main Block Stairs 1', {
+    // docs/STORY.md key rooms (M3): ICVL (a computing lab, `labIcvl`) and Room 195 (a classroom),
+    // both off one corridor -- see docs/INTERIORS_PLAN.md "Story rooms" for why they're here (no
+    // sourced real floor plan for either).
+    floor.addRect('icvl', { name: 'ICVL', type: 'labIcvl', x0: 3, y0: 3, x1: 16, y1: 14 });
+    floor.addRect('room195', { name: 'Room 195', type: 'classroom', x0: 18, y0: 3, x1: 29, y1: 14 });
+
+    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
+    floor.connect('icvl', 'corridor');
+    floor.connect('room195', 'corridor');
+    // A couple of locked classroom doors further down the corridor -- visible, not walkable
+    // (docs/STORY.md: only the route to the 3 key rooms stays open).
+    floor.placeStructure(10, 21, 'intDoorClosed');
+    floor.placeStructure(22, 21, 'intDoorClosed');
+
+    stairwell(floor, 'Main Block Stairs 1', {
       down: { to: 'main-block-g', toId: 'Main Block Stairs G (up)' },
       up: { to: 'main-block-2', toId: 'Main Block Stairs 2 (down)' },
     });
-
-    // The mezzanine: overlooks the foyer below through a railing-bordered void (same footprint as
-    // the foyer + Foyer 2 on the ground floor, so the void lines up with the real atrium below).
-    floor.addRect('connectingLobby', { name: 'Connecting Lobby', type: 'lobby', x0: 42, y0: 46, x1: 71, y1: 79 });
-    floor.connect('spine', 'connectingLobby');
-    floor.atriumVoid(48, 58, 65, 73);
-
-    // docs/STORY.md key rooms (2026-09-22, M3 story spine): two of the three key rooms live on this
-    // floor. "ICVL" and "Room 195" don't have a public floor plan (docs/INTERIORS_PLAN.md "rough
-    // spots" -- no source says which floor either is really on), so the two 50-seater classrooms
-    // this row already had were renamed/repurposed rather than growing the building further -- see
-    // docs/STORY.md's "small choices" note. `icvl` becomes a `lab` (computing lab furniture: benches
-    // + computer benches, not desks-and-whiteboard) at the same width/depth as before; `room195`
-    // keeps the plain classroom type, just renamed.
-    spineRow(floor, 'top', 46, [
-      { id: 'icvl', name: 'ICVL', type: 'lab', w: 9 },
-      { id: 'room195', name: 'Room 195', type: 'classroom', w: 9 },
-    ]);
-    spineRow(floor, 'top', 80, [
-      { id: 'classroom50c', name: '50 Seater Classroom (3)', type: 'classroom', w: 9 },
-      { id: 'classroom60a', name: '60 Seater Classroom', type: 'classroom60', w: 11 },
-      { id: 'classroom60b', name: '60 Seater Classroom (2)', type: 'classroom60', w: 11 },
-    ]);
-    // West of Connecting Lobby (x < 42), so this row never overlaps the mezzanine's own footprint.
-    spineRow(floor, 'bottom', 4, [
-      { id: 'lockerArea', name: 'Locker Area', type: 'locker', w: 10 },
-      { id: 'counselling', name: 'Counselling Centre', type: 'office', w: 9 },
-      { id: 'counsellingGroup', name: 'Counselling Center - Group Session Room', type: 'office', w: 7 },
-    ]);
-    // The 9-tile gap between Connecting Lobby and the (unbuilt, below the auditorium void) east
-    // side is just enough for the therapy room.
-    spineRow(floor, 'bottom', 71, [
-      { id: 'counsellingTherapy', name: 'Counselling Center - Therapy Room', type: 'office', w: 6 },
-    ]);
-    spineRow(floor, 'bottom', 80, [
-      { id: 'internationalServices', name: 'International Student Services', type: 'office', w: 9 },
-      { id: 'meetingRoom', name: 'Meeting Room', type: 'office', w: 7 },
-      { id: 'guestMeetingRoom', name: 'Guest Meeting Room', type: 'office', w: 7 },
-    ]);
+    floor.connect('corridor', 'stairwell');
   },
 };
 
@@ -145,39 +85,17 @@ const mainBlock2 = {
   name: 'Main Block · 2nd Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 75, y: 44, facing: 'up' },
+  spawn: { x: 16, y: 16, facing: 'down' },
   build(floor) {
-    addSpine(floor);
-    addStairwell(floor, 'Main Block Stairs 2', {
+    // No key here -- a transit corridor/landing between the 1st and 3rd floors, with a lounge
+    // corner and notice boards (FURNISHERS.lounge) so it doesn't read as bare hallway.
+    floor.addRect('landing', { name: 'Landing', type: 'lounge', x0: 3, y0: 12, x1: 30, y1: 21 });
+
+    stairwell(floor, 'Main Block Stairs 2', {
       down: { to: 'main-block-1', toId: 'Main Block Stairs 1 (up)' },
       up: { to: 'main-block-3', toId: 'Main Block Stairs 3 (down)' },
     });
-
-    spineRow(floor, 'top', 46, [
-      { id: 'eeeAnalog', name: 'Analog and Digital Electronics (EEE)', type: 'lab', w: 8 },
-      { id: 'eeeComms', name: 'Communication Systems Lab (EEE)', type: 'lab', w: 8 },
-      { id: 'eeeMachines', name: 'Electrical Machines Lab (EEE)', type: 'lab', w: 8 },
-    ]);
-    spineRow(floor, 'top', 80, [
-      { id: 'eeeInstrumentation', name: 'Instrumentation Lab (EEE)', type: 'lab', w: 8 },
-      { id: 'eeePower', name: 'Power Electronics Lab (EEE)', type: 'lab', w: 8 },
-      { id: 'chemEng', name: 'Chemical Engineering Lab (CHEM)', type: 'lab', w: 8 },
-      { id: 'petroleum', name: 'Petroleum Lab (CHEM)', type: 'lab', w: 8 },
-    ]);
-    spineRow(floor, 'bottom', 4, [
-      { id: 'computerLab', name: 'Computer Lab (CS)', type: 'lab', w: 8 },
-      { id: 'dbSystems', name: 'Database System & Algorithms Lab (CS)', type: 'lab', w: 8 },
-      { id: 'networkDist', name: 'Network & Distributed System Lab (CS)', type: 'lab', w: 8 },
-      { id: 'signalProcessing', name: 'Signal Processing and Simulation Lab (CS)', type: 'lab', w: 8 },
-      { id: 'advMolecularBio', name: 'Advanced Molecular Biology (BIOT)', type: 'lab', w: 8 },
-      { id: 'biotechResearch', name: 'Biotechnology-Research Lab (BIOT)', type: 'lab', w: 8 },
-      { id: 'microbiology', name: 'Microbiology Lab (BIOT)', type: 'lab', w: 8 },
-      { id: 'chemistryGS', name: 'Chemistry Lab (GS)', type: 'lab', w: 8 },
-      // Physics Lab moved to the 3rd floor (docs/STORY.md key room) -- see mainBlock3 below.
-      { id: 'soilMechanics', name: 'Soil Mechanics Lab (Civil)', type: 'lab', w: 8 },
-      { id: 'transportEng', name: 'Transport Engineering Lab (Civil)', type: 'lab', w: 8 },
-      { id: 'thermoFluids', name: 'Thermo-Fluids Lab (Workshop)', type: 'lab', w: 8 },
-    ]);
+    floor.connect('landing', 'stairwell');
   },
 };
 
@@ -185,38 +103,17 @@ const mainBlock3 = {
   name: 'Main Block · 3rd Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 75, y: 44, facing: 'up' },
+  spawn: { x: 10, y: 19, facing: 'up' },
   build(floor) {
-    addSpine(floor);
-    addStairwell(floor, 'Main Block Stairs 3', { down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });
+    // docs/STORY.md key room: "the Physics Lab, 3rd floor" -- one corridor leading straight to it,
+    // matching the story's own "she goes up and to the right."
+    floor.addRect('physicsLab', { name: 'Physics Lab', type: 'labPhysics', x0: 3, y0: 3, x1: 20, y1: 17 });
 
-    spineRow(floor, 'top', 46, [
-      { id: 'acm', name: 'ACM (Association for Computing Machinery)', type: 'club', w: 7 },
-      { id: 'acmw', name: 'ACM-W (Association of Computing Machinery Women)', type: 'club', w: 7 },
-      { id: 'gdg', name: 'Google Developers Groups', type: 'club', w: 7 },
-    ]);
-    spineRow(floor, 'top', 80, [
-      { id: 'mtc', name: 'MTC (Microsoft Tech Club)', type: 'club', w: 7 },
-      { id: 'ieee', name: 'IEEE (Institution Electrical and Electronic Engineers)', type: 'club', w: 7 },
-      { id: 'ifor', name: 'IFOR Club (Intelligent Flying Object and Reconnaissance)', type: 'club', w: 7 },
-      { id: 'supernova', name: 'Supernova (The Astronomy Club)', type: 'club', w: 7 },
-      // docs/STORY.md key room: "the Physics Lab, 3rd floor" -- moved here from the 2nd floor's
-      // guessed GS row (docs/INTERIORS_PLAN.md: floor was never sourced either way) so the story's
-      // own beat ("she goes up and to the right") is a real, named room instead of a placeholder.
-      { id: 'physicsLab', name: 'Physics Lab', type: 'lab', w: 7 },
-    ]);
-    spineRow(floor, 'bottom', 4, [
-      { id: 'music', name: 'Music Club', type: 'club', w: 7 },
-      { id: 'shadesArt', name: 'Shades Art Club', type: 'club', w: 7 },
-      { id: 'swe', name: 'SWE (Society of Women Engineers)', type: 'club', w: 7 },
-      { id: 'wie', name: 'WIE (Women in Engineering)', type: 'club', w: 7 },
-      { id: 'chimera', name: 'Chimera (Biotech Association)', type: 'club', w: 7 },
-      { id: 'studentCouncil', name: 'Student Council', type: 'club', w: 7 },
-      { id: 'vcOffice', name: 'Vice Chancellor Office', type: 'office', w: 9 },
-      { id: 'telepresenceConf', name: 'Telepresence Conference Room', type: 'office', w: 9 },
-      { id: 'guestRoom1', name: 'Guest Meeting Room (3rd Floor)', type: 'office', w: 7 },
-      { id: 'guestRoom2', name: 'Guest Meeting Room (3rd Floor) 2', type: 'office', w: 7 },
-    ]);
+    floor.addRect('corridor', { name: 'Corridor', type: 'corridor', x0: 3, y0: 17, x1: 30, y1: 21, isCorridor: true });
+    floor.connect('physicsLab', 'corridor');
+
+    stairwell(floor, 'Main Block Stairs 3', { down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });
+    floor.connect('corridor', 'stairwell');
   },
 };
 

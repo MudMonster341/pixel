@@ -116,6 +116,16 @@ const PALETTE = {
   // A lighter blue-grey reflection streak on the entrance's dark glass front (`*`), so the glass
   // reads as glazing catching the sky rather than a flat dark fill.
   Œ: '#4a5a68',
+  // Interiors rebuild (FB-0030/0031, premium pass stage 5, docs/research/campus-visual-reference.md
+  // "2. Main reception foyer"): the owner's own foyer photo -- glossy cream marble (base/highlight/
+  // shadow + a darker inlay "runner" band down the centre), black wrought-iron railing (not the
+  // fence's grey '<'), cool-white columns, warm chandelier brass/glow, and the ICVL's royal-blue
+  // cabinetry, all sampled from the reference photo/spec, not reused from an unrelated hue.
+  marbleLight: '#f2e9d2', marbleFleck: '#e8ddbf', marbleShadow: '#c9bb94', marbleRunner: '#b8a473',
+  ironRail: '#2a2a32',
+  columnBody: '#efe9da', columnShade: '#d8d0bd',
+  chandelierGold: '#e8c46a', chandelierGlow: '#fff6df',
+  icvlBlue: '#2f4a7a', icvlBlueHi: '#3a5a8f',
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -1292,6 +1302,23 @@ const TILES = [
   { name: 'flagTopBlue', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Blue') },
   { name: 'flagTopRed', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Red') },
   { name: 'busStopSign', solid: true, draw: busStopSign },
+
+  // Interiors rebuild (FB-0030/0031, premium pass stage 5, docs/INTERIORS_PLAN.md): the Main Block
+  // foyer per the owner's photo, plus the ICVL/Physics Lab/Room 195 key-room dressing. Appended at
+  // the very end so every existing tile's name/index stays stable.
+  { name: 'intFloorMarble', draw: intFloorMarble },
+  { name: 'intFloorMarbleRunner', draw: intFloorMarbleRunner },
+  { name: 'intColumn', solid: true, draw: intColumn },
+  { name: 'intFoyerStairsL', solid: true, draw: intFoyerStairsL },
+  { name: 'intFoyerStairsR', solid: true, draw: intFoyerStairsR },
+  { name: 'intFoyerLanding', solid: true, draw: intFoyerLanding },
+  { name: 'intChandelier', draw: intChandelier },
+  { name: 'intGlassDoorOpen', draw: intGlassDoorOpen },
+  { name: 'intDoorClosed', solid: true, draw: intDoorClosed },
+  { name: 'intIcvlBench', solid: true, draw: intIcvlBench },
+  { name: 'intServerRack', solid: true, draw: intServerRack },
+  { name: 'intLabBenchWood', solid: true, draw: intLabBenchWood },
+  { name: 'intProjectorScreen', solid: true, draw: intProjectorScreen },
 ];
 
 // ---------- campus tiles ----------
@@ -2327,6 +2354,113 @@ function intMachine(img, x, y) {
   img.box(x + 2, y + 2, 12, 12, 'O');
   img.fill(x + 4, y + 4, 8, 2, 'Y');
   img.box(x + 6, y + 7, 4, 4, 'o');
+}
+
+// ---------- Main Block foyer rebuild (FB-0030/0031, premium pass stage 5) ----------
+// Hand-drawn (no new vendor pack, same box/fill idiom as the rest of the interior kit), following
+// docs/research/campus-visual-reference.md "2. Main reception foyer" and the owner's own photo
+// (docs/research/reference/owner-main-block-foyer.png): glossy marble with a centre runner, a twin
+// staircase converging on a landing, walk-behind columns, a chandelier over the landing, and glass
+// entrance doors. tools/interiors/plans.js/build-interiors.js place these as `depthGroup`s (ADR
+// 0015) so she walks behind the staircase/columns/big plants, never over them.
+function intFloorMarble(img, x, y) {
+  forEachPixel((xx, yy) => img.set(x + xx, y + yy, (xx * 3 + yy * 5) % 11 === 0 ? 'marbleLight' : 'marbleFleck'));
+}
+// The dark inlay "runner" band down the centre of the floor from the entrance toward the staircase
+// (visible as a distinct stripe in the owner's photo) -- the same fleck floor either side of a
+// darker centre strip.
+function intFloorMarbleRunner(img, x, y) {
+  intFloorMarble(img, x, y);
+  img.fill(x + 3, y, TILE - 6, TILE, 'marbleRunner');
+}
+// A tall, cool-white column (LimeZu Room Builder's own double-height hall columns, per the photo) --
+// a walk-behind `depthGroup` in the plan, not per-tile depth, since the real hall is double-height.
+function intColumn(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'columnBody');
+  img.fill(x + TILE - 4, y, 4, TILE, 'columnShade'); // shaded side face, the 3/4-view read
+  img.fill(x, y, TILE, 1, 'K');
+  img.fill(x, y + TILE - 1, TILE, 1, 'K');
+}
+// The twin-flight staircase converging on a shared landing (the photo's single biggest gap from the
+// old straight `intStairsUp` run): solid + decorative (walked around, never through, like the
+// existing lift/atrium-void tricks), with the black wrought-iron scroll railing on the outer edge of
+// each flight reading as a contrasting stripe rather than the fence's grey.
+function intFoyerStairsL(img, x, y) {
+  intFloorMarble(img, x, y);
+  for (let i = 0; i < 4; i++) img.fill(x + 1, y + i * 4, TILE - 5, 2, i % 2 ? 'marbleShadow' : 'marbleLight');
+  img.fill(x, y, 2, TILE, 'ironRail');
+}
+function intFoyerStairsR(img, x, y) {
+  intFloorMarble(img, x, y);
+  for (let i = 0; i < 4; i++) img.fill(x + 4, y + i * 4, TILE - 5, 2, i % 2 ? 'marbleShadow' : 'marbleLight');
+  img.fill(x + TILE - 2, y, 2, TILE, 'ironRail');
+}
+function intFoyerLanding(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'marbleLight');
+  img.fill(x, y, TILE, 2, 'marbleShadow');
+  img.fill(x, y + 2, TILE, 1, 'ironRail');
+}
+// The tiered chandelier over the staircase's lower landing: a ground-layer decorative tile (like the
+// existing decorative lift/stairs trick) so it reads as "looking up at it" without blocking the
+// floor underneath.
+function intChandelier(img, x, y) {
+  intFloorMarble(img, x, y);
+  img.fill(x + 6, y + 1, 4, 2, 'ironRail');
+  img.fill(x + 5, y + 3, 6, 5, 'chandelierGold');
+  img.fill(x + 6, y + 8, 4, 3, 'chandelierGold');
+  img.set(x + 7, y + 4, 'chandelierGlow');
+  img.set(x + 8, y + 6, 'chandelierGlow');
+  img.set(x + 7, y + 9, 'chandelierGlow');
+}
+// The glass double door's own `openTiles` overlay (ADR 0015: shown while she's walking through) --
+// dark glazing with a reflection streak and a top transom bar, reusing the outdoor entrance's own
+// glass/reflection palette keys ('*'/'Œ') rather than inventing a new one.
+function intGlassDoorOpen(img, x, y) {
+  img.fill(x, y, TILE, TILE, '*');
+  img.fill(x + 1, y + 2, TILE - 2, TILE - 3, 'Œ');
+  img.fill(x, y, TILE, 2, 'ironRail');
+}
+// A closed, decorative door standing in for the "locked, but visible" side-wing/classroom doors
+// (docs/STORY.md: "everywhere else in the building is blocked off") -- solid, no warp object, just
+// wall dressing placed directly (Floor.placeStructure), so nothing about it needs a target map.
+function intDoorClosed(img, x, y) {
+  bitsWallPlain(img, x, y);
+  img.fill(x + 2, y + 1, TILE - 4, TILE - 2, 'n');
+  img.fill(x + 3, y + 2, TILE - 6, TILE - 4, 'N');
+  img.set(x + TILE - 5, y + TILE / 2, 'Y');
+}
+// ICVL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
+// cabinetry with a monitor sitting directly on the worktop, distinct from the generic grey
+// `intComputerBench` shared with Mechanical Block's own labs.
+function intIcvlBench(img, x, y) {
+  img.fill(x + 1, y + 5, TILE - 2, 10, 'icvlBlue');
+  img.fill(x + 1, y + 5, TILE - 2, 1, 'icvlBlueHi');
+  img.fill(x + 2, y + 9, 1, 5, 'icvlBlueHi');
+  img.fill(x + 12, y + 9, 1, 5, 'icvlBlueHi');
+  blitRect(img, x, y, COOL_SCHOOL.computer, { maxW: 13, maxH: 11, bottomPad: 4, remap: remapSchoolScreen });
+}
+// A server rack -- the ICVL's own equipment, in the same blue cabinetry tone as its benches.
+function intServerRack(img, x, y) {
+  img.box(x + 2, y, TILE - 4, TILE - 1, 'icvlBlue');
+  for (let ry = 2; ry < TILE - 2; ry += 3) img.fill(x + 3, y + ry, TILE - 6, 1, 'K');
+  img.set(x + 4, y + 3, 'chandelierGlow'); // a small lit status LED
+}
+// The Physics Lab's wood-topped benches (docs/research/campus-visual-reference.md "6. Physics/
+// science lab": "wooden-topped benches... over a metal one") -- the same wood-ramp tone ('i') the
+// rest of the kit already uses, over the generic metal-topped `intLabBench` shared with Mechanical
+// Block.
+function intLabBenchWood(img, x, y) {
+  img.box(x + 1, y + 5, TILE - 2, 7, 'i');
+  img.fill(x + 1, y + 5, TILE - 2, 1, 'wallHi');
+  img.fill(x + 2, y + 12, 1, 3, 'o');
+  img.fill(x + 12, y + 12, 1, 3, 'o');
+}
+// A pull-down projector screen beside the classroom's whiteboard (docs/research/campus-visual-
+// reference.md "4. Classroom": "a full-width whiteboard plus a pull-down projector screen").
+function intProjectorScreen(img, x, y) {
+  bitsWallPlain(img, x, y);
+  img.fill(x + 3, y + 2, TILE - 6, 10, 'Q');
+  img.fill(x + 3, y + 2, TILE - 6, 1, 'o');
 }
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------

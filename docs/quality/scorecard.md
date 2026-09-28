@@ -7,7 +7,7 @@ building. Target: 8+ in every area.
 | # | Category | Score | Last rated | Top issues |
 |---|---|---|---|---|
 | 1 | Outdoor art | 4 | 2026-09-28 | steps read as grey blinds; Mechanical plaza shadow bar; hostels not in shot; lawns tiled like wallpaper; lamp posts read as hammers; gate has no gate |
-| 2 | Interior art | — | — | (rebuilt 2026-09-28, not yet rated. Known: walls are 1 tile tall, not 2-row LimeZu top+face; foyer set pieces (columns, twin staircase, chandelier, glass door) are hand-drawn, not from the LimeZu atlas) |
+| 2 | Interior art | 3 | 2026-09-28 | foyer marble reads as sand, staircase reads as rails/ladder; rooms mostly empty floor; 1-tile strip walls; furniture tiny and sparse |
 | 3 | Characters and depth | — | — | |
 | 4 | UI and menus | — | — | (HUD clutter at the top: minimap, banner, hint and tracker all compete) |
 | 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
@@ -21,6 +21,14 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-28 — Interior art (run 1) — overall 3
+From the same qa-shots run (indoor-main-block-*.png). Per area:
+- **Foyer: 2.** The "marble" floor reads as speckled sand; the twin staircase draws as long vertical dark rails (a ladder or railway track), not steps; no chandelier, mezzanine plants or wordmark in view; columns are small white blocks floating on the floor. Nothing like the owner's photo.
+- **LUG stall: 3.** A runner, one plant on a brick tile, a small counter; sparse; the volunteer is cut off at the top.
+- **ICVL: 3.** A big pale empty floor with three server racks and two small items; no rows of desks with monitors, no blue cabinetry or poster wall.
+- **Physics Lab: 3.** An empty floor, a row of small tables along the bottom, one cabinet and a sink.
+- **Room 195: 5.** Rows of desks, a wood floor and the key on the teacher's desk read well; walls and trim are still flat.
+- **Everywhere:** 1-tile vertical wall strips (no 3/4 top edge + face); far too much empty floor; furniture tiny relative to rooms; corridors are bare.
 
 ### 2026-09-28 — Outdoor art (run 1) — overall 4
 Captured with `npm run qa:shots` (outdoor-*.png). Per area:

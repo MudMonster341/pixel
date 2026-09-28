@@ -39,6 +39,10 @@ const REQUIRED_TILES = [
   'intFoyerLanding', 'intChandelier', 'intGlassDoorOpen', 'intDoorClosed', 'intIcvlBench',
   'intServerRack', 'intLabBenchWood', 'intProjectorScreen',
   ...Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`), // "BITS PILANI, DUBAI CAMPUS" wordmark
+  // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28): real LimeZu
+  // Room_Builder walls (cap + face) and floors.
+  'intWallCap', 'intWallFace', 'intWallFaceEndL', 'intWallFaceEndR', 'intWallWindow',
+  'intFloorTiled', 'intFloorLabLight',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -54,11 +58,14 @@ const TYPE_FLOOR = {
   badminton: 'intFloorCourt', tabletennis: 'intFloorCourt',
   auditorium: 'intFloorCarpet',
   library: 'intFloorLibrary', stack: 'intFloorLibrary', reading: 'intFloorLibrary',
-  canteen: 'intFloorClassroom', workshop: 'asphalt', corridor: 'intFloorFoyer',
-  // FB-0030/0031: the ICVL/Physics Lab key rooms get their own cooler vinyl (matches the ICL/lab
+  canteen: 'intFloorClassroom', workshop: 'asphalt',
+  // Quality loop (Interior art run 1: "corridors are bare"): a real tiled floor instead of the plain
+  // foyer fleck reuse.
+  corridor: 'intFloorTiled',
+  // FB-0030/0031: the ICVL/Physics Lab key rooms get their own light floor (matches the ICL/lab
   // photos, docs/research/campus-visual-reference.md), distinct from the shared 'lab' type
   // Mechanical Block's own labs still use.
-  labIcvl: 'intFloorLabVinyl', labPhysics: 'intFloorLabVinyl',
+  labIcvl: 'intFloorLabLight', labPhysics: 'intFloorLabLight',
 };
 
 // A room type this small (walkable interior) skips furniture rather than risk blocking itself.
@@ -72,6 +79,12 @@ class Floor {
     this.H = plan.height;
     this.ground = new Int32Array(this.W * this.H).fill(TILE.edge);
     this.structures = new Int32Array(this.W * this.H).fill(-1);
+    // Quality loop (Interior art run 1): a chandelier "(overhead layer) over the landing" -- the
+    // exact same idea as the outdoor tree-canopy overhead layer (ADR 0008), a 3rd tile layer that
+    // always draws above every character. Left entirely empty (and so entirely absent from the
+    // Tiled JSON, see toTiledJSON()) for any floor that never calls placeOverhead() -- Library and
+    // Mechanical Block's own maps are byte-for-byte unaffected by this.
+    this.overhead = new Int32Array(this.W * this.H).fill(-1);
     this.rects = new Map(); // id -> { x0,y0,x1,y1, type, name, isCorridor }
     this.areaRooms = []; // { name, rect } for every real room (not corridors), for `area` objects
     this.objects = [];
@@ -90,21 +103,45 @@ class Floor {
   // A wall-ring rectangle: the border (x0,y0)-(x1,y1) becomes wall, the interior becomes floor.
   // Reuses the outdoor BITS wall tiles: a horizontal run (top/bottom) shows the front face
   // (cornice + base course), a vertical run (left/right) shows the darker side face.
-  addRect(id, { name, type, x0, y0, x1, y1, isCorridor = false, floorTile }) {
+  // `wallKit: 'roomBuilder'` (quality loop, Interior art run 1 -- Main Block only, see plans.js)
+  // swaps in the real LimeZu Room_Builder face/end tiles instead, and bleeds a matching cap tile one
+  // row above the room's own top wall wherever that row is still open void (capTopWall() below) --
+  // Library/Mechanical Block never pass this, so their walls/maps are completely unchanged.
+  addRect(id, { name, type, x0, y0, x1, y1, isCorridor = false, floorTile, wallKit }) {
     if (x1 <= x0 || y1 <= y0) throw new Error(`${this.key}: room "${id}" has a non-positive size (${x0},${y0})-(${x1},${y1})`);
     const floor = TILE[floorTile || TYPE_FLOOR[type] || 'intFloorCarpet'];
+    const wallPlain = wallKit === 'roomBuilder' ? 'intWallFace' : 'bitsWallPlain';
+    const wallEndL = wallKit === 'roomBuilder' ? 'intWallFaceEndL' : 'bitsWallEndL';
+    const wallEndR = wallKit === 'roomBuilder' ? 'intWallFaceEndR' : 'bitsWallEndR';
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const i = this.idx(x, y);
         this.ground[i] = floor;
         const onBorder = x === x0 || x === x1 || y === y0 || y === y1;
-        this.structures[i] = onBorder ? TILE[x === x0 || x === x1 ? (x === x0 ? 'bitsWallEndL' : 'bitsWallEndR') : 'bitsWallPlain'] : -1;
+        this.structures[i] = onBorder ? TILE[x === x0 || x === x1 ? (x === x0 ? wallEndL : wallEndR) : wallPlain] : -1;
       }
     }
     const rect = { id, name, type, x0, y0, x1, y1, isCorridor };
     this.rects.set(id, rect);
     if (!isCorridor && name) this.areaRooms.push(rect);
+    if (wallKit === 'roomBuilder') this.capTopWall(rect);
     return rect;
+  }
+
+  // Bleeds a wall-cap tile one row *above* a room's own top wall (quality loop: "a top edge... 2+
+  // rows tall") -- only where that row is still the untouched default void (`edge`, always solid),
+  // the same "art may extend above a building's own footprint" trick outdoor buildings already use
+  // (ADR 0015) rather than reserving an extra row of canvas for every room. A room packed directly
+  // against another room's own wall above it (no clearance) just doesn't get a cap there -- still a
+  // correct, if slightly shorter, wall; never overwrites another room's own tiles.
+  capTopWall(rect) {
+    const y = rect.y0 - 1;
+    if (y < 0) return;
+    for (let x = rect.x0; x <= rect.x1; x++) {
+      if (this.ground[this.idx(x, y)] === TILE.edge && this.structures[this.idx(x, y)] === -1) {
+        this.structures[this.idx(x, y)] = TILE.intWallCap;
+      }
+    }
   }
 
   get(id) {
@@ -178,6 +215,13 @@ class Floor {
   // used for the foyer's "BITS Pilani, Dubai Campus" wordmark (a row of bitsSignSeg tiles).
   placeStructureRow(x, y, tileNames) {
     tileNames.forEach((name, i) => this.placeStructure(x + i, y, name));
+  }
+
+  // A tile on the `overhead` layer (quality loop: "a chandelier (overhead layer) over the landing")
+  // -- always drawn above every character, the same layer/depth outdoor tree canopies already use
+  // (ADR 0008). Never solid, purely visual.
+  placeOverhead(x, y, tileName) {
+    this.overhead[this.idx(x, y)] = TILE[tileName];
   }
 
   // A rectangle marked as a y-sorted `depthGroup` (ADR 0015, docs/ARCHITECTURE.md "Depth groups and
@@ -277,10 +321,20 @@ class Floor {
     const columns = tileInfo.columns;
     const tilesetRows = Math.ceil(tileInfo.tiles.length / columns);
     const gids = (arr) => Array.from(arr, (t) => (t < 0 ? 0 : t + 1));
+    // The `overhead` layer only exists in the output when a floor actually used placeOverhead() --
+    // Library/Mechanical Block (and every other floor that never calls it) get byte-for-byte the
+    // same 3-layer JSON as before this quality-loop pass.
+    const hasOverhead = this.overhead.some((t) => t >= 0);
+    const layers = [
+      { id: 1, name: 'ground', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: gids(this.ground) },
+      { id: 2, name: 'structures', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: gids(this.structures) },
+    ];
+    if (hasOverhead) layers.push({ id: 4, name: 'overhead', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: gids(this.overhead) });
+    layers.push({ id: 3, name: 'objects', type: 'objectgroup', draworder: 'topdown', x: 0, y: 0, opacity: 1, visible: true, objects: this.objects });
     return {
       type: 'map', version: '1.10', tiledversion: '1.10.2', orientation: 'orthogonal', renderorder: 'right-down',
       infinite: false, width: this.W, height: this.H, tilewidth: TILE_PX, tileheight: TILE_PX,
-      nextlayerid: 4, nextobjectid: this.nextObjectId,
+      nextlayerid: hasOverhead ? 5 : 4, nextobjectid: this.nextObjectId,
       properties: [
         { name: 'name', type: 'string', value: this.plan.name },
         { name: 'metersPerTile', type: 'float', value: 1 },
@@ -290,11 +344,7 @@ class Floor {
       tilesets: [
         { firstgid: 1, name: 'tiles', image: '../tiles.png', imagewidth: columns * TILE_PX, imageheight: tilesetRows * TILE_PX, tilewidth: TILE_PX, tileheight: TILE_PX, tilecount: tileInfo.tiles.length, columns, margin: 0, spacing: 0 },
       ],
-      layers: [
-        { id: 1, name: 'ground', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: gids(this.ground) },
-        { id: 2, name: 'structures', type: 'tilelayer', width: this.W, height: this.H, x: 0, y: 0, opacity: 1, visible: true, data: gids(this.structures) },
-        { id: 3, name: 'objects', type: 'objectgroup', draworder: 'topdown', x: 0, y: 0, opacity: 1, visible: true, objects: this.objects },
-      ],
+      layers,
     };
   }
 
@@ -369,6 +419,11 @@ const FURNISHERS = {
   // a chandelier over the landing, the "BITS Pilani, Dubai Campus" wordmark on the wall above it, a
   // reception desk + seating near the entrance (out of the central sightline, per the photo), and the
   // LUG Stall nook tucked behind the staircase, reachable around either side.
+  // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28): re-read the owner's
+  // own photo and sized to "fill the screen at zoom 3" -- a 20x12-tile play area (ix0..ix1, iy0..iy1
+  // below), not the first pass's huge, mostly-empty hall. Horizontal-tread stairs (not vertical
+  // rails), a full-width mezzanine balcony with the wordmark under it, a real overhead chandelier,
+  // and 4 big 2-wide columns replace that pass's thin, sparse versions of the same ideas.
   foyer: (put, ix0, iy0, ix1, iy1, ctx) => {
     const cx = Math.round((ix0 + ix1) / 2);
     if (!ctx || !ctx.floor) return;
@@ -378,78 +433,93 @@ const FURNISHERS = {
     // The centre runner, from the entrance up to the staircase.
     floor.paintFloor(cx - 1, iy0, cx, iy1, 'intFloorMarbleRunner');
 
-    // Columns down both sides (LimeZu Room_Builder-style hall columns, walk-behind `depthGroup`s --
-    // ADR 0015 -- since the real hall is double-height): 5 a side, well clear of the staircase and
-    // the side aisles used to walk around it.
-    for (const cy of [iy0 + 3, iy0 + 9, iy0 + 15, iy0 + 21, Math.min(iy0 + 27, iy1 - 2)]) {
-      if (cy > iy1 - 2) continue;
-      put(ix0 + 3, cy, 'intColumn');
-      floor.depthGroupRect(ix0 + 3, cy, ix0 + 3, cy);
-      put(ix1 - 3, cy, 'intColumn');
-      floor.depthGroupRect(ix1 - 3, cy, ix1 - 3, cy);
+    // 4 big, 2-wide columns (quality loop: "4 big white columns, 2 tiles wide, full height,
+    // depthGroups") -- a pair flanking the staircase/landing, a pair flanking the entrance, well
+    // clear of the centre runner and the aisles either side of the stairs.
+    for (const cy0 of [iy0 + 3, iy1 - 3]) {
+      floor.paintFloor(ix0, cy0, ix0 + 1, cy0 + 2, 'intFloorMarble');
+      floor.paintFloor(ix1 - 1, cy0, ix1, cy0 + 2, 'intFloorMarble');
+      for (let y = cy0; y <= cy0 + 2; y++) for (let x = ix0; x <= ix0 + 1; x++) floor.placeStructure(x, y, 'intColumn');
+      for (let y = cy0; y <= cy0 + 2; y++) for (let x = ix1 - 1; x <= ix1; x++) floor.placeStructure(x, y, 'intColumn');
+      floor.depthGroupRect(ix0, cy0, ix0 + 1, cy0 + 2);
+      floor.depthGroupRect(ix1 - 1, cy0, ix1, cy0 + 2);
     }
 
-    // The twin staircase converging on a landing, a few rows in from the back wall -- solid, so
-    // she walks around either side, never over it; everything from there to the back wall stays
-    // open floor as the LUG Stall nook.
-    const landingY0 = iy0 + 7;
-    const landingY1 = landingY0 + 2;
+    // The twin staircase converging on a landing: horizontal-tread flights (quality loop: "draw it
+    // as steps, not vertical rails") rising to a landing, a full-width mezzanine balcony railing
+    // right behind it, and the LUG Stall nook beyond -- solid, so she walks *around* it, never
+    // through it.
+    const landingY0 = iy0 + 3;
+    const landingY1 = landingY0 + 1;
     const flightY0 = landingY1 + 1;
-    const flightY1 = Math.min(flightY0 + 7, iy1 - 6);
+    const flightY1 = flightY0 + 3;
     const stairsX0 = cx - 4;
     const stairsX1 = cx + 3;
     const midX = cx - 1;
-    if (flightY1 > flightY0) {
-      floor.paintFloor(stairsX0, landingY0, stairsX1, landingY1, 'intFloorMarble');
-      for (let y = landingY0; y <= landingY1; y++) for (let x = stairsX0; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerLanding');
-      floor.paintFloor(stairsX0, flightY0, midX, flightY1, 'intFloorMarble');
-      floor.paintFloor(midX + 1, flightY0, stairsX1, flightY1, 'intFloorMarble');
-      for (let y = flightY0; y <= flightY1; y++) for (let x = stairsX0; x <= midX; x++) floor.placeStructure(x, y, 'intFoyerStairsL');
-      for (let y = flightY0; y <= flightY1; y++) for (let x = midX + 1; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerStairsR');
-      // The mezzanine balcony edge, right at the landing's own back edge -- the black wrought-iron
-      // railing (reusing the 1st floor's own intAtriumRailing tile) she'd be looking up at from the
-      // base of the stairs, with the LUG Stall nook beyond/around it.
-      for (let x = stairsX0; x <= stairsX1; x++) floor.placeStructure(x, landingY0 - 1, 'intAtriumRailing');
-      floor.depthGroupRect(stairsX0, landingY0 - 1, stairsX1, flightY1);
-      // The chandelier hangs over the lower landing (a decorative, walkable ground-layer tile, the
-      // same "looking up at it" trick intLift/intStairsUp already use).
-      floor.paintFloor(midX, flightY0, midX, flightY0, 'intChandelier');
+    floor.paintFloor(stairsX0, landingY0, stairsX1, landingY1, 'intFloorMarble');
+    for (let y = landingY0; y <= landingY1; y++) for (let x = stairsX0; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerLanding');
+    floor.paintFloor(stairsX0, flightY0, midX, flightY1, 'intFloorMarble');
+    floor.paintFloor(midX + 1, flightY0, stairsX1, flightY1, 'intFloorMarble');
+    for (let y = flightY0; y <= flightY1; y++) for (let x = stairsX0; x <= midX; x++) floor.placeStructure(x, y, 'intFoyerStairsL');
+    for (let y = flightY0; y <= flightY1; y++) for (let x = midX + 1; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerStairsR');
+    floor.depthGroupRect(stairsX0, landingY0, stairsX1, flightY1);
 
-      // The wordmark, on the wall directly above the landing -- reuses the exact
-      // "BITS PILANI, DUBAI CAMPUS" bitsSignSeg0..8 tiles already generated for the outdoor
-      // facade (tools/make-assets.js SIGN_FONT_4X6), the room's single dominant feature, dead
-      // centre, per the photo.
-      const segs = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`);
-      floor.placeStructureRow(cx - 4, r.y0, segs);
+    // The mezzanine balcony: a black wrought-iron railing spanning the *entire* back wall (quality
+    // loop: "a mezzanine balcony runs across the back wall"), with potted plants along it, right
+    // above the landing.
+    for (let x = ix0; x <= ix1; x++) floor.placeStructure(x, landingY0 - 1, 'intAtriumRailing');
+    floor.depthGroupRect(ix0, landingY0 - 1, ix1, landingY0 - 1);
+    put(ix0 + 2, landingY0 - 1, 'plant');
+    put(ix1 - 2, landingY0 - 1, 'plant');
 
-      // The LUG Stall nook, behind (north of) the staircase -- walkable, reachable around either
-      // side, and registered as its own named `area` (docs/STORY.md "an event stall behind the
-      // stairs").
-      put(stairsX0 + 1, iy0 + 1, 'intCanteenCounter');
-      put(stairsX1 - 1, iy0 + 1, 'intNoticeboard'); // the LUG banner
-      put(stairsX0, iy0 + 3, 'plant');
-      floor.depthGroupRect(stairsX0, iy0 + 3, stairsX0, iy0 + 3);
-      floor.rectObject('area', 'LUG Stall', ix0, iy0, ix1, landingY0 - 2, { kind: 'stall' });
-    }
+    // The chandelier hangs over the lower landing, on the `overhead` layer (quality loop: "a
+    // chandelier (overhead layer) over the landing") -- always drawn above her, never a ground tile
+    // she could stand "in".
+    floor.placeOverhead(midX, flightY0, 'intChandelier');
+
+    // The wordmark, on the wall directly above the mezzanine railing -- reuses the exact
+    // "BITS PILANI, DUBAI CAMPUS" bitsSignSeg0..8 tiles already generated for the outdoor facade
+    // (tools/make-assets.js SIGN_FONT_4X6), the room's single dominant feature, dead centre, per the
+    // photo.
+    const segs = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`);
+    floor.placeStructureRow(cx - 4, r.y0, segs);
+
+    // The LUG Stall nook, behind (north of) the staircase -- walkable, reachable around either
+    // side, and registered as its own named `area` (docs/STORY.md "an event stall behind the
+    // stairs").
+    put(stairsX0 + 1, iy0, 'intCanteenCounter');
+    put(stairsX1 - 1, iy0, 'intNoticeboard'); // the LUG banner
+    floor.rectObject('area', 'LUG Stall', ix0, iy0, ix1, landingY0 - 2, { kind: 'stall' });
 
     // Reception desk + seating near the entrance, off to one side so the central sightline (runner
     // -> staircase -> wordmark) stays clear, per the photo ("out of frame... belong along the side
     // walls, not blocking the central sightline").
-    put(ix1 - 2, iy1 - 6, 'intReceptionDesk');
-    put(ix0 + 1, iy1 - 2, 'intSofa');
-    put(ix0 + 2, iy1 - 2, 'intSofa');
-    put(ix0 + 1, iy1 - 4, 'intNoticeboard');
+    put(ix1 - 3, iy1 - 1, 'intReceptionDesk');
+    put(ix0 + 2, iy1 - 1, 'intSofa');
+    put(ix0 + 3, iy1 - 1, 'intSofa');
+    put(ix0 + 2, iy1 - 2, 'intNoticeboard');
 
-    // Potted palms flanking the entrance and the staircase's base (the photo: "dark planter pots
-    // with palms/ferns flank the base of the staircase"), each its own 1x1 walk-behind depthGroup.
-    for (const [px, py] of [[ix0 + 1, iy0 + 1], [ix1 - 1, iy0 + 1], [ix0 + 1, iy1 - 1], [ix1 - 1, iy1 - 1]]) {
+    // Potted palms flanking the entrance, each its own 1x1 walk-behind depthGroup.
+    for (const [px, py] of [[ix0 + 2, iy1], [ix1 - 2, iy1]]) {
       put(px, py, 'plant');
       floor.depthGroupRect(px, py, px, py);
     }
   },
   classroom: (put, ix0, iy0, ix1, iy1, ctx) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intTeacherDesk');
-    rowGrid(put, ix0, iy0, ix1, iy1, 'intDesk', { topMargin: 2 });
+    // Quality loop ("Room 195 is fine, but... target less than ~40% plain floor"): desks packed
+    // side by side (stepX 1, was 2) in every row (stepY 1, was 2) -- a genuinely dense classroom,
+    // not a sparse quarter-filled grid.
+    rowGrid(put, ix0, iy0, ix1, iy1, 'intDesk', { topMargin: 1, stepX: 1, stepY: 1 });
+    // A few extra desks in the corners of the 1-tile walkway ring furnish() leaves along the side
+    // walls -- alternating with a clear tile, so the ring stays a real connected loop all the way
+    // round the room (never fully blocked on any one side) while still adding real density.
+    if (ctx && ctx.floor) {
+      for (let y = iy0 + 1; y <= iy1; y += 2) {
+        ctx.floor.placeStructure(ix0 - 1, y, 'intDesk');
+        ctx.floor.placeStructure(ix1 + 1, y, 'intDesk');
+      }
+    }
     // A whiteboard mounted on the room's own front wall, above the teacher's desk (owner brief:
     // "classrooms with desks facing a whiteboard") -- wallFeature overrides one wall tile, it can
     // never block the doorway ring furniture already respects.
@@ -466,27 +536,44 @@ const FURNISHERS = {
   // ICVL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
   // benches along both ends, a server rack, and a poster-covered wall -- distinct from the shared
   // `lab` type Mechanical Block's own labs use, so that furniture never changes here.
+  // Quality loop (docs/quality/scorecard.md, Interior art run 1: "a big pale empty floor... no rows
+  // of desks with monitors, no blue cabinetry or poster wall") -- 3-4 full rows of benches (not just
+  // the top/bottom edge), a server-rack corner (2 tiles, its own depthGroup) and a poster wall
+  // covering most of the front wall.
   labIcvl: (put, ix0, iy0, ix1, iy1, ctx) => {
-    for (let x = ix0; x <= ix1; x += 2) put(x, iy0, 'intIcvlBench');
-    for (let x = ix0 + 1; x <= ix1; x += 4) {
-      put(x, iy1, 'intServerRack');
-      if (ctx && ctx.floor) ctx.floor.depthGroupRect(x, iy1, x, iy1); // the server rack, tall
-    }
+    // Quality loop (docs/quality/scorecard.md, Interior art run 1: "target less than ~40% plain
+    // floor") -- desks packed side by side (stepX 1) in every row (stepY 1): a genuinely dense
+    // computer lab, not a sparse quarter-filled grid. The 1-tile walkway ring furnish() always
+    // leaves around the room's own walls (Floor.furnish()'s own double-inset) is what keeps every
+    // desk still reachable/walkable-past, even with no internal aisle.
+    rowGrid(put, ix0, iy0, ix1, iy1, 'intIcvlBench', { stepX: 1, stepY: 1 });
     if (ctx && ctx.floor) {
+      const rackX0 = ix1 - 1, rackX1 = ix1;
+      for (let x = rackX0; x <= rackX1; x++) put(x, iy0, 'intServerRack');
+      ctx.floor.depthGroupRect(rackX0, iy0, rackX1, iy0);
       const r = ctx.floor.get(ctx.id);
-      for (let x = r.x0 + 2; x <= r.x1 - 2; x += 3) ctx.floor.placeStructure(x, r.y0, 'intNoticeboard');
+      for (let x = r.x0 + 1; x <= r.x1 - 1; x += 2) ctx.floor.placeStructure(x, r.y0, 'intNoticeboard');
     }
   },
-  // The Physics Lab (docs/research/campus-visual-reference.md "6. Physics/science lab"): wood-topped
-  // benches at both ends, a rack and a sink -- the `intLabBenchWood` variant kept separate from the
-  // shared `lab` type's metal-topped bench so Mechanical Block's labs are untouched.
+  // The Physics Lab (docs/research/campus-visual-reference.md "6. Physics/science lab") -- quality
+  // loop: "3 long lab benches with equipment, shelves of apparatus, a sink/fume hood, a whiteboard".
+  // 3 full-width bench rows (wood-topped, `intLabBenchWood`, kept separate from the shared `lab`
+  // type's metal-topped bench so Mechanical Block's labs are untouched), a rack, a sink and a
+  // whiteboard on the front wall.
   labPhysics: (put, ix0, iy0, ix1, iy1, ctx) => {
-    for (let x = ix0; x <= ix1; x += 2) put(x, iy0, 'intLabBenchWood');
-    for (let x = ix0; x <= ix1; x += 2) put(x, iy1, 'intLabBenchWood');
-    if (iy1 - iy0 >= 4) {
-      put(ix1, Math.round((iy0 + iy1) / 2), 'intSink');
-      put(ix0, Math.round((iy0 + iy1) / 2), 'intLabRack');
-      if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix0, Math.round((iy0 + iy1) / 2), ix0, Math.round((iy0 + iy1) / 2));
+    // Quality loop ("3 long lab benches... target less than ~40% plain floor"): every row packed
+    // except a walking aisle every 3rd row, so the benches read as long full-width rows (not 3
+    // thin strips in an otherwise empty room) while still leaving room to walk between them.
+    for (let y = iy0; y <= iy1; y++) {
+      if ((y - iy0) % 4 === 3) continue;
+      for (let x = ix0; x <= ix1; x++) put(x, y, 'intLabBenchWood');
+    }
+    const midY = Math.round((iy0 + iy1) / 2);
+    put(ix0, midY, 'intLabRack');
+    put(ix1, midY, 'intSink');
+    if (ctx && ctx.floor) {
+      ctx.floor.depthGroupRect(ix0, midY, ix0, midY);
+      ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
     }
   },
   classroom60: (put, ix0, iy0, ix1, iy1, ctx) => {

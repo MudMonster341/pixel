@@ -82,7 +82,32 @@ campus from OSM (ADR 0009) should emit `door` objects in this exact shape at the
 Mechanical Block entrances -- same `to`/`toId`/`facing` properties, any position, and it will work
 with no changes on the interiors side.
 
-## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28)
+## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28); quality loop (2026-09-28)
+
+**Quality loop, Interior art run 1 (2026-09-28, docs/quality/scorecard.md "3/10... the marble reads
+as sand... 1-tile vertical wall strips... a big pale empty floor"):** a second pass on top of the
+FB-0030/0031 rebuild below, using the LimeZu Room_Builder sheet properly for the first time
+(`tools/make-assets.js` `RB`/`ROOM_BUILDER`) instead of hand-drawn fills.
+- **Walls**: every Main Block room (`wallKit: 'roomBuilder'`, `tools/interiors/plans.js`) now has a
+  real 2-tile-tall wall -- a light cap tile bled one row above the wall ring wherever that row is
+  still open void (`Floor.capTopWall()`), then a genuine LimeZu wall-face tile (`intWallFace`/
+  `intWallFaceEndL`/`intWallFaceEndR`) on the ring itself, both recolored onto the marble ramp.
+  Library/Mechanical Block still use the old single-tile `bitsWallPlain` -- untouched.
+- **Floors**: the foyer's marble (`intFloorMarble`/`intFloorMarbleRunner`) is now a real LimeZu stone
+  crop recolored cooler/less golden (the "reads as sand" fix), corridors get a real tiled floor
+  (`intFloorTiled`), and the ICVL/Physics Lab get their own light lab floor (`intFloorLabLight`,
+  distinct from the shared `intFloorLabVinyl` Mechanical Block's own labs still use). Room 195's
+  wood floor (`intFloorClassroom`) is now a real LimeZu wood-plank crop too.
+- **The foyer**: resized to a 20x12 play area ("fill the screen at zoom 3", was much larger); the
+  staircase is now horizontal treads (light stone steps + shadowed risers), not the first pass's
+  vertical rails; the mezzanine railing runs the *entire* back wall, with the wordmark under it; the
+  chandelier is a real `overhead` Tiled layer tile (`Floor.placeOverhead()`, the same layer/depth
+  outdoor tree canopies use, ADR 0008) instead of a ground-layer trick; 4 big 2-wide columns replace
+  the first pass's thin 1-tile ones.
+- **Dense furnishing**: ICVL, Room 195 and the Physics Lab are now packed close to wall-to-wall
+  (`tests/unit/interiors-premium-pass.test.js` checks each is under 40% plain floor) instead of a
+  sparse quarter-filled grid; corridors get benches/plants/notice boards/bins every few tiles
+  (`dressCorridor()`, `tools/interiors/plans.js`) instead of standing bare.
 
 **Status (2026-09-28): rebuilt.** The 2026-09-17 layout above (a 136x84 spine-and-rows building
 with ~40 named admin/lab/club rooms) was right-sized per the owner's own words (FB-0031: "we don't
@@ -257,11 +282,10 @@ had campus/text-map examples).
 
 - **Building shapes are simplified rectangles**, not the real (possibly L-shaped) footprints -- the
   owner's plan explicitly allows this ("interiors may be scaled/cropped a bit to stay playable").
-- **Interior walls are still a single tile tall** (`bitsWallPlain`'s own cap-band + shadow-line
-  treatment reads as "top edge + face" within that one tile, ADR 0015's "Depth groups" doc) rather
-  than a genuine 2-tile-tall wall with doors set into a separate wall-face row, per the letter of the
-  FB-0030/0031 brief -- restructuring every room's own wall-ring math for that is a bigger change than
-  this pass's time allowed; flagged for a follow-up rather than attempted half-done.
+- **Main Block's walls are now a genuine 2-tile-tall cap + face** (quality loop, Interior art run 1,
+  above) -- Library/Mechanical Block still use the older single-tile `bitsWallPlain` (its own
+  cap-band + shadow-line squeezed into one tile), untouched, since the brief was explicit those two
+  buildings aren't worth spending time on.
 - **The 2026-09-17 admin/lab/club rooms this section used to describe are gone**: FB-0030/0031
   (2026-09-27/28) right-sized Main Block from a 136x84 spine-and-rows building down to 40x40 per
   floor (see "Main Block (4 floors)" above) -- the Career Services/AUGSD/EEE-CHEM-CS-BIOT-labs/clubs

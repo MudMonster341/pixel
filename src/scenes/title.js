@@ -90,6 +90,10 @@ class TitleScene extends Phaser.Scene {
     // Gate 2 illustration this screen used to sit on.
     preloadCampusPanBackdrop(this);
     if (!this.textures.exists('title-fg')) this.load.image('title-fg', 'assets/cutscenes/title-fg.png');
+    // The UI kit (src/scenes/ui.js): the title screen is reachable before BootScene's own preload()
+    // ever runs (Play/Continue is what starts it), and its own menu/Controls/Credits panels already
+    // need the 9-slice frame the instant this scene's create() runs.
+    preloadUiKit(this);
     // M5 sound: the title screen is reachable before BootScene's own preload() ever runs (Play/
     // Continue is what starts it), so titleMusic needs loading here too -- AudioManager.preload()
     // skips anything already cached, so this and BootScene's later call never double-load a file.
@@ -273,8 +277,7 @@ class TitleScene extends Phaser.Scene {
     const maxScroll = Math.max(0, contentH - viewportH);
 
     const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6).setOrigin(0, 0);
-    const panel = this.add.graphics();
-    drawPanel(panel, x, y, w, h);
+    const panel = makePanel(this, x, y, w, h);
     const title = uiText(this, GAME_WIDTH / 2, y + 22, 'CREDITS', 12, COLORS.highlight).setOrigin(0.5);
 
     const viewX = x + 20;
@@ -370,7 +373,7 @@ class TitleScene extends Phaser.Scene {
   // Shown only when "Play" (new game) is chosen and a save already exists -- Continue/Watch the Card
   // Again never touch the save, so they skip this entirely (confirmMenu() above). Built once in
   // create(), the same "measure once, redraw on state change" shape every other panel in this file
-  // already uses, reusing drawPanel()/Button exactly as the brief asks.
+  // already uses, reusing makePanel()/Button exactly as the brief asks.
   buildNewGameConfirm() {
     const w = 460;
     const h = 190;
@@ -378,8 +381,7 @@ class TitleScene extends Phaser.Scene {
     const y = Math.round((GAME_HEIGHT - h) / 2);
 
     const dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6).setOrigin(0, 0);
-    const panel = this.add.graphics();
-    drawPanel(panel, x, y, w, h);
+    const panel = makePanel(this, x, y, w, h);
     const title = uiText(this, GAME_WIDTH / 2, y + 40, 'Start a new game?', 12, COLORS.highlight).setOrigin(0.5);
     const sub = uiText(this, GAME_WIDTH / 2, y + 68, 'Your saved game will be replaced.', 8, COLORS.text).setOrigin(0.5);
 

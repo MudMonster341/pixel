@@ -43,8 +43,8 @@ require. The raw packs are not in this repository; download them again if you ne
   round 2's separate `walkway()` fix. `kerb*` now reuses the RPG Urban Pack's own concrete sidewalk
   (see that pack's entry, above) instead; `PACK.kerbPaver`/`PACK.plainPaver` stay defined for
   reference but nothing calls them any more.
-  Kenney's Pixel UI Pack (`assets/vendor/kenney-pixel-ui-pack/`) was surveyed but **not used** --
-  worse fit than the existing hand-drawn dialog box.
+  Kenney's Pixel UI Pack was surveyed here and not used at the time -- **now in use**, see the "UI kit"
+  entry below.
 - **Cool School Tileset** by **NettySvit** (OpenGameArt, `assets/vendor/cool-school-tileset/`) -- CC0
   1.0. Not used yet -- earmarked as an interior-furniture reference/fallback if Modern Interiors
   Free doesn't cover a piece; needs a recolor pass first (see docs/research/asset-packs.md).
@@ -152,3 +152,23 @@ docs/plans/2026-09-26-premium-pass.md)
   FB-0025) -- recolored crops of Amelia (the lead), Adam (the LUG volunteer), Alex and Bob
   (background students), built by `tools/make-assets.js`. The original survey/mockup that led to
   this is still at docs/research/asset-packs.md's 2026-09-21 addendum.
+
+## UI kit (added 2026-09-28, docs/GAME_FEEL.md "one UI kit", roadmap M2)
+
+- **Pixel UI Pack** by **Kenney Vleugels** (with help by Lynn Evers) ([kenney.nl](https://kenney.nl),
+  `assets/vendor/kenney-pixel-ui-pack/`) -- CC0 1.0 (public domain). Surveyed and shelved during the
+  2026-09-21 art pass (see the note above); **now the source of every panel and button in the game**.
+  `tools/make-assets.js`'s "UI kit" section decodes the pack's own `9-Slice/Ancient/tan.png` (and
+  `tan_pressed.png` for the button's pressed state) directly -- a plain 45x45 bordered square (fill,
+  border line, a light top/left bevel and a dark bottom/right one, already following this game's own
+  "one light source, top-left" rule) -- and recolors its 4 flat colors onto this game's navy/cream/gold
+  palette, upscaled 2x into `assets/ui-panel.png` (4 90x90 frames: panel, button normal/hover/pressed).
+  `src/scenes/ui.js`'s `makePanel()`/`Button` build a real Phaser NineSlice from it, replacing the old
+  hand-drawn `drawPanel()`/`drawButtonState()` Graphics rectangles everywhere in the game (every dialog
+  box, menu, tracker, banner, mini-game card and the title screen's own buttons) without any layout
+  code changing.
+- **Hand-drawn, this pass**: the cursor/selection arrow (every keyboard-driven list: the pause menu,
+  the shared Controls/Sound panel, dialog choices, mini-game cards) and the dialog box's own bouncing
+  "next line" arrow, `assets/ui-icons.png` -- no pack at this exact tiny size/shape was a clean fit, so
+  these are original pixel art, drawn the same text-sprite way as everything else in
+  `tools/make-assets.js`.

@@ -31,6 +31,7 @@ class NameEntryScene extends Phaser.Scene {
   preload() {
     if (!this.textures.exists('mustafa-portrait')) this.load.image('mustafa-portrait', 'assets/cutscenes/mustafa.png');
     preloadCampusPanBackdrop(this);
+    preloadUiKit(this);
   }
 
   create() {
@@ -54,8 +55,7 @@ class NameEntryScene extends Phaser.Scene {
     const fieldH = 52;
     const fieldX = (GAME_WIDTH - fieldW) / 2;
     const fieldY = 140;
-    const fieldPanel = this.add.graphics();
-    drawPanel(fieldPanel, fieldX, fieldY, fieldW, fieldH);
+    makePanel(this, fieldX, fieldY, fieldW, fieldH);
     this.nameText = uiText(this, GAME_WIDTH / 2, fieldY + fieldH / 2, this.name, 16, COLORS.highlight).setOrigin(0.5);
     this.cursor = uiText(this, GAME_WIDTH / 2, fieldY + fieldH / 2, '_', 16, COLORS.highlight).setOrigin(0, 0.5);
     this.hint = uiText(this, GAME_WIDTH / 2, fieldY + fieldH + 18, `LETTERS AND SPACES, UP TO ${NAME_MAX}`, 8, COLORS.dim).setOrigin(0.5);

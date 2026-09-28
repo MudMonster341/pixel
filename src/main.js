@@ -48,6 +48,9 @@ class BootScene extends Phaser.Scene {
     const charSheet = { frameWidth: TILE, frameHeight: CHAR_HEIGHT };
     this.load.image('tiles', 'assets/tiles.png');
     this.load.json('tileinfo', 'assets/tiles.json');
+    // The UI kit (src/scenes/ui.js): every panel/button in world/ui needs this loaded before UIScene's
+    // own create() runs (guarded/idempotent -- a no-op if the title screen already loaded it).
+    preloadUiKit(this);
     // M3a customisation (src/scenes/intro-customize.js): she picked a clothes-color swatch, one of
     // tools/make-assets.js's CLOTHES_SWATCHES, each baked into its own `player-<id>.png` sheet ahead
     // of time (see that file's "character customisation" comment for why -- no runtime recolor here,

@@ -1,13 +1,26 @@
 // FB-0041a: JournalPanel.build() used to draw a fresh panel onto the same Graphics object every time
 // it opened without clearing it first, and never capped its own height -- with enough (or long
 // enough) entries it would just grow past the screen. Fixed with `panel.clear()` plus a capped,
-// scrollable viewport (up/down).
+// scrollable viewport (up/down). HUD declutter pass (2026-09-27/28): the panel is now a real 9-slice
+// (makePanel(), src/scenes/ui.js) resized via `setPanelSize()` instead of a Graphics object redrawn in
+// place -- the whole bug class (piling extra draw commands on top of themselves) is structurally
+// impossible now (a NineSlice's own vertex list never grows on resize), so the regression check below
+// instead proves the panel container never accumulates extra child objects, and that its own measured
+// size always matches `box` exactly, across repeated opens.
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame } = require('./helpers');
 
 const journalInfo = (page) => page.evaluate(() => {
   const j = game.scene.getScene('ui').journal;
-  return { visible: j.visible, box: j.box, maxScroll: j.maxScroll, viewportH: j.viewportH, rowCount: j.rowTexts.length, panelCommands: j.panel.commandBuffer.length };
+  return {
+    visible: j.visible,
+    box: j.box,
+    maxScroll: j.maxScroll,
+    viewportH: j.viewportH,
+    rowCount: j.rowTexts.length,
+    panelChildren: j.panel.list.length, // always [shadow, nineslice] -- 2, never more
+    panelPos: { x: j.panel.x, y: j.panel.y },
+  };
 });
 
 test('FB-0041a: opening the journal repeatedly does not redraw the panel on top of itself each time', async ({ page }) => {
@@ -17,24 +30,27 @@ test('FB-0041a: opening the journal repeatedly does not redraw the panel on top 
 
   await page.keyboard.press('j');
   await expect.poll(async () => (await journalInfo(page)).visible).toBe(true);
-  const first = (await journalInfo(page)).panelCommands;
+  const first = await journalInfo(page);
 
   await page.keyboard.press('j'); // close
   await expect.poll(async () => (await journalInfo(page)).visible).toBe(false);
   await page.keyboard.press('j'); // open again -> rebuild()
   await expect.poll(async () => (await journalInfo(page)).visible).toBe(true);
-  const second = (await journalInfo(page)).panelCommands;
+  const second = await journalInfo(page);
 
-  // Same number of draw commands every time -- proves clear() actually ran instead of piling another
-  // copy of the panel's rectangles/border on top of the last one.
-  expect(second).toBe(first);
+  // Same child count and position every time for identical content -- proves the panel was resized
+  // in place, not rebuilt on top of a leftover copy.
+  expect(second.panelChildren).toBe(first.panelChildren);
+  expect(second.panelPos).toEqual(first.panelPos);
+  expect(second.box).toEqual(first.box);
 
   await page.keyboard.press('j'); // close
   await expect.poll(async () => (await journalInfo(page)).visible).toBe(false);
   await page.keyboard.press('j'); // open a third time
   await expect.poll(async () => (await journalInfo(page)).visible).toBe(true);
-  const third = (await journalInfo(page)).panelCommands;
-  expect(third).toBe(first);
+  const third = await journalInfo(page);
+  expect(third.panelChildren).toBe(first.panelChildren);
+  expect(third.box).toEqual(first.box);
 });
 
 test('FB-0041a: with 15 long entries, the journal panel stays inside 960x540 and becomes scrollable', async ({ page }) => {

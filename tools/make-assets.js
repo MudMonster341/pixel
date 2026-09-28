@@ -14,6 +14,10 @@
 //   items.png               item icons, in the order of src/items.js
 //   held-items.png          tiny 8x8 versions shown in the character's hand, same order/frames
 //   prompt.png              interaction bubble, 2 frames: "E" (talk) and "!" (something new to say)
+//   ui-panel.png            the one UI kit (docs/GAME_FEEL.md): a 9-slice frame recolored from the
+//                           Kenney Pixel UI Pack, 4 frames stacked vertically (panel, then the
+//                           button's normal/hover/pressed states) -- see "UI kit" section below
+//   ui-icons.png            the cursor/selection arrow + dialog "next line" arrow, 2 16x16 frames
 //
 // Most sprites are still hand-drawn as text: one character = one pixel, "." = transparent. The
 // player and campus NPCs are the exception (ADR 0013): recolored crops of a vendor pack, blitted and
@@ -2888,6 +2892,136 @@ const PROMPT_BANG = sprite('prompt-bang', [
   '................',
 ]);
 
+// ---------- UI kit (docs/GAME_FEEL.md "one UI kit", docs/STYLE_GUIDE.md panel colors) ----------
+// One 9-slice frame for every panel/button in the game (dialog, menus, tracker, banners, mini-game
+// cards, ...), recolored from the Kenney Pixel UI Pack's own "9-Slice/Ancient/tan" frame (CC0,
+// assets/vendor/kenney-pixel-ui-pack/, credited in CREDITS.md) instead of drawn pixel-by-pixel.
+// Decoded directly (not guessed from a thumbnail): the pack's 48x48 source is really just a flat
+// 45x45 bordered square (a fill, a border line, a light top/left bevel line and a dark bottom/right
+// one -- 4 solid colors total, already following this game's own "one light source, top-left" rule,
+// which is exactly why this frame was picked over any other) plus its own baked-in drop-shadow sliver
+// along the last few rows/columns, cropped off below since this game already draws its own soft
+// shadow behind every panel (see makePanel(), src/scenes/ui.js) and stacking two shadows would just
+// double-darken the same corner. `tan_pressed.png` is the pack's own "flush, no shadow" variant, used
+// for the button's own pressed state below.
+const KENNEY_UI_PANEL = 'kenney-pixel-ui-pack/9-Slice/Ancient/tan.png';
+const KENNEY_UI_PANEL_PRESSED = 'kenney-pixel-ui-pack/9-Slice/Ancient/tan_pressed.png';
+const UI_FRAME_CROP = 45; // the pack's own bordered square, minus its baked-in shadow sliver past it
+const UI_FRAME_SCALE = 2; // upscaled so the border reads as a chunky ~4px line (STYLE_GUIDE's own spec)
+const UI_FRAME_SIZE = UI_FRAME_CROP * UI_FRAME_SCALE; // one frame's width/height in ui-panel.png (90)
+// src/scenes/ui.js's makePanel()/makeButtonFrame() use this same inset for every NineSlice they build
+// -- keeping the number here (not re-derived there) is the single source of truth for both files.
+const UI_FRAME_BORDER = 2 * UI_FRAME_SCALE; // 4
+
+// The pack frame's own 4 flat colors (sampled by decoding the PNG directly, not eyeballed), mapped
+// onto this game's palette: fill, border line, the light top/left bevel and the dark bottom/right one
+// (a corner "rivet" fleck in the pack's own art, and this game's own soft shadow color here). Each
+// entry is `[hex, alpha]` -- alpha lets the fill stay close to STYLE_GUIDE's "92% opacity" panel spec
+// baked directly into the texture, rather than something every caller has to remember to set again.
+function uiFrameMap(fill, border, hiBevel, loBevel) {
+  const map = { '#d3bf8f': fill, '#b1a077': border, '#d9cdaf': hiBevel };
+  if (loBevel) map['#a3997f'] = loBevel; // tan_pressed.png has no pixels of this color at all
+  return map;
+}
+const UI_PANEL_MAP = uiFrameMap(['#1a1c2c', 235], ['#eadbb8', 255], ['#fff1a8', 255], ['#000000', 90]);
+const UI_BUTTON_NORMAL_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#fff1a8', 255], ['#000000', 100]);
+// Hover/focused (docs/GAME_FEEL.md rule 7, "big buttons... drawn properly"): a brighter fill and a
+// gold border, matching this game's existing highlight color everywhere else a selection is shown.
+const UI_BUTTON_HOVER_MAP = uiFrameMap(['#24273c', 255], ['#ffd23f', 255], ['#fff1a8', 255], ['#000000', 110]);
+// Pressed: built from tan_pressed.png (no border-line pixels past the frame at all, see above), and
+// the top/left bevel line is recolored dark instead of light -- reading as a sunken, pushed-in frame
+// rather than the normal state's own raised one (docs/GAME_FEEL.md "inverted bevel" rule).
+const UI_BUTTON_PRESSED_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#000000', 70], null);
+
+// Crops the pack frame's own 45x45 bordered square out of `atlasPath`, recolors it pixel-by-pixel via
+// `colorMap` (`{'#srcHex': ['#dstHex', alpha]}`, above) and upscales it 2x (nearest-neighbor, the same
+// technique every other blit in this file uses) into a fresh Img.
+function buildUiFrame(atlasPath, colorMap) {
+  const atlas = loadAtlas(atlasPath);
+  const out = new Img(UI_FRAME_SIZE, UI_FRAME_SIZE);
+  for (let y = 0; y < UI_FRAME_CROP; y++) {
+    for (let x = 0; x < UI_FRAME_CROP; x++) {
+      const si = (y * atlas.width + x) * 4;
+      const a = atlas.data[si + 3];
+      if (a === 0) continue;
+      const key = '#' + [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+      const target = colorMap[key];
+      if (!target) continue; // this frame only ever has the colors mapped above
+      const [hex, alpha] = target;
+      const [r, g, b] = hexToRgb(hex);
+      for (let dy = 0; dy < UI_FRAME_SCALE; dy++) {
+        for (let dx = 0; dx < UI_FRAME_SCALE; dx++) out.setRGBA(x * UI_FRAME_SCALE + dx, y * UI_FRAME_SCALE + dy, r, g, b, alpha);
+      }
+    }
+  }
+  return out;
+}
+
+// Copies one Img wholesale into another at (dx, dy) -- the same job blitAtlas() does for a raw
+// decoded-PNG atlas, just for an Img we built ourselves (buildUiFrame() above) instead.
+function blitImg(dst, dx, dy, src) {
+  for (let y = 0; y < src.h; y++) {
+    for (let x = 0; x < src.w; x++) {
+      const i = (y * src.w + x) * 4;
+      dst.setRGBA(dx + x, dy + y, src.data[i], src.data[i + 1], src.data[i + 2], src.data[i + 3]);
+    }
+  }
+}
+
+// One sheet, 4 frames stacked vertically -- src/scenes/ui.js's UI_PANEL_FRAME/UI_BUTTON_*_FRAME
+// constants read this exact order (panel, then the button's normal/hover/pressed states).
+const uiPanelSheet = new Img(UI_FRAME_SIZE, UI_FRAME_SIZE * 4);
+[
+  buildUiFrame(KENNEY_UI_PANEL, UI_PANEL_MAP),
+  buildUiFrame(KENNEY_UI_PANEL, UI_BUTTON_NORMAL_MAP),
+  buildUiFrame(KENNEY_UI_PANEL, UI_BUTTON_HOVER_MAP),
+  buildUiFrame(KENNEY_UI_PANEL_PRESSED, UI_BUTTON_PRESSED_MAP),
+].forEach((frame, i) => blitImg(uiPanelSheet, 0, i * UI_FRAME_SIZE, frame));
+
+// The cursor/selection arrow (every keyboard-driven list: pause menu, controls/settings rows, dialog
+// choices, the journal) and the dialog box's own bouncing "next line" arrow -- hand-drawn (this pack
+// has nothing at this exact tiny size/shape), gold on the game's own outline color, same text-sprite
+// technique as everything else in this file.
+const UI_CURSOR = sprite('ui-cursor', [
+  '................',
+  '.KK.............',
+  '.KYK............',
+  '.KYYK...........',
+  '.KYYYK..........',
+  '.KYYYYK.........',
+  '.KYYYYYK........',
+  '.KYYYYYYK.......',
+  '.KYYYYYK........',
+  '.KYYYYK.........',
+  '.KYYYK..........',
+  '.KYYK...........',
+  '.KYK............',
+  '.KK.............',
+  '................',
+  '................',
+]);
+const UI_NEXT_ARROW = sprite('ui-next-arrow', [
+  '................',
+  '................',
+  '................',
+  '..KKKKKKKKKKKK..',
+  '..KYYYYYYYYYYK..',
+  '...KYYYYYYYYK...',
+  '...KYYYYYYYYK...',
+  '....KYYYYYYK....',
+  '....KYYYYYYK....',
+  '.....KYYYYK.....',
+  '.....KYYYYK.....',
+  '......KYYK......',
+  '......KYYK......',
+  '.......KK.......',
+  '................',
+  '................',
+]);
+const uiIcons = new Img(TILE * 2, TILE);
+uiIcons.draw(UI_CURSOR, 0, 0);
+uiIcons.draw(UI_NEXT_ARROW, TILE, 0);
+
 // ---------- write files ----------
 
 // `--out <dir>` writes somewhere else (the tests use this to check assets/ is up to date).
@@ -2977,4 +3111,8 @@ prompt.draw(PROMPT_E, 0, 0);
 prompt.draw(PROMPT_BANG, TILE, 0);
 write('prompt.png', prompt);
 
-console.log(`Wrote ${TILES.length} tiles, player (+${Object.keys(CLOTHES_SWATCHES).length} swatches), npc, ${ITEM_ICONS.length + VENDOR_ITEM_ICONS.length} items and prompt to assets/`);
+// The one UI kit (docs/GAME_FEEL.md): the panel/button 9-slice frame + the cursor/next-line arrows.
+write('ui-panel.png', uiPanelSheet);
+write('ui-icons.png', uiIcons);
+
+console.log(`Wrote ${TILES.length} tiles, player (+${Object.keys(CLOTHES_SWATCHES).length} swatches), npc, ${ITEM_ICONS.length + VENDOR_ITEM_ICONS.length} items, prompt and the UI kit to assets/`);

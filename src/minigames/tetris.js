@@ -64,7 +64,7 @@ class TetrisScene extends MinigameBaseScene {
     this.input.keyboard.on('keydown-W', rotate);
   }
 
-  // NEXT box + a LEVEL/SCORE readout, to the right of the well (docs/GAME_FEEL.md: same drawPanel()
+  // NEXT box + a LEVEL/SCORE readout, to the right of the well (docs/GAME_FEEL.md: same makePanel()
   // furniture as every other panel in the game). LINES/target stays on the shared top HUD every
   // mini-game already has (framework-scene.js) rather than being duplicated here.
   buildSidePanel() {
@@ -72,8 +72,7 @@ class TetrisScene extends MinigameBaseScene {
     const py = TT_BOARD_Y;
     const w = 150;
     const h = 230;
-    const panel = this.add.graphics().setDepth(90);
-    drawPanel(panel, px, py, w, h);
+    makePanel(this, px, py, w, h).setDepth(90);
     uiText(this, px + w / 2, py + 16, 'NEXT', 10, COLORS.dim).setOrigin(0.5).setDepth(91);
     this.nextGfx = this.add.graphics().setDepth(91);
     this.nextBoxCenter = { x: px + w / 2, y: py + 62 };

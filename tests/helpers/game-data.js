@@ -110,6 +110,7 @@ function loadGameData() {
     depthGroupAt: get('depthGroupAt'),
     parseOpenTiles: get('parseOpenTiles'),
     questObjectiveText: get('questObjectiveText'),
+    hudLayout: get('hudLayout'),
     // ADR 0016 / FB-0033 (in-world scripts + onboarding destination routing)
     resolveAnchor: get('resolveAnchor'),
     objectiveId: get('objectiveId'),

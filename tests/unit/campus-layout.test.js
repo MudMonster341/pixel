@@ -57,6 +57,10 @@ const FENCE_FAMILY = new Set(['fenceH', 'fenceV', 'fenceCornerTL', 'fenceCornerT
 const WALL_FAMILY = new Set([
   'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR', 'bitsRoof', 'bitsRoofT', 'bitsRoofL', 'bitsRoofR', 'bitsRoofTL', 'bitsRoofTR',
   'otherWallPlain', 'otherWall', 'otherWallEndL', 'otherWallEndR', 'otherRoof', 'otherRoofT', 'otherRoofL', 'otherRoofR', 'otherRoofTL', 'otherRoofTR',
+  // Quality loop, category 1 run 1 (2026-09-28): drawBuilding now mixes in bitsRoofB/C and
+  // otherRoofB/C (tools/make-assets.js flatRoof's own comment) for the plain interior roof fill, so
+  // they're just as much "part of a building's roof" as the original bitsRoof/otherRoof.
+  'bitsRoofB', 'bitsRoofC', 'otherRoofB', 'otherRoofC',
 ]);
 
 test('FB-0009: fence and wall tiles never join in a diagonal-only (staircase) line', () => {
@@ -259,6 +263,38 @@ test('FB-0026: a roundabout sits just inside the main gate', () => {
   }
   assert.ok(sawAsphalt, 'the roundabout has no paved (asphalt) ring');
   assert.ok(sawLawn, 'the roundabout has no lawn island in the middle');
+});
+
+// Quality loop, category 1 run 1 (2026-09-28): "a proper circular or rounded island... with a kerb
+// ring, not a flat grass square". A real kerb line should sit between the lawn island and the
+// asphalt ring somewhere in the same row the test above already scans.
+test('quality loop: the roundabout island has a real kerb ring around it (not just a bare lawn square)', () => {
+  const roundabout = objects.find((o) => o.type === 'area' && o.name === 'Gate 2 Roundabout');
+  const cy = Math.floor(roundabout.y + roundabout.height / 2);
+  let sawKerb = false;
+  for (let x = Math.floor(roundabout.x); x < roundabout.x + roundabout.width; x++) {
+    if ((structNameAt(x, cy) || '').startsWith('kerb')) sawKerb = true;
+  }
+  assert.ok(sawKerb, 'the roundabout island has no kerb tile bordering it');
+});
+
+// Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the
+// BITS sign, a security booth, a barrier arm, and planters with plants".
+test('quality loop: Gate 2 has real gate furniture (pillars, a barrier arm) straddling the avenue', () => {
+  const gate2 = gates.find((g) => /Gate 2/.test(g.name));
+  const y = Math.floor(gate2.y) - 1;
+  let sawPillar = false;
+  let sawBarrier = false;
+  let sawPlanter = false;
+  for (let x = Math.floor(gate2.x) - 10; x <= gate2.x + 10; x++) {
+    const s = structNameAt(x, y) || structNameAt(x, y + 1);
+    if (s === 'bitsPillar') sawPillar = true;
+    if (s === 'barrierArm') sawBarrier = true;
+    if (s === 'planter') sawPlanter = true;
+  }
+  assert.ok(sawPillar, 'no gate pillar (bitsPillar) found straddling Gate 2\'s own approach');
+  assert.ok(sawBarrier, 'no barrier arm found across Gate 2\'s own approach');
+  assert.ok(sawPlanter, 'no planter found near Gate 2 (should be real plants, not bare ground)');
 });
 
 test('FB-0026: parking areas lie on both sides of the entrance road', () => {

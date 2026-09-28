@@ -318,6 +318,15 @@ class UIScene extends Phaser.Scene {
     return Boolean(world && world.sys.isActive() && !world.transitioning);
   }
 
+  // Quality-loop category 4 run 1, bug 2: called by Letterbox (playIn/playOut/snap) so the always-on
+  // HUD (minimap, quest tracker, hotbar) gets out of the way of an in-world script and comes back once
+  // it ends -- `instant` (the Esc-skip path) lands in the right state with no animation.
+  setHudScriptHidden(hidden, instant = false) {
+    this.minimap.setScriptHidden(hidden, instant);
+    this.questTracker.setScriptHidden(hidden, instant);
+    this.hotbar.setScriptHidden(hidden, instant);
+  }
+
   // Undoes every subscription create() made on a *persistent* emitter (GameState.inventory,
   // `game.events`), run once when "Quit to Title" stops this scene (see the file-header comment).
   // Scene-local subscriptions (this.input.keyboard, this.events) don't need this: Phaser tears
@@ -356,6 +365,9 @@ class UIScene extends Phaser.Scene {
     this.dialog.update(time, delta);
     this.hotbar.setVisible(!this.dialog.isOpen);
     if (this.fullMap.visible) this.fullMap.update(time);
+    // Quality-loop category 4 run 1, bug 1: a hint queued (or already showing) while a dialog opens or
+    // a script starts holds/hides itself here every frame -- see HintBanner.tick() below.
+    this.hints.tick();
 
     const world = this.scene.get('world');
     if (world.player && world.player.active && world.tileData) this.minimap.update(world, time);
@@ -396,11 +408,19 @@ class Minimap {
     const hint = uiText(scene, this.area.x + this.area.w - 4, captionY + captionH / 2, 'M', 6, COLORS.dim).setOrigin(1, 0.5);
     this.parts = [panel, backdrop, this.image, this.markers, this.captionStrip, this.label, hint];
     this.visible = true;
+    this.scriptHidden = false; // quality-loop category 4 run 1, bug 2: faded out while a script runs
     this.onClick = null; // FB-0018: set by UIScene to open the full-screen map
 
     scene.add.zone(this.area.x, this.area.y, this.area.w, this.area.h).setOrigin(0, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.visible && this.onClick && this.onClick());
+  }
+
+  // Called by UIScene.setHudScriptHidden() (Letterbox playIn/playOut/snap) -- alpha only, independent
+  // of the M-key `visible` toggle above (both apply; either one hides it).
+  setScriptHidden(hidden, instant = false) {
+    this.scriptHidden = hidden;
+    fadeParts(this.scene, this.parts, !hidden, instant);
   }
 
   // The map is drawn once into a texture, 1 pixel per tile. Small maps are shown whole and scaled up;
@@ -674,6 +694,7 @@ class Hotbar {
     this.bounds = layout.hotbar;
     this.alpha = 1; // overlap-translucency only (FB-0001) -- unchanged meaning, tests read this directly
     this.autoHidden = false; // idle-while-empty (see HOTBAR_IDLE_MS above) -- a separate, new concern
+    this.scriptHidden = false; // faded out while a script runs (quality-loop category 4 run 1, bug 2)
     this.idleTimer = null;
 
     this.panel = makePanel(scene, this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h);
@@ -799,9 +820,27 @@ class Hotbar {
   }
 
   applyVisualAlpha() {
-    const alpha = this.autoHidden ? 0 : this.alpha;
+    const alpha = this.targetAlpha();
     [this.panel, this.frames, this.itemName].forEach((part) => part.setAlpha(alpha));
     this.slots.forEach((slot) => [slot.icon, slot.number, slot.amount].forEach((part) => part.setAlpha(alpha)));
+  }
+
+  targetAlpha() {
+    if (this.scriptHidden) return 0;
+    return this.autoHidden ? 0 : this.alpha;
+  }
+
+  // Called by UIScene.setHudScriptHidden() (Letterbox playIn/playOut/snap) -- quality-loop category 4
+  // run 1, bug 2. A third, independent alpha source on top of the two above (overlap-translucency,
+  // idle auto-hide): whichever of those wins, `scriptHidden` overrides both to fully hidden. Tweened
+  // (~200ms, HUD_SCRIPT_FADE_MS) unlike the other two, which stay instant snaps (unchanged behavior).
+  setScriptHidden(hidden, instant = false) {
+    if (hidden === this.scriptHidden) return;
+    this.scriptHidden = hidden;
+    const parts = [this.panel, this.frames, this.itemName, ...this.slots.flatMap((slot) => [slot.icon, slot.number, slot.amount])];
+    if (instant) { this.applyVisualAlpha(); return; }
+    this.scene.tweens.killTweensOf(parts);
+    this.scene.tweens.add({ targets: parts, alpha: this.targetAlpha(), duration: HUD_SCRIPT_FADE_MS });
   }
 
   teardown() {
@@ -831,9 +870,15 @@ class DialogBox {
     this.choiceTexts = null;
     this.choiceIndex = 0;
     this.selectedChoice = null; // the choice the player picked, passed to onClose() at the very end
-    this.box = box || { x: 100, y: 382, w: 760, h: 138 };
-    const { x, y, w, h } = this.box;
+    // A caller-supplied `box` (src/scenes/card.js's smaller in-card message box) opts this instance
+    // out of the letterboxed-script repositioning below entirely -- only UIScene's own dialog (the
+    // default box) is ever paired with a Letterbox, so a custom box just never calls setLetterboxed().
+    this.usesDefaultBox = !box;
+    this.baseBox = box || { ...DIALOG_BOX };
+    this.letterboxed = false;
+    this.box = { ...this.baseBox };
 
+    const { x, y, w, h } = this.box;
     this.panel = makePanel(scene, x, y, w, h);
     // The name plate is its own small panel, resized (never redrawn) each time open() runs, since its
     // width depends on the speaker's own name -- built at a throwaway 1x1 here so it always has a real
@@ -854,6 +899,37 @@ class DialogBox {
     scene.input.keyboard.on('keydown-ENTER', (event) => {
       if (!event.repeat && this.choices) this.confirmChoice();
     });
+  }
+
+  // Called by Letterbox (playIn/playOut/snap, src/scripts-runtime.js `letterbox` step) -- quality-loop
+  // category 4 run 1, bug 3: while the bars are up, the box lifts clear of the bottom one (hudLayout's
+  // own `dialogBox`, src/maplogic.js) instead of sitting where the bar would clip straight through it.
+  // A no-op for a custom-box instance (card.js), which is never paired with a Letterbox anyway.
+  setLetterboxed(active) {
+    if (!this.usesDefaultBox || active === this.letterboxed) return;
+    this.letterboxed = active;
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT, undefined, { letterboxed: active });
+    this.applyBox(active ? layout.dialogBox : this.baseBox);
+  }
+
+  // Repositions every child from a new box -- the constructor's own layout, run again. In real script
+  // usage the box only ever moves while the dialog is closed (every `say` step is preceded by its own
+  // `letterbox: 'in'`, src/scripts.js), but this still re-lays-out a currently-open box/choice list
+  // correctly too, rather than assuming that ordering.
+  applyBox(box) {
+    this.box = box;
+    const { x, y, w, h } = box;
+    this.panel.setPosition(x, y);
+    this.panel.setPanelSize(w, h);
+    this.name.setPosition(x + 34, y - 4);
+    this.body.setPosition(x + 30, y + 34).setWordWrapWidth(w - 60);
+    this.arrow.setPosition(x + w - 26, y + h - 22);
+    this.arrowBaseY = this.arrow.y;
+    if (this.name.visible) {
+      this.nameTag.setPosition(x + 16, y - 24);
+      this.nameTag.setPanelSize(this.name.text.length * 16 + 36, 40);
+    }
+    if (this.choices) this.buildChoiceTexts();
   }
 
   // `speaker` may be null/empty for a narration-style box with no name tag (the cutscene player,
@@ -1020,13 +1096,23 @@ const TOAST_HOLD_MS = 1400;
 const TOAST_FADE_MS = 500;
 const TOAST_QUEUE_CAP = 4; // messages waiting, not counting whichever one is on screen right now
 
+const TOAST_Y = 360; // sits just above the ordinary (non-letterboxed) dialog box, y=382
+
 class Toast {
   constructor(scene) {
     this.scene = scene;
-    this.y = 360;
+    this.y = TOAST_Y;
     this.queue = [];
     this.showing = null; // the message currently on screen (or fading out), or null between messages
     this.text = uiText(scene, GAME_WIDTH / 2, this.y, '', 16).setOrigin(0.5).setStroke('#1a1c2c', 8).setAlpha(0).setDepth(60);
+  }
+
+  // Called by Letterbox (playIn/playOut/snap) -- quality-loop category 4 run 1, item 4: a toast fired
+  // mid-script (not itself gated the way hints now are -- an item pickup can still legitimately toast
+  // during one) must not land on top of the dialog box once it lifts clear of the bottom bar.
+  setLetterboxed(active) {
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT, undefined, { letterboxed: active });
+    this.y = active ? layout.dialogBox.y - 20 : TOAST_Y;
   }
 
   show(message) {
@@ -1330,15 +1416,30 @@ class HintBanner {
   // stacked under the location banner near the top of the screen; moved so a first-time hint never
   // competes with the banner/tracker up top, and instead sits right where the thing it's teaching
   // (WASD, E, Shift, M) is about to be used, next to the hotbar.
+  //
+  // Quality-loop category 4 run 1, bug 1: a hint used to show the instant it was triggered, with no
+  // regard for a dialog box or an in-world script already owning the screen -- a live capture of the
+  // Gate 2 beat caught the "move" hint drawing directly on top of Mustafa's own dialog box. Hints now
+  // never *start* showing while blocked() (queued instead, same "queued, not stacked" rule as before,
+  // GAME_FEEL.md), and one already showing when blocking begins is hidden immediately and put back at
+  // the front of the queue to try again once control returns -- see tick(), called every frame from
+  // UIScene.update().
   constructor(scene) {
     this.scene = scene;
     this.queue = [];
     this.showing = null;
+    this.holdTimer = null;
     const { x, y, w, h } = hudLayout(GAME_WIDTH, GAME_HEIGHT).hint;
     this.panel = makePanel(scene, x, y, w, h).setDepth(70);
     this.text = uiText(scene, x + w / 2, y + h / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(71);
     this.parts = [this.panel, this.text];
     this.parts.forEach((part) => part.setAlpha(0));
+  }
+
+  // Dialog box on screen, or a script/warp-fade holding input -- the same two conditions the bug
+  // report named ("never while a dialog is open or a script is running").
+  blocked() {
+    return this.scene.dialog.isOpen || !this.scene.worldHasControl();
   }
 
   // Called for every hint id, every time it could apply (world.js doesn't bother checking "have I
@@ -1351,17 +1452,38 @@ class HintBanner {
     this.pump();
   }
 
+  // Every frame (UIScene.update()): interrupts a hint that started showing before blocking began, and
+  // otherwise tries to pump the queue -- covers both directions of the transition (blocked mid-show,
+  // or unblocked with something still waiting) without either side needing to know about the other.
+  tick() {
+    if (this.showing && this.blocked()) { this.interrupt(); return; }
+    this.pump();
+  }
+
   pump() {
-    if (this.showing || !this.queue.length) return;
+    if (this.showing || !this.queue.length || this.blocked()) return;
     this.showing = this.queue.shift();
     this.text.setText(HINTS[this.showing]);
+    this.scene.tweens.killTweensOf(this.parts);
     this.scene.tweens.add({ targets: this.parts, alpha: 1, duration: HINT_FADE_MS });
-    this.scene.time.delayedCall(HINT_FADE_MS + HINT_HOLD_MS, () => {
+    this.holdTimer = this.scene.time.delayedCall(HINT_FADE_MS + HINT_HOLD_MS, () => {
+      this.holdTimer = null;
       this.scene.tweens.add({
         targets: this.parts, alpha: 0, duration: HINT_FADE_MS,
         onComplete: () => { this.showing = null; this.pump(); },
       });
     });
+  }
+
+  // Hides whatever's currently showing right away (no fade -- this is an emergency interrupt, not the
+  // hint's own natural end) and re-queues its id at the front, so it's the very next one pump() tries
+  // once control returns.
+  interrupt() {
+    if (this.holdTimer) { this.holdTimer.remove(); this.holdTimer = null; }
+    this.scene.tweens.killTweensOf(this.parts);
+    this.parts.forEach((part) => part.setAlpha(0));
+    this.queue.unshift(this.showing);
+    this.showing = null;
   }
 }
 
@@ -1541,6 +1663,13 @@ class QuestTracker {
     this.objective.setVisible(false);
     this.keysText.setVisible(false);
   }
+
+  // Called by UIScene.setHudScriptHidden() (Letterbox playIn/playOut/snap) -- quality-loop category 4
+  // run 1, bug 2: an in-world script fades this out of the way (whichever of pill/expanded it's
+  // currently showing), same as the minimap and hotbar.
+  setScriptHidden(hidden, instant = false) {
+    fadeParts(this.scene, this.parts, !hidden, instant);
+  }
 }
 
 // ---------- letterbox bars (ADR 0016): a Pokemon-style story beat's own thin top/bottom bars ----------
@@ -1548,9 +1677,18 @@ class QuestTracker {
 // UI's own 960x540, zoom-1 camera is, docs/GAME_FEEL.md "UI canvas"), driven by src/scripts-runtime.js
 // ScriptRunner's `{ letterbox: 'in' | 'out' }` step. `snap()` is the Esc-fast-forward path: no slide,
 // just land on whichever state ('in' fully shown, 'out' fully hidden) the skip is heading towards.
+//
+// Quality-loop category 4 run 1 (docs/QUALITY_LOOP.md, bugs 2/3 from a live capture of the Gate 2
+// beat): the same transition every real script already drives (every `say` step is preceded by its
+// own `letterbox: 'in'`, src/scripts.js) is now also what fades the always-on HUD (minimap/tracker/
+// hotbar) out of the way and lifts the dialog box clear of the bottom bar -- see
+// UIScene.setHudScriptHidden()/DialogBox.setLetterboxed() below. `snap()` (the Esc-skip path) applies
+// both instantly, so skipping a script restores the HUD/dialog exactly like letting it finish would.
+// SCRIPT_LETTERBOX_HEIGHT itself now lives in src/maplogic.js (hudLayout()'s own dialogBox math needs
+// the same number, see that file's comment) -- this file just reads the one shared constant.
 
-const SCRIPT_LETTERBOX_HEIGHT = 70;
 const SCRIPT_LETTERBOX_SLIDE_MS = 350;
+const HUD_SCRIPT_FADE_MS = 200;
 
 class Letterbox {
   constructor(scene) {
@@ -1564,19 +1702,39 @@ class Letterbox {
     this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
     this.scene.tweens.add({ targets: this.topBar, y: this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeOut' });
     this.scene.tweens.add({ targets: this.bottomBar, y: GAME_HEIGHT - this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeOut', onComplete: onDone });
+    this.scene.setHudScriptHidden(true);
+    this.scene.dialog.setLetterboxed(true);
+    this.scene.toast.setLetterboxed(true);
   }
 
   playOut(onDone) {
     this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
     this.scene.tweens.add({ targets: this.topBar, y: -this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeIn' });
     this.scene.tweens.add({ targets: this.bottomBar, y: GAME_HEIGHT + this.h / 2, duration: SCRIPT_LETTERBOX_SLIDE_MS, ease: 'Cubic.easeIn', onComplete: onDone });
+    this.scene.setHudScriptHidden(false);
+    this.scene.dialog.setLetterboxed(false);
+    this.scene.toast.setLetterboxed(false);
   }
 
   snap(shown) {
     this.scene.tweens.killTweensOf([this.topBar, this.bottomBar]);
     this.topBar.y = shown ? this.h / 2 : -this.h / 2;
     this.bottomBar.y = shown ? GAME_HEIGHT - this.h / 2 : GAME_HEIGHT + this.h / 2;
+    this.scene.setHudScriptHidden(shown, true);
+    this.scene.dialog.setLetterboxed(shown);
+    this.scene.toast.setLetterboxed(shown);
   }
+}
+
+// Fades a flat list of GameObjects to fully shown/hidden together -- shared by every always-on HUD
+// element that needs to get out of a script's way (Minimap/QuestTracker below; Hotbar has its own
+// richer alpha-combining logic already, see its own setScriptHidden()). `instant` is for the Esc-skip
+// path (Letterbox.snap()), which must land in the right state with no animation at all.
+function fadeParts(scene, parts, show, instant = false) {
+  const alpha = show ? 1 : 0;
+  scene.tweens.killTweensOf(parts);
+  if (instant) { parts.forEach((part) => part.setAlpha(alpha)); return; }
+  scene.tweens.add({ targets: parts, alpha, duration: HUD_SCRIPT_FADE_MS });
 }
 
 // ---------- onboarding (FB-0033): a bouncing destination arrow + a "still stuck?" hint toast ----------

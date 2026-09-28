@@ -24,6 +24,36 @@ function overlaps(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
+// Pairs that are deliberately allowed to overlap because the two are never actually shown at the same
+// time (the same "share a corner on purpose" shape as trackerExpanded/tracker): the dialog box visually
+// replaces the hotbar the instant it opens (src/scenes/ui.js UIScene.update() -- `hotbar.setVisible
+// (!dialog.isOpen)`), so their *boxes* overlapping in the pure math is expected, not a bug.
+const EXEMPT_PAIRS = [
+  ['trackerExpanded', 'tracker'],
+  ['hotbar', 'dialogBox'],
+];
+function isExempt(a, b) {
+  return EXEMPT_PAIRS.some(([p, q]) => (p === a && q === b) || (p === b && q === a));
+}
+
+// `dialogBox` is only a box actually on screen while the dialog is open or a script has the bars up
+// (real dialog always opens under a `letterbox: 'in'`, src/scripts.js) -- checking it for overlaps
+// otherwise would be testing a box that was never drawn in the first place (same idea as
+// trackerExpanded only mattering while actually expanded).
+function assertNoOverlaps(layout, label, { dialogActive = false } = {}) {
+  // minimapArea is deliberately nested inside minimap (the map image sits inside its own panel), not
+  // a sibling box -- excluded from the pairwise check the same way trackerExpanded/tracker are.
+  const names = Object.keys(layout).filter((n) => n !== 'minimapArea' && (dialogActive || n !== 'dialogBox'));
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      if (isExempt(names[i], names[j])) continue;
+      const a = layout[names[i]];
+      const b = layout[names[j]];
+      assert.ok(!overlaps(a, b), `${names[i]} ${JSON.stringify(a)} overlaps ${names[j]} ${JSON.stringify(b)} ${label}`);
+    }
+  }
+}
+
 for (const [width, height] of SIZES) {
   test(`hudLayout(${width}, ${height}): every box stays on screen`, () => {
     const layout = hudLayout(width, height);
@@ -33,24 +63,37 @@ for (const [width, height] of SIZES) {
   });
 
   test(`hudLayout(${width}, ${height}): no two boxes overlap`, () => {
-    const layout = hudLayout(width, height);
-    // trackerExpanded replaces tracker when the pill is expanded -- they're never shown at the same
-    // time, so checking them against each other would be a false positive (they share a corner on
-    // purpose). minimapArea is deliberately nested inside minimap (the map image sits inside its own
-    // panel), not a sibling box.
-    const names = Object.keys(layout).filter((n) => n !== 'trackerExpanded' && n !== 'minimapArea');
-    for (let i = 0; i < names.length; i++) {
-      for (let j = i + 1; j < names.length; j++) {
-        const a = layout[names[i]];
-        const b = layout[names[j]];
-        assert.ok(!overlaps(a, b), `${names[i]} ${JSON.stringify(a)} overlaps ${names[j]} ${JSON.stringify(b)} at ${width}x${height}`);
-      }
+    assertNoOverlaps(hudLayout(width, height), `at ${width}x${height}`);
+  });
+
+  // Quality-loop category 4 run 1, bugs 1/3: the hint banner used to sit inside the dialog box's own
+  // territory (it was positioned relative to the hotbar, which the dialog box replaces when open), and
+  // the dialog box itself used to sit where a letterboxed script's bottom bar would clip straight
+  // through it. Every combination of dialogOpen/letterboxed must still produce a fully non-overlapping,
+  // on-screen layout -- every real `say` step is preceded by its own `letterbox: 'in'` (src/scripts.js),
+  // so `{ dialogOpen: true, letterboxed: true }` is the box real in-script dialog actually opens in,
+  // not a hypothetical combination.
+  for (const dialogOpen of [false, true]) {
+    for (const letterboxed of [false, true]) {
+      test(`hudLayout(${width}, ${height}, 5, { dialogOpen: ${dialogOpen}, letterboxed: ${letterboxed} }): no overlaps, all on screen`, () => {
+        const layout = hudLayout(width, height, 5, { dialogOpen, letterboxed });
+        for (const [name, box] of Object.entries(layout)) {
+          assert.ok(within(box, width, height), `${name} ${JSON.stringify(box)} is off-screen`);
+        }
+        assertNoOverlaps(layout, `(dialogOpen=${dialogOpen}, letterboxed=${letterboxed}) at ${width}x${height}`, {
+          dialogActive: dialogOpen || letterboxed,
+        });
+      });
     }
-    // The expanded tracker pill still must never overlap anything outside its own corner.
-    const others = names.filter((n) => n !== 'tracker');
-    for (const name of others) {
-      assert.ok(!overlaps(layout.trackerExpanded, layout[name]), `trackerExpanded overlaps ${name} at ${width}x${height}`);
-    }
+  }
+
+  test(`hudLayout(${width}, ${height}): letterboxed lifts the dialog box clear of the bottom bar`, () => {
+    const SCRIPT_LETTERBOX_HEIGHT = 70; // src/scenes/ui.js's own bar height
+    const { dialogBox } = hudLayout(width, height, 5, { letterboxed: true });
+    assert.ok(
+      dialogBox.y + dialogBox.h <= height - SCRIPT_LETTERBOX_HEIGHT,
+      `dialogBox ${JSON.stringify(dialogBox)} dips into the bottom letterbox bar at ${width}x${height}`,
+    );
   });
 }
 

@@ -84,6 +84,33 @@ with no changes on the interiors side.
 
 ## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28); quality loop (2026-09-28)
 
+**Quality loop, Interior art run 2 (2026-09-28, docs/quality/scorecard.md "4/10... a high-contrast
+white-on-tan checker (graph paper)... the staircase still draws as vertical rails... over-corrected
+into a solid wall-to-wall grid"):** run 1 mined the Room_Builder sheet but overshot on two fronts --
+the floor remap reached across the full marble ramp for a crop with almost no tonal range (a checker,
+not a subtle seam), and the "dense furnishing" fix packed every single row/column with no aisles at
+all. Both walked back this round:
+- **Floors low-contrast**: `remapMarbleFloor`/`remapCorridorTile`/`remapLabFloor` (`tools/make-
+  assets.js`) now map onto just 2 close tones each (`marbleFleck` moved from a 9.5% jump off
+  `marbleLight` to ~5.6%; the corridor/lab floors got their own equally tight pairs) -- comfortably
+  under the "~8% luminance variation" ceiling. The runner (`remapMarbleRunner`) keeps real contrast,
+  as the one place the brief said strong pattern belongs.
+- **The staircase, properly this time**: `intFoyerTread` is a single full-width horizontal step (a
+  light tread over a darker riser, no vertical marks at all); the rail is now its own tile
+  (`intFoyerStairsL`/`R`, reusing those 2 names) placed *only* at the block's true leftmost/rightmost
+  column (`FURNISHERS.foyer`, build-interiors.js) -- run 1's mistake was applying a "railSide" variant
+  to every tile in the flight, so a rail line got redrawn at every column's own inner edge, tiling
+  into a row of parallel bars.
+- **Chandelier bigger**: a real 2x2-tile fixture (`intChandelier`/`TR`/`BL`/`BR`, one 32x32 picture
+  split across 4 tile names, `chandelierPixels()`) instead of a single 16px one.
+- **ICVL/Physics Lab, real aisles**: both rebuilt with actual gaps between rows (a 1-tile aisle every
+  other ICVL desk row, multi-row aisles between the Physics Lab's 3 bench rows), a dedicated walkway
+  column, and more furniture variety (a chair/stool, a plain `intIcvlCabinet`, 3 differently-topped
+  lab benches `intLabBenchScope`/`Flask`/`Laptop`, `intFumeHood`) so neither reads as one tile
+  repeated. `tests/unit/interiors-premium-pass.test.js` now checks each stays inside a 35-60%
+  *walkable* band, not "as dense as possible" -- the ICVL key station moved from (5,5) to (6,6) to
+  land back on real furniture (`src/maps.js`); Physics Lab's stayed at (5,5).
+
 **Quality loop, Interior art run 1 (2026-09-28, docs/quality/scorecard.md "3/10... the marble reads
 as sand... 1-tile vertical wall strips... a big pale empty floor"):** a second pass on top of the
 FB-0030/0031 rebuild below, using the LimeZu Room_Builder sheet properly for the first time

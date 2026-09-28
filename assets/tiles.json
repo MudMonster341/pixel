@@ -1374,13 +1374,13 @@
       "name": "intFloorMarble",
       "solid": false,
       "overhead": false,
-      "color": "#cdc3ab"
+      "color": "#eae5d4"
     },
     {
       "name": "intFloorMarbleRunner",
       "solid": false,
       "overhead": false,
-      "color": "#b0a48a"
+      "color": "#b6ab92"
     },
     {
       "name": "intColumn",
@@ -1392,13 +1392,13 @@
       "name": "intFoyerStairsL",
       "solid": true,
       "overhead": false,
-      "color": "#c6bfae"
+      "color": "#c2bba9"
     },
     {
       "name": "intFoyerStairsR",
       "solid": true,
       "overhead": false,
-      "color": "#c6bfae"
+      "color": "#c2bba9"
     },
     {
       "name": "intFoyerLanding",
@@ -1410,7 +1410,7 @@
       "name": "intChandelier",
       "solid": false,
       "overhead": true,
-      "color": "#cbae68"
+      "color": "#d7b768"
     },
     {
       "name": "intGlassDoorOpen",
@@ -1518,43 +1518,103 @@
       "name": "intWallCap",
       "solid": true,
       "overhead": false,
-      "color": "#c9c5bc"
+      "color": "#cac6be"
     },
     {
       "name": "intWallFace",
       "solid": true,
       "overhead": false,
-      "color": "#cec8bb"
+      "color": "#d0cbbf"
     },
     {
       "name": "intWallFaceEndL",
       "solid": true,
       "overhead": false,
-      "color": "#d4ccba"
+      "color": "#d6cfbe"
     },
     {
       "name": "intWallFaceEndR",
       "solid": true,
       "overhead": false,
-      "color": "#c8c0b1"
+      "color": "#cac3b4"
     },
     {
       "name": "intWallWindow",
       "solid": true,
       "overhead": false,
-      "color": "#a2988f"
+      "color": "#a49a91"
     },
     {
       "name": "intFloorTiled",
       "solid": false,
       "overhead": false,
-      "color": "#dbd29c"
+      "color": "#d8dad5"
     },
     {
       "name": "intFloorLabLight",
       "solid": false,
       "overhead": false,
-      "color": "#8d8482"
+      "color": "#dbddd7"
+    },
+    {
+      "name": "intFoyerTreadPlain",
+      "solid": true,
+      "overhead": false,
+      "color": "#d8d0ba"
+    },
+    {
+      "name": "intChandelierTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#d7b768"
+    },
+    {
+      "name": "intChandelierBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#e9c56d"
+    },
+    {
+      "name": "intChandelierBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#e9c56d"
+    },
+    {
+      "name": "intChair",
+      "solid": true,
+      "overhead": false,
+      "color": "#666669"
+    },
+    {
+      "name": "intIcvlCabinet",
+      "solid": true,
+      "overhead": false,
+      "color": "#304976"
+    },
+    {
+      "name": "intFumeHood",
+      "solid": true,
+      "overhead": false,
+      "color": "#575c64"
+    },
+    {
+      "name": "intLabBenchScope",
+      "solid": true,
+      "overhead": false,
+      "color": "#947c66"
+    },
+    {
+      "name": "intLabBenchFlask",
+      "solid": true,
+      "overhead": false,
+      "color": "#928364"
+    },
+    {
+      "name": "intLabBenchLaptop",
+      "solid": true,
+      "overhead": false,
+      "color": "#877666"
     }
   ]
 }

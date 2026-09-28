@@ -277,3 +277,55 @@ function objectiveTarget(mapKey, quest) {
   const route = OBJECTIVE_ROUTES[id] || [];
   return route.find((step) => step.map === mapKey) || null;
 }
+
+// ---------- HUD layout (docs/GAME_FEEL.md rule 2, docs/QUALITY_LOOP.md category 4 "UI and menus") ----------
+// Pure layout math for every top-level HUD box (src/scenes/ui.js's Minimap/LocationBanner/HintBanner/
+// QuestTracker/Hotbar all read their own box from this, rather than each computing its own position),
+// extracted so a unit test can prove the game's own claim -- "the internal UI coordinate space is
+// always exactly 960x540 (Scale.FIT)... a panel that fits at 960x540 fits at every size, by
+// construction" (GAME_FEEL.md rule 2) -- instead of just asserting it. Every box is `{x, y, w, h}`,
+// top-left origin, in UI-canvas pixels (STYLE_GUIDE.md "UI canvas": screen-fixed, never the world
+// camera's zoom). Each box is a fixed size anchored to a corner/edge/center with a constant margin
+// (never scaled by `width`/`height`), the same "anchored, not stretched" shape every real Pokemon-style
+// HUD uses -- which is also what makes "no overlap, stays on screen" true at every size *by
+// construction*: corner-anchored boxes (minimap, tracker) only move further apart as the screen grows,
+// and center-anchored ones (banner, hint, hotbar) move together, never towards a corner box.
+const HUD_MARGIN = 16;
+const HUD_MINIMAP = { areaW: 120, areaH: 90, pad: 8 }; // ~120x90 map area, declutter pass (was 160x120)
+const HUD_TRACKER = { w: 280, collapsedH: 30, expandedH: 84 }; // a compact pill, expandable on change
+const HUD_BANNER = { w: 260, h: 36 };
+const HUD_HINT = { w: 320, h: 36 };
+const HUD_HOTBAR_SLOT = 48;
+const HUD_HOTBAR_GAP = 8;
+const HUD_HOTBAR_PAD = 10;
+
+function hudLayout(width, height, slotCount = 5) {
+  const minimap = {
+    x: HUD_MARGIN,
+    y: HUD_MARGIN,
+    w: HUD_MINIMAP.areaW + HUD_MINIMAP.pad * 2,
+    h: HUD_MINIMAP.areaH + HUD_MINIMAP.pad * 2,
+  };
+  // The actual map-image window inside the minimap panel -- the caption is drawn as a strip tucked
+  // inside the bottom of this area (not a separate reserved row below it, the old "extra ~50px of
+  // panel just for one line of text" layout this declutter pass replaces).
+  const minimapArea = { x: minimap.x + HUD_MINIMAP.pad, y: minimap.y + HUD_MINIMAP.pad, w: HUD_MINIMAP.areaW, h: HUD_MINIMAP.areaH };
+  const trackerX = width - HUD_MARGIN - HUD_TRACKER.w;
+  const tracker = { x: trackerX, y: HUD_MARGIN, w: HUD_TRACKER.w, h: HUD_TRACKER.collapsedH };
+  const trackerExpanded = { x: trackerX, y: HUD_MARGIN, w: HUD_TRACKER.w, h: HUD_TRACKER.expandedH };
+  const banner = { x: Math.round((width - HUD_BANNER.w) / 2), y: HUD_MARGIN, w: HUD_BANNER.w, h: HUD_BANNER.h };
+
+  const hotbarInnerW = slotCount * HUD_HOTBAR_SLOT + (slotCount - 1) * HUD_HOTBAR_GAP;
+  const hotbarW = hotbarInnerW + HUD_HOTBAR_PAD * 2;
+  const hotbarH = HUD_HOTBAR_SLOT + HUD_HOTBAR_PAD * 2;
+  const hotbar = { x: Math.round((width - hotbarW) / 2), y: height - HUD_MARGIN - hotbarH, w: hotbarW, h: hotbarH };
+
+  const hint = {
+    x: Math.round((width - HUD_HINT.w) / 2),
+    y: hotbar.y - HUD_MARGIN - HUD_HINT.h,
+    w: HUD_HINT.w,
+    h: HUD_HINT.h,
+  };
+
+  return { minimap, minimapArea, tracker, trackerExpanded, banner, hotbar, hint };
+}

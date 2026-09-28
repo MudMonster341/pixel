@@ -20,6 +20,7 @@ class GreetingScene extends Phaser.Scene {
   preload() {
     if (!this.textures.exists('mustafa-portrait')) this.load.image('mustafa-portrait', 'assets/cutscenes/mustafa.png');
     preloadCampusPanBackdrop(this);
+    preloadUiKit(this);
   }
 
   create() {
@@ -40,8 +41,7 @@ class GreetingScene extends Phaser.Scene {
     const py = 210;
     const pw = 220;
     const ph = 300;
-    const panel = this.add.graphics();
-    drawPanel(panel, px - pw / 2, py - ph / 2, pw, ph);
+    makePanel(this, px - pw / 2, py - ph / 2, pw, ph);
     this.add.image(px + 6, py + 10, 'mustafa-portrait').setScale(1.6).setAlpha(0.35).setTint(0x000000);
     this.add.image(px, py, 'mustafa-portrait').setScale(1.6);
 

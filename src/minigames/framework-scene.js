@@ -50,8 +50,7 @@ class MinigameBaseScene extends Phaser.Scene {
     const h = 34;
     const x = Math.round((GAME_WIDTH - w) / 2);
     const y = 12;
-    const panel = this.add.graphics().setDepth(90);
-    drawPanel(panel, x, y, w, h);
+    const panel = makePanel(this, x, y, w, h).setDepth(90);
     const text = uiText(this, GAME_WIDTH / 2, y + h / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(91);
     const parts = [panel, text];
     parts.forEach((part) => part.setVisible(false));
@@ -72,15 +71,14 @@ class MinigameBaseScene extends Phaser.Scene {
   // global 'toast' event goes to UIScene's Toast, which would be hidden behind this scene's own
   // opaque backdrop while a mini-game is on top (world.js launchMinigame() only pauses 'world', not
   // 'ui', but every mini-game scene renders above both), so a mini-game that needs a quick message
-  // shows it here instead, built once and reused, same drawPanel()/uiText() look as everywhere else.
+  // shows it here instead, built once and reused, same makePanel()/uiText() look as everywhere else.
   showMessage(text) {
     if (!this.message) {
       const w = 380;
       const h = 34;
       const x = Math.round((GAME_WIDTH - w) / 2);
       const y = GAME_HEIGHT - 74;
-      const panel = this.add.graphics().setDepth(95).setAlpha(0);
-      drawPanel(panel, x, y, w, h);
+      const panel = makePanel(this, x, y, w, h).setDepth(95).setAlpha(0);
       const label = uiText(this, GAME_WIDTH / 2, y + h / 2, '', 10, COLORS.text).setOrigin(0.5).setDepth(96).setAlpha(0);
       this.message = { panel, label };
     }
@@ -197,7 +195,7 @@ class MinigameBaseScene extends Phaser.Scene {
 }
 
 // ---------- the shared card: intro / game-over / win, all one small keyboard-driven menu ----------
-// Reuses this game's own drawPanel()/uiText()/COLORS (src/scenes/ui.js) so a mini-game's cards read
+// Reuses this game's own makePanel()/uiText()/COLORS (src/scenes/ui.js) so a mini-game's cards read
 // as the same game's UI, not a different one bolted on. Sized from its own content every time
 // (docs/GAME_FEEL.md rule 1: "a panel's box is sized from its content, never the other way around"),
 // since an intro's instructions and a game-over's score/skip line are different lengths.
@@ -214,6 +212,7 @@ class MinigameCard {
     this.parts = [];
     this.items = [];
     this.itemTexts = [];
+    this.itemCursors = [];
     this.index = 0;
     this.handlers = [];
     this.acceptInput = false;
@@ -223,6 +222,7 @@ class MinigameCard {
     this.parts.forEach((part) => part.destroy());
     this.parts = [];
     this.itemTexts = [];
+    this.itemCursors = [];
     this.handlers.forEach(({ event, fn }) => this.scene.input.keyboard.off(event, fn));
     this.handlers = [];
     this.acceptInput = false;
@@ -272,8 +272,7 @@ class MinigameCard {
     // instead, since Rectangle's constructor alpha argument sets fillAlpha, not the object's own
     // alpha -- tweening `alpha` on top of a 0.6 fillAlpha would have multiplied down to 0.36.
     const dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1).setOrigin(0, 0).setDepth(200);
-    const panel = scene.add.graphics().setDepth(201);
-    drawPanel(panel, x, y, w, h);
+    const panel = makePanel(scene, x, y, w, h).setDepth(201);
     const titleText = uiText(scene, x + w / 2, y + 30, title, 16, COLORS.highlight).setOrigin(0.5).setDepth(202);
     const paraTexts = lines.map((line, i) =>
       uiText(scene, x + w / 2, y + headerH + i * lineH, line, 12, COLORS.text).setOrigin(0.5).setDepth(202));
@@ -281,6 +280,10 @@ class MinigameCard {
     this.items = items;
     this.index = 0;
     const itemY0 = y + headerH + paraH;
+    // A cursor sprite to the left of the highlighted option, centered text otherwise unchanged (this
+    // card's own rows are centered, not left-aligned like every other list, so the cursor sits just
+    // outside the text's own measured width rather than at a fixed column).
+    this.itemCursors = items.map((item, i) => makeCursor(scene, 0, itemY0 + i * 30).setDepth(202).setVisible(false));
     this.itemTexts = items.map((item, i) => {
       const text = uiText(scene, x + w / 2, itemY0 + i * 30, item.label, 12, COLORS.text).setOrigin(0.5).setDepth(202);
       text.setInteractive({ useHandCursor: true })
@@ -291,13 +294,13 @@ class MinigameCard {
     const footer = uiText(scene, x + w / 2, y + h - footerH / 2, 'ENTER TO CHOOSE -- ESC TO QUIT', 8, COLORS.dim)
       .setOrigin(0.5).setDepth(202);
 
-    this.parts = [dim, panel, titleText, ...paraTexts, ...this.itemTexts, footer];
+    this.parts = [dim, panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer];
     this.refresh();
 
     // Eased card transition (docs/GAME_FEEL.md "nothing is a flat instant cut"): everything fades in
     // together and the content eases up 10px into its resting position -- the dim backdrop fades to
     // its own, lower, target alpha separately so it doesn't flash to full strength instantly either.
-    const content = [panel, titleText, ...paraTexts, ...this.itemTexts, footer];
+    const content = [panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer];
     dim.setAlpha(0);
     content.forEach((part) => { part.setAlpha(0); part.y += 10; });
     scene.tweens.add({ targets: dim, alpha: 0.6, duration: 160 });
@@ -324,7 +327,10 @@ class MinigameCard {
   refresh() {
     this.itemTexts.forEach((text, i) => {
       const current = i === this.index;
-      text.setColor(current ? COLORS.highlight : COLORS.text).setText(`${current ? '> ' : '  '}${this.items[i].label}`);
+      text.setColor(current ? COLORS.highlight : COLORS.text).setText(this.items[i].label);
+      // Centered text, so the cursor sits just to the left of this row's own measured width rather
+      // than a fixed column (every other list in the game is left-aligned, where a fixed column works).
+      this.itemCursors[i].setPosition(text.x - text.width / 2 - 18, text.y).setVisible(current);
     });
   }
 

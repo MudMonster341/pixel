@@ -3,9 +3,10 @@
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame, holdKey, pressUntil } = require('./helpers');
 
-// The minimap's own play area (see ui.js Minimap: x+12..x+12+160, y+12..y+12+120 from (16,16)),
-// in page coordinates — the 960x540 viewport matches canvas pixels 1:1 (playwright.config.js).
-const MINIMAP_CLICK = { x: 108, y: 88 };
+// The minimap's own play area (HUD declutter pass: hudLayout().minimapArea, src/maplogic.js -- a
+// ~120x90 window starting at (24, 24), 8px inset from the panel's own (16, 16) corner), in page
+// coordinates — the 960x540 viewport matches canvas pixels 1:1 (playwright.config.js).
+const MINIMAP_CLICK = { x: 84, y: 69 };
 
 test('FB-0018: clicking the minimap opens the full-screen map, N/Esc closes it', async ({ page }) => {
   await openGame(page, { map: null });

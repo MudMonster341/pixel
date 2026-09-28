@@ -86,6 +86,10 @@ class CardScene extends Phaser.Scene {
       const key = `card-temp-${i}`;
       if (!this.textures.exists(key)) this.load.image(key, `assets/cutscenes/card-temp-${i}.png`);
     }
+    // This scene's own message box reuses DialogBox (src/scenes/ui.js), which needs the UI kit's
+    // textures -- normally already loaded by boot/title by the time this scene is reached, but
+    // guarded/idempotent like every other preload() here, so a direct reach-in can't be caught short.
+    preloadUiKit(this);
     this.load.json('card-config', CARD_CONFIG_URL);
     // The closing video is NOT queued here -- see playEndingVideoOrFinish()'s own comment for why
     // (Phaser's video loader can't be trusted to report a 404 as a real error).
@@ -519,7 +523,7 @@ function imageLocalPoint(image, localX, localY) {
 }
 
 // The card's own panel -- a warm paper interior with a gold border and a soft drop shadow, deliberately
-// NOT src/scenes/ui.js's drawPanel() (dark navy, this game's usual UI chrome): a birthday card reads
+// NOT src/scenes/ui.js's makePanel() (dark navy, this game's usual UI chrome): a birthday card reads
 // as paper, not as another dark menu box, and the redesign this function is part of (coordinator
 // review, 2026-09-22) is specifically about the card reading as one warm, deliberate object rather
 // than UI furniture with decoration scattered around it. Same bevel/shadow technique as drawPanel

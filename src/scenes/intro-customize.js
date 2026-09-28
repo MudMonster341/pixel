@@ -34,6 +34,7 @@ class CustomizeScene extends Phaser.Scene {
       if (!this.textures.exists(key)) this.load.spritesheet(key, `assets/player-${option.id}.png`, sheet);
     }
     preloadCampusPanBackdrop(this);
+    preloadUiKit(this);
   }
 
   create() {
@@ -56,8 +57,7 @@ class CustomizeScene extends Phaser.Scene {
     const panelH = 260;
     const panelX = (GAME_WIDTH - panelW) / 2;
     const panelY = 108;
-    const panel = this.add.graphics();
-    drawPanel(panel, panelX, panelY, panelW, panelH);
+    makePanel(this, panelX, panelY, panelW, panelH);
     const previewX = GAME_WIDTH / 2;
     const previewY = panelY + panelH / 2 + 10;
     this.add.ellipse(previewX, previewY + CHAR_HEIGHT * PREVIEW_SCALE * 0.34, 46, 14, 0x000000, 0.3);

@@ -27,55 +27,92 @@ function uiText(scene, x, y, str, size = 8, color = COLORS.text) {
   });
 }
 
-// "A little 3D" (docs/GAME_FEEL.md): every panel in the game already went through drawPanel(), so
-// giving it a 1px inner bevel here -- a lighter line along the top/left inside the border, a darker
-// one along the bottom/right -- lifts every dialog box, minimap, pause menu and panel in one place,
-// consistent with docs/STYLE_GUIDE.md's "one light source, top-left" rule for every other asset in
-// the game. The outer drop shadow (offset fill behind the panel) is unchanged.
-function drawPanel(g, x, y, w, h) {
-  g.fillStyle(0x000000, 0.35).fillRect(x + 4, y + 4, w, h);
-  g.fillStyle(COLORS.panel, 0.92).fillRect(x, y, w, h);
-  g.lineStyle(4, COLORS.border, 1).strokeRect(x + 2, y + 2, w - 4, h - 4);
-  g.lineStyle(1, 0xffffff, 0.18).lineBetween(x + 5, y + 5, x + w - 5, y + 5).lineBetween(x + 5, y + 5, x + 5, y + h - 5);
-  g.lineStyle(1, 0x000000, 0.25).lineBetween(x + 5, y + h - 5, x + w - 5, y + h - 5).lineBetween(x + w - 5, y + 5, x + w - 5, y + h - 5);
+// Shrinks a text object's own font size (then, only as a last resort, truncates with an ellipsis)
+// until it fits `maxWidth` -- for a label that lives in a *fixed*-size box, where GAME_FEEL.md rule 1
+// ("size the box to its content") doesn't apply because the box's whole point is staying a constant
+// size (the minimap's own tucked-in caption, the quest tracker's collapsed pill below) rather than
+// growing with whatever text a map/story ends up needing.
+function fitTextInWidth(text, str, maxWidth, minSize = 5, startSize = 8) {
+  let size = startSize;
+  text.setFontSize(size).setText(str);
+  while (text.width > maxWidth && size > minSize) {
+    size -= 1;
+    text.setFontSize(size);
+  }
+  let shown = str;
+  while (text.width > maxWidth && shown.length > 1) {
+    shown = shown.slice(0, -1);
+    text.setText(`${shown}…`);
+  }
+}
+
+// ---------- the one UI kit (docs/GAME_FEEL.md "one UI kit"): a real 9-slice frame ----------
+// tools/make-assets.js generates assets/ui-panel.png: 4 90x90 frames stacked vertically (the shared
+// panel look, then the button's own normal/hover/pressed states), recolored from the Kenney Pixel UI
+// Pack's own 9-slice frame onto this game's navy/cream/gold palette -- see that file's own "UI kit"
+// section for exactly which pack pixels map to which color, and why (the pack frame already follows
+// STYLE_GUIDE's "one light source, top-left" rule on its own). UI_FRAME_BORDER has to match the same
+// constant there: it's the fixed corner/edge inset every NineSlice below is built with, so the border
+// reads as a crisp, constant width no matter how big a particular panel/button is.
+const UI_FRAME_TEXTURE = 'ui-panel';
+const UI_FRAME_SIZE = 90;
+const UI_FRAME_BORDER = 4;
+const UI_FRAME = { panel: 0, buttonNormal: 1, buttonHover: 2, buttonPressed: 3 };
+const UI_ICON_TEXTURE = 'ui-icons';
+const UI_ICON = { cursor: 0, nextArrow: 1 };
+
+// Registers the UI kit's own two textures with `scene`'s loader -- call this from the preload() of
+// any scene that could possibly be the *first* one this session to build a panel/button/DialogBox
+// (the title screen, every scene in the M3a opening chain, the card-only "watch again" path that
+// bypasses boot entirely); every scene only ever reached *after* one of those (world/ui, mini-games,
+// the box opening) can rely on the texture already being loaded, the same guarded/idempotent "load it
+// again anywhere it might be needed first" pattern this codebase's other preload() calls already use
+// for `mustafa-portrait`/`title-fg`/etc. (`this.textures.exists` first, so a second load is a no-op).
+function preloadUiKit(scene) {
+  if (!scene.textures.exists(UI_FRAME_TEXTURE)) {
+    scene.load.spritesheet(UI_FRAME_TEXTURE, 'assets/ui-panel.png', { frameWidth: UI_FRAME_SIZE, frameHeight: UI_FRAME_SIZE });
+  }
+  if (!scene.textures.exists(UI_ICON_TEXTURE)) {
+    scene.load.spritesheet(UI_ICON_TEXTURE, 'assets/ui-icons.png', { frameWidth: TILE, frameHeight: TILE });
+  }
+}
+
+// One panel: this game's own long-standing soft offset drop shadow (a plain rect, STYLE_GUIDE "Drop
+// shadows" -- black, offset down-right, unchanged from before this pass) behind a real 9-slice frame
+// (the recolored Kenney pack border above) instead of a hand-drawn rectangle. Returned as a Container
+// so every existing caller's "one GameObject in my `parts` array" pattern (`setVisible()`,
+// `setDepth()`, `setAlpha()`, `destroy()` -- all cascading to both children automatically, standard
+// Container behavior) keeps working without any layout code changing, per the brief. Callers that
+// need to resize a panel in place (its content changed, e.g. QuestTracker/JournalPanel below) use the
+// returned container's own `setPanelSize(w, h)` instead of clearing and redrawing.
+function makePanel(scene, x, y, w, h, frame = UI_FRAME.panel) {
+  const shadow = scene.add.graphics();
+  shadow.fillStyle(0x000000, 0.35).fillRect(4, 4, w, h);
+  const nine = scene.add.nineslice(0, 0, UI_FRAME_TEXTURE, frame, w, h, UI_FRAME_BORDER, UI_FRAME_BORDER, UI_FRAME_BORDER, UI_FRAME_BORDER).setOrigin(0, 0);
+  const container = scene.add.container(x, y, [shadow, nine]);
+  container.setPanelSize = (nw, nh) => {
+    shadow.clear().fillStyle(0x000000, 0.35).fillRect(4, 4, nw, nh);
+    nine.setSize(nw, nh);
+  };
+  return container;
+}
+
+// A cursor/selection arrow -- the small gold triangle every keyboard-driven list in the game now uses
+// instead of a plain "> " text prefix (the pause menu, the shared Controls/Sound panel's rows, dialog
+// choices, the journal's own scrollable list doesn't need one). `setOrigin(0, 0.5)` so callers place
+// it by its own left-center point, the same spot a "> " prefix used to start from.
+function makeCursor(scene, x, y) {
+  return scene.add.image(x, y, UI_ICON_TEXTURE, UI_ICON.cursor).setOrigin(0, 0.5);
 }
 
 // ---------- big drawn button (M3a title screen redesign, docs/GAME_FEEL.md "a little 3D") ----------
-// Bevelled, shaded, with its own drop shadow -- the title's Play/Continue/Controls/Credits rows used
-// to be plain text; the owner's brief specifically asked for "big buttons... drawn properly". Three
-// visual states (normal/hover/pressed) are all drawn up front into one Graphics object and swapped
-// by redrawing, the same "measure once, redraw on state change" shape every other panel in this file
-// already uses (see Hotbar.refresh(), DialogBox), so it fits this codebase's existing conventions
-// rather than introducing a new "component" system just for this screen.
-function drawButtonState(g, x, y, w, h, state) {
-  g.clear();
-  const lift = state === 'pressed' ? 2 : 0; // a pressed button sinks toward its own shadow
-  const by = y + lift;
-  // Drop shadow, softer/closer when pressed (less "floating").
-  g.fillStyle(0x000000, state === 'pressed' ? 0.25 : 0.4).fillRect(x + 3, y + 6, w, h);
-  // Base fill: navy panel tone, brighter on hover/selected so keyboard focus is obvious without text
-  // changing color alone (docs/GAME_FEEL.md rule 7: keyboard-first).
-  const base = state === 'hover' ? 0x24273c : COLORS.panel;
-  g.fillStyle(base, 0.96).fillRect(x, by, w, h);
-  // Bevel: light top/left, dark bottom/right (STYLE_GUIDE "one light source, top-left"), inverted
-  // when pressed so the button reads as pushed in rather than popped out.
-  const hiAlpha = state === 'pressed' ? 0.12 : 0.35;
-  const loAlpha = state === 'pressed' ? 0.35 : 0.4;
-  const hiSide = state === 'pressed' ? 0x000000 : 0xffffff;
-  const loSide = state === 'pressed' ? 0xffffff : 0x000000;
-  g.lineStyle(2, hiSide, hiAlpha).lineBetween(x + 2, by + 2, x + w - 2, by + 2).lineBetween(x + 2, by + 2, x + 2, by + h - 2);
-  g.lineStyle(2, loSide, loAlpha).lineBetween(x + 2, by + h - 2, x + w - 2, by + h - 2).lineBetween(x + w - 2, by + 2, x + w - 2, by + h - 2);
-  // Outer border: gold when selected/hovered (matches the rest of the UI's highlight color), cream otherwise.
-  g.lineStyle(3, state === 'hover' ? COLORS.gold : COLORS.border, 1).strokeRect(x + 1, by + 1, w - 2, h - 2);
-  return by; // callers reposition their label text to track the press-lift
-}
-
-// A whole button: its own Graphics (drawButtonState above), a centered label, and a Zone for mouse
+// A whole button: the UI kit's own 9-slice frame (normal/hover/pressed, swapped by frame index instead
+// of redrawn -- see UI_FRAME above), a centered label, its own small drop shadow, and a Zone for mouse
 // input. Keyboard focus is driven externally (whoever owns a row of these -- title.js's menu, the
 // customisation screen's swatches -- moves `focused` with arrow keys, same as every other
 // keyboard-driven list in this game); mouse hover/press are handled here directly. Both input paths
-// funnel into the same drawButtonState() so a keyboard-selected button and a mouse-hovered one look
-// identical (docs/GAME_FEEL.md rule 7: mouse is always an addition, never a different experience).
+// funnel into the same redraw() so a keyboard-selected button and a mouse-hovered one look identical
+// (docs/GAME_FEEL.md rule 7: mouse is always an addition, never a different experience).
 class Button {
   constructor(scene, x, y, w, h, label, onConfirm) {
     this.scene = scene;
@@ -83,7 +120,8 @@ class Button {
     this.hovered = false;
     this.focused = false;
     this.pressedVisual = false;
-    this.graphics = scene.add.graphics();
+    this.shadow = scene.add.graphics();
+    this.nine = scene.add.nineslice(x, y, UI_FRAME_TEXTURE, UI_FRAME.buttonNormal, w, h, UI_FRAME_BORDER, UI_FRAME_BORDER, UI_FRAME_BORDER, UI_FRAME_BORDER).setOrigin(0, 0);
     this.text = uiText(scene, x + w / 2, y + h / 2, label, 12, COLORS.text).setOrigin(0.5);
     this.zone = scene.add.zone(x, y, w, h).setOrigin(0, 0).setInteractive({ useHandCursor: true });
     this.zone.on('pointerover', () => { this.hovered = true; this.redraw(); });
@@ -122,19 +160,25 @@ class Button {
 
   redraw() {
     const state = this.pressedVisual ? 'pressed' : this.hovered || this.focused ? 'hover' : 'normal';
-    const by = drawButtonState(this.graphics, this.box.x, this.box.y, this.box.w, this.box.h, state);
-    this.text.setY(by + this.box.h / 2).setColor(state === 'hover' ? COLORS.highlight : COLORS.text);
+    const lift = state === 'pressed' ? 2 : 0; // a pressed button sinks toward its own shadow
+    const frame = state === 'pressed' ? UI_FRAME.buttonPressed : state === 'hover' ? UI_FRAME.buttonHover : UI_FRAME.buttonNormal;
+    const { x, y, w, h } = this.box;
+    this.shadow.clear().fillStyle(0x000000, state === 'pressed' ? 0.25 : 0.4).fillRect(x + 3, y + 6, w, h);
+    this.nine.setFrame(frame).setPosition(x, y + lift);
+    this.text.setPosition(x + w / 2, y + lift + h / 2).setColor(state === 'hover' ? COLORS.highlight : COLORS.text);
   }
 
   setVisible(visible) {
-    this.graphics.setVisible(visible);
+    this.shadow.setVisible(visible);
+    this.nine.setVisible(visible);
     this.text.setVisible(visible);
     if (visible) this.zone.setInteractive();
     else this.zone.disableInteractive();
   }
 
   destroy() {
-    this.graphics.destroy();
+    this.shadow.destroy();
+    this.nine.destroy();
     this.text.destroy();
     this.zone.destroy();
   }
@@ -329,20 +373,28 @@ class UIScene extends Phaser.Scene {
 // ---------- minimap (top left) ----------
 
 class Minimap {
+  // HUD declutter pass (docs/GAME_FEEL.md rule 2): box/area come from hudLayout(), the same numbers a
+  // unit test checks for overlap -- `x`/`y` are still accepted so UIScene's own call site doesn't need
+  // to change, but they're expected to match hudLayout's own top-left-anchored minimap box.
   constructor(scene, x, y) {
-    this.width = 184;
-    this.height = 168;
-    this.area = { x: x + 12, y: y + 12, w: 160, h: 120 };
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT);
+    this.width = layout.minimap.w;
+    this.height = layout.minimap.h;
+    this.area = layout.minimapArea;
 
     this.scene = scene;
-    const panel = scene.add.graphics();
-    drawPanel(panel, x, y, this.width, this.height);
+    const panel = makePanel(scene, x, y, this.width, this.height);
     const backdrop = scene.add.rectangle(this.area.x, this.area.y, this.area.w, this.area.h, 0x0b0c12).setOrigin(0, 0);
     this.image = scene.add.image(this.area.x, this.area.y, '__DEFAULT').setOrigin(0, 0).setVisible(false);
     this.markers = scene.add.graphics();
-    this.label = uiText(scene, x + 14, y + this.height - 26, '');
-    const hint = uiText(scene, x + this.width - 14, y + this.height - 26, 'M', 8, COLORS.dim).setOrigin(1, 0);
-    this.parts = [panel, backdrop, this.image, this.markers, this.label, hint];
+    // The caption is tucked inside the bottom of the map area itself (a thin translucent strip), not
+    // a separate row reserved below it -- see maplogic.js hudLayout()'s own comment on minimapArea.
+    const captionH = 14;
+    const captionY = this.area.y + this.area.h - captionH;
+    this.captionStrip = scene.add.rectangle(this.area.x, captionY, this.area.w, captionH, 0x000000, 0.55).setOrigin(0, 0);
+    this.label = uiText(scene, this.area.x + 4, captionY + captionH / 2, '', 6).setOrigin(0, 0.5);
+    const hint = uiText(scene, this.area.x + this.area.w - 4, captionY + captionH / 2, 'M', 6, COLORS.dim).setOrigin(1, 0.5);
+    this.parts = [panel, backdrop, this.image, this.markers, this.captionStrip, this.label, hint];
     this.visible = true;
     this.onClick = null; // FB-0018: set by UIScene to open the full-screen map
 
@@ -391,24 +443,12 @@ class Minimap {
     this.setLabel(world.def.name.toUpperCase());
   }
 
-  // The caption (e.g. "MECHANICAL BLOCK - GROUND FLOOR") must never run past the panel's right edge
-  // (QA P5): shrink the font first (works for every real map name), then, only if some future name
-  // is still too wide even at the smallest readable size, truncate with an ellipsis as a last resort
-  // so the bound is guaranteed regardless of what a map is named.
+  // The caption (e.g. "MECHANICAL BLOCK - GROUND FLOOR") must never run past its own tucked-in strip
+  // (QA P5) -- now a much tighter fit than the old wider panel, so fitTextInWidth() (shared with
+  // QuestTracker's own pill below) does the same "shrink, then truncate" job at a smaller max size.
   setLabel(text) {
-    const maxWidth = this.width - 28; // 14px inset each side, clear of the panel border
-    const minSize = 5;
-    let size = 8;
-    this.label.setFontSize(size).setText(text);
-    while (this.label.width > maxWidth && size > minSize) {
-      size -= 1;
-      this.label.setFontSize(size);
-    }
-    let shown = text;
-    while (this.label.width > maxWidth && shown.length > 1) {
-      shown = shown.slice(0, -1);
-      this.label.setText(`${shown}…`);
-    }
+    const maxWidth = this.area.w - 8 - 12; // clear of the strip's own left inset and the "M" hint
+    fitTextInWidth(this.label, text, maxWidth, 4, 6);
   }
 
   applyWindow() {
@@ -476,23 +516,27 @@ const BANNER_HOLD_MS = 2000;
 const BANNER_SLIDE_MS = 300;
 
 class LocationBanner {
+  // HUD declutter pass: box comes from hudLayout() (a narrower, unit-tested box that's guaranteed
+  // clear of the quest tracker pill and the minimap -- see hud-layout.test.js).
   constructor(scene) {
     this.scene = scene;
-    const w = 340;
-    const h = 40;
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT);
+    const { w, h } = layout.banner;
+    this.w = w;
     this.hiddenY = -h - 8;
-    this.shownY = 12;
+    this.shownY = layout.banner.y;
 
-    const panel = scene.add.graphics();
-    drawPanel(panel, 0, 0, w, h);
-    this.text = uiText(scene, w / 2, h / 2, '', 12, COLORS.text).setOrigin(0.5);
-    this.container = scene.add.container((GAME_WIDTH - w) / 2, this.hiddenY, [panel, this.text]).setDepth(80);
+    const panel = makePanel(scene, 0, 0, w, h);
+    this.text = uiText(scene, w / 2, h / 2, '', 10, COLORS.text).setOrigin(0.5);
+    this.container = scene.add.container(layout.banner.x, this.hiddenY, [panel, this.text]).setDepth(80);
     this.hideTimer = null;
     this.visible = false; // true from show() until the slide-out finishes (tests read this directly)
   }
 
   show(name) {
-    this.text.setText(name.toUpperCase());
+    // A narrower box (declutter pass) means a long map name needs the same "shrink, then truncate"
+    // guarantee the minimap's own caption uses, instead of assuming every real name already fits.
+    fitTextInWidth(this.text, name.toUpperCase(), this.w - 24, 6, 10);
     this.visible = true;
     this.scene.tweens.killTweensOf(this.container);
     if (this.hideTimer) this.hideTimer.remove();
@@ -607,6 +651,11 @@ class FullMap {
 // Slots are small (48px, was 64px) and the bar turns translucent when the player is behind it
 // (FB-0001): the owner's choice B, over hiding it (A) or growing the camera to avoid it (C).
 const HOTBAR_TRANSLUCENT_ALPHA = 0.35;
+// HUD declutter pass: an empty bar (nothing collected yet) is one more box competing for attention
+// over an otherwise clear play area, so it fades out after this long without any reason to look at it
+// (no item added/selected, no number key/wheel touched) and fades back in the instant any of those
+// happens -- never while it actually holds something, so a real inventory never disappears mid-play.
+const HOTBAR_IDLE_MS = 3000;
 
 class Hotbar {
   constructor(scene, inventory) {
@@ -615,16 +664,19 @@ class Hotbar {
     const size = 48;
     const gap = 8;
     const count = inventory.slots.length;
-    const total = count * size + (count - 1) * gap;
-    const x0 = Math.round((GAME_WIDTH - total) / 2);
-    const y0 = GAME_HEIGHT - size - 20;
-    const pad = 10;
+    // hudLayout()'s own hotbar box (unit-tested for overlap/on-screen at 3 sizes) -- x0/y0 below are
+    // the individual slots' own top-left, derived from that same box's inner content area.
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT, count);
+    const pad = (layout.hotbar.h - size) / 2;
+    const x0 = layout.hotbar.x + pad;
+    const y0 = layout.hotbar.y + pad;
     // On-screen box the bar occupies, used to test overlap with the player (see updateOverlap).
-    this.bounds = { x: x0 - pad, y: y0 - pad, w: total + pad * 2, h: size + pad * 2 };
-    this.alpha = 1;
+    this.bounds = layout.hotbar;
+    this.alpha = 1; // overlap-translucency only (FB-0001) -- unchanged meaning, tests read this directly
+    this.autoHidden = false; // idle-while-empty (see HOTBAR_IDLE_MS above) -- a separate, new concern
+    this.idleTimer = null;
 
-    this.panel = scene.add.graphics();
-    drawPanel(this.panel, this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h);
+    this.panel = makePanel(scene, this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h);
     this.frames = scene.add.graphics();
 
     this.slots = inventory.slots.map((_, i) => {
@@ -655,16 +707,20 @@ class Hotbar {
     });
 
     // Named so teardown() can undo them -- `inventory` is GameState.inventory, a persistent
-    // singleton that outlives this scene, see the file-header comment on why that matters.
-    this.onChanged = () => this.refresh();
+    // singleton that outlives this scene, see the file-header comment on why that matters. Both
+    // also count as "activity" for the idle auto-hide above -- an item added/removed, or a different
+    // slot picked (including by a number key/the wheel, which both call inventory.select()).
+    this.onChanged = () => { this.refresh(); this.markActivity(); };
     this.onSelected = () => {
       this.refresh();
       this.flashName();
+      this.markActivity();
     };
     inventory.on('changed', this.onChanged);
     inventory.on('selected', this.onSelected);
     this.visible = true;
     this.refresh();
+    this.markActivity(); // starts the idle clock from boot if she begins with an empty bar
   }
 
   refresh() {
@@ -714,10 +770,36 @@ class Hotbar {
     this.setTranslucent(overlaps);
   }
 
+  // `this.alpha` keeps its exact original meaning (overlap-translucency only, FB-0001) since existing
+  // tests read it directly -- the idle auto-hide below is tracked as a separate `autoHidden` flag, and
+  // applyVisualAlpha() is what actually combines the two into what's drawn on screen.
   setTranslucent(translucent) {
     const alpha = translucent ? HOTBAR_TRANSLUCENT_ALPHA : 1;
     if (alpha === this.alpha) return;
     this.alpha = alpha;
+    this.applyVisualAlpha();
+  }
+
+  isEmpty() {
+    return this.inventory.slots.every((slot) => !slot);
+  }
+
+  // Called on boot and on every 'changed'/'selected' event (an item picked up, or a slot chosen by
+  // click/number key/wheel): cancels any pending auto-hide, un-hides immediately if it had already
+  // fired, and -- only while the bar is genuinely empty -- (re)starts the idle clock.
+  markActivity() {
+    if (this.idleTimer) { this.idleTimer.remove(); this.idleTimer = null; }
+    if (this.autoHidden) { this.autoHidden = false; this.applyVisualAlpha(); }
+    if (this.isEmpty()) {
+      this.idleTimer = this.scene.time.delayedCall(HOTBAR_IDLE_MS, () => {
+        this.autoHidden = true;
+        this.applyVisualAlpha();
+      });
+    }
+  }
+
+  applyVisualAlpha() {
+    const alpha = this.autoHidden ? 0 : this.alpha;
     [this.panel, this.frames, this.itemName].forEach((part) => part.setAlpha(alpha));
     this.slots.forEach((slot) => [slot.icon, slot.number, slot.amount].forEach((part) => part.setAlpha(alpha)));
   }
@@ -725,6 +807,7 @@ class Hotbar {
   teardown() {
     this.inventory.off('changed', this.onChanged);
     this.inventory.off('selected', this.onSelected);
+    if (this.idleTimer) this.idleTimer.remove();
   }
 }
 
@@ -751,12 +834,15 @@ class DialogBox {
     this.box = box || { x: 100, y: 382, w: 760, h: 138 };
     const { x, y, w, h } = this.box;
 
-    this.panel = scene.add.graphics();
-    drawPanel(this.panel, x, y, w, h);
-    this.nameTag = scene.add.graphics();
+    this.panel = makePanel(scene, x, y, w, h);
+    // The name plate is its own small panel, resized (never redrawn) each time open() runs, since its
+    // width depends on the speaker's own name -- built at a throwaway 1x1 here so it always has a real
+    // NineSlice to resize later (see open() below and makePanel()'s own setPanelSize()).
+    this.nameTag = makePanel(scene, x + 16, y - 24, 1, 1);
     this.name = uiText(scene, x + 34, y - 4, '', 16, COLORS.highlight).setOrigin(0, 0.5);
     this.body = uiText(scene, x + 30, y + 34, '', 16).setWordWrapWidth(w - 60);
-    this.arrow = scene.add.triangle(x + w - 34, y + h - 26, 0, 0, 16, 0, 8, 10, COLORS.gold).setOrigin(0, 0);
+    this.arrow = scene.add.image(x + w - 26, y + h - 22, UI_ICON_TEXTURE, UI_ICON.nextArrow).setOrigin(0.5);
+    this.arrowBaseY = this.arrow.y;
     this.parts = [this.panel, this.nameTag, this.name, this.body, this.arrow];
     this.parts.forEach((part) => part.setDepth(50).setVisible(false));
 
@@ -784,12 +870,13 @@ class DialogBox {
     this.selectedChoice = null;
     this.isOpen = true;
 
-    this.nameTag.clear();
     if (speaker) {
       this.name.setText(speaker);
-      drawPanel(this.nameTag, x + 16, y - 24, speaker.length * 16 + 36, 40);
+      this.nameTag.setPosition(x + 16, y - 24);
+      this.nameTag.setPanelSize(speaker.length * 16 + 36, 40);
     }
     this.parts.forEach((part) => part.setVisible(true));
+    this.nameTag.setVisible(Boolean(speaker));
     this.name.setVisible(Boolean(speaker));
 
     // A choices-only entry (a question with no lead-in line) skips straight to the list.
@@ -836,6 +923,9 @@ class DialogBox {
   buildChoiceTexts() {
     this.destroyChoiceTexts();
     const { x, y } = this.box;
+    // The UI kit's own cursor sprite (one per row, shown/hidden on highlight) instead of a "> " text
+    // prefix -- every keyboard-driven list in the game now uses the same marker.
+    this.choiceCursors = this.choices.map((choice, i) => makeCursor(this.scene, x + 14, y + 30 + i * 26 + 8).setDepth(51));
     this.choiceTexts = this.choices.map((choice, i) => uiText(this.scene, x + 30, y + 30 + i * 26, choice.text, 16).setDepth(51));
     this.refreshChoiceHighlight();
   }
@@ -843,13 +933,16 @@ class DialogBox {
   refreshChoiceHighlight() {
     this.choiceTexts.forEach((text, i) => {
       const current = i === this.choiceIndex;
-      text.setText(`${current ? '>' : ' '} ${this.choices[i].text}`).setColor(current ? COLORS.highlight : COLORS.text);
+      text.setText(this.choices[i].text).setColor(current ? COLORS.highlight : COLORS.text);
+      this.choiceCursors[i].setVisible(current);
     });
   }
 
   destroyChoiceTexts() {
     (this.choiceTexts || []).forEach((text) => text.destroy());
+    (this.choiceCursors || []).forEach((cursor) => cursor.destroy());
     this.choiceTexts = null;
+    this.choiceCursors = null;
   }
 
   moveChoice(direction) {
@@ -906,7 +999,12 @@ class DialogBox {
       if (shownChars > prevShown && shownChars % 2 === 0) AudioManager.play('dialogBlip');
       if (this.shown >= this.fullText.length) this.typing = false;
     }
-    this.arrow.setVisible(!this.typing && Math.floor(time / 400) % 2 === 0);
+    // Dialog box polish: a real bouncing arrow sprite (UI kit) once the line has finished typing,
+    // never before -- replaces the old blink with a small continuous y-bob (GAME_FEEL.md "nothing is
+    // a flat instant cut"), still never appearing mid-typewriter.
+    const done = !this.typing;
+    this.arrow.setVisible(done);
+    if (done) this.arrow.setY(this.arrowBaseY + Math.abs(Math.sin(time / 200)) * 4);
   }
 }
 
@@ -1008,9 +1106,11 @@ class ControlsPanel {
     this.box = { x, y, w, h };
 
     this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
-    this.panel = scene.add.graphics();
-    drawPanel(this.panel, x, y, w, h);
+    this.panel = makePanel(scene, x, y, w, h);
     this.title = uiText(scene, x + w / 2, y + 30, 'CONTROLS', 16, COLORS.highlight).setOrigin(0.5);
+    // A cursor sprite marks the highlighted *settings* row only (the plain key/action rows below are
+    // display-only, never selectable) -- the same cursor every other keyboard-driven list uses.
+    this.settingCursors = SETTINGS_ROWS.map((id, i) => makeCursor(scene, x + 14, y + headerH + i * rowH + 8).setDepth(115));
     this.rowTexts = rows.flatMap(([key, action], i) => {
       const rowY = y + headerH + i * rowH;
       return [
@@ -1019,7 +1119,7 @@ class ControlsPanel {
       ];
     });
     this.footer = uiText(scene, x + w / 2, y + h - 22, 'ESC / ENTER TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
-    this.parts = [this.dim, this.panel, this.title, ...this.rowTexts, this.footer];
+    this.parts = [this.dim, this.panel, this.title, ...this.settingCursors, ...this.rowTexts, this.footer];
     this.parts.forEach((part) => part.setDepth(115).setVisible(false));
   }
 
@@ -1057,7 +1157,8 @@ class ControlsPanel {
   refreshSettings() {
     SETTINGS_ROWS.forEach((id, i) => {
       const selected = i === this.settingIndex;
-      this.rowTexts[i * 2].setText(`${selected ? '> ' : '  '}${settingLabel(id)}`).setColor(selected ? COLORS.highlight : COLORS.text);
+      this.settingCursors[i].setVisible(selected);
+      this.rowTexts[i * 2].setText(settingLabel(id)).setColor(selected ? COLORS.highlight : COLORS.text);
       this.rowTexts[i * 2 + 1].setText(settingValueText(id)).setColor(selected ? COLORS.highlight : COLORS.text);
     });
   }
@@ -1087,9 +1188,9 @@ class PauseMenu {
     this.box = { x, y, w, h };
 
     this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
-    this.panel = scene.add.graphics();
-    drawPanel(this.panel, x, y, w, h);
+    this.panel = makePanel(scene, x, y, w, h);
     this.title = uiText(scene, x + w / 2, y + 32, 'PAUSED', 16, COLORS.highlight).setOrigin(0.5);
+    this.itemCursors = PAUSE_ITEMS.map((item, i) => makeCursor(scene, x + 22, y + 66 + i * rowH + 8).setDepth(110));
     this.itemTexts = PAUSE_ITEMS.map((item, i) => {
       const text = uiText(scene, x + 40, y + 66 + i * rowH, item.label, 12, COLORS.text);
       text.setInteractive({ useHandCursor: true })
@@ -1097,7 +1198,7 @@ class PauseMenu {
         .on('pointerdown', () => { this.index = i; this.confirm(); });
       return text;
     });
-    this.parts = [this.dim, this.panel, this.title, ...this.itemTexts];
+    this.parts = [this.dim, this.panel, this.title, ...this.itemCursors, ...this.itemTexts];
     this.parts.forEach((part) => part.setDepth(110).setVisible(false));
 
     this.controls = new ControlsPanel(scene);
@@ -1154,7 +1255,8 @@ class PauseMenu {
   refresh() {
     this.itemTexts.forEach((text, i) => {
       const current = i === this.index;
-      text.setText(`${current ? '> ' : '  '}${PAUSE_ITEMS[i].label}`).setColor(current ? COLORS.highlight : COLORS.text);
+      text.setText(PAUSE_ITEMS[i].label).setColor(current ? COLORS.highlight : COLORS.text);
+      this.itemCursors[i].setVisible(current);
     });
   }
 
@@ -1220,21 +1322,21 @@ const HINTS = {
   run: 'HOLD SHIFT TO RUN',
   map: 'PRESS M FOR THE MAP',
 };
-const HINT_Y = 64; // below the location banner (y 12-52), clear of the tutorial checklist (x >= 644)
-const HINT_W = 320; // 320..640 horizontally: stays clear of the checklist panel at x >= 644
-const HINT_H = 36;
 const HINT_FADE_MS = 300;
 const HINT_HOLD_MS = 2600;
 
 class HintBanner {
+  // HUD declutter pass: bottom-center, just above the hotbar (hudLayout's own `hint` box) -- was
+  // stacked under the location banner near the top of the screen; moved so a first-time hint never
+  // competes with the banner/tracker up top, and instead sits right where the thing it's teaching
+  // (WASD, E, Shift, M) is about to be used, next to the hotbar.
   constructor(scene) {
     this.scene = scene;
     this.queue = [];
     this.showing = null;
-    const x = Math.round((GAME_WIDTH - HINT_W) / 2);
-    this.panel = scene.add.graphics().setDepth(70);
-    drawPanel(this.panel, x, HINT_Y, HINT_W, HINT_H);
-    this.text = uiText(scene, GAME_WIDTH / 2, HINT_Y + HINT_H / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(71);
+    const { x, y, w, h } = hudLayout(GAME_WIDTH, GAME_HEIGHT).hint;
+    this.panel = makePanel(scene, x, y, w, h).setDepth(70);
+    this.text = uiText(scene, x + w / 2, y + h / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(71);
     this.parts = [this.panel, this.text];
     this.parts.forEach((part) => part.setAlpha(0));
   }
@@ -1319,8 +1421,7 @@ class Tutorial {
     const x = GAME_WIDTH - w - 16;
     const y = 16;
 
-    const panel = scene.add.graphics();
-    drawPanel(panel, x, y, w, h);
+    const panel = makePanel(scene, x, y, w, h);
     const title = uiText(scene, x + 18, y + 20, 'TUTORIAL', 12, COLORS.highlight);
     this.stepTexts = TUTORIAL_STEPS.map((step, i) => uiText(scene, x + 18, y + 52 + i * 24, '', 8));
     const footer = uiText(scene, x + 18, y + h - 26, 'ESC: pause', 8, COLORS.dim);
@@ -1364,40 +1465,81 @@ class Tutorial {
   }
 }
 
-// ---------- quest tracker (top-right): the current objective + "Keys: n / 3" (M1 leftover) ----------
-// Always on (never a modal, never blocks input) once GameState.quest is meaningfully in play -- which
-// is from the very start, since the 'arrival' stage already has an objective ("find the LUG stall").
-// Same top-right corner the tutorial checklist uses (docs/STYLE_GUIDE.md's own "[quest / tutorial]"
-// layout sketch) -- they never actually appear together, since the checklist only exists on the
-// meadow test map (Tutorial's `stage` is 'done' everywhere else, see above).
+// ---------- quest tracker (top-right): a compact pill, expanding briefly on change ----------
+// HUD declutter pass: used to always show as a multi-line panel ("LUG TREASURE HUNT" title + the full
+// objective sentence + "Keys: n / 3", one of the biggest boxes permanently on screen). Now a single-
+// line pill ("Keys 1/3 · Find the ICVL, 1st floor") the rest of the time, and only expands to the full
+// objective for TRACKER_EXPAND_MS whenever the objective text itself actually changes (a key found, a
+// stage advanced) -- still always on (never a modal, never blocks input), just quieter when nothing
+// changed since the last time she looked. Same top-right corner the tutorial checklist uses
+// (docs/STYLE_GUIDE.md's own "[quest / tutorial]" layout sketch) -- they never actually appear
+// together, since the checklist only exists on the meadow test map (Tutorial's `stage` is 'done'
+// everywhere else, see above).
+
+const TRACKER_EXPAND_MS = 3000;
 
 class QuestTracker {
   constructor(scene) {
     this.scene = scene;
-    this.w = 260;
-    this.x = GAME_WIDTH - this.w - 16;
-    this.y = 16;
+    const layout = hudLayout(GAME_WIDTH, GAME_HEIGHT);
+    this.pillBox = layout.tracker;
+    this.expandedBox = layout.trackerExpanded;
+    this.expanded = false;
+    this.collapseTimer = null;
+    this.lastObjectiveText = null;
 
-    this.panel = scene.add.graphics();
-    this.title = uiText(scene, this.x + 14, this.y + 16, 'LUG TREASURE HUNT', 8, COLORS.highlight);
-    this.objective = uiText(scene, this.x + 14, this.y + 34, '', 8).setWordWrapWidth(this.w - 28, true);
-    this.keysText = uiText(scene, this.x + 14, this.y + 34, '', 8, COLORS.done);
-    this.parts = [this.panel, this.title, this.objective, this.keysText];
+    const { x, y, w, h } = this.pillBox;
+    this.panel = makePanel(scene, x, y, w, h);
+    this.pillText = uiText(scene, x + 14, y + h / 2, '', 8, COLORS.text).setOrigin(0, 0.5);
+    this.title = uiText(scene, x + 14, y + 16, 'LUG TREASURE HUNT', 8, COLORS.highlight).setVisible(false);
+    this.objective = uiText(scene, x + 14, y + 34, '', 8).setWordWrapWidth(this.expandedBox.w - 28, true).setVisible(false);
+    this.keysText = uiText(scene, x + 14, y + 34, '', 8, COLORS.done).setVisible(false);
+    this.parts = [this.panel, this.pillText, this.title, this.objective, this.keysText];
     this.refresh();
   }
 
-  // GAME_FEEL.md rule 1 ("a panel's box is sized from its content"): the objective line can wrap to
-  // more than one row depending on its own text, so the panel's height is measured from the actual
-  // rendered text height after setting it, never assumed to be one line.
   refresh() {
-    this.objective.setText(questObjectiveText(GameState.quest));
-    const keysY = this.y + 34 + this.objective.height + 8;
-    this.keysText.setPosition(this.x + 14, keysY);
+    const text = questObjectiveText(GameState.quest);
     const keysHeld = Object.values(GameState.quest.keys).filter(Boolean).length;
+
+    // The pill's own fixed-width line (GAME_FEEL.md rule 1 doesn't apply here -- see fitTextInWidth's
+    // own comment -- the whole point of a pill is staying one compact size, not growing to fit).
+    fitTextInWidth(this.pillText, `Keys ${keysHeld}/3 · ${text}`, this.pillBox.w - 28, 6, 8);
+
+    this.objective.setText(text);
+    const keysY = this.expandedBox.y + 34 + this.objective.height + 8;
+    this.keysText.setPosition(this.expandedBox.x + 14, keysY);
     this.keysText.setText(`Keys: ${keysHeld} / 3`);
-    const h = keysY + this.keysText.height + 14 - this.y;
-    this.panel.clear();
-    drawPanel(this.panel, this.x, this.y, this.w, h);
+
+    if (text !== this.lastObjectiveText) {
+      this.lastObjectiveText = text;
+      this.expand();
+    }
+  }
+
+  // Widens/heightens to the full objective (title + wrapped sentence + keys line) for a few seconds
+  // whenever refresh() finds the objective actually changed, then collapse() puts the pill back.
+  expand() {
+    this.expanded = true;
+    this.panel.setPosition(this.expandedBox.x, this.expandedBox.y);
+    this.panel.setPanelSize(this.expandedBox.w, this.expandedBox.h);
+    this.pillText.setVisible(false);
+    this.title.setVisible(true);
+    this.objective.setVisible(true);
+    this.keysText.setVisible(true);
+    if (this.collapseTimer) this.collapseTimer.remove();
+    this.collapseTimer = this.scene.time.delayedCall(TRACKER_EXPAND_MS, () => this.collapse());
+  }
+
+  collapse() {
+    this.expanded = false;
+    this.collapseTimer = null;
+    this.panel.setPosition(this.pillBox.x, this.pillBox.y);
+    this.panel.setPanelSize(this.pillBox.w, this.pillBox.h);
+    this.pillText.setVisible(true);
+    this.title.setVisible(false);
+    this.objective.setVisible(false);
+    this.keysText.setVisible(false);
   }
 }
 
@@ -1531,7 +1673,7 @@ class JournalPanel {
     this.maxScroll = 0;
 
     this.dim = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
-    this.panel = scene.add.graphics();
+    this.panel = makePanel(scene, this.x, 0, this.w, 1); // resized in build() once the real height is known
     this.title = uiText(scene, GAME_WIDTH / 2, 0, 'JOURNAL', 16, COLORS.highlight).setOrigin(0.5);
     this.footer = uiText(scene, GAME_WIDTH / 2, 0, 'J / ESC TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
     this.rowTexts = [];
@@ -1595,8 +1737,8 @@ class JournalPanel {
     this.maxScroll = Math.max(0, rowsH - this.viewportH);
     this.scroll = Phaser.Math.Clamp(this.scroll, 0, this.maxScroll);
 
-    this.panel.clear();
-    drawPanel(this.panel, this.x, y, this.w, h);
+    this.panel.setPosition(this.x, y);
+    this.panel.setPanelSize(this.w, h);
     this.title.setPosition(GAME_WIDTH / 2, y + 26);
     this.footer.setText(this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- J / ESC TO CLOSE' : 'J / ESC TO CLOSE');
     this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);

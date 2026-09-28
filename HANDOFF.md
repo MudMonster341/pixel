@@ -14,7 +14,11 @@ follow it, don't invent story.
 Phaser 3 from local files, plain script tags, **no build step** for the game itself. Node is only for
 dev tooling. Delivered as a Windows .exe ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
 
-## Status: PAUSED (2026-09-27)
+## Status (2026-09-28): Phase A (build) complete, Phase B (quality loop) next
+
+All premium-pass stages are merged on `main`; the full test round + fix round is done (ERR-0008/0009 and a save-deletion race fixed). Next: the quality loop in [docs/QUALITY_LOOP.md](docs/QUALITY_LOOP.md): one category per run, rate in [docs/quality/scorecard.md](docs/quality/scorecard.md), fix, repeat. The section below is the earlier pause snapshot, kept for history.
+
+## Earlier snapshot: PAUSED (2026-09-27)
 
 The owner asked to pause everything. As of the pause:
 - No agents or servers are running.
@@ -35,10 +39,10 @@ tracked as FB-0027..FB-0034; the code-review findings are FB-0035..FB-0043. The 
 | 1b | Music, sound, volume (`feature/audio`) | **Merged + pushed** |
 | 2 | Research | **Done.** [campus-visual-reference.md](docs/research/campus-visual-reference.md) (32 photos, per-space build specs), [asset-packs-2026-09-26.md](docs/research/asset-packs-2026-09-26.md). Ninja Adventure (CC0) downloaded for palms/trees/flags/FX/UI |
 | 3 | Depth engine ([ADR 0015](decisions/0015-depth-groups-and-door-entry.md)) | **Merged + pushed.** Y-sorted depth groups, feet-based depth, Pokémon door entry/exit, locked-door rattle, camera lerp, running dust |
-| 4 | Campus art (FB-0027/0028/0029) | **WIP, unreviewed**, branch `worktree-agent-a3b2fc0b219dea823` (last commit `c02913f`). Round 3: rebuilding the outdoor look on Kenney's RPG Urban Pack (CC0): concrete sidewalks, BITS buildings from Kenney parts recoloured to sand/terracotta, glass-front Main Block entrance with columns + canopy + compact navy sign, bright palms, flag poles, bus stop. Rounds 1-2 were rejected at review (still read as brick; the entrance read as a box). It stopped just after saving 5 screenshots it hadn't reviewed yet |
-| 5 | Interiors rebuild, foyer per the owner's photo (FB-0030/0031) | Not started (waits on stage 4: both change `assets/tiles.png`) |
-| 6 | In-world cutscenes + opening + onboarding ([ADR 0016](decisions/0016-cutscenes-play-in-the-game-world.md), FB-0032/0033) | **WIP, unreviewed**, branch `worktree-agent-a459f3366dea619e6` (last commit `e3eb7b6`). Script runner in WorldScene, new opening on the live campus, Mustafa NPC (npc-mustafa.png), destination markers. Stopped mid-way through the entrance/key-room beats. It was asked to list every new dialogue line for the owner's approval |
-| 7 | Finish: temporary card, UI kit, performance, QA at window sizes, README for the recipient (FB-0034) | Not started |
+| 4 | Campus art (FB-0027/0028/0029) | **Merged.** Rebuilt on Kenney RPG Urban Pack (CC0): concrete sidewalks, sand/terracotta BITS facades, glass-front Main Block entrance with columns/canopy/navy sign/steps, bright palms, flag poles, bus stop, depth groups |
+| 5 | Interiors rebuild (FB-0030/0031) | **Merged.** Main Block floors now compact 40x40; foyer per the owner's photo; furnished ICVL, Room 195, Physics Lab. Known: 1-tile walls, hand-drawn foyer set pieces |
+| 6 | In-world cutscenes + opening + onboarding (ADR 0016, FB-0032/0033) | **Merged.** Script runner, opening on the live campus, bus + Mustafa in-world, destination arrow/markers, entrance and key-room beats. 5 new lines await owner approval (FB-0032) |
+| 7 | Finish (FB-0034) | **Merged:** temporary card, README, UI kit + HUD declutter. Performance and window-size QA move into the quality loop |
 
 **Owner decisions in this pass:** free art packs only (declined buying LimeZu Modern Exteriors,
 2026-09-27); downloading free packs is approved; the keys leave the bag when handed in.

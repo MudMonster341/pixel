@@ -892,3 +892,26 @@ new card tests), and `tools/make-card-art.js`'s output was regenerated and match
 (`assets.test.js` passes), but `tests/e2e/ending.spec.js` and a look at the actual card in
 `npm start` are still outstanding before this is fully checked off -- run those next, then the rest of
 stage 7 (UI kit polish, performance, QA at window sizes).
+
+## 2026-09-28 — Phase A (build) complete; one test round, one fix round
+
+**Did:** under the owner's build-first rule (docs/QUALITY_LOOP.md), merged without e2e runs: the
+Kenney-kit campus art rebuild, in-world cutscenes + connected opening + Mustafa + onboarding markers
+(ADR 0016), the temporary card + README, the Main Block interiors rebuild (4 compact 40x40 floors,
+foyer per the owner's photo, furnished key rooms), and the UI kit + HUD declutter (Kenney Pixel UI
+9-slice, hudLayout). Unit tests 394/394. The one full round then gave 138 passed / 10 failed; one fix
+agent found three real bugs: ERR-0008 (stale overheadLayer crashed every campus->interior door),
+ERR-0009 (depth-group baking took 5.3 s per campus load; batched to ~0.1-0.2 s, regression test
+added), and deleteProfile() not cancelling a pending autosave. Full runs after: 149/149, then 148/149
+(one known load flake in interiors.spec.js, passes alone 3/3). Pushed.
+
+**Why:** the owner's rule: build the whole flow fast, then test once, fix once, then rate and fix by
+category.
+
+**Decisions:** none new. Owner approval of 5 new dialogue lines is pending in FB-0032.
+
+**Failures:** see the three bugs above; merge conflicts only in MEMORY.md and one trivial one in
+src/scenes/card.js (both preload blocks kept).
+
+**Next:** Phase B, the quality loop: rate category by category, starting with Outdoor art (1) and
+Interior art (2).

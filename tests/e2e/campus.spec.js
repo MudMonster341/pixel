@@ -79,6 +79,22 @@ test('the location banner announces the campus on start, then a specific area wh
   expect((await state(page)).locationBanner).toEqual({ visible: false, text: 'STUDENT PARKING' });
 });
 
+// Quality-loop category 4 run 2: the banner moved to the same top-left corner the minimap occupies
+// (Pokemon-style plate, was a top-center bar sitting over the Main Block's own sign) -- the minimap
+// fades out for as long as the banner is on screen instead of the two fighting for the same spot.
+test('the minimap hides while the location banner is showing in the same corner, and returns after', async ({ page }) => {
+  await openGame(page, { map: null });
+  await expect.poll(async () => (await state(page)).locationBanner.visible).toBe(true);
+  await page.waitForTimeout(250); // past the fade
+  expect(await page.evaluate(() => game.scene.getScene('ui').minimap.bannerShowing)).toBe(true);
+  expect(await page.evaluate(() => game.scene.getScene('ui').minimap.parts[0].alpha)).toBeLessThan(0.05);
+
+  await expect.poll(async () => (await state(page)).locationBanner.visible, { timeout: 5_000 }).toBe(false);
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(() => game.scene.getScene('ui').minimap.bannerShowing)).toBe(false);
+  expect(await page.evaluate(() => game.scene.getScene('ui').minimap.parts[0].alpha)).toBeGreaterThan(0.9);
+});
+
 // P5 QA: the "overhead" Tiled layer (tree/palm canopies, ADR 0008) must always draw above the
 // player, wherever the player is (its depth is a constant far above any character's own y-based
 // depth, world.js OVERHEAD_DEPTH) -- checked both at spawn and after walking, so a future change to

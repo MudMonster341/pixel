@@ -302,3 +302,24 @@ test('FB-0023: each first-time hint shows once, is remembered in the save, and n
   expect(after.alpha).toBe(0);
   expect((await state(page)).seenHints).toEqual(expect.arrayContaining(['move', 'run']));
 });
+
+// Quality-loop category 4 run 2: the title/greeting/name/customize backdrop used to be a 1px-per-tile
+// canvas (a blurry schematic); it's now a real Phaser Tilemap built from the same 'tiles' tileset/
+// campus map the actual game uses (src/scenes/opening-backdrop.js), with no physics bodies or NPCs.
+test('quality-loop category 4 run 2: the title backdrop is a real tilemap, not the old 1px-per-tile canvas', async ({ page }) => {
+  const { errors } = await openTitle(page, { map: null });
+  const backdrop = await page.evaluate(() => {
+    const t = game.scene.getScene('title');
+    return {
+      layerCount: t.bg.length,
+      layerNames: t.bg.map((l) => l.layer.name),
+      scale: t.bg[0].scaleX,
+      oldTextureStillExists: game.textures.exists('campus-pan'),
+    };
+  });
+  expect(backdrop.layerCount).toBeGreaterThanOrEqual(2); // ground + structures at least
+  expect(backdrop.layerNames).toEqual(expect.arrayContaining(['ground', 'structures']));
+  expect(backdrop.scale).toBe(3); // ZOOM -- "the real zoom", not a scaled-up thumbnail
+  expect(backdrop.oldTextureStillExists).toBe(false);
+  expect(errors).toEqual([]);
+});

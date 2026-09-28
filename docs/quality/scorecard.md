@@ -9,9 +9,9 @@ building. Target: 8+ in every area.
 | 1 | Outdoor art | 5 | 2026-09-28 (run 2) | entrance steps read as flat brown bars; Hostel A shot still shows only a field (no hostel, no player); Mechanical shadow still a grey band |
 | 2 | Interior art | 4 | 2026-09-28 (run 2) | floor is a loud high-contrast checker; foyer staircase still vertical rails; ICVL a solid grid of desks with no aisles; Physics Lab a uniform warehouse grid |
 | 3 | Characters and depth | — | — | |
-| 4 | UI and menus | — | — | (HUD clutter at the top: minimap, banner, hint and tracker all compete) |
+| 4 | UI and menus | — | — | (seen in cutscene-02-dialog.png: the first-time hint banner draws on top of the dialog box; minimap + tracker stay visible during cutscenes; the dialog box is clipped by the letterbox bar; full rating waits on qa:shots completing) |
 | 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
-| 6 | Cutscenes | — | — | (owner: choppy and disconnected; being rebuilt in-world) |
+| 6 | Cutscenes | — | — | (the in-world Gate 2 beat looks good; qa:shots times out waiting for the Gate 2 script to end) |
 | 7 | Mini-games | — | — | |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |

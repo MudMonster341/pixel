@@ -252,7 +252,7 @@
       "name": "bitsRoof",
       "solid": true,
       "overhead": false,
-      "color": "#9f9284"
+      "color": "#9b9387"
     },
     {
       "name": "bitsWall",
@@ -270,7 +270,7 @@
       "name": "otherRoof",
       "solid": true,
       "overhead": false,
-      "color": "#9fa3ad"
+      "color": "#a3a8b2"
     },
     {
       "name": "otherWall",
@@ -1086,7 +1086,7 @@
       "name": "lampPost",
       "solid": true,
       "overhead": false,
-      "color": "#659d63"
+      "color": "#6bb265"
     },
     {
       "name": "bench",
@@ -1260,37 +1260,37 @@
       "name": "bitsPorticoGlassTop",
       "solid": true,
       "overhead": false,
-      "color": "#b8b9c8"
+      "color": "#bbacb0"
     },
     {
       "name": "bitsPorticoGlassMid",
       "solid": true,
       "overhead": false,
-      "color": "#c7c4d2"
+      "color": "#ccb9bc"
     },
     {
       "name": "bitsPorticoGlassBase",
       "solid": false,
       "overhead": false,
-      "color": "#b3c1c9"
+      "color": "#bdb6b5"
     },
     {
       "name": "bitsStep1",
       "solid": false,
       "overhead": false,
-      "color": "#d5c5bc"
+      "color": "#b18477"
     },
     {
       "name": "bitsStep2",
       "solid": false,
       "overhead": false,
-      "color": "#dedbd5"
+      "color": "#a68e6e"
     },
     {
       "name": "bitsStep3",
       "solid": false,
       "overhead": false,
-      "color": "#d2cfc9"
+      "color": "#8d7759"
     },
     {
       "name": "bitsSignSeg0",
@@ -1447,6 +1447,72 @@
       "solid": true,
       "overhead": false,
       "color": "#c1b4a3"
+    },
+    {
+      "name": "lampPostTop",
+      "solid": false,
+      "overhead": true,
+      "color": "#706e70"
+    },
+    {
+      "name": "bitsRoofB",
+      "solid": true,
+      "overhead": false,
+      "color": "#9a9184"
+    },
+    {
+      "name": "bitsRoofC",
+      "solid": true,
+      "overhead": false,
+      "color": "#92897e"
+    },
+    {
+      "name": "otherRoofB",
+      "solid": true,
+      "overhead": false,
+      "color": "#a1a5ae"
+    },
+    {
+      "name": "otherRoofC",
+      "solid": true,
+      "overhead": false,
+      "color": "#989ca6"
+    },
+    {
+      "name": "lawn3",
+      "solid": false,
+      "overhead": false,
+      "color": "#56a54a"
+    },
+    {
+      "name": "lawn4",
+      "solid": false,
+      "overhead": false,
+      "color": "#539c45"
+    },
+    {
+      "name": "lawn5",
+      "solid": false,
+      "overhead": false,
+      "color": "#5db554"
+    },
+    {
+      "name": "gateSign",
+      "solid": true,
+      "overhead": false,
+      "color": "#b6a393"
+    },
+    {
+      "name": "securityBooth",
+      "solid": true,
+      "overhead": false,
+      "color": "#9f8e7d"
+    },
+    {
+      "name": "barrierArm",
+      "solid": false,
+      "overhead": false,
+      "color": "#916c69"
     }
   ]
 }

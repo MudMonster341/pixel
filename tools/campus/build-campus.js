@@ -71,6 +71,9 @@ const REQUIRED_TILES = [
   'bitsFacadeShadow', 'bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase', 'bitsStep1', 'bitsStep2', 'bitsStep3',
   // premium pass round 3 (2026-09-27): the flag's overhead top-of-pole tile, and a bus stop sign prop.
   'flagTopYellow', 'flagTopBlue', 'flagTopRed', 'busStopSign',
+  // quality loop, category 1 run 1 (2026-09-28): 2-tile lamp, roof/lawn variety, and Gate 2's props.
+  'lampPostTop', 'bitsRoofB', 'bitsRoofC', 'otherRoofB', 'otherRoofC', 'lawn3', 'lawn4', 'lawn5',
+  'gateSign', 'securityBooth', 'barrierArm',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -583,8 +586,23 @@ console.log(`campus frame: fence ${((fenceFrame.u1 - fenceFrame.u0)).toFixed(0)}
 
 // ================= 8. ground fill: lawn inside the fence + DIAC ring, sand (desert) elsewhere =================
 
+// Quality loop, category 1 run 1 (2026-09-28): "lawn tufts repeat on a rigid grid (wallpaper
+// look)" -- this used to alternate lawn/lawn2 on a strict 6x6-tile checkerboard, and lawn2 is one
+// static pre-rendered tile (always the same tuft), so the exact same tuft stamped out a printed
+// grid. Two-scale deterministic hash instead (the same `hash()` scatterTrees below already uses, so
+// this stays reproducible): a coarse 8-tile region decides whether that whole patch allows any tuft/
+// flower variety at all (most don't -- "keep large plain areas"), and inside an eligible region a
+// per-tile hash picks a specific variant, still mostly plain, so growth reads as small natural
+// clusters instead of either a uniform lawn or a repeating stamp.
 function lawnPatch(x, y) {
-  return (Math.floor(x / 6) + Math.floor(y / 6)) % 2 === 0 ? TILE.lawn : TILE.lawn2;
+  const region = hash(Math.floor(x / 8), Math.floor(y / 8));
+  if (region % 5 !== 0) return TILE.lawn;
+  const h = hash(x, y);
+  const pick = h % 10;
+  if (pick < 6) return TILE.lawn;
+  if (pick < 8) return TILE.lawn2;
+  if (pick === 8) return TILE.lawn3;
+  return (h >>> 4) % 2 === 0 ? TILE.lawn4 : TILE.lawn5;
 }
 forRectFrame(fenceFrame.u0, fenceFrame.v0, fenceFrame.u1, fenceFrame.v1, (x, y) => (ground[y * W + x] = lawnPatch(x, y)));
 {
@@ -603,7 +621,13 @@ for (const b of buildingList) footprintCells(b, (x, y) => (roofOwner[y * W + x] 
 
 function drawBuilding(b, index) {
   const bits = b.style === 'bits';
-  const roofFlat = bits ? TILE.bitsRoof : TILE.otherRoof;
+  // Quality loop, category 1 run 1 (2026-09-28): "flat roofs read as a floor grid" -- mostly because
+  // flatRoof() used to bake a 1px border into every single tile (fixed, see that function's own
+  // comment), but even with that gone, the exact same speckle texture repeated across dozens of
+  // tiles still reads as a stamp. Three variants (plain/AC-unit/hatch, tools/make-assets.js) mixed in
+  // by the same deterministic per-position hash scatterTrees uses, below, so a big roof shows a mix
+  // of real rooftop clutter instead of one texture tiled everywhere.
+  const roofFlatVariants = bits ? [TILE.bitsRoof, TILE.bitsRoofB, TILE.bitsRoofC] : [TILE.otherRoof, TILE.otherRoofB, TILE.otherRoofC];
   const roofT = bits ? TILE.bitsRoofT : TILE.otherRoofT;
   const roofL = bits ? TILE.bitsRoofL : TILE.otherRoofL;
   const roofR = bits ? TILE.bitsRoofR : TILE.otherRoofR;
@@ -643,7 +667,7 @@ function drawBuilding(b, index) {
     const topEdge = !inBuilding(x, y - 1);
     const leftEdge = !inBuilding(x - 1, y);
     const rightEdge = !inBuilding(x + 1, y);
-    let tile = roofFlat;
+    let tile = roofFlatVariants[hash(x, y) % roofFlatVariants.length];
     if (topEdge && leftEdge) tile = roofTL;
     else if (topEdge && rightEdge) tile = roofTR;
     else if (topEdge) tile = roofT;
@@ -1235,19 +1259,42 @@ const roundaboutCenter = [gate2U, fenceFrame.v1 - RA.avenueToRoundaboutMeters - 
 paveRectFrame(gate2U - AVENUE_W / 2, roundaboutCenter[1] + roundaboutOuterHalf, gate2U + AVENUE_W / 2, fenceFrame.v1, 'asphalt', 'v');
 
 // The roundabout: a paved square junction (kept axis-aligned/rectilinear -- ADR 0009 rules out a
-// true circular kerb, which would need diagonal tiles) with a lawn-and-hedge traffic island in the
-// middle, the same hedge-ring technique the tennis courts use.
+// true circular kerb, which would need diagonal tiles). Quality loop, category 1 run 1 (2026-09-28):
+// "a proper circular or rounded island with a planted centre... and a kerb ring, not a flat grass
+// square" -- ADR 0009 still stands (no diagonal tiles), so "rounded" here is the same kerb-corner
+// treatment every other paved rectangle in this file already gets (kerbTL/TR/BL/BR soften the
+// corners): a real paved kerb ring around the island instead of a bare hedge outline, a hedge border
+// just inside the kerb, and a single palm planted dead centre as the landmark instead of empty lawn.
 paveRectFrame(roundaboutCenter[0] - roundaboutOuterHalf, roundaboutCenter[1] - roundaboutOuterHalf, roundaboutCenter[0] + roundaboutOuterHalf, roundaboutCenter[1] + roundaboutOuterHalf, 'asphalt');
 forRectFrame(roundaboutCenter[0] - roundaboutIslandHalf, roundaboutCenter[1] - roundaboutIslandHalf, roundaboutCenter[0] + roundaboutIslandHalf, roundaboutCenter[1] + roundaboutIslandHalf, (x, y) => {
   ground[y * W + x] = lawnPatch(x, y);
 });
-for (let x = gx(roundaboutCenter[0] - roundaboutIslandHalf) - 1; x <= gx(roundaboutCenter[0] + roundaboutIslandHalf); x++) {
-  structOnLawn(x, gy(roundaboutCenter[1] - roundaboutIslandHalf) - 1, TILE.hedge);
-  structOnLawn(x, gy(roundaboutCenter[1] + roundaboutIslandHalf), TILE.hedge);
-}
-for (let y = gy(roundaboutCenter[1] - roundaboutIslandHalf); y < gy(roundaboutCenter[1] + roundaboutIslandHalf); y++) {
-  structOnLawn(gx(roundaboutCenter[0] - roundaboutIslandHalf) - 1, y, TILE.hedge);
-  structOnLawn(gx(roundaboutCenter[0] + roundaboutIslandHalf), y, TILE.hedge);
+{
+  const ix0 = gx(roundaboutCenter[0] - roundaboutIslandHalf);
+  const iy0 = gy(roundaboutCenter[1] - roundaboutIslandHalf);
+  const ix1 = gx(roundaboutCenter[0] + roundaboutIslandHalf);
+  const iy1 = gy(roundaboutCenter[1] + roundaboutIslandHalf);
+  for (let x = ix0; x < ix1; x++) {
+    structOnLawn(x, iy0 - 1, TILE.kerbT);
+    structOnLawn(x, iy1, TILE.kerbB);
+  }
+  for (let y = iy0; y < iy1; y++) {
+    structOnLawn(ix0 - 1, y, TILE.kerbL);
+    structOnLawn(ix1, y, TILE.kerbR);
+  }
+  structOnLawn(ix0 - 1, iy0 - 1, TILE.kerbTL);
+  structOnLawn(ix1, iy0 - 1, TILE.kerbTR);
+  structOnLawn(ix0 - 1, iy1, TILE.kerbBL);
+  structOnLawn(ix1, iy1, TILE.kerbBR);
+  for (let x = ix0; x < ix1; x++) {
+    structOnLawn(x, iy0, TILE.hedge);
+    structOnLawn(x, iy1 - 1, TILE.hedge);
+  }
+  for (let y = iy0; y < iy1; y++) {
+    structOnLawn(ix0, y, TILE.hedge);
+    structOnLawn(ix1 - 1, y, TILE.hedge);
+  }
+  plantTree(Math.floor((ix0 + ix1) / 2) - 1, Math.floor((iy0 + iy1) / 2) - 1, 'palm');
 }
 
 // Entrance parking, both sides of the road just past the roundabout (owner: "parking on the left and
@@ -1687,8 +1734,15 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
   const kind = AVENUE_PROP_KIND[i % AVENUE_PROP_KIND.length];
   const leftX = gx(gate2U - AVENUE_W / 2) - 5;
   const rightX = gx(gate2U + AVENUE_W / 2) + 3;
-  if (structOnLawn(leftX, y, TILE[kind])) { if (kind === 'lampPost') addDepthGroup('lampPost', leftX, y, 1, 1); }
-  if (structOnLawn(rightX, y, TILE[kind])) { if (kind === 'lampPost') addDepthGroup('lampPost', rightX, y, 1, 1); }
+  // Quality loop, category 1 run 1 (2026-09-28): the lamp is now a real 2-tile pole (make-assets.js
+  // lampPost/lampPostTop's own comment) -- place the matching overhead top tile one row north of the
+  // base, the same pattern plantTree/the flag-pole loop already use for their own overhead pieces.
+  if (structOnLawn(leftX, y, TILE[kind])) {
+    if (kind === 'lampPost') { addDepthGroup('lampPost', leftX, y, 1, 1); if (inGrid(leftX, y - 1)) overhead[(y - 1) * W + leftX] = TILE.lampPostTop; }
+  }
+  if (structOnLawn(rightX, y, TILE[kind])) {
+    if (kind === 'lampPost') { addDepthGroup('lampPost', rightX, y, 1, 1); if (inGrid(rightX, y - 1)) overhead[(y - 1) * W + rightX] = TILE.lampPostTop; }
+  }
 }
 
 // Coordinator review round 2, point D: the staircase/planters/flags are placed in section 16.5,
@@ -1703,6 +1757,29 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
   structOnLawn(gx(gate2U - AVENUE_W / 2) - 2, gateRow, TILE.bollard);
   structOnLawn(gx(gate2U + AVENUE_W / 2) + 2, gateRow, TILE.bollard);
   structOnLawn(gx(gate2U - AVENUE_W / 2) - 4, gateRow + 2, TILE.busStopSign);
+}
+
+// Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the BITS
+// sign, a security booth, a barrier arm, and planters with plants" -- Gate 2 used to be just a
+// crossing band in the fence with a couple of bollards further in, nothing that read as an actual
+// gate. Built right at the fence line itself, straddling the avenue: a terracotta column (the same
+// `bitsPillar` the Main Block portico uses) either side, a compact "BITS" plaque centred above them,
+// a small security booth beside the east pillar, a red/white barrier arm across the avenue itself
+// (non-solid -- purely visual, on top of the road, never blocks the player), and a real planter
+// (Kenney's own flower box, not bare ground) beside each pillar.
+{
+  const gateLineRow = gy(fenceFrame.v1) - 1;
+  const leftPillarX = gx(gate2U - AVENUE_W / 2) - 1;
+  const rightPillarX = gx(gate2U + AVENUE_W / 2) + 1;
+  if (structOnLawn(leftPillarX, gateLineRow, TILE.bitsPillar)) wallOwner[gateLineRow * W + leftPillarX] = -2;
+  if (structOnLawn(rightPillarX, gateLineRow, TILE.bitsPillar)) wallOwner[gateLineRow * W + rightPillarX] = -2;
+  if (inGrid(leftPillarX, gateLineRow - 1) && roofOwner[(gateLineRow - 1) * W + leftPillarX] === -1) structures[(gateLineRow - 1) * W + leftPillarX] = TILE.gateSign;
+  structOnLawn(rightPillarX + 1, gateLineRow, TILE.securityBooth);
+  structOnLawn(leftPillarX, gateLineRow + 1, TILE.planter);
+  structOnLawn(rightPillarX, gateLineRow + 1, TILE.planter);
+  for (let x = leftPillarX + 1; x <= rightPillarX - 1; x++) {
+    if (inGrid(x, gateLineRow)) structures[gateLineRow * W + x] = TILE.barrierArm;
+  }
 }
 
 // A low decorative fence along each gate-side parking lot's near (avenue-facing) edge.
@@ -1825,8 +1902,13 @@ if (mainBlock.frontBand) {
   // Coordinator review round 2, point D: the wide 3-row staircase (walkable, ground layer) below the
   // portico -- placed here, after the forecourt paving above, so it isn't immediately overwritten by
   // it. Planters at the staircase's own ends, and the flag row further out on the forecourt.
-  const stepX0 = doorX0 - 3;
-  const stepX1 = doorX1 + 3;
+  // Quality loop, category 1 run 1 (2026-09-28): the steps used to stop 3 tiles either side of the
+  // door (narrower than the portico itself), leaving a bare strip of the forecourt's own red-brown
+  // paver exposed right against the wall on both flanks -- "red brick patches either side of the
+  // steps". Widened to the same width as the forecourt plaza (px0/px1, above) so the steps now run
+  // the full entrance width and there's no leftover paver strip flanking them.
+  const stepX0 = px0;
+  const stepX1 = px1;
   [[doorY + 1, 'bitsStep1'], [doorY + 2, 'bitsStep2'], [doorY + 3, 'bitsStep3']].forEach(([y, name]) => {
     for (let x = stepX0; x <= stepX1; x++) {
       if (inGrid(x, y) && roofOwner[y * W + x] === -1) ground[y * W + x] = TILE[name];

@@ -76,6 +76,12 @@ const PALETTE = {
   // genuinely red arch band for the Main Block's grand entrance (the existing '&' trim is salmon,
   // too close to the wall body to read as "a red arch" on its own).
   wallHi: '#f2ddb8', baseCool: '#6b7280', archRed: '#9c3a28',
+  // Quality loop, category 1 run 2 (2026-09-28): the entrance steps used '-'/'D'/'d' for their own
+  // "light stone" tread face -- those are actually the old dirt-path/paving-bevel keys (salmon-tan
+  // and brown), never light at all, which is the real reason the steps read as "flat dark brown
+  // bars" even after round 3's redesign moved away from the Kenney staircase crop. Three genuinely
+  // pale cream-grey tones instead, close in lightness to the Kenney sidewalk they sit next to.
+  stepLight: '#e8e4d8', stepMid: '#d6d0c0', stepDark: '#c2bbaa',
   // FB-0022 (QA): flat concrete roof (from directly above, this is the whole tile) -- a
   // darker/greyer tone than it used to be, deliberately distinct from both the reddish-brown brick
   // paving ('7'/'-'/'_' below) and the blue-grey "other building" roof ('~'), so a roof never reads
@@ -1645,9 +1651,16 @@ function bitsFacadeBase(img, x, y) {
 // -- not a shadow, a glitch-looking stripe. Now a soft gradient instead: strongest right at the wall
 // (still well under half-black) fading to fully transparent by the tile's own far edge, so it reads
 // as one soft contact shadow cast onto the ground, not a hard-edged band.
+// Quality loop, category 1 run 2 (2026-09-28): "still reads as a grey band on the Mechanical
+// plaza" -- round 2's fade spanned the tile's *whole* 16px depth, so even its faded tail still
+// tinted most of the tile a visible grey across a wide plaza. Peak alpha halved (28, ~11%, down
+// from 56/~22%) and the fade now reaches zero by row 6 instead of row 16, so the effect reads as a
+// soft tint hugging the one row directly under the facade, not a band running the tile's full depth.
 function bitsFacadeShadow(img, x, y) {
+  const peak = 28;
+  const fadeRows = 6;
   for (let yy = 0; yy < TILE; yy++) {
-    const alpha = Math.round(56 * (1 - yy / TILE));
+    const alpha = Math.round(peak * Math.max(0, 1 - yy / fadeRows));
     if (alpha <= 0) continue;
     for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, 0, 0, 0, alpha);
   }
@@ -2203,15 +2216,20 @@ function bitsPorticoGlassBase(img, x, y) {
 // shallow shadowed riser band (~5px) below it -- no vertical lines at all, so three of these stacked
 // read as shallow horizontal steps the full width of the entrance (build-campus.js widens the step
 // run to the forecourt's own width, removing the bare paver strip that used to flank a narrower run).
+// Quality loop, category 1 run 2 (2026-09-28): "steps read as two flat dark brown bars... must be
+// LIGHT stone (cream/pale grey like the sidewalk)... a light tread top (~11px) with a thin darker
+// riser line (~3-4px)". Face keys are now stepLight/Mid/Dark (genuinely pale, PALETTE's own
+// comment on why the old '-'/'D'/'d' choice was wrong); the riser is a plain 4px neutral-grey band
+// (baseCool, already used for plinths elsewhere -- a cool grey, never brown), not the majority of
+// the tile.
 function bitsStepTread(img, x, y, faceKey) {
-  img.fill(x, y, TILE, 10, faceKey); // the tread's own light top face
-  img.fill(x, y + 10, TILE, 1, '%'); // nosing shadow, the tread's own front edge
-  img.fill(x, y + 11, TILE, 5, 'baseCool'); // riser, in shadow
-  img.fill(x, y + 11, TILE, 1, 'K'); // crisp dark line where the riser meets the tread above
+  img.fill(x, y, TILE, 11, faceKey); // light stone tread face
+  img.fill(x, y + 11, TILE, 1, 'K'); // crisp line where the riser meets the tread above
+  img.fill(x, y + 12, TILE, 4, 'baseCool'); // riser, thin and in shadow
 }
-function bitsStep1(img, x, y) { bitsStepTread(img, x, y, '-'); }
-function bitsStep2(img, x, y) { bitsStepTread(img, x, y, 'D'); }
-function bitsStep3(img, x, y) { bitsStepTread(img, x, y, 'd'); }
+function bitsStep1(img, x, y) { bitsStepTread(img, x, y, 'stepLight'); }
+function bitsStep2(img, x, y) { bitsStepTread(img, x, y, 'stepMid'); }
+function bitsStep3(img, x, y) { bitsStepTread(img, x, y, 'stepDark'); }
 
 // A tight 4x6 pixel font (the coordinator's "1px spacing... several letters per tile" -- the old
 // 5x7-one-tile-per-character version spelled the message across the *whole* facade). 4 wide + 1px

@@ -1810,7 +1810,14 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
   };
   placeNear(leftPillarX - 1, TILE.planter);
   placeNear(rightPillarX + 2, TILE.planter);
-  for (let x = leftPillarX + 1; x <= rightPillarX - 1; x++) {
+  // Quality loop, category 1 run 2 (2026-09-28): "the barrier spans the full width like a stripe...
+  // make it a short arm (3-4 tiles) from the booth over the inbound lane only" -- a real boom
+  // barrier is one arm pivoting from its own post beside the booth, not a wall across both lanes.
+  // Anchored right next to the security booth (east side), extending 4 tiles towards the avenue's
+  // own centre -- the inbound (east) lane only, leaving the outbound (west) lane clear.
+  const barrierLen = Math.max(0, Math.min(4, rightPillarX - leftPillarX - 2));
+  for (let i = 0; i < barrierLen; i++) {
+    const x = rightPillarX - 1 - i;
     if (inGrid(x, gateLineRow)) structures[gateLineRow * W + x] = TILE.barrierArm;
   }
 }

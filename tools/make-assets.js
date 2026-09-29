@@ -2679,9 +2679,27 @@ function intLocker(img, x, y) {
 function intPrinter(img, x, y) {
   blitRect(img, x, y, COOL_SCHOOL.printer, { maxW: 14, maxH: 10, bottomPad: 3, remap: remapSchoolScreen });
 }
+// Bug (found via a rainbow-glitch qa-shot, docs/research/premium-pass/cutscenes/12-key-room-beat-
+// physics-lab.png): `intBooksStack` was the one Cool School piece in the whole file that never got
+// the pack's own "recolor onto this game's ramp" treatment every other piece gets (see
+// remapSchoolWood's own comment, above) -- left in the pack's raw "pastel pink/purple/orange", which
+// reads as a rainbow glitch once several copies sit next to each other. A bucketed luminance ramp
+// (like remapSchoolWood) collapsed the sprite's own shading into a shapeless blob, so this is a
+// *continuous* single-hue tint instead: every pixel keeps its exact original brightness, just
+// recoloured toward one warm book-cover brown -- preserves the source art's own light/dark contrast
+// (the shape that actually reads as "books"), not just its silhouette.
+function remapBooksHue(r, g, b, a) {
+  if (a === 0) return [r, g, b, a];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (lum < 35) return [...hexToRgb('#1a1c2c'), a]; // keep the art's own outline near-black
+  const t = Math.min(1, lum / 255);
+  const shade = 0.35 + t * 0.9;
+  const [tr, tg, tb] = [150, 92, 48]; // a warm book-cover brown-red
+  return [Math.min(255, Math.round(tr * shade)), Math.min(255, Math.round(tg * shade)), Math.min(255, Math.round(tb * shade)), a];
+}
 // A small pile of books -- decorative clutter for library tables/classroom desks.
 function intBooksStack(img, x, y) {
-  blitRect(img, x, y, COOL_SCHOOL.books, { maxW: 12, maxH: 10, bottomPad: 3 });
+  blitRect(img, x, y, COOL_SCHOOL.books, { maxW: 12, maxH: 10, bottomPad: 3, remap: remapBooksHue });
 }
 // A globe on a stand -- classroom/library decoration, LimeZu's own sprite.
 function intGlobe(img, x, y) {

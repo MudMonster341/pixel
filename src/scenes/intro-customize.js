@@ -44,9 +44,10 @@ class CustomizeScene extends Phaser.Scene {
     this.index = Math.max(0, CLOTHES_OPTIONS.findIndex((o) => o.id === startId));
 
     // FB-0032: the same live campus pan the rest of the opening chain sits on, crossfaded in.
-    buildCampusPanBackdrop(this, { alpha: 0.18 });
+    // Quality loop (Cutscenes run 1): brighter resting dim, same reasoning as intro-name.js.
+    buildCampusPanBackdrop(this, { alpha: 0.3 });
     this.dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.9).setOrigin(0, 0);
-    this.tweens.add({ targets: this.dim, fillAlpha: 0.7, duration: 200 });
+    this.tweens.add({ targets: this.dim, fillAlpha: 0.35, duration: 200 });
 
     uiText(this, GAME_WIDTH / 2, 48, `Nice to meet you, ${(GameState.playerName || '').toUpperCase()}!`, 16, COLORS.highlight).setOrigin(0.5);
     uiText(this, GAME_WIDTH / 2, 78, 'Pick your look:', 12, COLORS.text).setOrigin(0.5);

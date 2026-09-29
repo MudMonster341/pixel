@@ -1,17 +1,22 @@
 // Generates the game's illustrated (non-tile) art as PNGs: full-screen story cutscenes
-// (Pokemon-style beats, src/scenes/cutscene.js) plus the M3a opening's own small art (Mustafa's
-// portrait, the bus, the title screen's parallax foreground) -- all drawn in code, like
-// tools/make-assets.js. No photos are copied or referenced as image files, only as notes (see
-// docs/research/bits-dubai-campus.md, "Main gate appearance").
+// (Pokemon-style beats, src/scenes/cutscene.js) plus the M3a opening's own small art (the bus, the
+// title screen's parallax foreground) -- all drawn in code, like tools/make-assets.js. No photos are
+// copied or referenced as image files, only as notes (see docs/research/bits-dubai-campus.md, "Main
+// gate appearance"). Quality loop (Cutscenes run 1, 2026-09-29): Mustafa's own separate portrait
+// (mustafa.png) is gone -- the greeting now shows him as a real, idle-animated 'npc-mustafa' sprite
+// (tools/make-assets.js buildCharacter(), assets/npc-mustafa.png) standing on the live campus
+// backdrop, the same character/texture the in-world script (src/scripts.js) spawns him as later, so
+// there's one Mustafa, not two mismatched pieces of art.
 // Run:  node tools/make-cutscenes.js   (also runs as part of `npm run assets`)
 // Output, all in assets/cutscenes/:
 //   gate2.png      320x240, the Gate 2 welcome cutscene (unchanged)
 //   entrance.png   320x240, the Main Block entrance cutscene (M3a): steps, pillars, the glass front
 //                  under the red arch, close up -- triggered the first time she reaches the door
 //                  (tools/campus/build-campus.js section 17, src/cutscenes.js)
-//   mustafa.png    96x128, a bust portrait of the friendly organiser who greets her (M3a step 1) --
-//                  an original, generic young man, not a likeness of anyone
-//   bus.png        96x48, the side-view coach for the arrival animation (M3a step 4/5)
+//   bus.png        a true top-down coach for the M3a arrival animation (M3a step 4/5, ADR 0016
+//                  SCRIPTS.opening) -- see buildBus()'s own header for why this is hand-drawn rather
+//                  than a vendor-pack crop (quality loop, Cutscenes run 1: "perspective clash" with
+//                  the side-view art this replaces).
 //   title-fg.png   480x64, a tileable silhouette strip (palms + fence) scrolled for the title
 //                  screen's parallax foreground (docs/GAME_FEEL.md "a little 3D")
 // Full-screen cutscenes are meant to be scaled up 3x by the game (960 wide) and panned vertically
@@ -448,104 +453,90 @@ palm(img, W - 24, H - 30, 1.0);
 return img;
 }
 
-// ---------- Mustafa's portrait (M3a step 1): a friendly, generic student organiser -- original art,
-// not a likeness of anyone. Bust framing (head + shoulders), soft shading per docs/STYLE_GUIDE.md's
-// "one light source, top-left" rule, shown beside the dialog box during his greeting. ----------
-
-function buildPortrait() {
-const PW = 96;
-const PH = 128;
-const img = new Img(PW, PH);
-const P = {
-  skin: '#f0bd8e', skinShade: '#cf9a68', skinDeep: '#a86f45',
-  hair: '#3a2a1c', hairHi: '#5a4128',
-  shirt: '#3b7dd8', shirtHi: '#6fa8f2', shirtShade: '#2a5aa8',
-  collar: '#eadbb8',
-  outline: '#1a1c2c',
-};
-const cx = PW / 2;
-
-// Shoulders/shirt (drawn first, the head overlaps its top edge).
-img.ellipse(cx, PH - 30, 42, 46, P.shirt);
-img.ellipse(cx - 14, PH - 30, 30, 40, P.shirtHi, 0.5); // a soft highlight, upper-left (light source rule)
-img.ellipse(cx + 16, PH - 22, 26, 36, P.shirtShade, 0.4);
-// A simple open collar (a V of the plaster/cream trim color), friendly and casual.
-img.rect(cx - 14, PH - 62, cx + 14, PH - 46, P.collar);
-img.rect(cx - 6, PH - 62, cx + 6, PH - 40, P.shirt);
-
-// Head (a rounded rectangle via a big ellipse), fair-medium skin.
-const headCy = 56;
-img.ellipse(cx, headCy, 30, 34, P.skin);
-img.ellipse(cx - 10, headCy - 6, 18, 20, P.skinShade, 0.35); // gentle shading, lower-right of the highlight
-img.ellipse(cx + 12, headCy + 10, 14, 14, P.skinDeep, 0.3);
-// Ears.
-img.ellipse(cx - 29, headCy + 4, 6, 8, P.skin);
-img.ellipse(cx + 29, headCy + 4, 6, 8, P.skin);
-
-// Hair: short and neat, a side parting, covering the top and sides of the head.
-img.ellipse(cx, headCy - 20, 32, 22, P.hair);
-img.rect(cx - 30, headCy - 24, cx + 30, headCy + 2, P.hair);
-img.ellipse(cx - 8, headCy - 26, 14, 10, P.hairHi, 0.6); // a lift near the parting, top-left light
-img.rect(cx - 30, headCy - 4, cx - 22, headCy + 14, P.hair); // a little more hair in front of the ears
-img.rect(cx + 22, headCy - 4, cx + 30, headCy + 14, P.hair);
-
-// Face: simple friendly features -- open eyes, eyebrows, a warm smile, per "generic young man".
-const eyeY = headCy + 2;
-for (const ex of [cx - 11, cx + 11]) {
-  img.rect(ex - 4, eyeY - 6, ex + 4, eyeY - 5, P.outline); // eyebrow
-  img.ellipse(ex, eyeY, 4, 5, '#ffffff');
-  img.ellipse(ex, eyeY + 1, 2, 3, P.outline); // pupil
-}
-img.ellipse(cx, headCy + 8, 3, 4, P.skinDeep, 0.5); // nose shadow
-img.rect(cx - 9, headCy + 18, cx + 9, headCy + 19, P.outline); // a simple smile line
-img.ellipse(cx - 9, headCy + 17, 2, 2, P.outline);
-img.ellipse(cx + 9, headCy + 17, 2, 2, P.outline); // smile corners turn up slightly
-
-return img;
-}
-
-// ---------- the arrival bus (M3a step 4/5): a simple side-view coach, driven in from off-screen for
-// the arrival animation (src/scenes/intro-bus.js drives its position; this is just the art) ----------
-
+// ---------- the arrival bus (M3a step 4/5, ADR 0016 SCRIPTS.opening): a true top-down coach ----------
+// Quality loop (Cutscenes run 1, 2026-09-29): the old art was a side-view bus (wheels along the
+// bottom, windows in a row) driving on a straight-overhead road -- "a perspective clash". The owner's
+// suggestion was a vendor-pack crop (Kenney RPG Urban Pack or Pixel Vehicle Pack); both were checked
+// pixel-by-pixel (decoding the sheets, the same method MEMORY.md's own asset-survey entries use) and
+// neither has a genuine top-down BUS: the Urban Pack's own "vehicle row" is single-tile 16x16 cars
+// (already used for the campus's parked cars, `URBAN.carFront*`/tools/make-assets.js), and the Pixel
+// Vehicle Pack's own bus.png/van*.png files are the *same* elevated 3/4 side view as the art this
+// replaces (checked: windows in a row, wheels along the bottom edge) -- so this is hand-drawn instead,
+// in the same code-drawn style every other cutscene in this file already uses, viewed genuinely from
+// directly above: a windshield cap (not a side window row), wheels only as small hints peeking from
+// under the body (never a full wheel silhouette), no side view of the body at all.
+//
+// Drawn nose-up (front cap at y=0, matching BUS_STEPS' own arrival direction, src/scripts.js) and
+// deliberately near-symmetric front/back (both ends are a rounded windshield cap) -- so
+// ScriptRunner's own `face` step can flip it vertically for the departure leg (src/scripts-runtime.js
+// step_face(), 'kind: image' actors) and the "other end" still reads as a believable front, not a
+// mismatched rear -- exactly the trick a real bus reversing/turning around off-screen would need
+// without a second, separately-drawn rear-view frame.
 function buildBus() {
-const BW = 96;
-const BH = 48;
+const BW = 32;
+const BH = 72;
 const img = new Img(BW, BH);
 const C2 = {
-  body: '#eadbb8', bodyShade: '#c9ae80',
+  body: '#eadbb8', bodyShade: '#c9ae80', bodyHi: '#f5ead0',
   stripe: '#cf8a6c', stripeDeep: '#9c5a44',
   glass: '#2f3a44', glassHi: '#9fd3ff',
-  wheel: '#1a1c2c', hub: '#c8c8c8',
-  door: '#e6cba4', doorLine: '#a98a63',
+  wheel: '#1a1c2c', hub: '#8a8a94',
+  mirror: '#1a1c2c',
+  light: '#ffe38a',
   outline: '#1a1c2c',
 };
-// Body: a rounded box, cabin taller at the front (left) with a sloped nose, per a friendly coach shape.
-img.rect(10, 8, BW - 6, BH - 14, C2.body);
-img.rect(4, 16, 12, BH - 14, C2.body); // sloped nose
-img.rect(10, 6, BW - 6, 9, C2.bodyShade); // roof shade band (light from top-left overall, but roof edge reads as shade)
-img.rect(10, BH - 16, BW - 6, BH - 14, C2.bodyShade); // lower skirt shade
-img.rect(6, 30, BW - 6, 34, C2.stripe); // a mid stripe, the campus trim color
-img.rect(6, 33, BW - 6, 34, C2.stripeDeep);
-// Windscreen + windshield strip along the top.
-img.rect(6, 12, 16, 24, C2.glass);
-img.ellipse(10, 16, 3, 2, C2.glassHi, 0.6);
-for (let wx = 20; wx < BW - 14; wx += 12) img.rect(wx, 12, wx + 8, 24, C2.glass);
-// The door: a distinct panel with a center split line (the "opens" line the game tweens over).
-const doorX = BW - 26;
-img.rect(doorX, 16, doorX + 16, BH - 16, C2.door);
-img.rect(doorX + 7, 16, doorX + 9, BH - 16, C2.doorLine);
-img.outlineRect(doorX, 16, doorX + 16, BH - 16);
-img.rect(doorX + 2, 18, doorX + 14, 26, C2.glass); // a small door window
-// Outline the whole silhouette last so panel seams don't get double-outlined oddly.
-img.outlineRect(10, 6, BW - 6, BH - 14);
-img.outlineRect(4, 16, 12, BH - 14);
-// Wheels + hubs, and a soft ground shadow.
-img.ellipse(BW * 0.28, BH - 6, 10, 3, '#000000', 0.25);
-img.ellipse(BW * 0.78, BH - 6, 10, 3, '#000000', 0.25);
-for (const wx of [BW * 0.28, BW * 0.78]) {
-  img.ellipse(wx, BH - 13, 8, 8, C2.wheel);
-  img.ellipse(wx, BH - 13, 3, 3, C2.hub);
+const cx = BW / 2;
+
+// The roof/body: a rounded rectangle (a narrower cap rect over a full-width middle rect -- the
+// corner pixels are simply never painted, Img starts fully transparent, no separate "clear" step
+// needed) filling almost the whole canvas -- from directly above, the roof *is* the bus; there's no
+// side wall to show.
+img.rect(2, 1, BW - 3, BH - 2, C2.body); // narrower cap, top+bottom corners left transparent
+img.rect(0, 5, BW - 1, BH - 6, C2.body); // full width through the middle
+// A soft highlight down the left edge, shade down the right (one light source, top-left). `Img.rect`
+// has no alpha blending (only `px`/`ellipse` do), so these are solid, slightly muted tones rather
+// than a translucent overlay -- same approach buildGate2()/buildEntrance() already use for flat shade
+// bands elsewhere in this file.
+img.rect(2, 8, 5, BH - 9, C2.bodyHi);
+img.rect(BW - 7, 8, BW - 3, BH - 9, C2.bodyShade);
+// Roof vents down the centreline -- reads as "there's mechanical detail up here", not a blank slab.
+for (let vy = 30; vy < BH - 30; vy += 10) img.rect(cx - 3, vy, cx + 3, vy + 3, C2.bodyShade);
+
+// The trim stripe, wrapping the full width around mid-body (the campus's own trim color, matching
+// every other cutscene in this file).
+img.rect(3, BH / 2 - 4, BW - 4, BH / 2 - 1, C2.stripe);
+img.rect(3, BH / 2 - 1, BW - 4, BH / 2, C2.stripeDeep);
+
+// Front + rear windshield caps -- near-identical on purpose (see the file-level comment above).
+for (const capY of [4, BH - 18]) {
+  img.rect(6, capY, BW - 6, capY + 12, C2.glass);
+  img.ellipse(cx - 4, capY + 4, 3, 2, C2.glassHi, 0.7);
+  img.ellipse(cx + 5, capY + 7, 2, 2, C2.glassHi, 0.4);
+  img.outlineRect(6, capY, BW - 6, capY + 12);
 }
+// Headlights / tail-lights, small pale squares tucked at both far corners of each cap.
+for (const capY of [3, BH - 6]) {
+  img.rect(3, capY, 5, capY + 2, C2.light);
+  img.rect(BW - 6, capY, BW - 4, capY + 2, C2.light);
+}
+// Side mirrors: small dark tabs poking out near the front cap only (a real coach only has them up
+// front) -- kept even after a vertical flip, since a flipped bus is still "the same bus, now facing
+// the other way", not literally a different physical vehicle.
+img.rect(0, 9, 2, 12, C2.mirror);
+img.rect(BW - 2, 9, BW, 12, C2.mirror);
+
+// Wheels: hinted only (never a full side-view wheel), small dark rectangles just peeking from under
+// the body on both sides, at roughly the front and rear axle positions.
+for (const wy of [19, BH - 23]) {
+  img.rect(0, wy, 2, wy + 6, C2.wheel);
+  img.rect(BW - 2, wy, BW, wy + 6, C2.wheel);
+  img.rect(0, wy + 1, 1, wy + 5, C2.hub);
+  img.rect(BW - 1, wy + 1, BW, wy + 5, C2.hub);
+}
+
+// Outline the silhouette: the two rects' own edges, giving the cap its rounded-corner step for free.
+img.outlineRect(2, 1, BW - 3, BH - 2);
+img.outlineRect(0, 5, BW - 1, BH - 6);
 return img;
 }
 
@@ -588,7 +579,6 @@ fs.mkdirSync(outDir, { recursive: true });
 const write = (name, built) => fs.writeFileSync(path.join(outDir, name), built.toPNG());
 write('gate2.png', buildGate2());
 write('entrance.png', buildEntrance());
-write('mustafa.png', buildPortrait());
 write('bus.png', buildBus());
 write('title-fg.png', buildTitleForeground());
-console.log(`Wrote gate2, entrance, mustafa, bus and title-fg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+console.log(`Wrote gate2, entrance, bus and title-fg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

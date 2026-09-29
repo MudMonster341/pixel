@@ -69,6 +69,10 @@ const BUS_STEPS = [
   { setActorVisible: { actor: 'player', visible: true } },
   { move: { actor: 'player', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 2] }], speed: 3 } },
   { wait: 250 },
+  // Quality loop (Cutscenes run 1): the bus is drawn nose-up (tools/make-cutscenes.js buildBus());
+  // turning to 'down' before pulling away flips it vertically so it still reads nose-first while
+  // driving back out, not backwards (src/scripts-runtime.js step_face()).
+  { face: { actor: 'bus', dir: 'down' } },
   { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 10] }], speed: 7, ease: 'Cubic.easeIn' } },
   { despawnActor: 'bus' },
 ];

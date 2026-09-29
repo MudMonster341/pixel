@@ -113,13 +113,17 @@ pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per
   (see the code comment by `CLOTHES_SWATCHES` for the cost/benefit judgment call). Picked on the
   `customize` intro scene, saved in `GameState.customization.clothes`, loaded as the game's real
   `player` texture by `src/main.js` BootScene.
-- **Mustafa's portrait:** `tools/make-cutscenes.js` `buildPortrait()` → `assets/cutscenes/mustafa.png`,
-  96x128. A friendly, generic young man (brown hair, a blue collared shirt) -- original art, not a
-  likeness of anyone, per CLAUDE.md's "no real people" rule.
-  Shown beside the game's own dialog box on the `greeting` and `name-entry` intro scenes.
-- **The arrival bus:** `tools/make-cutscenes.js` `buildBus()` → `assets/cutscenes/bus.png`, 96x48, a
-  side-view coach with a distinct door panel (its own outlined section, so the `bus-arrival` intro
-  scene has a real spot to animate "the door opens" over).
+- **Mustafa:** no separate portrait art (quality loop, Cutscenes run 1, 2026-09-29: the old
+  `buildPortrait()` bust read as "a crude round blob" and was dropped). He's the real
+  `npc-mustafa.png` character sheet (`tools/make-assets.js` `buildCharacter('Adam', MUSTAFA_RECOLOR)`,
+  a maroon polo) everywhere he appears -- an idle-animated sprite standing on the live campus backdrop
+  on the `greeting`/`name-entry` intro scenes, and a real script actor in the in-world opening/Gate 2
+  beat (`src/scripts.js`). One character, one asset.
+- **The arrival bus:** `tools/make-cutscenes.js` `buildBus()` → `assets/cutscenes/bus.png`, 32x72, a
+  true top-down coach (quality loop, Cutscenes run 1: the old side-view art was "a perspective clash"
+  on the straight-overhead road) -- a windshield cap top and bottom, wheels only hinted at the edges,
+  no side view of the body. See that function's own header for why this is hand-drawn rather than a
+  vendor-pack crop (neither suggested pack has a genuine top-down bus, checked pixel-by-pixel).
 - **Title screen parallax foreground:** `tools/make-cutscenes.js` `buildTitleForeground()` →
   `assets/cutscenes/title-fg.png`, 480x64, a tileable palm/fence silhouette strip scrolled behind the
   title menu at its own speed (docs/GAME_FEEL.md "a little 3D" rule 3).

@@ -326,7 +326,15 @@ class ScriptRunner {
     if (!actorEntry) return;
     actorEntry.facing = dir;
     if (actorEntry.kind === 'player') this.scene.facing = dir; // see tweenActorTo()'s own comment
-    if (actorEntry.kind === 'image') return;
+    if (actorEntry.kind === 'image') {
+      // A top-down `image` actor (the bus, src/scripts.js BUS_STEPS) is drawn nose-up
+      // (tools/make-cutscenes.js buildBus()) and deliberately near-symmetric front/back, so facing
+      // 'down' (turned around, driving back out) is just a vertical flip -- 'up' (its own drawn
+      // orientation) clears it. No rotation for 'left'/'right': nothing in this game drives a script
+      // actor sideways today.
+      actorEntry.sprite.setFlipY(dir === 'down');
+      return;
+    }
     const idleFrames = { down: 0, up: 8, left: 16, right: 24 };
     actorEntry.sprite.anims.stop();
     actorEntry.sprite.setFrame(idleFrames[dir] ?? 0);

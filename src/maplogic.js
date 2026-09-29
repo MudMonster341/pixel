@@ -321,7 +321,11 @@ function objectiveTarget(mapKey, quest) {
 const HUD_MARGIN = 16;
 const HUD_MINIMAP = { areaW: 120, areaH: 90, pad: 8 }; // ~120x90 map area, declutter pass (was 160x120)
 const HUD_TRACKER = { w: 280, collapsedH: 30, expandedH: 84 }; // a compact pill, expandable on change
-const HUD_BANNER = { w: 260, h: 36 };
+// Quality-loop category 4 run 2: moved from top-center (where it sat directly over the Main Block's
+// own entrance sign in the campus backdrop) to a small top-left plate, Pokemon-style -- the same
+// corner the minimap occupies, since the two are never shown at once (the minimap hides for as long
+// as the banner is sliding in/held/sliding out, src/scenes/ui.js LocationBanner/Minimap).
+const HUD_BANNER = { w: 220, h: 32 };
 const HUD_HINT = { w: 320, h: 36 };
 const HUD_HOTBAR_SLOT = 48;
 const HUD_HOTBAR_GAP = 8;
@@ -358,7 +362,7 @@ function hudLayout(width, height, slotCount = 5, { dialogOpen = false, letterbox
   const trackerX = width - HUD_MARGIN - HUD_TRACKER.w;
   const tracker = { x: trackerX, y: HUD_MARGIN, w: HUD_TRACKER.w, h: HUD_TRACKER.collapsedH };
   const trackerExpanded = { x: trackerX, y: HUD_MARGIN, w: HUD_TRACKER.w, h: HUD_TRACKER.expandedH };
-  const banner = { x: Math.round((width - HUD_BANNER.w) / 2), y: HUD_MARGIN, w: HUD_BANNER.w, h: HUD_BANNER.h };
+  const banner = { x: HUD_MARGIN, y: HUD_MARGIN, w: HUD_BANNER.w, h: HUD_BANNER.h };
 
   const hotbarInnerW = slotCount * HUD_HOTBAR_SLOT + (slotCount - 1) * HUD_HOTBAR_GAP;
   const hotbarW = hotbarInnerW + HUD_HOTBAR_PAD * 2;

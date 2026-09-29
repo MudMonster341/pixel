@@ -28,11 +28,15 @@ function stairwell(floor, name, { up, down } = {}) {
 // rect furnished directly (corridors are `isCorridor: true`, skipped by the generic furnish() pass)
 // with the props the brief named -- benches, plants, notice boards, bins, spaced every few tiles
 // along its own length, never on the door openings connect() already carved.
+// Quality loop run 3 (docs/quality/scorecard.md, 2026-09-29: "Corridors: doors with small name
+// plates beside them, and wall posters/notice boards") -- `intWallPoster` in the regular prop cycle
+// (a diagram/chart, distinct from `intNoticeboard`'s corkboard), and `doorNameplate()` below places
+// the actual nameplates next to each of the 3 key-room doors.
 function dressCorridor(floor, rect, { axis }) {
-  const props = ['bench', 'plant', 'intNoticeboard', 'intBin'];
+  const props = ['bench', 'intPottedPlant', 'intNoticeboard', 'intWallPoster', 'intBin'];
   const place = (x, y, name) => {
     floor.placeStructure(x, y, name);
-    if (name === 'plant') floor.depthGroupRect(x, y, x, y); // a "big plant" too, walk-behind (ADR 0015)
+    if (name === 'intPottedPlant') floor.depthGroupRect(x, y, x, y); // a "big plant" too, walk-behind (ADR 0015)
   };
   if (axis === 'h') {
     const y = rect.y0 + 1;
@@ -43,6 +47,24 @@ function dressCorridor(floor, rect, { axis }) {
     let i = 0;
     for (let y = rect.y0 + 2; y <= rect.y1 - 2; y += 3) place(x, y, props[i++ % props.length]);
   }
+}
+
+// A small nameplate beside a door -- computed the same way Floor.connect() itself centres a door in
+// the wall the two rects share, so it's placed accurately without duplicating that geometry by hand.
+function doorNameplate(floor, roomA, roomB) {
+  const a = floor.get(roomA);
+  const b = floor.get(roomB);
+  if (a.x1 === b.x0 || b.x1 === a.x0) {
+    const wallX = a.x1 === b.x0 ? a.x1 : a.x0;
+    const y0 = Math.max(a.y0, b.y0) + 1, y1 = Math.min(a.y1, b.y1) - 1;
+    const start = y0 + Math.floor((y1 - y0 + 1 - 2) / 2);
+    floor.placeStructure(wallX, start - 1, 'intNameplate');
+    return;
+  }
+  const wallY = a.y1 === b.y0 ? a.y1 : a.y0;
+  const x0 = Math.max(a.x0, b.x0) + 1, x1 = Math.min(a.x1, b.x1) - 1;
+  const start = x0 + Math.floor((x1 - x0 + 1 - 2) / 2);
+  floor.placeStructure(start - 1, wallY, 'intNameplate');
 }
 
 const mainBlockG = {
@@ -95,6 +117,8 @@ const mainBlock1 = {
     const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
     floor.connect('icvl', 'corridor');
     floor.connect('room195', 'corridor');
+    doorNameplate(floor, 'icvl', 'corridor');
+    doorNameplate(floor, 'room195', 'corridor');
     // A couple of locked classroom doors further down the corridor -- visible, not walkable
     // (docs/STORY.md: only the route to the 3 key rooms stays open).
     floor.placeStructure(10, 21, 'intDoorClosed');
@@ -139,6 +163,7 @@ const mainBlock3 = {
 
     const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 17, x1: 30, y1: 21, isCorridor: true });
     floor.connect('physicsLab', 'corridor');
+    doorNameplate(floor, 'physicsLab', 'corridor');
     dressCorridor(floor, corridor, { axis: 'h' });
 
     stairwell(floor, 'Main Block Stairs 3', { down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });

@@ -107,9 +107,7 @@ class TitleScene extends Phaser.Scene {
 
     this.buildBackground();
 
-    this.add.text(GAME_WIDTH / 2, 108, 'BITS DUBAI', {
-      fontFamily: FONT, fontSize: '30px', color: COLORS.highlight,
-    }).setOrigin(0.5).setStroke('#1a1c2c', 7).setShadow(4, 5, '#000000', 4, true, true);
+    this.buildLogo();
     uiText(this, GAME_WIDTH / 2, 150, 'The LUG Treasure Hunt', 8, COLORS.dim).setOrigin(0.5).setStroke('#1a1c2c', 4);
 
     this.pressEnter = uiText(this, GAME_WIDTH / 2, 340, 'PRESS ENTER', 12, COLORS.text).setOrigin(0.5);
@@ -188,6 +186,33 @@ class TitleScene extends Phaser.Scene {
     this.fgTiles = [this.fgA, this.fgB];
     this.fgTileWidth = fgW;
     this.fgSpeed = 12; // px/sec, deliberately faster than the ~40s round trip of the vertical pan above
+  }
+
+  // Quality-loop category 4 run 2: a crisp drop shadow + outline, no ghosting. The old version used a
+  // canvas `setShadow(blur: 4)` alongside a thick 7px stroke -- at this size the blur softened the
+  // shadow into a second, blurry silhouette sitting behind the sharp stroke, reading as a duplicate
+  // rather than a shadow (the same failure mode flagged on the card's own title glow). This is a
+  // second, unblurred, solid text object offset down-right (STYLE_GUIDE "one light source, top-left"
+  // -- shadows fall bottom-right) instead: genuinely crisp because there's no blur anywhere.
+  // The shine (GAME_FEEL.md "gentle life... subtle"): a slow, periodic brighten-toward-white-and-back
+  // tint pulse, not a masked sweeping highlight bar -- Bitmap masking (the usual way to sweep a
+  // highlight clipped to text/letter shapes) isn't supported at all under the Canvas renderer, and
+  // this game's `Phaser.AUTO` config can fall back to it, so a tint pulse is the renderer-safe choice.
+  buildLogo() {
+    const style = { fontFamily: FONT, fontSize: '30px', color: COLORS.highlight };
+    this.add.text(GAME_WIDTH / 2 + 3, 112, 'BITS DUBAI', { ...style, color: '#000000' }).setOrigin(0.5).setAlpha(0.45);
+    const logo = this.add.text(GAME_WIDTH / 2, 108, 'BITS DUBAI', style).setOrigin(0.5).setStroke('#1a1c2c', 5);
+
+    const shine = { t: 0 };
+    const base = Phaser.Display.Color.ValueToColor(0xffd23f);
+    const bright = Phaser.Display.Color.ValueToColor(0xffffff);
+    this.tweens.add({
+      targets: shine, t: 1, duration: 1000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, repeatDelay: 3400,
+      onUpdate: () => {
+        const c = Phaser.Display.Color.Interpolate.ColorWithColor(base, bright, 100, Math.round(shine.t * 100));
+        logo.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b));
+      },
+    });
   }
 
   buildMenu() {

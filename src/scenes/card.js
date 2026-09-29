@@ -192,17 +192,7 @@ class CardScene extends Phaser.Scene {
   buildInterior() {
     this.panel = this.add.graphics().setDepth(1);
     drawCardPanel(this.panel, CARD_X, CARD_Y, CARD_W, CARD_H);
-    // "A soft glow on the title" (owner brief, this pass): a second, larger, low-alpha copy of the
-    // same text sitting just behind the real one, pulsing gently -- cheap, texture-free "glow" that
-    // works under Canvas rendering too (Phaser's real postFX.addGlow is WebGL-only, and this game's
-    // renderer picks whichever Phaser.AUTO finds, src/main.js); same trick as the vignette rings in
-    // src/scenes/box-opening.js buildVignette(), a blurred look faked with plain shape/text stacking.
-    this.titleGlow = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#ffe27a')
-      .setOrigin(0.5).setDepth(1).setScale(1.1).setAlpha(0.3);
-    this.tweens.add({
-      targets: this.titleGlow, alpha: { from: 0.22, to: 0.5 }, duration: 1500,
-      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
+    this.buildTitleGlow();
     // A deep pink, not the game's usual gold highlight -- gold reads poorly against this card's own
     // cream paper interior (too close in tone); the outline's own player-pink palette pops instead.
     this.title = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#d94b8f')
@@ -214,9 +204,42 @@ class CardScene extends Phaser.Scene {
 
     // A smaller message box than the game's ordinary bottom-of-screen dialog, sized to sit under the
     // caption inside the card itself (docs/GAME_FEEL.md rule 1 still applies: DialogBox measures its
-    // own content, this just gives it a different box to measure into -- src/scenes/ui.js).
+    // own content, this just gives it a different box to measure into -- src/scenes/ui.js). Quality
+    // loop, "Card and ending" run 1: the shared DialogBox always draws ui.js's own dark navy panel
+    // (makePanel()) -- read as a second, unrelated box sitting under the photo frame's warm paper.
+    // Draw this card's own cream note-paper panel first, then hide DialogBox's panel behind it
+    // (alpha 0, not setVisible(false) -- open() would just turn visibility back on every time it
+    // runs) so the message reads as written on the card itself, one composition with the photo above
+    // it, not two different UI languages stacked on top of each other.
+    this.messagePanel = this.add.graphics().setDepth(1);
+    drawNotePanel(this.messagePanel, MESSAGE_BOX.x, MESSAGE_BOX.y, MESSAGE_BOX.w, MESSAGE_BOX.h);
     this.dialog = new DialogBox(this, MESSAGE_BOX);
-    this.interiorParts = [this.panel, this.titleGlow, this.title, this.cakeParts, this.frameParts, this.heartParts].flat();
+    this.dialog.panel.setAlpha(0);
+    this.dialog.body.setColor('#4a3520'); // warm dark ink on cream paper, not COLORS.text's near-white
+    this.interiorParts = [this.panel, this.titleGlow, this.title, this.cakeParts, this.frameParts, this.heartParts, this.messagePanel].flat();
+  }
+
+  // "A soft glow on the title" (owner brief) -- the first attempt (a second, offset copy of the title
+  // text, low-alpha and slightly scaled up) was flagged in the quality-loop review as reading like a
+  // rendering error ("a ghosted duplicate of the text"), not a glow. Replaced with a texture-free
+  // radial halo: three low-alpha ellipses (same faked-gradient technique as
+  // src/scenes/box-opening.js's own buildVignette()) sitting behind the title and pulsing gently --
+  // no text involved at all, so there is nothing that could look like a duplicated line of letters.
+  buildTitleGlow() {
+    const g = this.add.graphics().setDepth(1);
+    const rings = [
+      { rx: 220, ry: 30, hex: 0xffe27a, alpha: 0.08 },
+      { rx: 160, ry: 24, hex: 0xffe9a0, alpha: 0.14 },
+      { rx: 100, ry: 18, hex: 0xfff3c4, alpha: 0.22 },
+    ];
+    for (const ring of rings) g.fillStyle(ring.hex, ring.alpha).fillEllipse(CARD_CENTER_X, TITLE_Y, ring.rx, ring.ry);
+    this.titleGlow = g;
+    // Pulsing the whole graphics object's own alpha dims/brightens all three rings together, still one
+    // halo, never a second copy of anything.
+    this.tweens.add({
+      targets: this.titleGlow, alpha: { from: 0.5, to: 1 }, duration: 1500,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
   }
 
   // A small corner motif (coordinator review: was a large, lone centerpiece with nothing balancing
@@ -537,4 +560,18 @@ function drawCardPanel(g, x, y, w, h) {
   g.lineStyle(1, 0xffffff, 0.5).lineBetween(x + 9, y + 9, x + w - 9, y + 9).lineBetween(x + 9, y + 9, x + 9, y + h - 9);
   g.lineStyle(1, 0x9c845c, 0.5).lineBetween(x + 9, y + h - 9, x + w - 9, y + h - 9).lineBetween(x + w - 9, y + 9, x + w - 9, y + h - 9);
   g.lineStyle(2, 0x1a1c2c, 1).strokeRect(x, y, w, h);
+}
+
+// The message box's own panel (quality loop, "Card and ending" run 1: "the photo frame and message
+// box read as two unrelated boxes") -- a plainer, smaller cousin of drawCardPanel() above, same
+// cream/gold/bevel language (so the two clearly belong to the same object) but lighter-weight (a
+// thinner border, a softer shadow, no header band) so it reads as a note tucked inside the card, not
+// a second card competing with the outer one's own bold border.
+function drawNotePanel(g, x, y, w, h) {
+  g.fillStyle(0x000000, 0.18).fillRect(x + 3, y + 4, w, h);
+  g.fillStyle(0xfdf6e3, 1).fillRect(x, y, w, h);
+  g.lineStyle(3, 0xe8d9a8, 1).strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+  g.lineStyle(1, 0xffffff, 0.6).lineBetween(x + 6, y + 6, x + w - 6, y + 6).lineBetween(x + 6, y + 6, x + 6, y + h - 6);
+  g.lineStyle(1, 0x9c845c, 0.4).lineBetween(x + 6, y + h - 6, x + w - 6, y + h - 6).lineBetween(x + w - 6, y + 6, x + w - 6, y + h - 6);
+  g.lineStyle(1, 0x1a1c2c, 0.6).strokeRect(x, y, w, h);
 }

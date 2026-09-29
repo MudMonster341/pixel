@@ -82,7 +82,37 @@ campus from OSM (ADR 0009) should emit `door` objects in this exact shape at the
 Mechanical Block entrances -- same `to`/`toId`/`facing` properties, any position, and it will work
 with no changes on the interiors side.
 
-## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28); quality loop (2026-09-28)
+## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28); quality loop (2026-09-28/29)
+
+**Quality loop, Interior art run 3 (2026-09-29, docs/quality/scorecard.md "5/10... bland: white
+stripes for columns, the chandelier reads as a gold plus sign, the reception desk and sofas are
+tiny... plants sit on brick-tile pedestals... [Physics Lab] still a uniform grid, sparse wall
+decoration"):**
+- **Plants, everywhere**: `intPottedPlant` (tools/make-assets.js) is the same LimeZu potted-plant
+  crop as the old `plant` tile, minus that tile's own `floor()` call -- a warm plank/brick background
+  meant for the outdoor meadow-house test map, never appropriate indoors, which is exactly what "on
+  brick tiles" was. Used in the foyer, the ICVL's aisles and every corridor; `plant` itself is
+  untouched (Library/Mechanical Block and other shared room types still use it).
+- **Round columns**: 6 tiles (`intColumnCapL/R`, `ShaftL/R`, `BaseL/R`) instead of 1 -- each half
+  shades from light at the seam between the pair (the cylinder's own lit centre) to dark at the
+  tile's outer edge, so two tiles side by side read as one round column, with a lighter flared cap
+  row and a darker flared base row.
+- **A real tiered chandelier**: two true ellipses (not stacked rectangles, which is what made it read
+  as a plus sign) with a ring of glowing bulb dots around each tier.
+- **A richer foyer**: a 3-tile reception desk with tapered end caps (`intReceptionDeskL/R`), 2 sofa
+  groups each with its own coffee table, a large rug (`intRug`) in front of the staircase, and a
+  directory sign beside the desk.
+- **The Physics Lab, less uniform**: 3 different bench shapes instead of 3 repeats of the same
+  full-width row -- one long bench under the demo desk/whiteboard, a second long bench down the left
+  wall, and a short freestanding island bench with its own equipment trolley -- plus wall posters
+  (`intWallPoster`) either side of the whiteboard and on the back wall.
+- **Corridors**: a nameplate (`intNameplate`) beside each of the 3 key-room doors, computed the same
+  way `Floor.connect()` itself centres a door (`doorNameplate()`, tools/interiors/plans.js), and
+  `intWallPoster` added to the regular prop-dressing cycle alongside the existing noticeboard/bench/
+  bin/plant.
+- Key-station coordinates that moved because the room's own furniture layout changed: ICVL's `icvl`
+  stayed at its run-2 position; the Physics Lab's `physicsLab` moved to `(5,7)` (the new layout's
+  first bench) -- both still verified to sit exactly on the right furniture tile.
 
 **Quality loop, Interior art run 2 (2026-09-28, docs/quality/scorecard.md "4/10... a high-contrast
 white-on-tan checker (graph paper)... the staircase still draws as vertical rails... over-corrected

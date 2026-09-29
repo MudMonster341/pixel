@@ -57,7 +57,12 @@ const AMBIENT = {
     { id: 'campus-amb-jog', character: 'ambient-c', kind: 'patrol', speed: 110, pauseMs: 0, loop: true,
       waypoints: [{ x: 120, y: 90 }, { x: 165, y: 90 }, { x: 165, y: 108 }, { x: 120, y: 108 }] },
     // 3 sitting on benches along the avenue.
-    { id: 'campus-amb-sit-1', character: 'ambient-d', kind: 'idle', x: 225, y: 135, facing: 'down' },
+    // x: 229, not 225 -- quality loop, Mini-games/Characters fix round (2026-09-29): 225 sat directly
+    // in the Main Block door's own straight-line approach column (the door itself is at x 225.5), so
+    // a player walking north into it collided with this NPC's body a few tiles out and never reached
+    // the door at all (tests/e2e/campus.spec.js "walk from the Gate 2 spawn up to the Main Block
+    // entrance"). Shifted clear of that column, still along the same forecourt.
+    { id: 'campus-amb-sit-1', character: 'ambient-d', kind: 'idle', x: 229, y: 135, facing: 'down' },
     { id: 'campus-amb-sit-2', character: 'ambient-e', kind: 'idle', x: 243, y: 162, facing: 'left' },
     { id: 'campus-amb-sit-3', character: 'student-b', kind: 'idle', x: 221, y: 137, facing: 'right' },
     // A pair chatting, facing each other.
@@ -83,7 +88,13 @@ const AMBIENT = {
     // Working at ICVL desks, facing into the room (docs/STORY.md beat 7) -- a tile clear of the desk
     // block itself, the same "she interacts from nearby, not standing on the furniture" shape the
     // real key station already uses.
-    { id: 'mb1-amb-icvl-1', character: 'ambient-d', kind: 'idle', x: 5, y: 7, facing: 'right' },
+    // x: 4, not 5 -- quality loop, Mini-games/Characters fix round (2026-09-29): the icvl key station
+    // (src/maps.js, x:6 y:6) is approached from (6,7); (5,7) sat exactly as far from that approach
+    // tile (16px, one tile) as the key station itself, and nearestInteractable() (src/scenes/world.js)
+    // breaks that exact tie in the NPC's favor -- talking there gave this student's own small-talk
+    // line instead of ever reaching the ICVL key (tests/e2e/story.spec.js, minigames.spec.js). Shifted
+    // one more tile off so the key station is unambiguously nearer.
+    { id: 'mb1-amb-icvl-1', character: 'ambient-d', kind: 'idle', x: 4, y: 7, facing: 'right' },
     { id: 'mb1-amb-icvl-2', character: 'ambient-e', kind: 'idle', x: 5, y: 9, facing: 'right' },
     // 2 in the corridor.
     { id: 'mb1-amb-corridor-1', character: 'student-b', kind: 'patrol', speed: 50, pauseMs: 800,
@@ -94,6 +105,12 @@ const AMBIENT = {
 
   'main-block-3': [
     // At a Physics Lab bench, facing the key station's own desk (docs/STORY.md beat 6).
-    { id: 'mb3-amb-bench', character: 'ambient-a', kind: 'idle', x: 5, y: 9, facing: 'up' },
+    // x: 4, not 5 -- quality loop, Mini-games/Characters fix round (2026-09-29): the physicsLab key
+    // station (src/maps.js, x:5 y:7) is approached from (5,8); (5,9) sat exactly as far from that
+    // approach tile (16px, one tile) as the key station itself, and nearestInteractable()
+    // (src/scenes/world.js) breaks that exact tie in the NPC's favor -- talking there gave this
+    // student's own small-talk line instead of ever launching the platformer (tests/e2e/story.spec.js,
+    // minigames.spec.js). Shifted diagonally off so the key station is unambiguously nearer.
+    { id: 'mb3-amb-bench', character: 'ambient-a', kind: 'idle', x: 4, y: 9, facing: 'up' },
   ],
 };

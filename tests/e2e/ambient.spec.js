@@ -6,7 +6,7 @@
 // no Playwright runs. Whoever runs the next `npm test` (or the quality-loop review pass) is the first
 // real execution of this file.
 const { test, expect } = require('@playwright/test');
-const { openGame, waitForMap, teleport, state } = require('./helpers');
+const { openGame, waitForMap, teleport, state, startGame, skipWorldScript } = require('./helpers');
 
 // Every ambient sprite's tile position + its def's kind/id, read straight from the live scene rather
 // than re-deriving it, so this is checking the *engine's* placement (createAmbient()/toPixel()), not
@@ -85,8 +85,17 @@ test.describe('Ambient campus/Main Block life', () => {
 
   test('talking to an ambient student shows a short neutral line, never story information', async ({ page }) => {
     await openGame(page, { map: 'campus' });
-    const target = (await ambientTiles(page))[0];
-    await teleport(page, Math.round(target.x), Math.round(target.y) + 1);
+    // A stationary (idle/chat) NPC, never a 'patrol' one: updateAmbientPatrol() (world.js) keeps
+    // moving a patrol NPC every frame, so its position read here would already be stale by the time
+    // teleport() lands the player next to it a round-trip later -- this test cares about the dialog
+    // a chat produces, not about chasing a moving target, so it picks one that never goes stale.
+    const target = (await ambientTiles(page)).find((t) => t.kind !== 'patrol');
+    // ambientTiles() reads a sprite's pixel position back into tile units (`sprite.x / 16`), which for
+    // any tile-centered sprite (toPixel(), src/maplogic.js) is always exactly N.5 -- Math.round() on an
+    // exact .5 rounds *up* (JS's own convention), silently landing a whole tile past the one the NPC
+    // is actually standing on and outside INTERACT_RANGE, unlike Math.floor() (what state()'s own
+    // `tile` field already uses for the same pixel-to-tile conversion, tests/e2e/helpers.js).
+    await teleport(page, Math.floor(target.x), Math.floor(target.y) + 1);
     await page.keyboard.press('e');
     await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);
     const line = await page.evaluate(() => game.scene.getScene('ui').dialog.body.text);
@@ -94,20 +103,30 @@ test.describe('Ambient campus/Main Block life', () => {
   });
 
   test('ambient NPCs hide for the whole opening script and reappear once it ends', async ({ page }) => {
-    await openGame(page, { map: 'campus', cutscene: true, intro: true });
-    // Right after boot the opening script (SCRIPTS.opening) is running: every ambient sprite should be
-    // invisible (setAmbientVisible(false) in playOpeningSequence()), not just "not updating".
+    // `intro: true` on a direct openGame() boot can never actually start SCRIPTS.opening: that script
+    // only ever runs from `playOpening: true` on WorldScene's own init data (src/scenes/world.js),
+    // which is set exactly once, by CustomizeScene's hand-off at the end of the real title -> greeting
+    // -> name-entry -> customize flow (src/scenes/intro-customize.js) -- a flow openGame()'s own
+    // `?title=0` fast path boots straight past. Written-but-never-run assumption (this file's own
+    // header comment); the fix runs a real script instead, the Gate 2 one (cutscene.spec.js's own
+    // trigger), which shares the exact same setAmbientVisible() hide/reveal code path (playScript(),
+    // world.js) as the opening does, so this still proves the promise ("ambient NPCs hide for the
+    // whole of ANY script and reappear once it ends") end to end.
+    await openGame(page, { map: 'campus', cutscene: true });
+    await startGame(page);
+    const trigger = await page.evaluate(() => {
+      const t = game.scene.getScene('world').mapObjects.find((o) => o.type === 'cutscene' && o.props.cutscene === 'gate2');
+      return { x: t.x + t.width / 2, y: t.y + t.height / 2 };
+    });
+    await teleport(page, trigger.x, trigger.y);
+    await expect.poll(async () => (await state(page)).cutsceneActive).toBe(true);
+    // Every ambient sprite should be invisible (setAmbientVisible(false) in playScript()), not just
+    // "not updating".
     const duringScript = await ambientTiles(page);
     expect(duringScript.every((t) => t.visible === false)).toBe(true);
 
     // Skip to the end of the script and confirm they're back.
-    await page.evaluate(async () => {
-      const world = game.scene.getScene('world');
-      while (world.scriptRunner.isRunning) {
-        world.scriptRunner.skip?.();
-        await new Promise((r) => setTimeout(r, 50));
-      }
-    });
+    await skipWorldScript(page);
     const afterScript = await ambientTiles(page);
     expect(afterScript.every((t) => t.visible === true)).toBe(true);
   });

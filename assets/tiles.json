@@ -1410,7 +1410,7 @@
       "name": "intChandelier",
       "solid": false,
       "overhead": true,
-      "color": "#d7b768"
+      "color": "#dcbc6c"
     },
     {
       "name": "intGlassDoorOpen",
@@ -1566,19 +1566,19 @@
       "name": "intChandelierTR",
       "solid": false,
       "overhead": true,
-      "color": "#d7b768"
+      "color": "#daba6a"
     },
     {
       "name": "intChandelierBL",
       "solid": false,
       "overhead": true,
-      "color": "#e9c56d"
+      "color": "#eac772"
     },
     {
       "name": "intChandelierBR",
       "solid": false,
       "overhead": true,
-      "color": "#e9c56d"
+      "color": "#eac976"
     },
     {
       "name": "intChair",
@@ -1615,6 +1615,84 @@
       "solid": true,
       "overhead": false,
       "color": "#877666"
+    },
+    {
+      "name": "intPottedPlant",
+      "solid": true,
+      "overhead": false,
+      "color": "#626d5b"
+    },
+    {
+      "name": "intColumnCapL",
+      "solid": true,
+      "overhead": false,
+      "color": "#dcd1bb"
+    },
+    {
+      "name": "intColumnCapR",
+      "solid": true,
+      "overhead": false,
+      "color": "#dcd1bb"
+    },
+    {
+      "name": "intColumnShaftL",
+      "solid": true,
+      "overhead": false,
+      "color": "#e7ddc7"
+    },
+    {
+      "name": "intColumnShaftR",
+      "solid": true,
+      "overhead": false,
+      "color": "#e7ddc7"
+    },
+    {
+      "name": "intColumnBaseL",
+      "solid": true,
+      "overhead": false,
+      "color": "#ccc3b2"
+    },
+    {
+      "name": "intColumnBaseR",
+      "solid": true,
+      "overhead": false,
+      "color": "#ccc3b2"
+    },
+    {
+      "name": "intRug",
+      "solid": false,
+      "overhead": false,
+      "color": "#887b5f"
+    },
+    {
+      "name": "intReceptionDeskL",
+      "solid": true,
+      "overhead": false,
+      "color": "#6c462f"
+    },
+    {
+      "name": "intReceptionDeskR",
+      "solid": true,
+      "overhead": false,
+      "color": "#6c462f"
+    },
+    {
+      "name": "intWallPoster",
+      "solid": true,
+      "overhead": false,
+      "color": "#afacab"
+    },
+    {
+      "name": "intNameplate",
+      "solid": true,
+      "overhead": false,
+      "color": "#cdb597"
+    },
+    {
+      "name": "intEquipmentTrolley",
+      "solid": true,
+      "overhead": false,
+      "color": "#6d7979"
     }
   ]
 }

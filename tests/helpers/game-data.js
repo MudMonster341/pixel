@@ -102,6 +102,7 @@ function loadGameData() {
     titleEnabled: get('titleEnabled'),
     introEnabled: get('introEnabled'),
     objectAt: get('objectAt'),
+    nearestNamedArea: get('nearestNamedArea'),
     notSeenCutscene: get('notSeenCutscene'),
     doorLockRule: get('doorLockRule'),
     isDoorLocked: get('isDoorLocked'),

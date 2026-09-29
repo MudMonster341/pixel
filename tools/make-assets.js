@@ -448,6 +448,14 @@ const URBAN = {
   planter: urbanTile(6, 10), // a wood flower box with two flower colors
   lowFence: urbanTile(4, 12), // a low decorative railing, one straight run segment
   bollard: urbanTile(5, 8), // a striped barrier/bollard
+  // Quality loop, category 1 run 3 (2026-09-29): "a few parked cars in the right perspective (Kenney
+  // RPG Urban cars are top-down 3/4, use those)" -- this pack's own vehicle row is mostly 2-tile-wide
+  // compositions (a hood tile + a body tile side by side), but each colour also has one clean,
+  // complete-in-a-single-tile front view a few columns over (found by decoding the sheet and cropping
+  // individual cells) -- those are what these three point at, one per colour the sheet offers.
+  carFrontYellow: urbanTile(17, 15),
+  carFrontRed: urbanTile(17, 17),
+  carFrontGreen: urbanTile(21, 15),
 };
 // premium pass Part 2: Ninja Adventure asset pack (Pixel-boy and AAA, CC0, assets/vendor/
 // ninja-adventure/) -- palms (no free pack has date palms in the right pixel style, per the asset
@@ -1009,6 +1017,18 @@ const SIGN_SEGMENTS = Array.from(
   (_, i) => MAIN_SIGN_TEXT.slice(i * SIGN_CHARS_PER_TILE, i * SIGN_CHARS_PER_TILE + SIGN_CHARS_PER_TILE).padEnd(SIGN_CHARS_PER_TILE, ' '),
 );
 
+// Quality loop, category 1 run 3 (2026-09-29): "the plaza gets... the 'welcomes you' sign board, per
+// the photo" -- a free-standing 2-tile board (not the fascia wordmark above), 4 chars/tile (no gap
+// between glyphs, same as gateSign's single-tile "BITS") since SIGN_FONT_4X6's glyphs are exactly 4px
+// wide and the tile is 16px. build-campus.js only needs WELCOME_SIGN_SEGMENTS.length and places
+// `welcomeSignSeg0..N` in order, the same convention as bitsSignSeg above.
+const WELCOME_SIGN_TEXT = 'WELCOME';
+const WELCOME_SIGN_CHARS_PER_TILE = 4;
+const WELCOME_SIGN_SEGMENTS = Array.from(
+  { length: Math.ceil(WELCOME_SIGN_TEXT.length / WELCOME_SIGN_CHARS_PER_TILE) },
+  (_, i) => WELCOME_SIGN_TEXT.slice(i * WELCOME_SIGN_CHARS_PER_TILE, i * WELCOME_SIGN_CHARS_PER_TILE + WELCOME_SIGN_CHARS_PER_TILE).padEnd(WELCOME_SIGN_CHARS_PER_TILE, ' '),
+);
+
 // Quality loop, category 1 run 1 (2026-09-28): "lawn tufts repeat on a rigid grid (wallpaper
 // look)" -- lawn2 is one static pre-rendered tile (always the same tuft, same seed), and
 // build-campus.js's old lawnPatch() picked it on a strict 6x6-tile checkerboard, so the exact same
@@ -1506,6 +1526,21 @@ const TILES = [
   { name: 'intWallPoster', solid: true, draw: intWallPoster },
   { name: 'intNameplate', solid: true, draw: intNameplate },
   { name: 'intEquipmentTrolley', solid: true, draw: intEquipmentTrolley },
+
+  // Quality loop, category 1 run 3 (2026-09-29): the Main Block forecourt's own free-standing
+  // "welcomes you" board (docs reference photo), distinct from the fascia wordmark above -- appended
+  // at the very end so every existing tile's name/index stays stable.
+  ...WELCOME_SIGN_SEGMENTS.map((text4, i) => ({ name: `welcomeSignSeg${i}`, solid: true, draw: (img, x, y) => welcomeSignSegment(img, x, y, text4) })),
+
+  // Quality loop, category 1 run 3 (2026-09-29) continued: "more outdoor detail... bike racks near
+  // hostels, benches under trees, a few parked cars in the right perspective, shade sails or a bus
+  // shelter at the bus stop". Appended at the very end so every existing tile's name/index stays
+  // stable.
+  { name: 'busShelter', solid: true, draw: busShelter },
+  { name: 'bikeRack', solid: true, draw: bikeRack },
+  { name: 'carFrontYellow', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontYellow.atlas), URBAN.carFrontYellow.sx, URBAN.carFrontYellow.sy, 16, 16) },
+  { name: 'carFrontRed', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontRed.atlas), URBAN.carFrontRed.sx, URBAN.carFrontRed.sy, 16, 16) },
+  { name: 'carFrontGreen', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontGreen.atlas), URBAN.carFrontGreen.sx, URBAN.carFrontGreen.sy, 16, 16) },
 ];
 
 // ---------- campus tiles ----------
@@ -2308,6 +2343,10 @@ const SIGN_FONT_4X6 = {
   M: ['#..#', '####', '#..#', '#..#', '#..#', '#..#'],
   ',': ['....', '....', '....', '....', '..#.', '.#..'],
   ' ': ['....', '....', '....', '....', '....', '....'],
+  // Quality loop, category 1 run 3 (2026-09-29): the two extra letters WELCOME_SIGN_SEGMENTS needs
+  // that the fascia wordmark ("BITS PILANI, DUBAI CAMPUS") never did.
+  O: ['.##.', '#..#', '#..#', '#..#', '#..#', '.##.'],
+  W: ['#..#', '#..#', '#..#', '#.##', '##.#', '#..#'],
 };
 // A compact sign band: navy letters on a light fascia, three per tile -- replaces bitsSignGlyph's
 // one-letter-per-tile band above (kept, unused) for the Main Block's own cap row.
@@ -2320,6 +2359,26 @@ function bitsSignSegment(img, x, y, text3) {
     const glyph = SIGN_FONT_4X6[ch] || SIGN_FONT_4X6[' '];
     const gx = x + 1 + i * 5;
     const gy = y + 3;
+    glyph.forEach((row, ry) => {
+      [...row].forEach((c, rx) => {
+        if (c === '#') img.set(gx + rx, gy + ry, 'Ñ');
+      });
+    });
+  });
+}
+
+// Quality loop, category 1 run 3 (2026-09-29): a free-standing board on its own low post (unlike
+// bitsSignSegment above, which is a flush fascia strip meant to sit high on a wall) -- planted on the
+// lawn like signboard()/the flag poles, terracotta-framed to match the rest of the BITS kit.
+function welcomeSignSegment(img, x, y, text4) {
+  grass(img, x, y, 158);
+  img.box(x, y + 2, TILE, 9, '&');
+  img.fill(x + 1, y + 3, TILE - 2, 7, 'wallHi');
+  img.fill(x + 5, y + 11, 6, 4, 'baseCool'); // post, meets the ground
+  [...text4].forEach((ch, i) => {
+    const glyph = SIGN_FONT_4X6[ch] || SIGN_FONT_4X6[' '];
+    const gx = x + i * 4; // 4 chars x 4px = the full 16px tile width, same convention as gateSign's "BITS"
+    const gy = y + 5;
     glyph.forEach((row, ry) => {
       [...row].forEach((c, rx) => {
         if (c === '#') img.set(gx + rx, gy + ry, 'Ñ');
@@ -2400,6 +2459,34 @@ function flagPoleTop(img, x, y, color) {
 function busStopSign(img, x, y) {
   grass(img, x, y, 158);
   blitAtlas(img, x, y, loadAtlas(BUS_STOP_SIGN_SRC.atlas), BUS_STOP_SIGN_SRC.sx, BUS_STOP_SIGN_SRC.sy, 16, 16);
+}
+
+// Quality loop, category 1 run 3 (2026-09-29): "shade sails or a bus shelter at the bus stop" -- a
+// small hand-drawn lean-to canopy (this pack has no ready-made shelter sprite), two dark support poles
+// under a sloped fabric roof, in the same terracotta/cream the rest of the BITS kit uses so it reads
+// as campus furniture rather than a city-street prop transplanted in.
+function busShelter(img, x, y) {
+  grass(img, x, y, 159);
+  img.fill(x + 1, y + 2, TILE - 2, 3, '&'); // sloped canvas roof, terracotta
+  img.fill(x + 1, y + 4, TILE - 2, 1, 'wallHi'); // a highlight seam along the roof's low edge
+  img.fill(x + 2, y + 5, 2, 9, 'K'); // left post
+  img.fill(x + TILE - 4, y + 5, 2, 9, 'K'); // right post
+  img.fill(x + 3, y + 12, TILE - 6, 2, 'baseCool'); // low bench/plinth under the canopy
+}
+
+// Quality loop, category 1 run 3 (2026-09-29): "bike racks near hostels" -- this pack's own bicycle
+// art (found while surveying it for a rack sprite) is a ground-paint stencil icon, not an upright 3D
+// rack, so this is hand-drawn instead: two dark inverted-U stands on the paving, the same technique
+// signboard()/securityBooth() above already use for kit pieces this asset survey didn't have a direct
+// match for.
+function bikeRack(img, x, y) {
+  grass(img, x, y, 160);
+  img.fill(x + 2, y + 10, TILE - 4, 2, '%'); // paved pad the rack stands on
+  for (const ux of [4, 10]) {
+    img.fill(x + ux, y + 4, 2, 7, 'K'); // one stand's left post
+    img.fill(x + ux + 4, y + 4, 2, 7, 'K'); // right post
+    img.fill(x + ux, y + 4, 6, 2, 'K'); // the loop's own top bar
+  }
 }
 
 // ---------- interior kit (P3: Main/Library/Mechanical Block interiors, 1 m/tile) ----------

@@ -694,3 +694,47 @@ test('FB-0027: every building and tall prop has a depthGroup covering its tiles'
     assert.ok(depthGroups.some((g) => g.name === kind), `no depthGroup for any "${kind}" prop`);
   }
 });
+
+// ---------- Quality loop, category 1 run 3: more outdoor detail (bike racks, benches, cars, a bus shelter) ----------
+
+// Counts every occurrence of a structure tile by name across the whole map, once, for the handful of
+// "at least one exists somewhere" checks below.
+function countStructureTiles() {
+  const counts = new Map();
+  for (let i = 0; i < structuresLayer.length; i++) {
+    const gid = structuresLayer[i];
+    if (!gid) continue;
+    const name = tileInfo.tiles[gid - 1].name;
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return counts;
+}
+
+test('quality loop: bike racks stand near the hostels', () => {
+  const counts = countStructureTiles();
+  assert.ok(counts.get('bikeRack') >= 3, `expected at least 3 bikeRack tiles near hostels, found ${counts.get('bikeRack') || 0}`);
+});
+
+test('quality loop: a bus stop sign AND a shelter both actually made it onto the map, not just the sign', () => {
+  // Found the hard way this round: the shelter (and, before this round's fix, the sign itself) used a
+  // single fixed offset that happened to land exactly on the fence line / an already-occupied Gate 2
+  // decoration, so structOnLawn() silently placed nothing and nobody had ever counted these tiles to
+  // notice. Both need at least one real placement now.
+  const counts = countStructureTiles();
+  assert.ok((counts.get('busStopSign') || 0) >= 1, 'no busStopSign tile placed anywhere on the map');
+  assert.ok((counts.get('busShelter') || 0) >= 1, 'no busShelter tile placed anywhere on the map (shade sail / shelter at the bus stop)');
+});
+
+test('quality loop: a few Kenney RPG Urban Pack cars (top-down 3/4) are parked somewhere on campus', () => {
+  const counts = countStructureTiles();
+  const kenneyCars = (counts.get('carFrontYellow') || 0) + (counts.get('carFrontRed') || 0) + (counts.get('carFrontGreen') || 0);
+  assert.ok(kenneyCars >= 3, `expected at least 3 Kenney RPG Urban Pack cars parked somewhere, found ${kenneyCars}`);
+});
+
+test('quality loop: benches sit near some of the scattered shade trees, not just along the avenue', () => {
+  // FB-0025's original avenue benches already existed before this round; this just checks the total
+  // grew enough that "benches under trees" (this round's own addition, scatterTrees's own comment)
+  // plausibly contributed real tiles, not that the avenue alone accounts for all of them.
+  const counts = countStructureTiles();
+  assert.ok((counts.get('bench') || 0) >= 15, `expected well more than just the avenue's own benches, found ${counts.get('bench') || 0}`);
+});

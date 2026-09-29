@@ -147,6 +147,34 @@ function objectAt(mapObjects, types, x, y) {
   return hits.reduce((a, b) => (a.width * a.height <= b.width * b.height ? a : b));
 }
 
+// Quality loop, category 1 run 3 (2026-09-29): "every named building/area should resolve to its own
+// name... or fall back to the nearest named building within a few tiles" -- the location banner used
+// to show whatever objectAt() found and nothing else, so standing just past a building's own 'zone'
+// (which only reaches a few tiles past its real footprint -- extended from the door, or from the
+// footprint's own southmost row for a building with no door yet, like a hostel; see
+// tools/campus/build-campus.js's own comment on why) fell all the way through to the one thing that
+// always contains every point inside the fence: the whole-campus outline itself (`kind: 'campus'`).
+// If objectAt() found that (or nothing), this looks for the nearest real 'zone'/'building' object
+// within `nearTiles` tiles -- measuring to the closest point on its own rectangle, so standing
+// anywhere inside it still counts as distance 0 -- and uses that name instead.
+function nearestNamedArea(mapObjects, x, y, nearTiles = 8) {
+  const hit = objectAt(mapObjects, ['area', 'zone'], x, y);
+  if (hit && hit.props.kind !== 'campus') return hit;
+  let best = null;
+  let bestDist = Infinity;
+  for (const o of mapObjects) {
+    if (o.type !== 'zone' && o.type !== 'building') continue;
+    const cx = Math.max(o.x, Math.min(x, o.x + o.width));
+    const cy = Math.max(o.y, Math.min(y, o.y + o.height));
+    const dist = Math.hypot(x - cx, y - cy);
+    if (dist <= nearTiles && dist < bestDist) {
+      bestDist = dist;
+      best = o;
+    }
+  }
+  return best || hit;
+}
+
 // Play-once check: a cutscene should start only if it has a key and that key hasn't been seen yet
 // (GameState.seenCutscenes, a Set of keys, the same style as GameState.collected).
 function notSeenCutscene(key, seen) {

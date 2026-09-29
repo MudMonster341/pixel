@@ -28,6 +28,9 @@ const FRONT_WALL_TILES = 4;
 // requires) -- SIGN_SEGMENT_COUNT is only used to know how many segment tiles exist.
 const SIGN_CHARS_PER_TILE = 3;
 const SIGN_SEGMENT_COUNT = Math.ceil('BITS PILANI, DUBAI CAMPUS'.length / SIGN_CHARS_PER_TILE);
+// Quality loop, category 1 run 3 (2026-09-29): mirrored the same way, from make-assets.js's own
+// WELCOME_SIGN_TEXT/WELCOME_SIGN_CHARS_PER_TILE -- the forecourt's free-standing "welcomes you" board.
+const WELCOME_SIGN_SEGMENT_COUNT = Math.ceil('WELCOME'.length / 4);
 
 // The portico's own column table, read left-to-right as offsets from the door's own left tile
 // (doorX0): 'column' = a full portico column (bitsEntranceColumn), 'frame' = the terracotta portal
@@ -1257,7 +1260,13 @@ const RA = layout.roundabout;
 // overlapped it, breaking the loop in the middle instead of routing around it.
 const coreFrontV = coreBox.v1 + FRONT_WALL_TILES * MPT;
 const gateToCoreDepth = fenceFrame.v1 - coreFrontV;
-const roundaboutOuterHalf = Math.min(RA.outerHalfMeters, gateToCoreDepth * 0.16);
+// Quality loop, category 1 run 3 (2026-09-29): shrunk from *0.16 -- freeing depth for a real forecourt
+// (see loopV1Floor/parkingV0 below) needed more room north of the roundabout than layout.js's own
+// avenueToRoundaboutMeters reduction alone could give without cutting the entrance avenue's own
+// straight leg down to almost nothing (FB-0008/FB-0010's own "a real distance inside the gate" check).
+// A smaller roundabout still leaves a real, walkable, kerb-ringed island (FB-0026) -- just not as
+// large as before -- and moves 2 metres of depth back towards the core for every 1 metre shrunk here.
+const roundaboutOuterHalf = Math.min(RA.outerHalfMeters, gateToCoreDepth * 0.11);
 const roundaboutIslandHalf = Math.max(MPT, Math.min(RA.islandHalfMeters, roundaboutOuterHalf - MPT * 2));
 const roundaboutCenter = [gate2U, fenceFrame.v1 - RA.avenueToRoundaboutMeters - roundaboutOuterHalf];
 
@@ -1312,23 +1321,54 @@ const PK = layout.entranceParking;
 const loopClearance = layout.loopRoad.widthMeters + MPT * 2; // the loop strip itself, plus a little lawn before the core's front wall
 const parkingV1 = roundaboutCenter[1] - roundaboutOuterHalf - MPT; // just north of the roundabout
 const parkingDepth = Math.min(30, Math.max(10, gateToCoreDepth * 0.3));
-// Coordinator review round 2 (2026-09-27), point D: parkingV0 used the same under-sized
-// coreFrontV-based estimate the loop road's own v1 did, which is why entrance parking (and, through
-// it, the loop road's own clamp) ended up hugging the Main Block door with almost no forecourt --
-// floored against the *real* drawn door position (`mainDoor`, available here since drawBuilding has
-// already run) plus 5 tiles of forecourt and the loop road's own width, same as loopBox.v1 below.
-// Clamped back from parkingV1 (the roundabout's own near edge, fixed) by at least MIN_PARKING_DEPTH:
-// this specific campus's gate-to-core corridor is only ~14 tiles deep, not enough for both a full
-// forecourt and the parking lot's old depth, so a real trade-off (favouring the entrance, per this
-// review's own priority) shrinks the lot rather than removing it outright -- paveRectFrame's own kerb
-// border eats 1 tile top and bottom, so anything under 3 tiles deep shows zero actual parking tiles.
-const MIN_PARKING_DEPTH = MPT * 3;
-const parkingV0 = Math.min(
-  Math.max(coreFrontV + loopClearance, parkingV1 - parkingDepth, mainDoor[1] + MPT * 5 + loopClearance),
-  parkingV1 - MIN_PARKING_DEPTH,
+// Quality loop, category 1 run 3 (2026-09-29): "the Main Block steps drop straight onto the sidewalk
+// and the loop road... make room for at least 5-6 tiles of forecourt". A hard requirement now (not
+// just one of several Math.max() preferences that an outer Math.min() could still silently override
+// downward, which is exactly what left the previous round's forecourt at ~3 tiles despite this same
+// comment already asking for 5): the loop road's own near (door-facing) edge must clear the *real*
+// drawn Main Block door (`mainDoor`) by at least FORECOURT_TILES tiles, full stop -- see loopV1Floor,
+// used both here and by loopBox.v1 below. Parking is what flexes instead (`layout.js`'s own
+// avenueToRoundaboutMeters was also shrunk this round -- "push the parking back" -- to give this
+// corridor enough real depth to keep both a full forecourt AND a real parking lot; MIN_PARKING_DEPTH
+// below is still a floor for how deep the lot itself should be, but never at the forecourt's expense).
+// Measured from the door, not the foot of the steps: "at least 5-6 tiles of forecourt... between the
+// steps and any road" (the owner's own wording) means open paver PLAZA past the 3-row staircase
+// (bitsStep1/2/3, drawn later in section 16.5) -- so this floor needs to clear the door by the
+// staircase's own depth (STEP_ROWS) *plus* that plaza depth, or the plaza works out to only
+// FORECOURT_TILES minus 3 deep, which is what happened the first time this was tried (measuring only
+// from the door left just ~3 tiles of real plaza once the steps ate their own 3 rows of it). 5 tiles
+// of plaza (the bottom of the owner's "5-6" ask), not 6: giving the entrance parking lot real depth
+// too (see MIN_PARKING_DEPTH below) needed the extra tile more than the plaza did.
+const STEP_ROWS = 3;
+const FORECOURT_TILES = STEP_ROWS + 5;
+const FORECOURT_M = MPT * FORECOURT_TILES;
+const loopV1Floor = mainDoor[1] + FORECOURT_M + layout.loopRoad.widthMeters;
+// Shared with section 16.5's own forecourt-plaza paving below (and section 15's Main Block flanking
+// palms, which need to steer clear of this same rectangle) -- one number, not two copies that could
+// drift apart the way the old hard-coded `doorY+9` cap on the paving loop almost did this round.
+const FORECOURT_PLAZA_HALF = 6;
+// paveRectFrame's own kerb border eats 1 tile all round, and the lot is PK.widthMeters/MPT (16) tiles
+// wide, so its interior parking-tile count is (16-2)*(depthTiles-2) -- FB-0026's own `parkingTiles >
+// 20` floor needs at least 4 tiles of real depth ((16-2)*(4-2) = 28), not the 3 tiles a plain "at
+// least 1 row shows" comment used to assume (that gives only 14, silently under the actual test).
+const MIN_PARKING_DEPTH = MPT * 4;
+// If the corridor is too tight to give the lot even that much once the forecourt/loop floor is
+// honoured, the lot degenerates towards zero depth rather than the forecourt shrinking back down (the
+// owner explicitly allows changing this area's layout, parking included). The forecourt/loop floor is
+// the outer Math.max()'s own first argument, deliberately NOT wrapped in a further Math.min() the way
+// the old (pre-run-3) version was -- that outer min() is exactly what let a short corridor silently
+// eat back into the forecourt it was supposed to protect.
+const parkingV0 = Math.max(
+  loopV1Floor + MPT, // a 1-tile gap between the loop road and the lot -- still a real, visible seam
+  Math.min(Math.max(coreFrontV + loopClearance, parkingV1 - parkingDepth), parkingV1 - MIN_PARKING_DEPTH),
 );
-const westLot = { u0: gate2U - AVENUE_W / 2 - PK.gapMeters - PK.widthMeters, v0: parkingV0, u1: gate2U - AVENUE_W / 2 - PK.gapMeters, v1: parkingV1 };
-const eastLot = { u0: gate2U + AVENUE_W / 2 + PK.gapMeters, v0: parkingV0, u1: gate2U + AVENUE_W / 2 + PK.gapMeters + PK.widthMeters, v1: parkingV1 };
+// Never past parkingV1 itself (a corridor too tight even for the forecourt/loop floor alone would
+// otherwise give the lot a negative depth) -- degenerates to a zero-depth lot rather than an invalid
+// rect; drawEntranceParkingLot below already only draws real cells, so a zero-depth lot simply draws
+// nothing rather than erroring.
+const parkingV0Safe = Math.min(parkingV0, parkingV1);
+const westLot = { u0: gate2U - AVENUE_W / 2 - PK.gapMeters - PK.widthMeters, v0: parkingV0Safe, u1: gate2U - AVENUE_W / 2 - PK.gapMeters, v1: parkingV1 };
+const eastLot = { u0: gate2U + AVENUE_W / 2 + PK.gapMeters, v0: parkingV0Safe, u1: gate2U + AVENUE_W / 2 + PK.gapMeters + PK.widthMeters, v1: parkingV1 };
 // Because gate2U sits inside the academic core's own u-range (it's offset off the Main Block's
 // centreline, section 6, but the core is wide), a lot flanking the avenue by its full width can reach
 // as far sideways as a building door's own approach column even though the two are well separated in
@@ -1379,18 +1419,18 @@ const loopBox = {
   u0: Math.min(coreBox.u0, Math.max(coreBox.u0 - LOOP.marginMeters - LOOP.widthMeters, fenceFrame.u0 + MPT * 5, westNeighbourU1 + MPT * 3)),
   v0: Math.max(coreBox.v0 - LOOP.marginMeters - LOOP.widthMeters, fenceFrame.v0 + MPT * 5),
   u1: Math.max(coreBox.u1, Math.min(coreBox.u1 + LOOP.marginMeters + LOOP.widthMeters, fenceFrame.u1 - MPT * 5, eastNeighbourU0 - MPT * 3)),
-  // Coordinator review round 2 (2026-09-27), point D: "the forecourt plaza must sit between the
-  // steps and any road, at least 5 tiles deep... if the loop road runs right against the facade
-  // there, move that stretch of road south". Measured against the *real* drawn Main Block door
-  // (`mainDoor`, from its actual footprint -- an L-shaped building's front run doesn't always sit
-  // exactly on coreBox's own naive south edge, which is what left only 1 tile of clearance here
-  // before this fix): the loop's own south strip (drawn `widthM` inset from this box's v1, see
-  // drawLoopRoad below) should clear the door by at least 5 tiles (10m) of forecourt -- but never
-  // past `parkingV0 - MPT*2` (the outer Math.min, unchanged from before this fix): the entrance
-  // parking lots sit at a fixed depth of their own, and pushing the loop road out far enough to clear
-  // the door by *more* than that would just move the collision from "the road overlaps the door" to
-  // "the road overlaps the parking lot" instead of solving it.
-  v1: Math.min(Math.max(coreFrontV + loopClearance, mainDoor[1] + MPT * 5 + LOOP.widthMeters), parkingV0 - MPT * 2),
+  // Quality loop, category 1 run 3 (2026-09-29): "make room for at least 5-6 tiles of forecourt...
+  // reroute or shorten that stretch of the loop road". Measured against the *real* drawn Main Block
+  // door (`mainDoor`, from its actual footprint -- an L-shaped building's front run doesn't always sit
+  // exactly on coreBox's own naive south edge): the loop's own south strip (drawn `widthM` inset from
+  // this box's v1, see drawLoopRoad below) must clear the door by at least FORECOURT_TILES tiles of
+  // forecourt (`loopV1Floor`, shared with parkingV0's own floor above). Unlike the previous round's
+  // version of this line, this floor is NOT wrapped in a further `Math.min(..., parkingV0 - MPT*2)`:
+  // that outer min() is exactly what silently let a short corridor eat back into the forecourt it was
+  // supposed to protect (this round's own bug -- confirmed by direct ground-layer inspection: the
+  // "5 tiles" the old comment promised only ever produced ~3 in practice). parkingV0 is now floored
+  // against this same value instead (see above), so the two can never conflict.
+  v1: Math.max(coreFrontV + loopClearance, loopV1Floor),
 };
 function drawLoopRoad(box, widthM) {
   paveRectFrame(box.u0, box.v0, box.u1, box.v0 + widthM, 'asphalt', 'h');
@@ -1484,7 +1524,11 @@ paveRectFrame(parkingFeature.rect[0], parkingFeature.rect[1], parkingFeature.rec
 // A function (not inlined once, section 11b's addendum: the two new entrance lots flanking Gate 2's
 // roundabout, "parking on the left and right", get the same treatment as the original Student Parking).
 function placeParkingCars(u0, v0, u1, v1, avoidColumns = []) {
-  const PARKING_CARS = [TILE.carSedan, TILE.carSedanBlue, TILE.carSuv, TILE.carVan];
+  // Quality loop, category 1 run 3 (2026-09-29): "a few parked cars in the right perspective (Kenney
+  // RPG Urban cars are top-down 3/4, use those)" -- mixed into the same round-robin pool as the
+  // existing Modern City/Pixel Vehicle Pack cars, rather than replacing them outright (the owner asked
+  // for "a few", not a wholesale swap, and every parking lot on campus draws from this one pool).
+  const PARKING_CARS = [TILE.carSedan, TILE.carSedanBlue, TILE.carSuv, TILE.carVan, TILE.carFrontYellow, TILE.carFrontRed, TILE.carFrontGreen];
   const x0 = gx(u0) + 1;
   const x1 = gx(u1) - 1;
   const y0 = gy(v0) + 1;
@@ -1702,8 +1746,13 @@ if (mainBlock.frontBand) {
     for (const dx of [0, 6, 12, 18, 24, 30, 36, 42]) for (const dy of [-1, 2, 5, 8]) cells.push([xBase + dir * dx, doorY + dy]);
     return cells;
   };
-  for (const [x, y] of palmCandidates(doorX0 - 7, -1)) if (plantTree(x, y, 'palm')) break;
-  for (const [x, y] of palmCandidates(doorX1 + 5, 1)) if (plantTree(x, y, 'palm')) break;
+  // Quality loop, category 1 run 3 (2026-09-29): the forecourt plaza (section 16.5, below) got deeper
+  // this round, reaching rows these candidates' own dy list already covers -- xBase now clears the
+  // plaza's own px0/px1 (FORECOURT_PLAZA_HALF either side of the door) by a genuine empty tile, not
+  // just the 1-tile adjacency the old -7/+5 offsets gave, which FB-0022's "1 tile of clearance from any
+  // path" check (rightly) started failing once the plaza's kerb reached that far out.
+  for (const [x, y] of palmCandidates(doorX0 - FORECOURT_PLAZA_HALF - 2, -1)) if (plantTree(x, y, 'palm')) break;
+  for (const [x, y] of palmCandidates(doorX1 + FORECOURT_PLAZA_HALF + 2, 1)) if (plantTree(x, y, 'palm')) break;
 }
 
 // Shade trees scattered across the lawn: a deterministic hash so the map is reproducible, jittered
@@ -1718,6 +1767,7 @@ function hash(x, y) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 let treeCount = 0;
+let benchUnderTreeCount = 0;
 function scatterTrees(x0, y0, x1, y1) {
   const STEP = 8;
   for (let gy0 = y0; gy0 < y1; gy0 += STEP) {
@@ -1726,7 +1776,18 @@ function scatterTrees(x0, y0, x1, y1) {
       if (h % 3 !== 0) continue;
       const jx = gx0 + (h >> 2) % (STEP - 2);
       const jy = gy0 + (h >> 5) % (STEP - 2);
-      if (plantTree(jx, jy, 'tree')) treeCount++;
+      if (!plantTree(jx, jy, 'tree')) continue;
+      treeCount++;
+      // Quality loop, category 1 run 3 (2026-09-29): "benches under trees" -- a bench beside (not
+      // literally under, which would overlap the trunk) about 1 in every 6 shade trees, deterministic
+      // on the same coarse-cell hash so this stays reproducible like every other scatter pass in this
+      // file. A short candidate list, since the trunk's own clearance rules can leave a tight-ish spot.
+      if (h % 18 < 3) {
+        const benchSpots = [[1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0]];
+        for (const [dx, dy] of benchSpots) {
+          if (structOnLawn(jx + dx, jy + dy, TILE.bench)) { benchUnderTreeCount++; break; }
+        }
+      }
     }
   }
 }
@@ -1761,6 +1822,20 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
   }
 }
 
+// Quality loop, category 1 run 3 (2026-09-29): "bike racks near hostels" -- one near each hostel's own
+// plaza-facing anchor (approxDoorAnchor, the same estimate the walkway network already routes to for a
+// hostel with no real interior door yet), a short list of nearby candidate offsets like the Main Block
+// palms above, since the exact anchor cell itself is usually already claimed by the walkway/plaza.
+for (const h of westHostels.concat(eastHostels)) {
+  const [au, av] = approxDoorAnchor(h);
+  const ax = gx(au);
+  const ay = gy(av);
+  const candidates = [[3, 1], [-3, 1], [4, 2], [-4, 2], [2, 3], [-2, 3], [5, 0], [-5, 0]];
+  for (const [dx, dy] of candidates) {
+    if (structOnLawn(ax + dx, ay + dy, TILE.bikeRack)) { addDepthGroup('bikeRack', ax + dx, ay + dy, 1, 1); break; }
+  }
+}
+
 // Coordinator review round 2, point D: the staircase/planters/flags are placed in section 16.5,
 // below, after the forecourt paving itself exists (this section runs first, and the forecourt
 // rectangle would otherwise overwrite a staircase placed here).
@@ -1772,7 +1847,26 @@ for (let i = 0, y = gy(mainDoor[1]) + 2; y <= gy(fenceFrame.v1) - 3; y += 6, i++
   const gateRow = gy(fenceFrame.v1) - 2;
   structOnLawn(gx(gate2U - AVENUE_W / 2) - 2, gateRow, TILE.bollard);
   structOnLawn(gx(gate2U + AVENUE_W / 2) + 2, gateRow, TILE.bollard);
-  structOnLawn(gx(gate2U - AVENUE_W / 2) - 4, gateRow + 2, TILE.busStopSign);
+  // Quality loop, category 1 run 3 (2026-09-29): the old fixed `gateRow + 2` landed exactly ON the
+  // fence line itself (gateRow is already only 2 rows in from it), so the bus stop sign was silently
+  // failing to place every single time -- found by actually counting `busStopSign` tiles on the
+  // generated map (zero), not by any test (nothing checked this before). A short candidate list, same
+  // "try a few nearby spots" fallback the palms/bike racks above already use, replaces the single
+  // fixed offset for both the sign and its new shelter.
+  const busStopX = gx(gate2U - AVENUE_W / 2) - 4;
+  const busSpots = [[0, 0], [0, -1], [-1, 0], [0, 1], [-2, 0], [-1, -1]];
+  let busStopPlaced = false;
+  for (const [dx, dy] of busSpots) {
+    if (structOnLawn(busStopX + dx, gateRow + dy, TILE.busStopSign)) { busStopPlaced = true; break; }
+  }
+  // Quality loop, category 1 run 3 (2026-09-29): "shade sails or a bus shelter at the bus stop" --
+  // right beside the sign itself once it's actually placed.
+  if (busStopPlaced) {
+    const shelterSpots = [[-2, 0], [-2, 1], [-3, 0], [2, 0], [-2, -1]];
+    for (const [dx, dy] of shelterSpots) {
+      if (structOnLawn(busStopX + dx, gateRow + dy, TILE.busShelter)) break;
+    }
+  }
 }
 
 // Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the BITS
@@ -1909,17 +2003,21 @@ const WALKWAY_EDGE_TILE = {
 // whole avenue -- the avenue itself stays `walkway` (asphalt-adjacent kerbs already frame it).
 if (mainBlock.frontBand) {
   const { doorX0, doorX1, y1: doorY } = mainBlock.frontBand;
-  // Coordinator review round 2, point D: "the forecourt plaza must sit between the steps and any
-  // road, at least 5 tiles deep" -- py1 reaches as far as the loop road fix above now allows, but
-  // never into the entrance parking lots (a fixed-depth feature of their own, not derived from the
-  // loop road) -- whichever is closer to the door wins, so this can never overlap real parking tiles
-  // even if a future layout tweak changes their relative distances again.
-  const plazaHalf = 6;
+  // Quality loop, category 1 run 3 (2026-09-29): "the plaza gets the small low-contrast red pavers,
+  // kerb edges... between the steps and any road, at least 5-6 tiles deep" -- py1 reaches at least a
+  // couple of tiles past loopV1Floor's own near edge (FORECOURT_TILES from the door) so the paving
+  // loop below actually meets the loop road's own kerb instead of stopping short and leaving a bare
+  // walkway/lawn gap; its own "never paint over a real road" guard (below) is what does the real,
+  // precise trim against whatever the loop road actually drew, so overshooting here is harmless. Still
+  // never reaches into the entrance parking lots (a fixed-depth feature of their own) -- whichever is
+  // closer to the door wins, so this can never overlap real parking tiles even if a future layout
+  // tweak changes their relative distances again.
+  const plazaHalf = FORECOURT_PLAZA_HALF;
   const px0 = doorX0 - plazaHalf;
   const px1 = doorX1 + plazaHalf;
   const py0 = doorY + 1;
   const parkingNorthEdge = Math.min(gy(westLot.v0), gy(eastLot.v0));
-  const py1 = Math.min(doorY + 9, parkingNorthEdge - 1);
+  const py1 = Math.min(doorY + FORECOURT_TILES + 2, parkingNorthEdge - 1);
   for (let y = py0; y <= py1; y++) {
     for (let x = px0; x <= px1; x++) {
       if (!inGrid(x, y) || roofOwner[y * W + x] !== -1 || wallOwner[y * W + x] !== -1) continue;
@@ -1976,6 +2074,22 @@ if (mainBlock.frontBand) {
       if (inGrid(x, flagY - 1)) overhead[(flagY - 1) * W + x] = TILE[topName];
     }
   });
+
+  // Quality loop, category 1 run 3 (2026-09-29): "the plaza gets... the 'welcomes you' sign board,
+  // per the photo" -- a WELCOME_SIGN_SEGMENT_COUNT-tile board needs that many CONTIGUOUS open lawn
+  // tiles in a row, so (unlike a single-tile prop) it can't just retry structOnLawn tile-by-tile --
+  // if only the first tile were open, that would silently plant half a sign. Mirrors the flag row's
+  // own east side (the west side is already spoken for, above), same "try a short list of candidate
+  // spots, nearest the steps first" fallback the palms/flags already use for this same short corridor.
+  const welcomeCandidates = [];
+  for (const dy of [3, 6, 0, 8]) for (const dx of [doorX1 + 6, doorX1 + 12, doorX0 - 18 - WELCOME_SIGN_SEGMENT_COUNT * 2]) welcomeCandidates.push([dx, doorY + dy]);
+  for (const [x0, y] of welcomeCandidates) {
+    const cells = Array.from({ length: WELCOME_SIGN_SEGMENT_COUNT }, (_, i) => [x0 + i, y]);
+    if (!cells.every(([x, y2]) => isLawn(x, y2))) continue;
+    cells.forEach(([x, y2], i) => { structures[y2 * W + x] = TILE[`welcomeSignSeg${i}`]; });
+    addDepthGroup('welcomeSign', x0, y, WELCOME_SIGN_SEGMENT_COUNT, 1);
+    break;
+  }
 }
 
 // Re-stamp every building's entrance tiles now that all road/walkway/parking painting above has

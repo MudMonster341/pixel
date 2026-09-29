@@ -1693,6 +1693,48 @@
       "solid": true,
       "overhead": false,
       "color": "#6d7979"
+    },
+    {
+      "name": "welcomeSignSeg0",
+      "solid": true,
+      "overhead": false,
+      "color": "#7b9875"
+    },
+    {
+      "name": "welcomeSignSeg1",
+      "solid": true,
+      "overhead": false,
+      "color": "#7b9873"
+    },
+    {
+      "name": "busShelter",
+      "solid": true,
+      "overhead": false,
+      "color": "#699a59"
+    },
+    {
+      "name": "bikeRack",
+      "solid": true,
+      "overhead": false,
+      "color": "#518d4c"
+    },
+    {
+      "name": "carFrontYellow",
+      "solid": true,
+      "overhead": false,
+      "color": "#b8916c"
+    },
+    {
+      "name": "carFrontRed",
+      "solid": true,
+      "overhead": false,
+      "color": "#ab666b"
+    },
+    {
+      "name": "carFrontGreen",
+      "solid": true,
+      "overhead": false,
+      "color": "#548577"
     }
   ]
 }

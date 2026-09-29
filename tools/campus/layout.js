@@ -114,7 +114,15 @@ module.exports = {
   // kept axis-aligned per ADR 0009 (a true circular kerb would need diagonal tiles) -- a paved square
   // junction with a lawn-and-hedge traffic island in the middle. `outerHalfMeters`/`islandHalfMeters`
   // are upper bounds: build-campus.js shrinks them if the real gate-to-Main-Block depth is tight.
-  roundabout: { avenueToRoundaboutMeters: 12, outerHalfMeters: 10, islandHalfMeters: 4 },
+  // Quality loop, category 1 run 3 (2026-09-29): shrunk from 12 -- on this campus's own generated
+  // geometry, there wasn't enough depth left between the Main Block door and the entrance parking lot
+  // to also fit a real forecourt (owner: "at least 5-6 tiles") and the loop road, because most of the
+  // real gate-to-core depth was being spent well south of the parking lot (the roundabout itself, plus
+  // this gap to the fence). Shrinking this gap (combined with a smaller roundabout, build-campus.js's
+  // own comment on `roundaboutOuterHalf`) moves the roundabout and the parking lot closer to the gate
+  // -- exactly "push the parking back" -- freeing that depth for the forecourt instead. Still well
+  // clear of FB-0008/FB-0010's own "a real distance inside the gate" check (4 tiles, not 0).
+  roundabout: { avenueToRoundaboutMeters: 8, outerHalfMeters: 10, islandHalfMeters: 4 },
   // Parking either side of the entrance road, just past the roundabout (owner: "parking on the left
   // and right"). Depth is derived at build time from whatever depth is left after the roundabout and
   // the loop road's own clearance from the Main Block are reserved (see build-campus.js section 11).

@@ -1028,7 +1028,10 @@ class WorldScene extends Phaser.Scene {
   // 'building' bbox used only for labels -- QA: the bbox of an L-shaped building can spill into a
   // neighbouring building's plaza and win there, which 'zone's precise footprint rectangles don't).
   areaHere() {
-    return objectAt(this.mapObjects, ['area', 'zone'], this.player.x / TILE, this.player.y / TILE);
+    // Quality loop, category 1 run 3 (2026-09-29): the fallback-to-nearest-named-building logic lives
+    // in maplogic.js (nearestNamedArea) as a plain, unit-testable function -- see its comment there
+    // for why a building's own 'zone' isn't always enough and the campus-wide fallback needs help.
+    return nearestNamedArea(this.mapObjects, this.player.x / TILE, this.player.y / TILE);
   }
 
   // Location banner (Pokemon-style name plate, P4): tells the UI scene when the player enters a

@@ -12,7 +12,7 @@ building. Target: 8+ in every area.
 | 4 | UI and menus | 7 | 2026-09-29 (run 2) | title backdrop could be brighter; re-check HUD during cutscenes in a playthrough |
 | 5 | Story flow and clarity | 6 | 2026-09-29 (run 1) | control returns with the objective and Mustafa present; greeting screen is a crude portrait over a dim backdrop |
 | 6 | Cutscenes | 5 | 2026-09-29 (run 1) | bus is a side-view picture on a top-down road; Mustafa portrait crude; Physics Lab beat shows rainbow glitch sprites |
-| 7 | Mini-games | — | — | |
+| 7 | Mini-games | 4 | 2026-09-29 (run 1) | platformer + flyer: hero drawn at 1x (a speck), scenes dark and empty; Tetris good |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
 | 10 | Card and ending | 7 | 2026-09-29 (run 2) | message box empty while the first line types in; box-opening not re-rated yet |
@@ -21,6 +21,12 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Mini-games (run 1) — overall 4
+Now capturable (qa-shots fixed: 96 captured, 0 skipped).
+- **Tetris: 7.** Clean well, NEXT box, level/score panel, classroom backdrop with whiteboard and night window.
+- **Platformer: 4.** The hero is drawn at 1x in a 960x540 scene: a speck. The lab backdrop is dark and muddy; platforms are thin strips.
+- **Flyer: 3.** Same: the hero is a speck; the server room is dark and mostly empty; racks only at the edge.
+- **Cards: 6.** Readable; the frame's tick decorations look odd on the left edge.
 ### 2026-09-29 — Cutscenes (run 1) — 5, Story flow (run 1) — 6
 From `npm run qa:shots:intro` (docs/research/premium-pass/cutscenes/01-12).
 - **Greeting (3):** Mustafa's portrait is crude (a round blob face in a box); the live backdrop behind it is very dark.

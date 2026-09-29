@@ -498,6 +498,20 @@ async function shootTitleAndPause(browser) {
 // `win()` (the same calls real gameplay reaching that outcome would make), the same shortcut that
 // spec uses, rather than scripting a full playthrough of each game just for a screenshot.
 
+// Quality loop, category 7 run 1: this used to lose all 5 shots for every one of the 3 games, every
+// run -- FB-0042 (src/minigames/framework-scene.js) added a 350ms guard (CARD_INPUT_DELAY_MS) where
+// a card silently drops ENTER/SPACE (MinigameCard.confirm() no-ops while `acceptInput` is false), and
+// this flow used to fire a bare `page.keyboard.press('Enter')` only 150ms after the intro card
+// appeared -- comfortably inside that guard, so START was lost for good (a keydown, never re-sent,
+// unlike a real player who'd just press it again) and the very next wait (for mgState to reach
+// 'playing') burned its full 5s timeout and took the other 4 shots down with it (tryStep's own
+// per-game try/catch). Waiting on `card.acceptInput` itself (real state, the same flag the game's
+// own confirm() gates on) instead of guessing past it with a fixed sleep removes the race entirely.
+async function waitCardAcceptsInput(page, sceneKey) {
+  await waitFor(page, (key) => Boolean(game.scene.getScene(key).card && game.scene.getScene(key).card.acceptInput),
+    { arg: sceneKey, timeout: 3000 });
+}
+
 async function shootMinigames(browser) {
   for (const id of ['platformer', 'flappy', 'tetris']) {
     const page = await browser.newPage({ viewport: VIEWPORT });
@@ -514,31 +528,64 @@ async function shootMinigames(browser) {
         return MINIGAMES[gameId].sceneKey;
       }, id);
       await waitFor(page, (key) => game.scene.isActive(key), { arg: sceneKey, timeout: 5000 });
-      await page.waitForTimeout(150);
+      await page.waitForTimeout(150); // let the card's own fade-in tween (framework-scene.js show()) settle
       await shoot(page, `minigame-${id}-01-intro`);
 
+      await waitCardAcceptsInput(page, sceneKey);
       await page.keyboard.press('Enter'); // START
       await waitFor(page, (key) => game.scene.getScene(key).mgState === 'playing', { arg: sceneKey, timeout: 5000 });
       await page.waitForTimeout(200);
       if (id === 'flappy') {
-        // The first server rack spawns just off the right edge and scrolls in at 150px/s -- a couple
-        // of steadying flaps and about a second of flight brings it on screen for the shot, instead of
-        // catching an empty room a moment after launch.
-        for (let i = 0; i < 4; i++) {
-          await page.keyboard.press('Space');
+        // FB-0042: she now hovers (no gravity/scrolling/collision, framework "get ready" beat) until
+        // the first real flap -- `flying` flips true synchronously inside flap(), so waiting on it
+        // confirms the very first Space actually registered before spending real time on the rest of
+        // the steadying flaps, rather than assuming it landed. The first server rack spawns just off
+        // the right edge and scrolls in at 150px/s -- a few more flaps and about a second of flight
+        // brings it on screen for the shot, instead of catching an empty room right after liftoff.
+        await page.keyboard.press('Space');
+        await waitFor(page, (key) => game.scene.getScene(key).flying === true, { arg: sceneKey, timeout: 2000 });
+        for (let i = 0; i < 3; i++) {
           await page.waitForTimeout(230);
+          await page.keyboard.press('Space');
         }
       } else if (id === 'platformer') {
-        // Run a step toward the first gap, then jump, so the shot shows her mid-stride/airborne rather
-        // than standing still at the spawn point.
+        // At PLATFORMER_RUN_SPEED (140px/s) over a 1500px level (PF_LEVEL_WIDTH), running from the
+        // spawn point for a fraction of a second only ever reached the first platform, nowhere near
+        // "mid-level" -- and scripting real jumps timed against the actual gaps (platformer-physics.js
+        // coyote-time/jump-buffer rules) just to get further in risks dropping her into a pit and
+        // losing the attempt before the shot, for no visual benefit over the same shortcut this file
+        // already uses for game-over/win: real engine state (the same reset()/setVelocityY() her own
+        // jump and startAttempt() already use), not a scripted playthrough. Places her airborne over
+        // the 3rd platform (PF_PLATFORMS, x 760-940) with the camera centered on her, and keeps ArrowRight
+        // held through it so she reads as running/jumping, not idly floating.
         await page.keyboard.down('ArrowRight');
-        await page.waitForTimeout(500);
+        await page.evaluate((key) => {
+          const s = game.scene.getScene(key);
+          const x = 820;
+          const y = PF_GROUND_Y - 70;
+          s.player.setPosition(x, y);
+          s.player.body.reset(x, y);
+          s.player.body.setVelocityY(PLATFORMER_JUMP_VELOCITY);
+          s.cameras.main.scrollX = Math.max(0, Math.min(x - GAME_WIDTH / 2, PF_LEVEL_WIDTH - GAME_WIDTH));
+        }, sceneKey);
+        await page.waitForTimeout(150); // let playUpdate() apply this frame's anim/hero-sprite sync
         await page.keyboard.up('ArrowRight');
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(200);
       } else {
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(250);
+        // Tetris never bound SPACE to anything (rotate is UP/W, drop is DOWN/S) -- the old
+        // `keyboard.press('Space')` here did nothing at all, leaving the shot barely different from
+        // the empty board just after launch. Drop a few pieces for real, through the same engine
+        // functions playUpdate() itself calls every tick (movePiece/lockAndContinue), the same
+        // shortcut already used below to force game-over/win, instead of holding Down and waiting out
+        // the real fall timer (700ms/row at level 1) just for a screenshot.
+        await page.evaluate((key) => {
+          const s = game.scene.getScene(key);
+          for (let n = 0; n < 3; n++) {
+            let moved = movePiece(s.board, s.piece, 0, 1);
+            while (moved !== s.piece) { s.piece = moved; moved = movePiece(s.board, s.piece, 0, 1); }
+            s.lockAndContinue();
+          }
+        }, sceneKey);
+        await page.waitForTimeout(150); // let the lock-flash/redraw settle before the shot
       }
       await shoot(page, `minigame-${id}-02-play`);
 
@@ -547,7 +594,9 @@ async function shootMinigames(browser) {
       await page.waitForTimeout(100);
       await shoot(page, `minigame-${id}-03-gameover`);
 
-      // Force 2 more losses to reach the 3-fail skip offer, its own distinct card.
+      // Force 2 more losses to reach the 3-fail skip offer, its own distinct card. Driven straight
+      // through beginAttempt()/lose() (not a real Retry keypress), so the card's own acceptInput guard
+      // never enters into it here.
       for (let i = 0; i < 2; i++) {
         await page.evaluate((key) => {
           const s = game.scene.getScene(key);

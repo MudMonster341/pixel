@@ -6,21 +6,26 @@ building. Target: 8+ in every area.
 
 | # | Category | Score | Last rated | Top issues |
 |---|---|---|---|---|
-| 1 | Outdoor art | 6 | 2026-09-29 (run 3) | no forecourt: steps meet the road directly; no life (no students); location banner covers the Main Block sign; hostel areas named "BITS Pilani, Dubai Campus" |
-| 2 | Interior art | 5 | 2026-09-29 (run 3) | foyer clean but bland; chandelier reads as a gold plus sign; plants sit on brick tiles; Physics Lab benches still a uniform grid; no people |
+| 1 | Outdoor art | 7 | 2026-09-29 (run 4) | palms look noisy/dithered; still no people walking around |
+| 2 | Interior art | 6 | 2026-09-29 (run 4) | foyer floor tile grid a bit busy; no people besides the volunteer; stair block still plain |
 | 3 | Characters and depth | — | — | |
-| 4 | UI and menus | 5 | 2026-09-29 (run 1) | title backdrop is a dark blurry schematic (1px/tile map scaled up); location banner overlaps the Main Block sign; run-1 cutscene overlaps fixed (merged, re-test next) |
+| 4 | UI and menus | 7 | 2026-09-29 (run 2) | title backdrop could be brighter; re-check HUD during cutscenes in a playthrough |
 | 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
 | 6 | Cutscenes | — | — | (the in-world Gate 2 beat looks good; qa:shots times out waiting for the Gate 2 script to end) |
 | 7 | Mini-games | — | — | |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
-| 10 | Card and ending | 5 | 2026-09-29 (run 1) | title glow draws as a ghosted double of the text; temp entrance slide still shows the red arch; photo frame and message box read as two unrelated boxes |
+| 10 | Card and ending | 7 | 2026-09-29 (run 2) | message box empty while the first line types in; box-opening not re-rated yet |
 | 11 | Performance and stability | — | — | (e2e timeouts only under parallel load) |
 
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Run 4 re-rate: Outdoor 7, Interior 6, UI 7, Card 7
+- **Outdoor (7, was 6):** the Main Block now matches the photo: full "BITS PILANI, DUBAI CAMPUS" sign, the tall mullioned glass front, light stone steps, a real red-paver forecourt, palms either side, the banner no longer covering the sign. Palms look noisy/dithered; no people.
+- **Interior (6, was 5):** round shaded columns, a tiered gold chandelier, a rug, a reception desk, proper plant pots. The floor tile grid is a little busy; the stair block is plain; it's empty of people.
+- **UI (7, was 5):** the title shows the real campus (the Main Block entrance) behind a crisp logo; the location banner moved to the top-left.
+- **Card (7, was 5):** no ghost text; the new entrance slide matches the building; the cream note panel ties it together.
 ### 2026-09-29 — Outdoor art (run 3) — overall 6 (was 5)
 - **Main Block front: 7.** Now reads as the entrance: the BITS lettering, windowed facade, tall mullioned glass front, double door and light stone steps. But the steps drop straight onto the sidewalk and road (no forecourt), and the location banner covers the sign.
 - **Gate 2: 7.** Palm, pillar, booth, short barrier, planters: reads as a gate.

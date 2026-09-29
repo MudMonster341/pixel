@@ -10,8 +10,8 @@ building. Target: 8+ in every area.
 | 2 | Interior art | 6 | 2026-09-29 (run 4) | foyer floor tile grid a bit busy; no people besides the volunteer; stair block still plain |
 | 3 | Characters and depth | — | — | |
 | 4 | UI and menus | 7 | 2026-09-29 (run 2) | title backdrop could be brighter; re-check HUD during cutscenes in a playthrough |
-| 5 | Story flow and clarity | — | — | (owner: "I don't understand what's going on" at arrival; being rebuilt) |
-| 6 | Cutscenes | — | — | (the in-world Gate 2 beat looks good; qa:shots times out waiting for the Gate 2 script to end) |
+| 5 | Story flow and clarity | 6 | 2026-09-29 (run 1) | control returns with the objective and Mustafa present; greeting screen is a crude portrait over a dim backdrop |
+| 6 | Cutscenes | 5 | 2026-09-29 (run 1) | bus is a side-view picture on a top-down road; Mustafa portrait crude; Physics Lab beat shows rainbow glitch sprites |
 | 7 | Mini-games | — | — | |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
@@ -21,6 +21,13 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Cutscenes (run 1) — 5, Story flow (run 1) — 6
+From `npm run qa:shots:intro` (docs/research/premium-pass/cutscenes/01-12).
+- **Greeting (3):** Mustafa's portrait is crude (a round blob face in a box); the live backdrop behind it is very dark.
+- **Bus arrival (4):** the bus is a side-profile picture (wheels at the bottom) placed on a top-down road; perspective clash.
+- **Mustafa meets her (7):** in-world at Gate 2, letterboxed, HUD hidden, clear dialog. Good.
+- **Control returns (6):** objective pill + banner + Mustafa standing by; clear enough.
+- **Physics Lab beat (4):** letterbox + line work, but the benches show rainbow-coloured glitch sprites (a bad tile crop).
 ### 2026-09-29 — Run 4 re-rate: Outdoor 7, Interior 6, UI 7, Card 7
 - **Outdoor (7, was 6):** the Main Block now matches the photo: full "BITS PILANI, DUBAI CAMPUS" sign, the tall mullioned glass front, light stone steps, a real red-paver forecourt, palms either side, the banner no longer covering the sign. Palms look noisy/dithered; no people.
 - **Interior (6, was 5):** round shaded columns, a tiered gold chandelier, a rug, a reception desk, proper plant pots. The floor tile grid is a little busy; the stair block is plain; it's empty of people.

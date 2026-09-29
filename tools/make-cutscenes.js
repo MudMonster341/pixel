@@ -466,15 +466,15 @@ return img;
 // directly above: a windshield cap (not a side window row), wheels only as small hints peeking from
 // under the body (never a full wheel silhouette), no side view of the body at all.
 //
-// Drawn nose-up (front cap at y=0, matching BUS_STEPS' own arrival direction, src/scripts.js) and
-// deliberately near-symmetric front/back (both ends are a rounded windshield cap) -- so
-// ScriptRunner's own `face` step can flip it vertically for the departure leg (src/scripts-runtime.js
-// step_face(), 'kind: image' actors) and the "other end" still reads as a believable front, not a
-// mismatched rear -- exactly the trick a real bus reversing/turning around off-screen would need
-// without a second, separately-drawn rear-view frame.
+// Drawn nose-up (front cap at y=0, matching BUS_STEPS' own arrival direction, src/scripts.js). The
+// front and rear caps are deliberately *not* identical any more (quality loop, Cutscenes run 2: "make
+// it read as a bus" wanted a destination display, which only a real front has) -- but flipping still
+// works correctly for the departure leg (src/scripts-runtime.js step_face(), 'kind: image' actors):
+// flipping the whole sprite vertically moves the front cap (display included) to the bottom, which is
+// exactly where the real front belongs once she's turned around to drive back out nose-first.
 function buildBus() {
 const BW = 32;
-const BH = 72;
+const BH = 88;
 const img = new Img(BW, BH);
 const C2 = {
   body: '#eadbb8', bodyShade: '#c9ae80', bodyHi: '#f5ead0',
@@ -483,6 +483,8 @@ const C2 = {
   wheel: '#1a1c2c', hub: '#8a8a94',
   mirror: '#1a1c2c',
   light: '#ffe38a',
+  display: '#f5ead0', displayText: '#5e2a20',
+  vent: '#a98a63', ac: '#c9ae80', acShade: '#a98a63',
   outline: '#1a1c2c',
 };
 const cx = BW / 2;
@@ -497,42 +499,55 @@ img.rect(0, 5, BW - 1, BH - 6, C2.body); // full width through the middle
 // has no alpha blending (only `px`/`ellipse` do), so these are solid, slightly muted tones rather
 // than a translucent overlay -- same approach buildGate2()/buildEntrance() already use for flat shade
 // bands elsewhere in this file.
-img.rect(2, 8, 5, BH - 9, C2.bodyHi);
-img.rect(BW - 7, 8, BW - 3, BH - 9, C2.bodyShade);
-// Roof vents down the centreline -- reads as "there's mechanical detail up here", not a blank slab.
-for (let vy = 30; vy < BH - 30; vy += 10) img.rect(cx - 3, vy, cx + 3, vy + 3, C2.bodyShade);
+img.rect(2, 20, 5, BH - 21, C2.bodyHi);
+img.rect(BW - 7, 20, BW - 3, BH - 21, C2.bodyShade);
 
-// The trim stripe, wrapping the full width around mid-body (the campus's own trim color, matching
-// every other cutscene in this file).
-img.rect(3, BH / 2 - 4, BW - 4, BH / 2 - 1, C2.stripe);
-img.rect(3, BH / 2 - 1, BW - 4, BH / 2, C2.stripeDeep);
+// Front cap: a destination display (a lit sign strip with a few dark "text" ticks, the thing that
+// most reads as "bus" from directly above) over the windshield, headlights tucked at the corners,
+// side mirrors just below.
+img.rect(7, 2, BW - 7, 7, C2.display);
+img.outlineRect(7, 2, BW - 7, 7);
+for (const tx of [10, 15, 20]) img.rect(tx, 4, tx + 3, 5, C2.displayText);
+img.rect(2, 2, 4, 4, C2.light);
+img.rect(BW - 4, 2, BW - 2, 4, C2.light);
+img.rect(6, 9, BW - 6, 21, C2.glass);
+img.ellipse(cx - 4, 13, 3, 2, C2.glassHi, 0.7);
+img.ellipse(cx + 5, 16, 2, 2, C2.glassHi, 0.4);
+img.outlineRect(6, 9, BW - 6, 21);
+img.rect(0, 14, 2, 17, C2.mirror);
+img.rect(BW - 2, 14, BW, 17, C2.mirror);
 
-// Front + rear windshield caps -- near-identical on purpose (see the file-level comment above).
-for (const capY of [4, BH - 18]) {
-  img.rect(6, capY, BW - 6, capY + 12, C2.glass);
-  img.ellipse(cx - 4, capY + 4, 3, 2, C2.glassHi, 0.7);
-  img.ellipse(cx + 5, capY + 7, 2, 2, C2.glassHi, 0.4);
-  img.outlineRect(6, capY, BW - 6, capY + 12);
-}
-// Headlights / tail-lights, small pale squares tucked at both far corners of each cap.
-for (const capY of [3, BH - 6]) {
-  img.rect(3, capY, 5, capY + 2, C2.light);
-  img.rect(BW - 6, capY, BW - 4, capY + 2, C2.light);
-}
-// Side mirrors: small dark tabs poking out near the front cap only (a real coach only has them up
-// front) -- kept even after a vertical flip, since a flipped bus is still "the same bus, now facing
-// the other way", not literally a different physical vehicle.
-img.rect(0, 9, 2, 12, C2.mirror);
-img.rect(BW - 2, 9, BW, 12, C2.mirror);
-
-// Wheels: hinted only (never a full side-view wheel), small dark rectangles just peeking from under
-// the body on both sides, at roughly the front and rear axle positions.
-for (const wy of [19, BH - 23]) {
+// Front + rear wheels: hinted only (never a full side-view wheel), small dark rectangles just peeking
+// from under the body on both sides, at roughly the front and rear axle positions.
+for (const wy of [24, BH - 30]) {
   img.rect(0, wy, 2, wy + 6, C2.wheel);
   img.rect(BW - 2, wy, BW, wy + 6, C2.wheel);
   img.rect(0, wy + 1, 1, wy + 5, C2.hub);
   img.rect(BW - 1, wy + 1, BW, wy + 5, C2.hub);
 }
+
+// The passenger body: a row of side windows peeking out from under the roof overhang on both long
+// edges (the thing that reads as "many rows of seats", i.e. a coach, not a car), roof vents and an
+// AC/luggage-rack unit down the centreline, and the campus trim stripe wrapping the full width.
+for (let wy = 34; wy < BH - 32; wy += 9) {
+  img.rect(0, wy, 2, wy + 5, C2.glass);
+  img.rect(BW - 2, wy, BW, wy + 5, C2.glass);
+}
+img.rect(cx - 2, 32, cx + 2, 36, C2.vent);
+img.rect(cx - 6, 44, cx + 6, 56, C2.ac);
+img.rect(cx - 6, 44, cx + 6, 47, C2.acShade);
+img.outlineRect(cx - 6, 44, cx + 6, 56);
+img.rect(cx - 2, 62, cx + 2, 66, C2.vent);
+img.rect(3, BH - 34, BW - 4, BH - 31, C2.stripe);
+img.rect(3, BH - 31, BW - 4, BH - 30, C2.stripeDeep);
+
+// Rear cap: a plain window (no display -- the front-facing one, above, is what a flip relocates to
+// the leading edge for the departure leg) and tail-lights.
+img.rect(6, BH - 22, BW - 6, BH - 8, C2.glass);
+img.ellipse(cx, BH - 16, 3, 2, C2.glassHi, 0.5);
+img.outlineRect(6, BH - 22, BW - 6, BH - 8);
+img.rect(2, BH - 6, 4, BH - 4, C2.light);
+img.rect(BW - 4, BH - 6, BW - 2, BH - 4, C2.light);
 
 // Outline the silhouette: the two rects' own edges, giving the cap its rounded-corner step for free.
 img.outlineRect(2, 1, BW - 3, BH - 2);

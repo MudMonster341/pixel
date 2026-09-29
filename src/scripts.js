@@ -30,10 +30,16 @@
 // her at the 'spawn' anchor) just as readily as it plays from a live walk-in a few tiles further along
 // the same approach (the fast path) -- ADR 0016's own "a later map change doesn't break the script"
 // concern, taken one step further (a few tiles of *player* variance doesn't break it either).
+// Quality loop (Cutscenes run 2): "Mustafa should face her while talking, and she should face him" --
+// explicit `face` steps right before every `say`, rather than relying on incidental leftover facing
+// from whichever `move` happened to run last (fragile: the first `say` already happened to work this
+// way purely because he walked toward her, but the second one didn't -- both walked the same
+// direction together and were left facing forward, side by side, not at each other).
 const MUSTAFA_MEETS_HER_CORE = [
   { spawnActor: { id: 'mustafa', sprite: 'npc-mustafa', at: { actor: 'player', offset: [0, -5] }, facing: 'down' } },
   { move: { actor: 'mustafa', path: [{ actor: 'player', offset: [0, -2] }], speed: 4 } },
-  { face: { actor: 'player', dir: 'up' } },
+  { face: { actor: 'mustafa', dir: 'down' } }, // he's now north of her -- face her
+  { face: { actor: 'player', dir: 'up' } }, // she faces him back
   { emote: { actor: 'mustafa', kind: '!' } },
   // Line 1 reused verbatim from the old gate2 cutscene (src/cutscenes.js); line 2 is NEW (short,
   // functional -- "get moving" -- per this task's own brief for onboarding lines).
@@ -42,13 +48,13 @@ const MUSTAFA_MEETS_HER_CORE = [
     { move: { actor: 'mustafa', path: [{ actor: 'mustafa', offset: [-1, -5] }], speed: 3.5 } },
     { move: { actor: 'player', path: [{ actor: 'player', offset: [1, -5] }], speed: 3.5 } },
   ] },
-  { face: { actor: 'mustafa', dir: 'up' } },
-  { face: { actor: 'player', dir: 'up' } },
+  // They're side by side now, mustafa 2 tiles to her left -- face each other again before he speaks.
+  { face: { actor: 'mustafa', dir: 'right' } },
+  { face: { actor: 'player', dir: 'left' } },
   { cameraPan: { to: 'Main Block entrance', ms: 1600 } },
   { wait: 250 },
   // NEW line (the brief's own suggested wording for this exact beat).
   { say: { speaker: 'Mustafa', lines: ['The LUG stall is inside the Main Block — behind the staircase.'] } },
-  { face: { actor: 'mustafa', dir: 'down' } },
   { cameraPan: { to: { actor: 'player' }, ms: 1200 } },
   { cameraFollow: 'player' },
 ];
@@ -59,15 +65,28 @@ const MUSTAFA_MEETS_HER_CORE = [
 // point is relative to the 'gate' anchor (the real Gate 2 object, tools/campus/build-campus.js),
 // offsets in tiles, "+y" being further out along the approach (away from campus) per that generator's
 // own coordinate sense.
+// Quality loop (Cutscenes run 2, 2026-09-29): "she is invisible after stepping off the bus". Root
+// cause (fixed at the engine level too, src/scripts-runtime.js syncActorVisuals()/actorFeetOffset())
+// was actually two bugs stacked -- a depth-sort bug (the bus's own "feet" were computed the same
+// fixed 8px-below-center way a 16x24 character's are, wildly wrong for an 88px-tall image) *and* this
+// data bug: her old disembark walk ended at offset [0, 2] -- back on the bus's own centreline (its
+// footprint spans roughly x:[-1,+1]) and squarely inside its vertical extent, i.e. she used to walk
+// back *behind* the bus on purpose. She now disembarks at the bus's own side (x offset 1.5, clear of
+// that footprint with margin to spare) and stays at that same x for her whole "walk clear" -- never
+// crossing back into the bus's column at all, belt-and-suspenders with the depth fix above.
 const BUS_STEPS = [
   { setActorVisible: { actor: 'player', visible: false } },
   { cameraPan: { to: { anchor: 'Gate 2 (Main Entrance)', offset: [0, 2] }, ms: 10 } }, // settle on the gate before she'd otherwise be framed
   { spawnActor: { id: 'bus', sprite: 'bus', kind: 'image', at: { anchor: 'Gate 2 (Main Entrance)', offset: [0, 9] }, facing: 'up' } },
   { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 3] }], speed: 6, ease: 'Cubic.easeOut' } },
   { wait: 400 },
-  { placeActor: { actor: 'player', at: { anchor: 'Gate 2 (Main Entrance)', offset: [1, 3] }, facing: 'down' } },
+  // Steps out at the bus's own side (the "door"), facing back toward it for a beat before walking on.
+  { placeActor: { actor: 'player', at: { anchor: 'Gate 2 (Main Entrance)', offset: [1.5, 3] }, facing: 'left' } },
   { setActorVisible: { actor: 'player', visible: true } },
-  { move: { actor: 'player', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 2] }], speed: 3 } },
+  { wait: 200 },
+  // Walks 1.5 tiles clear, staying at the same x the whole way -- never back over the bus's own column.
+  { move: { actor: 'player', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [1.5, 1.5] }], speed: 3 } },
+  { face: { actor: 'player', dir: 'up' } }, // turns toward the gate as the bus pulls away, below
   { wait: 250 },
   // Quality loop (Cutscenes run 1): the bus is drawn nose-up (tools/make-cutscenes.js buildBus());
   // turning to 'down' before pulling away flips it vertically so it still reads nose-first while

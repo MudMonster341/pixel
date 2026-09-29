@@ -57,3 +57,28 @@ test('flappyPassedPipe: true only once the pipe\'s trailing edge has scrolled be
   pipe.scored = true; // caller marks it scored the moment it passes
   assert.equal(flappyPassedPipe(pipe, birdX), false, 'never scores the same pipe twice');
 });
+
+// Mini-games quality pass (rated 4/10, "the hero is a speck"): she now draws HERO_SCALE-d (3x,
+// framework-scene.js) via a plain sprite scale, and FLAPPY_BIRD_RADIUS scales with her (8 -> 24) so
+// her collision footprint matches her new, bigger silhouette. Gravity/flap velocity/gap height were
+// all authored at a smaller "compact" scale first, then uniformly multiplied by 3 (platformer.js's
+// own file header explains why that preserves every fairness ratio), rather than left at the old
+// numbers, which were tuned for a radius-8 bird and would have been a real difficulty regression
+// squeezed against a radius-24 one. This pins the real exported numbers and checks the flap's own rise
+// height stays a sensible fraction of src/minigames/flappy.js's own FL_GAP_HEIGHT (duplicated here as
+// a plain number, same reasoning as platformer-physics.test.js's own version of this check --
+// flappy.js needs a real Phaser scene and can't load into this sandbox).
+test('the retuned mini-game-scale constants stay fair', () => {
+  const { FLAPPY_GRAVITY, FLAPPY_FLAP_VELOCITY, FLAPPY_BIRD_RADIUS } = loadGameData();
+
+  assert.equal(FLAPPY_GRAVITY, 1440);
+  assert.equal(FLAPPY_FLAP_VELOCITY, -450);
+  assert.equal(FLAPPY_BIRD_RADIUS, 24, 'scales with HERO_SCALE, same as the sprite');
+
+  const riseHeight = (FLAPPY_FLAP_VELOCITY * FLAPPY_FLAP_VELOCITY) / (2 * FLAPPY_GRAVITY);
+  const FL_GAP_HEIGHT = 240; // src/minigames/flappy.js
+  // A single flap's rise should read as a controlled hop, not fill most of the gap -- comfortably
+  // under half of it, with room either side for the bird's own radius and a margin of error.
+  assert.ok(riseHeight < FL_GAP_HEIGHT * 0.4, `flap rise ${riseHeight} too tall for a 240px gap`);
+  assert.ok(riseHeight > FLAPPY_BIRD_RADIUS * 2, `flap rise ${riseHeight} too small to clear her own body`);
+});

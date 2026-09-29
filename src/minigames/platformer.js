@@ -1,33 +1,53 @@
 // The Physics Lab key's mini-game (docs/STORY.md): a small side-view run-and-jump level. "Real
 // platforming feel" (docs/ROADMAP.md M4) comes from Arcade Physics' own gravity/collision plus the
 // coyote-time/jump-buffer/variable-height rules in src/minigames/platformer-physics.js -- this file
-// only wires those together and draws the level. Art pass (coordinator brief, 2026-09-22): a themed
-// lab backdrop (tools/make-minigame-art.js), platforms built to read as lab furniture rather than
-// green bars, and the lead's own real sprite as the hero instead of a stand-in shape.
+// only wires those together and draws the level.
+//
+// Quality loop pass (Mini-games category, rated 4/10 -- "the hero is a speck"): she now draws at
+// HERO_SCALE (framework-scene.js, 3x, matching the main game's own pixel scale) via a plain
+// `sprite.setScale()` instead of a camera zoom (camera zoom turned out to be unreliable for this
+// scene setup -- see framework-scene.js's own comment on HERO_SCALE). The level geometry and physics
+// constants below were authored at a smaller "compact" scale first (a 320x180-equivalent viewport)
+// and then *uniformly* multiplied by 3 for the real numbers here, the same factor as HERO_SCALE --
+// multiplying every spatial constant (position, size, gap, gravity, velocity, run speed) by one
+// factor preserves every ratio (jump-height-to-platform-rise, gap-to-max-jump-distance) exactly, so
+// the compact design's own reachability margins carry over unchanged; only the *hero's own* size
+// doesn't scale with the rest of the level, which is exactly what makes her read as chunky now. Time
+// constants (coyote/jump-buffer ms) are never scaled -- see platformer-physics.js's own comment. A
+// two-layer parallax backdrop (a static far wall behind a scrolling mid shelving/tank layer,
+// tools/make-minigame-art.js) plus a real code-drawn floor replace the old single flat image;
+// platforms read as lab benches with a lit top edge; a landing/jump squash-stretch and ambient dust
+// motes round out the juice pass.
 
-const PF_GROUND_Y = 420;
-const PF_KILL_Y = 560; // falling past this = an instant loss (an attempt, not the whole session)
-const PF_LEVEL_WIDTH = 1500;
+const PF_GROUND_Y = 420; // top surface of every ground-level platform, world px
+const PF_KILL_Y = 600; // falling past this = an instant loss (an attempt, not the whole session)
+const PF_LEVEL_WIDTH = 1602; // = 534 * 3 (the compact design's own width), matches the backdrop art's own scale
+const PF_MID_SCROLL_FACTOR = 0.4; // the mid shelving/tank layer's own parallax speed
 
-// Platforms: { x, y, w } rectangles (world pixels, y = top surface). Gaps between them are pits --
-// missing a jump costs the attempt, not a permanent setback (docs/STORY.md "retry as often as you
-// like"). Charge cells float just above a platform; the exit door sits at the very end.
+// Platforms: { x, y, w } rectangles (world px, y = top surface). Gaps between them are pits -- missing
+// a jump costs the attempt, not a permanent setback (docs/STORY.md "retry as often as you like").
+// Elevations (420 -> 366 -> 342) stay well under the retuned jump's own apex height (~109 world px,
+// see platformer-physics.js's own comment) with margin for imperfect timing; gaps (72-90 world px)
+// stay well under the max horizontal distance a full jump covers (~120 world px) -- both margins are
+// asserted directly by tests/unit/platformer-physics.test.js so a future edit here that breaks
+// reachability fails a unit test, not a playtest.
 const PF_PLATFORMS = [
-  { x: 0, y: PF_GROUND_Y, w: 260 },
-  { x: 340, y: PF_GROUND_Y, w: 160 },
-  { x: 560, y: PF_GROUND_Y - 70, w: 140 },
-  { x: 760, y: PF_GROUND_Y, w: 180 },
-  { x: 1020, y: PF_GROUND_Y - 100, w: 120 },
-  { x: 1220, y: PF_GROUND_Y, w: 280 },
+  { x: 0, y: PF_GROUND_Y, w: 270 },
+  { x: 354, y: PF_GROUND_Y, w: 165 },
+  { x: 603, y: PF_GROUND_Y - 54, w: 144 },
+  { x: 819, y: PF_GROUND_Y, w: 192 },
+  { x: 1101, y: PF_GROUND_Y - 78, w: 126 },
+  { x: 1317, y: PF_GROUND_Y, w: 285 },
 ];
 const PF_COINS = [
-  { x: 180, y: PF_GROUND_Y - 30 },
-  { x: 400, y: PF_GROUND_Y - 30 },
-  { x: 620, y: PF_GROUND_Y - 100 },
-  { x: 820, y: PF_GROUND_Y - 30 },
-  { x: 1070, y: PF_GROUND_Y - 130 },
-  { x: 1320, y: PF_GROUND_Y - 30 },
+  { x: 135, y: 378 },
+  { x: 435, y: 378 },
+  { x: 675, y: 324 },
+  { x: 915, y: 378 },
+  { x: 1164, y: 300 },
+  { x: 1440, y: 378 },
 ];
+const PF_DOOR_X = PF_LEVEL_WIDTH - 72;
 
 class PlatformerScene extends MinigameBaseScene {
   constructor() {
@@ -35,7 +55,8 @@ class PlatformerScene extends MinigameBaseScene {
   }
 
   preload() {
-    if (!this.textures.exists('platformer-bg')) this.load.image('platformer-bg', 'assets/minigames/platformer-bg.png');
+    if (!this.textures.exists('platformer-bg-far')) this.load.image('platformer-bg-far', 'assets/minigames/platformer-bg-far.png');
+    if (!this.textures.exists('platformer-bg-mid')) this.load.image('platformer-bg-mid', 'assets/minigames/platformer-bg-mid.png');
   }
 
   buildScene() {
@@ -43,24 +64,33 @@ class PlatformerScene extends MinigameBaseScene {
     this.physics.world.setBounds(0, 0, PF_LEVEL_WIDTH, GAME_HEIGHT + 200);
     this.cameras.main.setBounds(0, 0, PF_LEVEL_WIDTH, GAME_HEIGHT);
 
-    // The Physics Lab backdrop (tools/make-minigame-art.js): pinned to the camera (scrollFactor 0)
-    // so it always fills the view without needing to tile across the scrolling 1500px level --
-    // benches/shelves/a specimen tank read as the room she's actually in, not a black void.
-    this.add.image(0, 0, 'platformer-bg').setOrigin(0, 0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setScrollFactor(0).setDepth(-10);
+    // The far wall (pinned, canvas-sized -- never needs to be wider since it never scrolls) behind the
+    // mid shelving/tank layer (level-width sized, scrolled at a fraction of camera speed for real
+    // parallax depth -- STYLE_GUIDE "Layering"). Both source images are generated at the compact
+    // scale (320x180 / 534x180) and stretched 3x here -- pixelArt:true (src/main.js) keeps that a
+    // crisp nearest-neighbor upscale, not a blur.
+    this.add.image(0, 0, 'platformer-bg-far').setOrigin(0, 0)
+      .setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setScrollFactor(0).setDepth(-30);
+    this.add.image(0, 0, 'platformer-bg-mid').setOrigin(0, 0)
+      .setDisplaySize(PF_LEVEL_WIDTH, GAME_HEIGHT).setScrollFactor(PF_MID_SCROLL_FACTOR).setDepth(-20);
+
+    this.buildFloor();
+    this.buildAmbientDust();
 
     this.platformGroup = this.physics.add.staticGroup();
     for (const p of PF_PLATFORMS) this.drawPlatform(p);
 
     // The player's physics body is a plain, invisible rectangle (no texture needed for a hitbox);
     // her real sprite (ensurePlayerAnims(), framework-scene.js) is kept glued to it every frame in
-    // playUpdate() instead of being the physics object itself.
-    this.player = this.add.rectangle(60, PF_GROUND_Y - 40, 14, 22, 0xff6fb1, 0);
+    // playUpdate() instead of being the physics object itself. The body is sized to roughly match her
+    // now-larger HERO_SCALE silhouette (42x66 -- 3x the original 14x22), not the old tiny hitbox.
+    this.player = this.add.rectangle(60, PF_GROUND_Y - 40, 42, 66, 0xff6fb1, 0);
     this.physics.add.existing(this.player);
-    this.player.body.setSize(14, 22);
+    this.player.body.setSize(42, 66);
     this.player.body.setCollideWorldBounds(true);
     ensurePlayerAnims(this);
     this.heroFacing = 'right'; // she runs into the level, left to right
-    this.hero = this.add.sprite(60, PF_GROUND_Y - 40, 'player', HERO_IDLE_FRAME.right).setDepth(20);
+    this.hero = this.add.sprite(60, PF_GROUND_Y - 40, 'player', HERO_IDLE_FRAME.right).setScale(HERO_SCALE).setDepth(20);
     this.physics.add.collider(this.player, this.platformGroup);
 
     this.coinSprites = PF_COINS.map((coin) => this.makeCoin(coin));
@@ -86,22 +116,49 @@ class PlatformerScene extends MinigameBaseScene {
     }
   }
 
-  // A platform built to read as lab furniture (coordinator brief: "not green bars") -- a metal-cased
-  // bench/shelf: a light top surface catching the overhead lamps, a darker case body with a panel
-  // seam, and legs at each end so it reads as furniture standing on the floor, not a floating slab.
-  drawPlatform(p) {
-    const height = 20;
-    const top = p.y;
-    const caseTop = top + 6;
-    const bottom = top + height;
-    this.add.rectangle(p.x + p.w / 2, top, p.w, 6, 0xcfd8cf).setDepth(5); // steel top surface
-    this.add.rectangle(p.x + p.w / 2, top + 1, p.w - 4, 2, 0xeef3ee).setDepth(6); // highlight catching the lamps
-    this.add.rectangle(p.x + p.w / 2, (caseTop + bottom) / 2, p.w, bottom - caseTop, 0x3a4048).setDepth(5); // case body
-    this.add.rectangle(p.x + p.w / 2, caseTop + 2, p.w - 6, 2, 0x4a5560).setDepth(6); // panel seam
-    for (const legX of [p.x + 6, p.x + p.w - 6]) {
-      this.add.rectangle(legX, bottom + 3, 6, 8, 0x232830).setDepth(4); // short support legs
+  // A real, code-drawn near-foreground floor (was baked into the old backdrop image) -- tied to true
+  // world position (default scrollFactor 1), so it scrolls in perfect lockstep with the platforms
+  // standing on it, spanning the whole level so it's never visibly missing under her feet.
+  buildFloor() {
+    const y = PF_GROUND_Y + 120;
+    this.add.rectangle(PF_LEVEL_WIDTH / 2, y, PF_LEVEL_WIDTH, 90, 0x2a2118).setDepth(-5);
+    const grout = this.add.graphics().setDepth(-4);
+    grout.lineStyle(2, 0x1a140e, 0.6);
+    for (let x = 0; x < PF_LEVEL_WIDTH; x += 48) grout.lineBetween(x, y - 45, x, y + 45);
+  }
+
+  // Ambient dust motes (coordinator brief "juice": "ambient particles") -- a handful of warm, faint
+  // specks drifting slowly up and sideways on a loop, scattered across the whole level so the room
+  // feels alive rather than static, well under the "nothing flashes faster than 3Hz" rule (these don't
+  // flash at all, just drift).
+  buildAmbientDust() {
+    for (let i = 0; i < 14; i++) {
+      const x = 60 + ((i * 291) % (PF_LEVEL_WIDTH - 120));
+      const y = 90 + ((i * 159) % 270);
+      const mote = this.add.circle(x, y, 3 + (i % 2) * 2, 0xffdf9e, 0.22 + (i % 3) * 0.06).setDepth(-1);
+      this.tweens.add({
+        targets: mote, y: y - 42 - (i % 3) * 12, x: x + (i % 2 === 0 ? 18 : -18),
+        duration: 3200 + (i % 5) * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
     }
-    this.add.rectangle(p.x + p.w / 2, top - 0.5, p.w, height + 1, 0x1a1c2c, 0).setStrokeStyle(1, 0x14171c).setDepth(7);
+  }
+
+  // A lab bench built to have a clear, lit top edge (rubric: "readable platforms") -- a bright steel
+  // surface catching the ceiling lamps, a darker case body with a panel seam, and short legs so it
+  // reads as furniture standing on the floor, not a floating slab.
+  drawPlatform(p) {
+    const height = 27;
+    const top = p.y;
+    const caseTop = top + 9;
+    const bottom = top + height;
+    this.add.rectangle(p.x + p.w / 2, top, p.w, 6, 0xd8e0d8).setDepth(5); // steel top surface
+    this.add.rectangle(p.x + p.w / 2, top + 1.5, p.w - 6, 3, 0xf4f8f2).setDepth(6); // highlight catching the lamps
+    this.add.rectangle(p.x + p.w / 2, (caseTop + bottom) / 2, p.w, bottom - caseTop, 0x3a4048).setDepth(5); // case body
+    this.add.rectangle(p.x + p.w / 2, caseTop + 3, p.w - 9, 3, 0x4a5560).setDepth(6); // panel seam
+    this.add.rectangle(p.x + p.w / 2, top - 1.5, p.w, height + 3, 0x1a1c2c, 0).setStrokeStyle(2, 0x14171c).setDepth(7);
+    for (const legX of [p.x + 9, p.x + p.w - 9]) {
+      this.add.rectangle(legX, bottom + 6, 6, 9, 0x232830).setDepth(4); // short support legs
+    }
 
     const rect = this.add.rectangle(p.x + p.w / 2, top + height / 2, p.w, height, 0x000000, 0);
     this.physics.add.existing(rect, true);
@@ -112,11 +169,11 @@ class PlatformerScene extends MinigameBaseScene {
   // text) rather than an adventure-game gold coin -- a soft outer glow, a bright core and a white
   // highlight, cyan to read as lab equipment against the warm backdrop.
   makeCoin(coin) {
-    const glow = this.add.circle(coin.x, coin.y, 9, 0x7fe0ff, 0.25).setDepth(9);
-    const core = this.add.circle(coin.x, coin.y, 5, 0x7fe0ff).setStrokeStyle(1, 0x1a1c2c).setDepth(10);
-    const hi = this.add.circle(coin.x - 1.5, coin.y - 1.5, 1.5, 0xffffff, 0.9).setDepth(11);
-    this.tweens.add({ targets: [glow, core, hi], y: '-=4', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const body = this.add.circle(coin.x, coin.y, 6, 0x000000, 0);
+    const glow = this.add.circle(coin.x, coin.y, 15, 0x7fe0ff, 0.28).setDepth(9);
+    const core = this.add.circle(coin.x, coin.y, 9, 0x7fe0ff).setStrokeStyle(2, 0x1a1c2c).setDepth(10);
+    const hi = this.add.circle(coin.x - 3, coin.y - 3, 3, 0xffffff, 0.9).setDepth(11);
+    this.tweens.add({ targets: [glow, core, hi], y: '-=6', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const body = this.add.circle(coin.x, coin.y, 12, 0x000000, 0);
     this.physics.add.existing(body, true);
     body.taken = false;
     body.visualParts = [glow, core, hi];
@@ -133,16 +190,16 @@ class PlatformerScene extends MinigameBaseScene {
   }
 
   // The exit door (coordinator brief flavor: the intro card already says "reach the door"): a frame,
-  // a panel with a small window, and a glowing "EXIT"-style lamp above it -- a lab door, not a flag.
+  // a panel with a small window, and a glowing lamp above it -- a lab door, not a flag.
   buildDoor() {
-    const dx = PF_LEVEL_WIDTH - 60;
-    const topY = PF_GROUND_Y - 62;
-    this.add.rectangle(dx, PF_GROUND_Y - 31, 34, 62, 0x2a2118).setDepth(5); // frame
-    this.add.rectangle(dx, PF_GROUND_Y - 31, 28, 56, 0x463a28).setDepth(6); // panel
-    this.add.rectangle(dx, PF_GROUND_Y - 48, 16, 12, 0x7fe0ff, 0.7).setDepth(7); // small window
-    const lamp = this.add.ellipse(dx, topY - 10, 26, 14, 0x8fd46a, 0.85).setDepth(7);
+    const dx = PF_DOOR_X;
+    const topY = PF_GROUND_Y - 96;
+    this.add.rectangle(dx, PF_GROUND_Y - 48, 54, 96, 0x2a2118).setDepth(5); // frame
+    this.add.rectangle(dx, PF_GROUND_Y - 48, 45, 84, 0x463a28).setDepth(6); // panel
+    this.add.rectangle(dx, PF_GROUND_Y - 72, 24, 18, 0x7fe0ff, 0.7).setDepth(7); // small window
+    const lamp = this.add.ellipse(dx, topY - 18, 42, 24, 0x8fd46a, 0.85).setDepth(7);
     this.tweens.add({ targets: lamp, alpha: 0.4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.flag = this.add.rectangle(dx, PF_GROUND_Y - 30, 30, 62, 0x000000, 0);
+    this.flag = this.add.rectangle(dx, PF_GROUND_Y - 48, 54, 96, 0x000000, 0);
     this.physics.add.existing(this.flag, true);
     this.physics.add.overlap(this.player, this.flag, () => this.tryFinish());
   }
@@ -179,10 +236,12 @@ class PlatformerScene extends MinigameBaseScene {
     const grounded = body.blocked.down || body.touching.down;
     this.groundedTimer = grounded ? 0 : this.groundedTimer + delta;
 
-    // A small landing puff the instant she touches down after being airborne (coordinator brief,
-    // "juice") -- framework-scene.js's spawnDustPuff(), shared so every mini-game can use the same
-    // cheap effect.
-    if (grounded && !this.wasGrounded) spawnDustPuff(this, this.player.x, this.player.y + 11);
+    // A landing squash (coordinator brief "juice": "a squash and stretch on jump and land") plus the
+    // existing dust puff, both only the instant she touches down after being airborne.
+    if (grounded && !this.wasGrounded) {
+      spawnDustPuff(this, this.player.x, this.player.y + 33);
+      squashStretch(this, this.hero, 'squash');
+    }
     this.wasGrounded = grounded;
 
     const k = this.mgKeys;
@@ -194,6 +253,7 @@ class PlatformerScene extends MinigameBaseScene {
       if (bufferedOk && canCoyoteJump(this.groundedTimer)) {
         body.setVelocityY(PLATFORMER_JUMP_VELOCITY);
         AudioManager.play('minigameJump');
+        squashStretch(this, this.hero, 'stretch'); // the takeoff half of the same juice
         this.jumpQueuedAt = null;
         this.groundedTimer = PLATFORMER_COYOTE_MS + 1; // spend the coyote window: no double jump off nothing
       } else if (!bufferedOk) {
@@ -201,7 +261,7 @@ class PlatformerScene extends MinigameBaseScene {
       }
     }
 
-    this.hero.setPosition(this.player.x, this.player.y + 1);
+    this.hero.setPosition(this.player.x, this.player.y + 3);
     // FB-0043: real left/right art, never a mirrored "side" row (see framework-scene.js
     // ensurePlayerAnims()) -- `heroFacing` remembers the last real direction so idle keeps facing
     // the way she was last actually moving, the same way world.js's own idle animation does.

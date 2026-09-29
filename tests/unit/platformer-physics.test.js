@@ -33,3 +33,43 @@ test('clipJumpRelease: caps a fast upward velocity to the short-hop speed on ear
   assert.equal(clipJumpRelease(-180, -180), -180, 'exactly at the cap: unchanged');
   assert.equal(clipJumpRelease(50, -180), 50, 'already falling: nothing to clip');
 });
+
+// Mini-games quality pass (rated 4/10, "the hero is a speck"): she now draws HERO_SCALE-d (3x,
+// framework-scene.js) via a plain sprite scale, and these physics constants were retuned to match --
+// not just left alone, since the *old* numbers already had a latent design bug (some platform jumps
+// were physically unreachable) a same-scale sprite change alone wouldn't have fixed. This test pins
+// the real numbers src/minigames/platformer-physics.js exports and proves the level in
+// src/minigames/platformer.js (PF_PLATFORMS' own elevation offsets and gaps, duplicated here as plain
+// numbers since that file needs a real Phaser scene and can't load into this sandbox) stays reachable
+// with real margin -- so a future edit to either file that breaks the relationship fails here, not in
+// a playtest.
+test('the retuned mini-game-scale constants stay fair', () => {
+  const {
+    PLATFORMER_GRAVITY, PLATFORMER_JUMP_VELOCITY, PLATFORMER_MIN_JUMP_VELOCITY,
+    PLATFORMER_RUN_SPEED, PLATFORMER_COYOTE_MS, PLATFORMER_JUMP_BUFFER_MS,
+  } = loadGameData();
+
+  assert.equal(PLATFORMER_GRAVITY, 1650);
+  assert.equal(PLATFORMER_JUMP_VELOCITY, -600);
+  assert.equal(PLATFORMER_MIN_JUMP_VELOCITY, -255);
+  assert.equal(PLATFORMER_RUN_SPEED, 165);
+  // Coyote time / jump buffer are unchanged by the rescale (ms windows, not distances) -- GAME_FEEL.md
+  // "the mini-game hero" pass explicitly asked to "keep coyote time/jump buffer".
+  assert.equal(PLATFORMER_COYOTE_MS, 110);
+  assert.equal(PLATFORMER_JUMP_BUFFER_MS, 110);
+
+  const apex = (PLATFORMER_JUMP_VELOCITY * PLATFORMER_JUMP_VELOCITY) / (2 * PLATFORMER_GRAVITY);
+  const airtime = (2 * -PLATFORMER_JUMP_VELOCITY) / PLATFORMER_GRAVITY;
+  const maxJumpDistance = airtime * PLATFORMER_RUN_SPEED;
+
+  // PF_PLATFORMS' own elevation offsets (src/minigames/platformer.js): 54 and 78 world px above
+  // PF_GROUND_Y. Both must stay under the jump's own apex height, with real margin for a player who
+  // isn't pixel-perfect on the run-up.
+  const elevations = [54, 78];
+  for (const rise of elevations) assert.ok(apex > rise * 1.2, `apex ${apex} too tight against a ${rise}px platform rise`);
+
+  // The level's own horizontal gaps (platform end to next platform start, computed from PF_PLATFORMS):
+  // 84, 84, 72, 90, 90 world px. All must stay under the max distance a full jump covers, same margin.
+  const gaps = [84, 84, 72, 90, 90];
+  for (const gap of gaps) assert.ok(maxJumpDistance > gap * 1.2, `max jump distance ${maxJumpDistance} too tight against a ${gap}px gap`);
+});

@@ -697,19 +697,31 @@ foyer (`docs/INTERIORS_PLAN.md`) got the most attention: real seating/plants/not
 *decorative* grand staircase (walkable, no warp trigger of its own -- the same trick `intLift` already
 used) with a cleared nook and a stall counter behind it for the LUG event stall (docs/STORY.md).
 
-## Mini-game backdrops (roadmap M4 art pass, 2026-09-22)
+## Mini-game backdrops (roadmap M4 art pass, 2026-09-22; rescaled quality-loop pass, 2026-09-29)
 
 Each of the 3 mini-games (`src/minigames/`, docs/GAME_FEEL.md "Mini-games") gets a themed, generated
-960x540 backdrop from `tools/make-minigame-art.js` -- the same tiny Img/PNG-writer technique as
+backdrop from `tools/make-minigame-art.js` -- the same tiny Img/PNG-writer technique as
 `tools/make-cutscenes.js`'s story illustrations, kept as its own file since these are a different
 size/shape (full mini-game canvas, not the cutscene player's letterboxed frame) and are loaded by a
-scene's own `preload()` rather than `BootScene`. `assets/minigames/platformer-bg.png` (the Physics
-Lab: shelving, a specimen tank, warm lamp pools, a tiled floor), `flappy-bg.png` (the ICVL server
-room: racks receding toward the ceiling, a cable tray, cold blue light, a raised floor), and
-`tetris-bg.png` (Room 195 at night: a whiteboard, desks, a window onto a lit skyline) -- each pinned
-in its scene with `scrollFactor(0)` so a scrolling level never needs to tile it. `npm run assets` (or
-`npm run minigame-art` alone) regenerates them; `tests/unit/assets.test.js` checks they're committed
-and up to date, same as every other generated art file.
+scene's own `preload()` rather than `BootScene`.
+
+Quality-loop pass (Mini-games category, rated 4/10, "the hero is a speck"): the lead now draws
+`HERO_SCALE`-d (3x, `src/minigames/framework-scene.js`, matching the main game's own `ZOOM`) via a
+plain `sprite.setScale()` in the platformer and the flyer, so their level geometry and physics were
+retuned to match (see `src/minigames/platformer.js`'s own file header for the "compact scale,
+uniformly multiplied by 3" method) -- the backdrops follow the same method: generated at that smaller
+compact scale, then stretched 3x in-scene (`setDisplaySize`, crisp under `pixelArt: true`, `src/
+main.js`) rather than authored at full canvas resolution. `assets/minigames/platformer-bg-far.png`
+(320x180, the Physics Lab's back wall, warm lamp glow pools, a ceiling pipe run, pinned -- scrollFactor
+0) and `platformer-bg-mid.png` (534x180, shelving units and a specimen tank spread across the whole
+level, scrollFactor ~0.4 for real parallax depth) replace the old single `platformer-bg.png`; the
+platformer's own floor is now code-drawn (tied 1:1 to real world position) rather than baked into the
+image. `flappy-bg.png` (320x180, the ICVL server room: two depth-graded rack rows, a cable tray, cold
+blue light, a raised floor) stays one static image, stretched the same way (the flyer's own camera
+never scrolls, so a second parallax layer wouldn't read as motion there). `tetris-bg.png` (960x540,
+unchanged -- Room 195 at night: a whiteboard, desks, a window onto a lit skyline) was rated fine and
+this pass left it alone. `npm run assets` (or `npm run minigame-art` alone) regenerates them;
+`tests/unit/assets.test.js` checks they're committed, up to date and sized to each scene's own scale.
 
 ## Audio (roadmap M5, 2026-09-22)
 

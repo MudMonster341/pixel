@@ -3,9 +3,17 @@
 // flappy.js (the Phaser scene) only renders these numbers and forwards the flap key to flappyFlap().
 // tests/unit/flappy-logic.test.js exercises every rule here directly.
 
-const FLAPPY_GRAVITY = 900; // px/s^2
-const FLAPPY_FLAP_VELOCITY = -260; // px/s, upward (screen y grows downward, so "up" is negative)
-const FLAPPY_BIRD_RADIUS = 8;
+// Quality loop fix (Mini-games category, "the hero is a speck"): she now draws HERO_SCALE-d (3x,
+// framework-scene.js) via a plain sprite scale, so FLAPPY_BIRD_RADIUS scales up too (8 -> 24) to keep
+// her collision footprint matching her new, bigger silhouette. Gravity/flap velocity/gap height
+// (src/minigames/flappy.js FL_GAP_HEIGHT) were all authored at a smaller "compact" scale first and
+// then uniformly multiplied by 3 (see platformer.js's own file header for why that preserves every
+// fairness ratio exactly) rather than left at their old numbers, which were tuned for a radius-8 bird
+// and would have been a real difficulty regression squeezed against a radius-24 one.
+// tests/unit/flappy-logic.test.js "the retuned mini-game-scale constants stay fair" checks the margin.
+const FLAPPY_GRAVITY = 1440; // px/s^2
+const FLAPPY_FLAP_VELOCITY = -450; // px/s, upward (screen y grows downward, so "up" is negative)
+const FLAPPY_BIRD_RADIUS = 24;
 
 // One physics tick, plain semi-implicit Euler (velocity updates first, then position uses the new
 // velocity) -- the standard, stable way to integrate a constant-gravity faller frame by frame.

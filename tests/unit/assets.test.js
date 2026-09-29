@@ -93,14 +93,26 @@ test('assets/cutscenes/ (card art) is up to date with tools/make-card-art.js (ru
   }
 });
 
-test('every mini-game backdrop is a full 960x540 image', () => {
-  const names = ['platformer-bg.png', 'flappy-bg.png', 'tetris-bg.png'];
-  for (const name of names) {
+// Quality loop fix (Mini-games category, "the hero is a speck"): the platformer/flyer backdrops are
+// generated at a smaller "compact" scale (matching the compact level design src/minigames/
+// platformer.js's own file header describes) and stretched 3x in-scene (setDisplaySize, crisp under
+// pixelArt:true) rather than authored at full canvas resolution -- the platformer's mid (shelving)
+// layer is level-width sized (534, = the compact PF_LEVEL_WIDTH) so it has room to pan under the
+// camera's own scroll (see tools/make-minigame-art.js's file header). Tetris keeps its own 960x540
+// backdrop unchanged.
+test('every mini-game backdrop is sized to its own scene\'s viewport', () => {
+  const sizes = {
+    'platformer-bg-far.png': [320, 180],
+    'platformer-bg-mid.png': [534, 180],
+    'flappy-bg.png': [320, 180],
+    'tetris-bg.png': [960, 540],
+  };
+  for (const [name, [expectedW, expectedH]] of Object.entries(sizes)) {
     const png = path.join(ASSETS, 'minigames', name);
     assert.ok(fs.existsSync(png), `assets/minigames/${name} is missing`);
     const { width, height } = pngSize(png);
-    assert.equal(width, 960, `${png} is ${width} wide, expected 960`);
-    assert.equal(height, 540, `${png} is ${height} tall, expected 540`);
+    assert.equal(width, expectedW, `${png} is ${width} wide, expected ${expectedW}`);
+    assert.equal(height, expectedH, `${png} is ${height} tall, expected ${expectedH}`);
   }
 });
 

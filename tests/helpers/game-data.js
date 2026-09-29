@@ -147,11 +147,23 @@ function loadGameData() {
     flappyHitsGround: get('flappyHitsGround'),
     flappyHitsCeiling: get('flappyHitsCeiling'),
     flappyPassedPipe: get('flappyPassedPipe'),
+    // Flappy's own tuned constants (Mini-games quality pass) -- exposed so a test can check the real
+    // numbers the game plays with, not a hand-typed copy that could silently drift from them.
+    FLAPPY_GRAVITY: get('FLAPPY_GRAVITY'),
+    FLAPPY_FLAP_VELOCITY: get('FLAPPY_FLAP_VELOCITY'),
+    FLAPPY_BIRD_RADIUS: get('FLAPPY_BIRD_RADIUS'),
     // Platformer pure physics helpers
     integrateGravity: get('integrateGravity'),
     canCoyoteJump: get('canCoyoteJump'),
     shouldBufferedJumpFire: get('shouldBufferedJumpFire'),
     clipJumpRelease: get('clipJumpRelease'),
+    // The platformer's own tuned constants (Mini-games quality pass), same reasoning as Flappy's above.
+    PLATFORMER_GRAVITY: get('PLATFORMER_GRAVITY'),
+    PLATFORMER_JUMP_VELOCITY: get('PLATFORMER_JUMP_VELOCITY'),
+    PLATFORMER_MIN_JUMP_VELOCITY: get('PLATFORMER_MIN_JUMP_VELOCITY'),
+    PLATFORMER_RUN_SPEED: get('PLATFORMER_RUN_SPEED'),
+    PLATFORMER_COYOTE_MS: get('PLATFORMER_COYOTE_MS'),
+    PLATFORMER_JUMP_BUFFER_MS: get('PLATFORMER_JUMP_BUFFER_MS'),
     notifyStateChanged: get('notifyStateChanged'),
     resetGameState: get('resetGameState'),
     matchesWhen: get('matchesWhen'),

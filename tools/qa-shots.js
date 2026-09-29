@@ -528,7 +528,12 @@ async function shootMinigames(browser) {
         return MINIGAMES[gameId].sceneKey;
       }, id);
       await waitFor(page, (key) => game.scene.isActive(key), { arg: sceneKey, timeout: 5000 });
-      await page.waitForTimeout(150); // let the card's own fade-in tween (framework-scene.js show()) settle
+      // FB-0042's card ignores ENTER/SPACE for CARD_INPUT_DELAY_MS (350ms) after it appears (mashing
+      // Space to launch the mini-game used to carry straight through into an instant "START") -- wait
+      // for the intro card's own `acceptInput` flag instead of a guessed fixed delay, so this doesn't
+      // race that gate (a fixed 150ms here used to lose the Enter press below more often than not,
+      // leaving mgState stuck on 'intro' and every later shot in this game skipped).
+      await waitFor(page, (key) => game.scene.getScene(key).card && game.scene.getScene(key).card.acceptInput, { arg: sceneKey, timeout: 5000 });
       await shoot(page, `minigame-${id}-01-intro`);
 
       await waitCardAcceptsInput(page, sceneKey);

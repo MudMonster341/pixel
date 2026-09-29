@@ -136,8 +136,17 @@ class MinigameBaseScene extends Phaser.Scene {
     this.mgState = 'win';
     this.setHudVisible(false);
     AudioManager.play('minigameWin');
+    this.flashScreen(); // juice: a brief, subtle win flash, right before the win card eases in
     recordAttempt(GameState, this.gameId, skipped ? 'skipped' : 'won', this.score);
     this.card.showWin(this.def, skipped, () => this.finish('won'));
+  }
+
+  // A quick, subtle full-canvas white flash (coordinator brief "juice": "a win flash; keep it
+  // subtle") -- one plain rect, alpha down to 0 over 220ms, well under GAME_FEEL.md's "nothing flashes
+  // faster than 3 times a second" (this is a single one-shot pulse, not a repeating flash at all).
+  flashScreen() {
+    const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0.45).setOrigin(0, 0).setDepth(300);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 220, ease: 'Cubic.easeOut', onComplete: () => flash.destroy() });
   }
 
   lose() {
@@ -430,6 +439,29 @@ function spawnDustPuff(scene, x, y) {
       duration: 260, ease: 'Cubic.easeOut', onComplete: () => mote.destroy(),
     });
   }
+}
+
+// Quality loop fix (Mini-games, rated 4/10 -- "the hero is a speck"): platformer.js and flappy.js
+// draw the hero/bird at HERO_SCALE (3x, matching the main game's own `ZOOM`, src/state.js) via a
+// plain `sprite.setScale(HERO_SCALE)` -- camera zoom turned out to be unreliable for this scene setup
+// (traced through many qa:shots screenshots: the camera's own zoom/scroll properties always read back
+// correct, but world content kept rendering at 1x regardless -- a real, unresolved oddity in this
+// environment, not worth blocking the fix on), so the fix is a plain sprite scale instead: proven,
+// simple, and exactly how the win card's own key icon (addWinKeyIcon() above) already gets its size.
+const HERO_SCALE = 3;
+
+// Juice (coordinator brief: "a squash and stretch on jump and land... keep it subtle") -- a quick,
+// shared tween shape for the hero's own sprite so platformer.js's jump/land and flappy.js's flap can
+// all reuse it instead of hand-rolling their own. `mode: 'stretch'` (a takeoff -- taller, thinner,
+// leaving the ground) or `'squash'` (an impact -- shorter, wider, landing/settling); both spring back
+// to `baseScale` (not bare 1 -- the hero draws at HERO_SCALE, so resetting to 1 would suddenly shrink
+// her back to a speck for the rest of the tween's hold) over a beat via Back.easeOut so it reads as a
+// little bounce, not a snap.
+function squashStretch(scene, sprite, mode = 'stretch', baseScale = HERO_SCALE) {
+  scene.tweens.killTweensOf(sprite);
+  const [fx, fy] = mode === 'squash' ? [1.22, 0.82] : [0.85, 1.18];
+  sprite.setScale(baseScale * fx, baseScale * fy);
+  scene.tweens.add({ targets: sprite, scaleX: baseScale, scaleY: baseScale, duration: 150, ease: 'Back.easeOut' });
 }
 
 function ensurePlayerAnims(scene) {

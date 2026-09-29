@@ -1488,6 +1488,24 @@ const TILES = [
   { name: 'intLabBenchScope', solid: true, draw: intLabBenchScope },
   { name: 'intLabBenchFlask', solid: true, draw: intLabBenchFlask },
   { name: 'intLabBenchLaptop', solid: true, draw: intLabBenchLaptop },
+
+  // Quality loop, Interior art run 3 (2026-09-29): the interior potted plant (no brick-floor
+  // background), round columns, a rug, a bigger reception desk's end caps, wall posters/nameplates,
+  // and an equipment trolley. Appended at the very end so every existing tile's name/index stays
+  // stable.
+  { name: 'intPottedPlant', solid: true, draw: intPottedPlant },
+  { name: 'intColumnCapL', solid: true, draw: intColumnCapL },
+  { name: 'intColumnCapR', solid: true, draw: intColumnCapR },
+  { name: 'intColumnShaftL', solid: true, draw: intColumnShaftL },
+  { name: 'intColumnShaftR', solid: true, draw: intColumnShaftR },
+  { name: 'intColumnBaseL', solid: true, draw: intColumnBaseL },
+  { name: 'intColumnBaseR', solid: true, draw: intColumnBaseR },
+  { name: 'intRug', draw: intRug },
+  { name: 'intReceptionDeskL', solid: true, draw: intReceptionDeskL },
+  { name: 'intReceptionDeskR', solid: true, draw: intReceptionDeskR },
+  { name: 'intWallPoster', solid: true, draw: intWallPoster },
+  { name: 'intNameplate', solid: true, draw: intNameplate },
+  { name: 'intEquipmentTrolley', solid: true, draw: intEquipmentTrolley },
 ];
 
 // ---------- campus tiles ----------
@@ -2721,11 +2739,34 @@ function intFoyerLanding(img, x, y) {
 // `chandelierPixels` drawing (the same "draw once, crop per tile" idea `bitsSignSegN` already uses
 // for the wordmark). Placed on the `overhead` layer (ADR 0008) by
 // `Floor.placeOverhead()`/FURNISHERS.foyer as a 2x2 block, transparent everywhere but the fixture.
+// Quality loop run 3 (docs/quality/scorecard.md, 2026-09-29: "the chandelier reads as a gold plus
+// sign: draw a tiered chandelier (a gold frame with rows of warm light dots and a soft glow)") --
+// run 2's two stacked rectangles made a cross silhouette once the chain was added; two true ellipses
+// (an ORed-together x/y radius test, not row-by-row rectangles) give round tiers instead, with a
+// ring of glowing "bulb" dots around each one and a brighter glow at the very centre.
 function chandelierPixels(put) {
-  for (let gy = 0; gy < 8; gy++) { put(15, gy, 'ironRail'); put(16, gy, 'ironRail'); } // chain
-  for (let gx = 6; gx < 26; gx++) for (let gy = 8; gy < 18; gy++) put(gx, gy, 'chandelierGold'); // upper tier
-  for (let gx = 10; gx < 22; gx++) for (let gy = 18; gy < 27; gy++) put(gx, gy, 'chandelierGold'); // lower tier
-  for (const [gx, gy] of [[9, 11], [22, 11], [15, 9], [16, 9], [12, 21], [19, 21], [15, 25], [16, 25]]) put(gx, gy, 'chandelierGlow');
+  for (let gy = 0; gy < 6; gy++) { put(15, gy, 'ironRail'); put(16, gy, 'ironRail'); } // chain
+  const inEllipse = (gx, gy, cx, cy, rx, ry) => {
+    const dx = (gx + 0.5 - cx) / rx;
+    const dy = (gy + 0.5 - cy) / ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  for (let gx = 0; gx < 32; gx++) {
+    for (let gy = 6; gy < 32; gy++) {
+      if (inEllipse(gx, gy, 15.5, 13, 10, 6) || inEllipse(gx, gy, 15.5, 23, 6.5, 5)) put(gx, gy, 'chandelierGold');
+    }
+  }
+  // A ring of small warm light dots around each tier's own rim, plus a soft glow at each centre.
+  for (let a = 0; a < 8; a++) {
+    const ang = (a / 8) * Math.PI * 2;
+    put(Math.round(15.5 + Math.cos(ang) * 8), Math.round(13 + Math.sin(ang) * 4.5), 'chandelierGlow');
+  }
+  for (let a = 0; a < 6; a++) {
+    const ang = (a / 6) * Math.PI * 2;
+    put(Math.round(15.5 + Math.cos(ang) * 5), Math.round(23 + Math.sin(ang) * 3.5), 'chandelierGlow');
+  }
+  put(15, 12, 'chandelierGlow'); put(16, 12, 'chandelierGlow');
+  put(15, 22, 'chandelierGlow'); put(16, 22, 'chandelierGlow');
 }
 function intChandelierQuadrant(img, x, y, qx, qy) {
   chandelierPixels((gx, gy, key) => {
@@ -2833,6 +2874,95 @@ function intLabBenchLaptop(img, x, y) {
   intLabBenchWood(img, x, y);
   img.fill(x + 5, y + 6, 7, 4, 'o');
   img.fill(x + 6, y + 5, 5, 1, 'Q');
+}
+
+// ---------- Quality loop, Interior art run 3 (docs/quality/scorecard.md, 2026-09-29) ----------
+// "Foyer... bland: white stripes for columns, the chandelier reads as a gold plus sign... tiny
+// reception desk and sofas... empty of people"; "plants sit on brick-tile pedestals"; "Physics Lab
+// still a uniform grid, sparse wall decoration".
+
+// The interior potted plant (LimeZu's own crop already has a proper round terracotta pot baked in --
+// see MEMORY.md) WITHOUT the outdoor `plant()`'s own `floor()` background call, which was a warm
+// plank/brick fill meant for the meadow-house test map, not Main Block's own marble/tile floors --
+// that fill showing through the sprite's transparent margins is exactly "plants on brick tiles".
+function intPottedPlant(img, x, y) {
+  blitFit(img, x, y, loadAtlas(LIMEZU.plant.atlas), LIMEZU.plant.sx, LIMEZU.plant.sy, LIMEZU.plant.sw, LIMEZU.plant.sh, { maxW: 14, maxH: 15 });
+}
+
+// Round columns (quality loop run 3: "make them read as round white columns (a shaded cylinder with
+// a capital and base, 2 tiles wide)"): each half-tile shades from light (at the seam between the two
+// tiles, the cylinder's own lit centre) to dark (at the tile's outer edge, the shadowed side) --
+// side-by-side, the two halves read as one round column, not two flat stripes. `band` adds a
+// lighter flared cap (top row) or a darker flared foot (bottom row) of the 2-wide x 3-tall block
+// build-interiors.js places these in.
+function intColumnHalf(img, x, y, side, band) {
+  const seamX = side === 'L' ? TILE - 1 : 0; // the edge touching the *other* half-tile
+  for (let xx = 0; xx < TILE; xx++) {
+    const d = Math.abs(xx - seamX);
+    const key = d < 4 ? 'wallHi' : d < 10 ? 'columnBody' : 'columnShade';
+    img.fill(x + xx, y, 1, TILE, key);
+  }
+  if (band === 'cap') {
+    img.fill(x, y, TILE, 3, 'wallHi');
+    img.fill(x, y + 2, TILE, 1, 'K');
+  } else if (band === 'base') {
+    img.fill(x, y + TILE - 3, TILE, 3, 'columnShade');
+    img.fill(x, y + TILE - 4, TILE, 1, 'K');
+    img.fill(x, y + TILE - 1, TILE, 1, 'K');
+  }
+}
+function intColumnCapL(img, x, y) { intColumnHalf(img, x, y, 'L', 'cap'); }
+function intColumnCapR(img, x, y) { intColumnHalf(img, x, y, 'R', 'cap'); }
+function intColumnShaftL(img, x, y) { intColumnHalf(img, x, y, 'L', null); }
+function intColumnShaftR(img, x, y) { intColumnHalf(img, x, y, 'R', null); }
+function intColumnBaseL(img, x, y) { intColumnHalf(img, x, y, 'L', 'base'); }
+function intColumnBaseR(img, x, y) { intColumnHalf(img, x, y, 'R', 'base'); }
+
+// A large rug in front of the staircase (quality loop run 3) -- a warm patterned floor tile, low
+// contrast in the body (same "no checker" rule as the rest of the floor kit) with a distinct dark
+// border so it reads as a rug laid over the marble, not more marble.
+function intRug(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'marbleRunner');
+  img.fill(x + 2, y + 2, TILE - 4, TILE - 4, 'marbleRunnerDark');
+  img.fill(x + 4, y + 4, TILE - 8, TILE - 8, 'marbleRunner');
+}
+// A bigger reception desk (quality loop run 3: "4-5 tiles, a curved counter look") -- tapered end
+// caps either side of the existing straight `intReceptionDesk` centre section, so the counter reads
+// as gently curving inward at both ends instead of a flat slab.
+function intReceptionDeskEnd(img, x, y, side) {
+  const inset = side === 'L' ? [3, 0] : [0, 3];
+  img.box(x + 1 + inset[0], y + 6, TILE - 2 - inset[0] - inset[1], 8, 'N');
+  img.fill(x + 1 + inset[0], y + 6, TILE - 2 - inset[0] - inset[1], 1, '&');
+}
+function intReceptionDeskL(img, x, y) { intReceptionDeskEnd(img, x, y, 'L'); }
+function intReceptionDeskR(img, x, y) { intReceptionDeskEnd(img, x, y, 'R'); }
+
+// A wall poster / periodic table / diagram (quality loop run 3: "posters/periodic table and diagrams
+// on walls" for the Physics Lab, "wall posters/notice boards" for corridors) -- a plain sheet pinned
+// to the wall, distinct from `intNoticeboard` (a corkboard with pinned notes): a flat colour field
+// with a grid of thin lines, reading as a chart/diagram rather than a corkboard.
+function intWallPoster(img, x, y) {
+  bitsWallPlain(img, x, y);
+  img.fill(x + 2, y + 2, TILE - 4, 11, 'W');
+  for (let gx = 4; gx < TILE - 2; gx += 3) img.fill(x + gx, y + 3, 1, 9, 'icvlBlue');
+  for (let gy = 4; gy < 12; gy += 3) img.fill(x + 3, y + gy, TILE - 6, 1, 'icvlBlue');
+}
+// A small door nameplate (quality loop run 3: "doors with small name plates beside them") -- a tiny
+// plaque mounted on the wall next to a door, placed via Floor.placeStructure at a specific spot
+// (not part of a door object itself), so it works beside any door without new warp data.
+function intNameplate(img, x, y) {
+  bitsWallPlain(img, x, y);
+  img.fill(x + 5, y + 6, 6, 4, 'wallHi');
+  img.fill(x + 5, y + 6, 6, 1, 'K');
+}
+// An equipment trolley (quality loop run 3: "an equipment trolley") -- a small wheeled cart with a
+// tray of loose apparatus, for the Physics Lab.
+function intEquipmentTrolley(img, x, y) {
+  img.box(x + 2, y + 4, TILE - 4, 7, 'Q');
+  img.fill(x + 3, y + 5, 3, 2, '@');
+  img.fill(x + 9, y + 5, 3, 2, '!');
+  img.set(x + 4, y + 12, 'K');
+  img.set(x + 11, y + 12, 'K');
 }
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------

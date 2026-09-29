@@ -66,7 +66,10 @@ function coveredByDepthGroup(groups, x, y) {
 // depthGroup rect -- the exact "she walks behind it" promise (ADR 0015) the owner's brief asked for
 // ("make the staircase/mezzanine/columns/big plants depthGroups").
 const TALL_TILES_BY_MAP = {
-  'main-block-g': ['intColumn', 'intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding', 'plant'],
+  'main-block-g': [
+    'intColumnCapL', 'intColumnCapR', 'intColumnShaftL', 'intColumnShaftR', 'intColumnBaseL', 'intColumnBaseR',
+    'intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding', 'intFoyerTreadPlain', 'intPottedPlant',
+  ],
   'main-block-1': ['intServerRack'],
   'main-block-3': ['intLabRack'],
 };

@@ -91,7 +91,9 @@ const MAPS = {
     indoors: true,
     keyStations: [
       // On a wood-topped physics-lab bench (FB-0030/0031 compact redesign).
-      { id: 'physicsLab', name: STORY.keyStations.physicsLab.name, item: STORY.keyStations.physicsLab.item, x: 5, y: 5, dialog: keyStationDialog('physicsLab') },
+      // Quality loop run 3 (2026-09-29): the bench layout varied (2 long benches + an island), so
+      // the first bench moved -- docs/quality/scorecard.md "Interior art run 3".
+      { id: 'physicsLab', name: STORY.keyStations.physicsLab.name, item: STORY.keyStations.physicsLab.item, x: 5, y: 7, dialog: keyStationDialog('physicsLab') },
     ],
   },
   'library-block-g': { name: 'Library Block · Ground Floor', tiled: 'library-block-g', indoors: true },

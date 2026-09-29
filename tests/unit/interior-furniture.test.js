@@ -145,7 +145,7 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
       if (sgid && ['intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'].includes(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
     }
   }
-  for (const name of ['intReceptionDesk', 'intSofa', 'plant', 'intNoticeboard', 'intColumn']) {
+  for (const name of ['intReceptionDesk', 'intSofa', 'intPottedPlant', 'intNoticeboard', 'intColumnShaftL']) {
     assert.ok(found.has(name), `expected the Foyer to include "${name}", found [${[...found]}]`);
   }
   for (const name of ['intFloorMarble', 'intFloorMarbleRunner']) {

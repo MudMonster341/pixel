@@ -47,6 +47,11 @@ const REQUIRED_TILES = [
   // quadrants, and the ICVL/Physics Lab's extra furniture variety.
   'intFoyerTreadPlain', 'intChandelierTR', 'intChandelierBL', 'intChandelierBR', 'intChair',
   'intIcvlCabinet', 'intFumeHood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop',
+  // Quality loop, Interior art run 3 (2026-09-29): round columns, the interior potted plant, a rug,
+  // a bigger reception desk, wall posters/nameplates, and an equipment trolley.
+  'intPottedPlant', 'intColumnCapL', 'intColumnCapR', 'intColumnShaftL', 'intColumnShaftR',
+  'intColumnBaseL', 'intColumnBaseR', 'intRug', 'intReceptionDeskL', 'intReceptionDeskR',
+  'intWallPoster', 'intNameplate', 'intEquipmentTrolley',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -437,14 +442,23 @@ const FURNISHERS = {
     // The centre runner, from the entrance up to the staircase.
     floor.paintFloor(cx - 1, iy0, cx, iy1, 'intFloorMarbleRunner');
 
-    // 4 big, 2-wide columns (quality loop: "4 big white columns, 2 tiles wide, full height,
+    // 4 big, 2-wide columns (quality loop run 1: "4 big white columns, 2 tiles wide, full height,
     // depthGroups") -- a pair flanking the staircase/landing, a pair flanking the entrance, well
-    // clear of the centre runner and the aisles either side of the stairs.
+    // clear of the centre runner and the aisles either side of the stairs. Quality loop run 3
+    // ("make them read as round white columns (a shaded cylinder with a capital and base)"): each
+    // 2-wide x 3-tall block is now 6 different tiles -- a capital row, a shaft row and a base row,
+    // each row an L/R half-cylinder pair (tools/make-assets.js intColumnCapL/R etc.).
     for (const cy0 of [iy0 + 3, iy1 - 3]) {
       floor.paintFloor(ix0, cy0, ix0 + 1, cy0 + 2, 'intFloorMarble');
       floor.paintFloor(ix1 - 1, cy0, ix1, cy0 + 2, 'intFloorMarble');
-      for (let y = cy0; y <= cy0 + 2; y++) for (let x = ix0; x <= ix0 + 1; x++) floor.placeStructure(x, y, 'intColumn');
-      for (let y = cy0; y <= cy0 + 2; y++) for (let x = ix1 - 1; x <= ix1; x++) floor.placeStructure(x, y, 'intColumn');
+      for (let i = 0; i < 3; i++) {
+        const y = cy0 + i;
+        const band = i === 0 ? 'Cap' : i === 2 ? 'Base' : 'Shaft';
+        floor.placeStructure(ix0, y, `intColumn${band}L`);
+        floor.placeStructure(ix0 + 1, y, `intColumn${band}R`);
+        floor.placeStructure(ix1 - 1, y, `intColumn${band}L`);
+        floor.placeStructure(ix1, y, `intColumn${band}R`);
+      }
       floor.depthGroupRect(ix0, cy0, ix0 + 1, cy0 + 2);
       floor.depthGroupRect(ix1 - 1, cy0, ix1, cy0 + 2);
     }
@@ -482,8 +496,11 @@ const FURNISHERS = {
     // above the landing.
     for (let x = ix0; x <= ix1; x++) floor.placeStructure(x, landingY0 - 1, 'intAtriumRailing');
     floor.depthGroupRect(ix0, landingY0 - 1, ix1, landingY0 - 1);
-    put(ix0 + 2, landingY0 - 1, 'plant');
-    put(ix1 - 2, landingY0 - 1, 'plant');
+    // Quality loop run 3 ("plants in proper round pots, not on brick tiles"): `intPottedPlant`
+    // (tools/make-assets.js) drops the outdoor `plant()`'s own brick/plank floor background --
+    // LimeZu's own crop already bakes in a round terracotta pot.
+    put(ix0 + 2, landingY0 - 1, 'intPottedPlant');
+    put(ix1 - 2, landingY0 - 1, 'intPottedPlant');
 
     // The chandelier hangs over the lower landing, on the `overhead` layer (quality loop run 1: "a
     // chandelier (overhead layer) over the landing") -- always drawn above her, never a ground tile
@@ -508,17 +525,32 @@ const FURNISHERS = {
     put(stairsX1 - 1, iy0, 'intNoticeboard'); // the LUG banner
     floor.rectObject('area', 'LUG Stall', ix0, iy0, ix1, landingY0 - 2, { kind: 'stall' });
 
+    // A large rug in front of the staircase (quality loop run 3), from the flights' own foot down to
+    // the seating near the entrance (furniture sits on top of it, same as any real rug).
+    floor.paintFloor(stairsX0, flightY1 + 1, stairsX1, iy1, 'intRug');
+
     // Reception desk + seating near the entrance, off to one side so the central sightline (runner
     // -> staircase -> wordmark) stays clear, per the photo ("out of frame... belong along the side
-    // walls, not blocking the central sightline").
+    // walls, not blocking the central sightline"). Quality loop run 3 ("bigger reception desk, 2
+    // sofa groups with a coffee table... a notice board and a directory sign"): a real 3-tile
+    // curved-look counter (tapered end caps either side of the plain centre section), 2 separate
+    // sofa+coffee-table clusters instead of one lone pair, and a directory sign beside the desk.
+    put(ix1 - 4, iy1 - 1, 'intReceptionDeskL');
     put(ix1 - 3, iy1 - 1, 'intReceptionDesk');
+    put(ix1 - 2, iy1 - 1, 'intReceptionDeskR');
+    put(ix1 - 3, iy1 - 2, 'intNoticeboard'); // the directory sign, just behind the desk
+
     put(ix0 + 2, iy1 - 1, 'intSofa');
     put(ix0 + 3, iy1 - 1, 'intSofa');
-    put(ix0 + 2, iy1 - 2, 'intNoticeboard');
+    put(ix0 + 2, iy1 - 2, 'table'); // coffee table, in front of the first sofa group
+
+    put(ix0 + 8, iy1 - 1, 'intSofa');
+    put(ix0 + 9, iy1 - 1, 'intSofa');
+    put(ix0 + 8, iy1 - 2, 'table'); // and the second
 
     // Potted palms flanking the entrance, each its own 1x1 walk-behind depthGroup.
     for (const [px, py] of [[ix0 + 2, iy1], [ix1 - 2, iy1]]) {
-      put(px, py, 'plant');
+      put(px, py, 'intPottedPlant');
       floor.depthGroupRect(px, py, px, py);
     }
   },
@@ -577,8 +609,9 @@ const FURNISHERS = {
       // leaves just beyond it.
     }
     for (const y of aisleRows) {
-      put(ix0 + 3, y, 'plant');
-      put(ix0 + 6, y, 'plant');
+      // Quality loop run 3 ("plants sit on brick-tile pedestals"): `intPottedPlant`, not `plant`.
+      put(ix0 + 3, y, 'intPottedPlant');
+      put(ix0 + 6, y, 'intPottedPlant');
       put(ix0 + 8, y, 'intBin');
     }
     if (ctx && ctx.floor) {
@@ -596,37 +629,84 @@ const FURNISHERS = {
   // rows (not a repeated grid), each a mix of the 3 differently-topped bench tiles (a scope, flasks,
   // a laptop) plus stools, clear multi-row aisles between them, apparatus shelves along a wall, a
   // sink + fume hood, and a whiteboard at the front.
+  // Quality loop run 3 (docs/quality/scorecard.md, 2026-09-29: "still a uniform grid, sparse wall
+  // decoration... vary the bench layout: 2 long benches plus an island bench... posters/periodic
+  // table and diagrams on walls, an equipment trolley, a demo desk at the front"). 3 different bench
+  // shapes now instead of 3 repeats of the same full-width row: a long bench along the top (under
+  // the demo desk + whiteboard), a second long bench running down the left wall, and a short
+  // freestanding island bench in the middle of the room.
   labPhysics: (put, ix0, iy0, ix1, iy1, ctx) => {
+    const mid = Math.round((ix0 + ix1) / 2);
     const benchTiles = ['intLabBenchWood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop'];
-    const benchRows = [iy0, iy0 + 5, iy1].filter((y, i, arr) => arr.indexOf(y) === i && y <= iy1);
-    const stoolRows = new Set();
-    for (const y of benchRows) {
-      for (let x = ix0; x <= ix1; x++) put(x, y, benchTiles[(x - ix0) % benchTiles.length]);
-      // A row of stools on both sides of each bench, where there's room.
-      if (y - 1 >= iy0 && !benchRows.includes(y - 1)) stoolRows.add(y - 1);
-      if (y + 1 <= iy1 && !benchRows.includes(y + 1)) stoolRows.add(y + 1);
+
+    // The demo desk at the front, under the whiteboard.
+    put(mid, iy0, 'intTeacherDesk');
+
+    // Long bench 1: the full width, just past the demo desk, with a row of stools.
+    const topBenchY = iy0 + 2;
+    for (let x = ix0; x <= ix1; x++) put(x, topBenchY, benchTiles[(x - ix0) % benchTiles.length]);
+    for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, topBenchY + 1, x % 2 === 1 ? 'intChair' : 'intBooksStack');
+
+    // Long bench 2: down the left wall.
+    const sideBenchY0 = iy0 + 5, sideBenchY1 = iy1 - 3;
+    for (let y = sideBenchY0; y <= sideBenchY1; y++) {
+      put(ix0, y, benchTiles[(y - sideBenchY0) % benchTiles.length]);
+      put(ix0 + 1, y, 'intChair');
     }
-    for (const y of stoolRows) for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, 'intChair');
-    // Apparatus shelves down both walls, in the aisle rows between the bench/stool rows -- tall
-    // furniture, so every rack/tank gets its own walk-behind depthGroup (ADR 0015).
+
+    // The island bench: short, freestanding, not touching any wall.
+    const islandY = iy1 - 1;
+    const islandX0 = mid - 2, islandX1 = mid + 2;
+    for (let x = islandX0; x <= islandX1; x++) put(x, islandY, benchTiles[(x - islandX0) % benchTiles.length]);
+    for (let x = islandX0; x <= islandX1; x++) put(x, islandY - 1, 'intChair');
+    put(islandX1 + 2, islandY, 'intEquipmentTrolley');
+
+    // Apparatus shelves down *both* walls (tall furniture, its own walk-behind depthGroup, ADR
+    // 0015), in whichever rows aren't already a bench/stool/island row.
     const midY = Math.round((iy0 + iy1) / 2);
-    for (let y = iy0; y <= iy1; y++) {
-      if (benchRows.includes(y) || stoolRows.has(y)) continue;
-      put(ix0, y, 'intLabRack');
-      put(ix0 + 1, y, 'intLabTank');
-      if (ctx && ctx.floor) {
-        ctx.floor.depthGroupRect(ix0, y, ix0, y);
-        ctx.floor.depthGroupRect(ix0 + 1, y, ix0 + 1, y);
-      }
-      if (y !== midY && y !== midY + 1) {
-        put(ix1, y, 'intLabRack');
-        if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix1, y, ix1, y);
+    const isFreeRow = (y) => !(y === topBenchY || y === topBenchY + 1 || y === islandY || y === islandY - 1 || (y >= sideBenchY0 && y <= sideBenchY1));
+    for (let y = iy0 + 1; y <= iy1; y++) {
+      if (!isFreeRow(y)) continue;
+      put(ix1, y, 'intLabRack');
+      if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix1, y, ix1, y);
+      if (y > sideBenchY1) { // the left wall's own free rows below the 2nd long bench
+        put(ix0, y, 'intLabTank');
+        if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix0, y, ix0, y);
       }
     }
+    put(ix1 - 1, iy0 + 1, 'intLabTank');
+    if (ctx && ctx.floor) ctx.floor.depthGroupRect(ix1 - 1, iy0 + 1, ix1 - 1, iy0 + 1);
     put(ix1, midY, 'intSink');
     put(ix1, midY + 1 <= iy1 ? midY + 1 : midY, 'intFumeHood');
+    // Extra apparatus in the gap between the demo desk and the first long bench.
+    for (let x = ix0 + 2; x <= ix1 - 2; x += 2) put(x, iy0 + 1, x % 4 === 0 ? 'intLabTank' : 'intBooksStack');
+    put(ix1 - 2, iy0 + 1, 'intEquipmentTrolley');
+
+    // The room reads spacious with just the 3 bench clusters (a 16x13 room, "2 long benches + an
+    // island" alone leaves most of the floor open) -- a light scatter of stools/apparatus across the
+    // *rest* of the open floor, every 3rd column, still leaves 2 clear tiles out of 3 as a real
+    // aisle in both directions.
+    const scatter = ['intChair', 'intLabTank', 'intBooksStack'];
+    let s = 0;
+    for (let y = iy0 + 1; y <= iy1; y++) {
+      if (y === topBenchY || y === topBenchY + 1) continue;
+      const inSideBenchRow = y >= sideBenchY0 && y <= sideBenchY1;
+      const inIslandRow = y === islandY || y === islandY - 1;
+      const xStart = inSideBenchRow ? ix0 + 4 : ix0 + 1; // stay clear of the side bench + its chair
+      for (let x = xStart; x <= ix1 - 1; x += 2) {
+        if (inIslandRow && x >= islandX0 - 1 && x <= islandX1 + 1) continue; // the island + its own chairs/trolley
+        put(x, y, scatter[s++ % scatter.length]);
+      }
+    }
+
     if (ctx && ctx.floor) {
       ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
+      // Posters/periodic table/diagrams on both the front and back walls.
+      const r = ctx.floor.get(ctx.id);
+      ctx.floor.placeStructure(mid - 4, r.y0, 'intWallPoster');
+      ctx.floor.placeStructure(mid + 4, r.y0, 'intWallPoster');
+      ctx.floor.placeStructure(mid - 3, r.y1, 'intWallPoster');
+      ctx.floor.placeStructure(mid + 3, r.y1, 'intWallPoster');
     }
   },
   classroom60: (put, ix0, iy0, ix1, iy1, ctx) => {

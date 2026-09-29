@@ -148,18 +148,32 @@ class ScriptRunner {
     actorEntry.sprite.anims.play(key, true);
   }
 
+  // How far an actor's own "feet" (the ADR 0015 depth-sort line) sit below its sprite's own y --
+  // ACTOR_FEET_OFFSET for a 16x24 character sheet (player/NPC-shaped actors), but a plain `image`
+  // actor (the bus) can be any size at all, so its real bottom edge (half its own display height)
+  // is what has to sort against everything else, not the character constant. Quality loop (Cutscenes
+  // run 2, 2026-09-29): using ACTOR_FEET_OFFSET for the bus too was the root cause of "she's invisible
+  // after stepping off" -- an 88px-tall image was claiming its feet sat only 8px below its center, so
+  // depth-sorted as if it were a normal-sized character standing there, when its own drawn pixels
+  // actually reached ~44px in every direction -- comfortably covering anything standing at a depth the
+  // formula thought was safely "in front".
+  actorFeetOffset(actorEntry) {
+    return actorEntry.kind === 'image' ? actorEntry.sprite.displayHeight / 2 : ACTOR_FEET_OFFSET;
+  }
+
   // Depth-by-feet (ADR 0015) and the ground shadow, kept current every tick a script actor moves --
   // the player's own real shadow (world.js `playerShadow`) is reused for her; every other actor gets
   // its own, created in step_spawnActor.
   syncActorVisuals(actorEntry) {
     const sprite = actorEntry.sprite;
-    const depth = sprite.y + ACTOR_FEET_OFFSET;
+    const feet = this.actorFeetOffset(actorEntry);
+    const depth = sprite.y + feet;
     sprite.setDepth(depth);
     if (actorEntry.kind === 'player') {
       this.scene.playerShadow.setPosition(sprite.x, sprite.y + 9).setDepth(depth - 1);
       this.scene.updateHeldItem(this.scene.time.now, true);
     } else if (actorEntry.shadow) {
-      actorEntry.shadow.setPosition(sprite.x, sprite.y + 9).setDepth(depth - 1);
+      actorEntry.shadow.setPosition(sprite.x, sprite.y + feet).setDepth(depth - 1);
     }
   }
 
@@ -232,8 +246,17 @@ class ScriptRunner {
     const px = toPixel(point.x);
     const py = toPixel(point.y);
     if (kind === 'image') {
-      const image = this.scene.add.image(px, py, sprite).setDepth(py);
-      const shadow = this.scene.add.ellipse(px, py + 20, 60, 12, 0x000000, 0.3).setDepth(py - 1);
+      const image = this.scene.add.image(px, py, sprite);
+      // Quality loop (Cutscenes run 2): the shadow used to be a fixed 60x12 regardless of the actual
+      // image's own size -- far wider than the bus itself. Sized to the sprite's own footprint now
+      // (+2px, docs/plans own brief), soft and low-alpha like every other ground shadow in this game
+      // (world.js playerShadow/createNpcs()), positioned at its own feet (bottom edge), not a guessed
+      // offset.
+      const feet = image.displayHeight / 2;
+      const shadowW = image.displayWidth + 2;
+      const shadowH = Math.max(6, image.displayWidth * 0.32);
+      const shadow = this.scene.add.ellipse(px, py + feet, shadowW, shadowH, 0x000000, 0.22).setDepth(py + feet - 1);
+      image.setDepth(py + feet);
       this.actors.set(id, { sprite: image, shadow, kind: 'image', textureKey: sprite, facing });
       return;
     }

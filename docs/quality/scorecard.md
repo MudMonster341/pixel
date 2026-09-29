@@ -8,11 +8,11 @@ building. Target: 8+ in every area.
 |---|---|---|---|---|
 | 1 | Outdoor art | 7 | 2026-09-29 (run 4) | palms look noisy/dithered; still no people walking around |
 | 2 | Interior art | 6 | 2026-09-29 (run 4) | foyer floor tile grid a bit busy; no people besides the volunteer; stair block still plain |
-| 3 | Characters and depth | 6 | 2026-09-29 (run 1) | faces the way she walks, sorts behind buildings/columns correctly, doors open; but the world is empty: only the volunteer and Mustafa, no students walking, no idle life |
+| 3 | Characters and depth | 4 | 2026-09-29 (run 2) | BUG: 3 ambient students in the foyer render as missing-texture boxes (npc-ambient-* sheets never loaded); otherwise life added |
 | 4 | UI and menus | 7 | 2026-09-29 (run 2) | title backdrop could be brighter; re-check HUD during cutscenes in a playthrough |
 | 5 | Story flow and clarity | 6 | 2026-09-29 (run 1) | control returns with the objective and Mustafa present; greeting screen is a crude portrait over a dim backdrop |
 | 6 | Cutscenes | 7 | 2026-09-29 (run 3) | she now steps out visibly beside the bus; they face each other; bus reads as a shuttle. Next: small polish only |
-| 7 | Mini-games | 4 | 2026-09-29 (run 1) | platformer + flyer: hero drawn at 1x (a speck), scenes dark and empty; Tetris good |
+| 7 | Mini-games | 6 | 2026-09-29 (run 2) | platformer 7 (3x hero, lab parallax); flyer 5 (bigger, brighter, still empty-looking); tetris 7 |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
 | 10 | Card and ending | 7 | 2026-09-29 (run 2) | message box empty while the first line types in; box-opening not re-rated yet |
@@ -21,6 +21,9 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Characters (run 2) — 4 (bug); Mini-games (run 2) — 6
+- **Characters:** ambient students now exist, but three in the foyer draw as Phaser's missing-texture box (black square, green diagonal): the new `npc-ambient-*` sheets are generated but never loaded. Scored down until fixed; no test checks that every referenced texture is loaded.
+- **Mini-games:** platformer 7 (she's big and readable, lab shelves and specimen tanks in parallax, clear benches, glowing cells); flyer 5 (bigger hero, brighter room, but it reads empty, with racks only at the edge); Tetris 7.
 ### 2026-09-29 — Cutscenes (run 3) — 7; Characters and depth (run 1) — 6
 - **Cutscenes (7):** she steps out visibly beside the bus and turns to the gate; Mustafa and she face each other on every line; the bus reads as a campus shuttle with its terracotta stripe.
 - **Characters (6):** from all captures: correct facing in every direction, correct sorting behind buildings, columns and furniture, the door walk-in works. But the campus and the Main Block are empty: only the volunteer and Mustafa exist. No students walking, sitting or chatting; no idle life.

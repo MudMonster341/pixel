@@ -276,7 +276,12 @@ read as *this* game's UI wrapped around it, not a different one bolted on. Rules
   `src/scenes/world.js` does, walk/idle animations and all -- not a stand-in shape. Because that
   texture is loaded once, at boot, under whichever clothes-colour swatch she actually picked
   (`src/main.js` BootScene), a mini-game never needs to know her colour itself: it just reuses the
-  one texture the game already loaded, and gets the right one for free.
+  one texture the game already loaded, and gets the right one for free. **Quality-loop pass
+  (2026-09-29, Mini-games category rated 4/10, "the hero is a speck"):** that sprite is now drawn at
+  `HERO_SCALE` (`src/minigames/framework-scene.js`, 3x -- matching the main game's own `ZOOM`) via a
+  plain `sprite.setScale()`, since it used to render at native 16x24 size on the mini-game canvas and
+  read as tiny. The level geometry and physics constants for both games were retuned to match (see
+  `src/minigames/platformer.js`'s own file header) rather than left at their old numbers.
 - **Retrying is exactly one keypress, never a menu to navigate into first.** The game-over card's item
   list always starts with Retry highlighted (`MinigameCard.show()`'s `index = 0`), so ENTER alone
   retries -- rule 7 below (keyboard first) plus this task's own brief. Skipping to another item

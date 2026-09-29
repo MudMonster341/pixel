@@ -1,29 +1,54 @@
 // Themed backdrops for the 3 mini-games (docs/ROADMAP.md M4, coordinator art-pass brief
 // 2026-09-22): "give each game a themed backdrop instead of black... drawn in the tools like the rest
 // of the art." Same technique as tools/make-cutscenes.js -- a tiny Img/PNG writer, no dependencies,
-// no photos copied -- just a second illustration set alongside the story cutscenes, sized to fill the
-// mini-game canvas (960x540) rather than the cutscene player's letterboxed frame.
+// no photos copied -- just a second illustration set alongside the story cutscenes.
+//
+// Quality loop pass (Mini-games category, "the lab and the server room are dark and muddy... add
+// depth: a layered parallax backdrop"): the platformer scrolls a real camera across a level wider
+// than one screen (src/minigames/platformer.js), so it gets *true* two-layer parallax -- a static far
+// wall (canvas-sized, pinned like before) plus a mid shelving/equipment layer sized to the whole level
+// and scrolled at a fraction of camera speed (scrollFactor, set in platformer.js). Both layers are
+// generated here at a smaller "compact" scale (matching platformer.js's own compact level design, see
+// that file's header) and stretched 3x in-scene (setDisplaySize, crisp under pixelArt:true, src/
+// main.js) rather than authored at full canvas resolution. The flyer's own camera never scrolls (the
+// racks scroll past a fixed camera instead, flappy.js's own animation loop), so a second,
+// independently-moving layer wouldn't read as parallax there -- it gets one richer, brighter, more
+// layered backdrop instead (far sky/cable-tray band behind a dimmer distant rack row behind a
+// brighter nearer one), composed in one image the same way the old single-backdrop games did, just
+// brighter and busier, also generated compact and stretched 3x. Both games' own floor/foreground (the
+// actual near layer) stays code-drawn in their own scene file, tied 1:1 to real world position -- see
+// PF_* / FL_* constants there.
+//
 // Run:  node tools/make-minigame-art.js   (also runs as part of `npm run assets`)
 // Output, in assets/minigames/:
-//   platformer-bg.png   960x540, the Physics Lab: benches, shelving and a specimen tank silhouetted
-//                        against a warm-lit wall, a tiled lab floor along the bottom
-//   flappy-bg.png        960x540, the ICVL server room: racks receding into the distance, a cable
-//                        tray along the ceiling, cold blue light, a raised-floor tile band
-//   tetris-bg.png         960x540, Room 195 at night: a whiteboard, desks either side, a window onto
-//                        a skyline of lit windows
-// Each scene draws its own foreground (platforms, racks, the Tetris well) itself -- these are just
-// the wall/floor/room dressing behind it, loaded once per scene (src/minigames/*.js preload(),
-// guarded like every other cached texture in this codebase) and pinned with scrollFactor(0) so a
-// scrolling level never has to tile it.
-//
+//   platformer-bg-far.png  320x180 (compact scale), pinned (scrollFactor 0): the Physics Lab's back
+//                           wall, warm lamp glow pools, a ceiling pipe run.
+//   platformer-bg-mid.png  PF_LEVEL_WIDTH x 180 (534 compact, = the real level width / 3),
+//                           scrollFactor ~0.4: shelving units and a specimen tank, spread across the
+//                           whole level so it has room to pan.
+//   flappy-bg.png           320x180 (compact scale), pinned: the ICVL server room, brighter and more
+//                           layered than before -- cable tray, two depth-graded rack rows, a cool
+//                           ambient glow.
+//   tetris-bg.png            960x540 (unchanged -- Tetris rated fine, this pass leaves it alone):
+//                            Room 195 at night, a whiteboard, desks either side, a lit skyline window.
 // `--out <dir>` writes elsewhere (tests check the files are up to date), matching the convention in
 // tools/make-assets.js / tools/make-cutscenes.js.
 const fs = require('fs');
 const path = require('path');
 const { encodePNG } = require('./lib/png');
 
+// Tetris keeps its own original, full UI-resolution canvas (unchanged this pass).
 const W = 960;
 const H = 540;
+// The compact scale the platformer/flyer backdrops are authored at (a 320x180-equivalent viewport,
+// 1/3 of the real 960x540 canvas -- src/state.js ZOOM=3) and the platformer's own compact level width
+// -- kept in sync with src/minigames/platformer.js's own compact-scale constants (both files' own
+// comments cross-reference this) by hand, the same trust the rest of this file already places in
+// matching constants across files, e.g. TETRIS_COLS living in src/minigames/tetris-logic.js but drawn
+// here nowhere at all.
+const VIEW_W = 320;
+const VIEW_H = 180;
+const PF_LEVEL_WIDTH = 534;
 
 class Img {
   constructor(w, h) {
@@ -97,123 +122,136 @@ class Img {
 }
 
 // ---------- Physics Lab (platformer) ----------
-// A warm-lit lab interior: a back wall carrying shelving/benches/a specimen tank in silhouette (the
-// actual platforms are drawn by src/minigames/platformer.js on top of this), pools of warm lamplight,
-// and a tiled lab floor band along the very bottom.
+// Two layers now (see file header): a static far wall (viewport-sized) behind a scrolling mid layer
+// of shelving/a specimen tank (level-width sized). Both brightened well past the old single-image
+// version (owner: "dark and muddy") -- lighter wall tones, bigger/warmer lamp pools, and the shelving
+// itself uses a lit-tan tone instead of near-black silhouette so it actually reads as lab furniture
+// rather than a shadow. The floor is drawn by platformer.js itself now (a real, code-drawn near layer
+// tied to world position), not baked into either image.
 
-function buildPlatformerBg() {
-  const img = new Img(W, H);
+function buildPlatformerFar() {
+  const img = new Img(VIEW_W, VIEW_H);
   const C = {
-    wallDeep: '#241f1a', wallMid: '#332b22', wallWarm: '#463a28',
-    shelf: '#1c1712', shelfEdge: '#2e2318',
-    tankGlass: '#2f5c52', tankLiquid: '#3f8f7c', tankBubble: '#bfe6da',
-    lampGlow: '#ffdf9e', lampGlowDim: '#c9a24d',
-    floorLight: '#2a251f', floorDark: '#211d18', floorGrout: '#161310',
-    pipe: '#2a2118',
+    wallHi: '#5a4c3a', wallMid: '#463a2c', wallDeep: '#362c22',
+    lampGlow: '#ffe6b0', lampGlowDim: '#e0b25e',
+    pipe: '#4a3d2c', pipeHi: '#6b5a42',
   };
+  // Brighter vertical gradient (was near-black at both ends) -- the wall now reads as lit stone/
+  // plaster, not a void, even between the lamp pools.
+  img.vGradient(0, VIEW_H - 1, [[0, C.wallMid], [0.45, C.wallHi], [1, C.wallDeep]]);
 
-  img.vGradient(0, H - 1, [[0, C.wallDeep], [0.55, C.wallMid], [1, C.wallDeep]]);
-
-  // Warm lamp fixtures along the ceiling, each casting a soft pool of light down the wall.
-  const lamps = [130, 430, 730];
+  // Warm lamp fixtures along the ceiling, bigger and brighter glow pools than before.
+  const lamps = [55, 160, 265];
   for (const lx of lamps) {
-    img.ellipse(lx, 0, 90, 170, C.lampGlow, 0.10);
-    img.ellipse(lx, 0, 55, 110, C.lampGlowDim, 0.14);
-    img.rect(lx - 14, 0, lx + 14, 8, C.pipe);
-    img.ellipse(lx, 10, 16, 6, C.lampGlow, 0.5);
+    img.ellipse(lx, 0, 46, 90, C.lampGlow, 0.22);
+    img.ellipse(lx, 0, 26, 55, C.lampGlowDim, 0.28);
+    img.rect(lx - 7, 0, lx + 7, 4, C.pipe);
+    img.ellipse(lx, 5, 8, 3, C.lampGlow, 0.75);
   }
 
-  // Wall-mounted shelving units, evenly spaced, carrying small equipment-box silhouettes.
-  for (let sx = 40; sx < W; sx += 190) {
-    const top = 70;
-    const bottom = 400;
-    img.rect(sx, top, sx + 120, top + 4, C.shelfEdge);
-    img.rect(sx, top + 4, sx + 120, bottom, C.shelf);
-    for (let shelfY = top + 40; shelfY < bottom; shelfY += 70) {
-      img.rect(sx, shelfY, sx + 120, shelfY + 4, C.shelfEdge);
-      // A couple of boxes/equipment shapes sitting on each shelf.
-      for (let bx = sx + 10; bx < sx + 100; bx += 34) {
-        const bh = 20 + ((bx + shelfY) % 14);
-        img.rect(bx, shelfY - bh, bx + 22, shelfY - 2, C.wallDeep);
-        img.rect(bx, shelfY - bh, bx + 22, shelfY - bh + 3, C.shelfEdge);
+  // A ceiling pipe run, catching a highlight along its top edge (STYLE_GUIDE "one light source").
+  img.rect(0, 9, VIEW_W - 1, 12, C.pipe, 0.9);
+  img.rect(0, 9, VIEW_W - 1, 10, C.pipeHi, 0.5);
+  for (let x = 8; x < VIEW_W; x += 22) img.rect(x, 7, x + 2, 14, C.pipeHi);
+
+  return img;
+}
+
+function buildPlatformerMid() {
+  const img = new Img(PF_LEVEL_WIDTH, VIEW_H);
+  const C = {
+    shelf: '#7a6a4e', shelfHi: '#9c8862', shelfEdge: '#4a3f2e',
+    box: '#3a4a52', boxHi: '#5a7078',
+    tankGlass: '#4fa08c', tankLiquid: '#3f8f7c', tankBubble: '#d8f5ea', tankRim: '#5a4a34',
+  };
+
+  // Wall-mounted shelving units, evenly spaced across the whole level, each carrying a couple of
+  // equipment-box silhouettes -- a lit tan tone (not near-black) so it reads as furniture, with a
+  // highlight on each shelf's own top edge (the "clear top edge" the rubric asks platforms to have,
+  // echoed here in the set dressing too).
+  for (let sx = 20; sx < PF_LEVEL_WIDTH; sx += 78) {
+    const top = 24;
+    const bottom = 118;
+    img.rect(sx, top, sx + 46, top + 3, C.shelfHi);
+    img.rect(sx, top + 3, sx + 46, bottom, C.shelf);
+    for (let shelfY = top + 22; shelfY < bottom; shelfY += 30) {
+      img.rect(sx, shelfY, sx + 46, shelfY + 2, C.shelfEdge);
+      img.rect(sx, shelfY - 2, sx + 46, shelfY, C.shelfHi, 0.6);
+      for (let bx = sx + 4; bx < sx + 40; bx += 14) {
+        const bh = 8 + ((bx + shelfY) % 6);
+        img.rect(bx, shelfY - bh, bx + 9, shelfY - 1, C.box);
+        img.rect(bx, shelfY - bh, bx + 9, shelfY - bh + 2, C.boxHi);
       }
     }
   }
 
-  // A big specimen tank between two shelving runs, glowing faintly (a lab centerpiece).
-  const tx = 480;
-  img.rect(tx - 46, 90, tx + 46, 330, C.tankGlass, 0.85);
-  img.rect(tx - 46, 90, tx + 46, 330, C.tankLiquid, 0.35);
-  img.outlineRect(tx - 46, 90, tx + 46, 330, C.shelfEdge);
-  for (let i = 0; i < 10; i++) {
-    const bx = tx - 30 + ((i * 37) % 60);
-    const by = 300 - ((i * 53) % 200);
-    img.ellipse(bx, by, 2, 2, C.tankBubble, 0.6);
+  // A glowing specimen tank every couple of shelf runs -- a lab centerpiece, repeated so it reads
+  // wherever the camera happens to be, not just once at a fixed spot.
+  for (let tx = 130; tx < PF_LEVEL_WIDTH; tx += 220) {
+    img.rect(tx - 16, 30, tx + 16, 118, C.tankGlass, 0.55);
+    img.rect(tx - 16, 30, tx + 16, 118, C.tankLiquid, 0.3);
+    img.outlineRect(tx - 16, 30, tx + 16, 118, C.tankRim);
+    for (let i = 0; i < 6; i++) {
+      const bx = tx - 10 + ((i * 13) % 20);
+      const by = 108 - ((i * 19) % 70);
+      img.ellipse(bx, by, 1, 1, C.tankBubble, 0.7);
+    }
+    img.rect(tx - 18, 27, tx + 18, 31, C.tankRim); // tank lid/rim
   }
-  img.rect(tx - 50, 84, tx + 50, 92, C.shelfEdge); // tank lid/rim
-
-  // A ceiling pipe run for a bit of industrial detail.
-  img.rect(0, 20, W - 1, 24, C.pipe, 0.8);
-  for (let x = 20; x < W; x += 60) img.rect(x, 16, x + 4, 28, C.shelfEdge);
-
-  // Floor band: alternating tile tones with grout lines, warm-toned to match the wall.
-  const floorY = 460;
-  img.rect(0, floorY, W - 1, H - 1, C.floorLight);
-  for (let x = 0; x < W; x += 40) img.rect(x, floorY, x, H - 1, C.floorGrout);
-  for (let y = floorY; y < H; y += 40) img.rect(0, y, W - 1, y, C.floorGrout);
-  for (let x = 0; x < W; x += 80) {
-    for (let y = floorY; y < H; y += 80) img.rect(x, y, x + 39, y + 39, C.floorDark, 0.3);
-  }
-  img.rect(0, floorY, W - 1, floorY + 3, C.wallDeep); // the wall's own base course, right at the floor line
 
   return img;
 }
 
 // ---------- ICVL server room (flappy) ----------
-// Cold blue light, rows of server racks with lit LEDs receding toward the top of the frame (a cheap
-// sense of depth without true 3D perspective), a cable tray along the ceiling, and a raised-floor
-// tile band -- the actual obstacle racks are drawn by src/minigames/flappy.js on top of this.
+// Cold blue light, brightened and more layered than before (owner: "dark and muddy"): a lighter sky
+// gradient, a cable tray, two depth-graded rack rows (a dim far row, a brighter mid row) receding
+// toward the top of the frame, and a raised-floor tile band -- the actual obstacle racks are drawn by
+// src/minigames/flappy.js on top of this. Sized to the compact scale (the flyer's own camera never
+// scrolls, so unlike the platformer this stays one static image, just a richer one -- see the file
+// header) and stretched 3x in-scene.
 
 function buildFlappyBg() {
-  const img = new Img(W, H);
+  const img = new Img(VIEW_W, VIEW_H);
   const C = {
-    skyDeep: '#111a2b', skyMid: '#1a2740', skyLight: '#243652',
-    rackFar: '#182231', rackFarLit: '#233348',
-    cableTray: '#0c121b', cableRung: '#1c2836',
-    floorLight: '#26313f', floorDark: '#1c2530', floorGrid: '#33465c',
-    ledRed: '#ff5a5a', ledGreen: '#8fd46a', ledAmber: '#ffd23f', ledBlue: '#7fe0ff',
+    skyDeep: '#1c2c48', skyMid: '#28405f', skyLight: '#3a5878',
+    rackFar: '#2a3c54', rackFarLit: '#3a5068',
+    rackMid: '#33495f', rackMidLit: '#456082',
+    cableTray: '#141f2e', cableRung: '#28394e',
+    floorLight: '#33465c', floorDark: '#283850', floorGrid: '#4a6480',
+    ledGreen: '#8fd46a', ledAmber: '#ffd23f',
   };
 
-  img.vGradient(0, H - 1, [[0, C.skyDeep], [0.6, C.skyMid], [1, C.skyLight]]);
+  img.vGradient(0, VIEW_H - 1, [[0, C.skyDeep], [0.6, C.skyMid], [1, C.skyLight]]);
 
   // Cable tray along the ceiling.
-  img.rect(0, 0, W - 1, 22, C.cableTray);
-  for (let x = 6; x < W; x += 18) img.rect(x, 0, x + 3, 22, C.cableRung);
+  img.rect(0, 0, VIEW_W - 1, 7, C.cableTray);
+  for (let x = 2; x < VIEW_W; x += 6) img.rect(x, 0, x + 1, 7, C.cableRung);
 
-  // Two faint, smaller "distant" rack rows (implied depth) above the real, closer racks the scene
-  // draws itself -- deliberately dim/small so the real obstacles read as the nearest, sharpest row.
-  const rowYs = [40, 96];
-  const scales = [0.55, 0.75];
-  for (let r = 0; r < rowYs.length; r++) {
-    const rh = 46 * scales[r];
-    for (let x = 10; x < W; x += 70) {
-      img.rect(x, rowYs[r], x + 46 * scales[r], rowYs[r] + rh, C.rackFar);
-      img.rect(x + 3, rowYs[r] + 4, x + 6, rowYs[r] + 7, ((x / 70) | 0) % 3 === 0 ? C.ledGreen : C.rackFarLit, 0.7);
-      img.rect(x + 10, rowYs[r] + 4, x + 13, rowYs[r] + 7, ((x / 70) | 0) % 2 === 0 ? C.ledAmber : C.rackFarLit, 0.7);
+  // A dim, distant rack row, then a brighter, closer one just below it -- a cheap two-step depth cue
+  // (STYLE_GUIDE "Layering") that reads clearly even at this small scale.
+  const rows = [
+    { y: 13, scale: 0.55, fill: C.rackFar, lit: C.rackFarLit, alpha: 0.75 },
+    { y: 28, scale: 0.8, fill: C.rackMid, lit: C.rackMidLit, alpha: 0.9 },
+  ];
+  for (const row of rows) {
+    const rh = 15 * row.scale;
+    const rw = 14 * row.scale;
+    for (let x = 4; x < VIEW_W; x += 24) {
+      img.rect(x, row.y, x + rw, row.y + rh, row.fill, row.alpha);
+      img.rect(x + 1, row.y + 1, x + rw - 1, row.y + 2, row.lit, row.alpha);
+      img.px(x + 2, row.y + 4, ((x / 24) | 0) % 2 === 0 ? C.ledGreen : C.ledAmber, 0.85);
     }
   }
 
-  // Floor: raised server-room floor tiles, cool and grid-lined.
-  const floorY = 480;
-  img.rect(0, floorY, W - 1, H - 1, C.floorLight);
-  for (let x = 0; x < W; x += 30) img.rect(x, floorY, x, H - 1, C.floorGrid, 0.6);
-  for (let y = floorY; y < H; y += 30) img.rect(0, y, W - 1, y, C.floorGrid, 0.6);
-  for (let x = 0; x < W; x += 60) {
-    for (let y = floorY; y < H; y += 60) img.rect(x, y, x + 29, y + 29, C.floorDark, 0.35);
-  }
+  // Floor: raised server-room floor tiles, cool and grid-lined, brighter than before.
+  const floorY = 160;
+  img.rect(0, floorY, VIEW_W - 1, VIEW_H - 1, C.floorLight);
+  for (let x = 0; x < VIEW_W; x += 10) img.rect(x, floorY, x, VIEW_H - 1, C.floorGrid, 0.55);
+  for (let y = floorY; y < VIEW_H; y += 10) img.rect(0, y, VIEW_W - 1, y, C.floorGrid, 0.55);
 
-  // A soft cold ambient glow low across the room (cable-tray-to-floor light falloff).
-  img.rect(0, 22, W - 1, floorY, C.skyDeep, 0.08);
+  // A soft cold ambient glow low across the room (cable-tray-to-floor light falloff) -- lighter than
+  // the old near-black wash so the middle of the room doesn't read as murky.
+  img.rect(0, 7, VIEW_W - 1, floorY, C.skyLight, 0.06);
 
   return img;
 }
@@ -304,7 +342,13 @@ const outFlag = process.argv.indexOf('--out');
 const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : path.join(__dirname, '..', 'assets', 'minigames');
 fs.mkdirSync(outDir, { recursive: true });
 const write = (name, built) => fs.writeFileSync(path.join(outDir, name), built.toPNG());
-write('platformer-bg.png', buildPlatformerBg());
+write('platformer-bg-far.png', buildPlatformerFar());
+write('platformer-bg-mid.png', buildPlatformerMid());
 write('flappy-bg.png', buildFlappyBg());
 write('tetris-bg.png', buildTetrisBg());
-console.log(`Wrote platformer-bg, flappy-bg and tetris-bg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+// The old single platformer-bg.png is retired (replaced by the far/mid pair above) -- remove it if a
+// previous run left it behind, so assets.test.js's "every generated file is exactly what the tool
+// would write" check doesn't trip over a stale, no-longer-written file.
+const stale = path.join(outDir, 'platformer-bg.png');
+if (fs.existsSync(stale)) fs.unlinkSync(stale);
+console.log(`Wrote platformer-bg-far, platformer-bg-mid, flappy-bg and tetris-bg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

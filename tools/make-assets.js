@@ -3655,6 +3655,20 @@ const UI_BUTTON_PRESSED_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#
 // Crops the pack frame's own 45x45 bordered square out of `atlasPath`, recolors it pixel-by-pixel via
 // `colorMap` (`{'#srcHex': ['#dstHex', alpha]}`, above) and upscales it 2x (nearest-neighbor, the same
 // technique every other blit in this file uses) into a fresh Img.
+//
+// Quality loop fix (Mini-games category, "odd tick decorations on the left edge"): decoding the pack
+// frame directly (not eyeballed) found its "Ancient" style scatters a handful of small border-colored
+// rivet flecks through the interior fill -- Kenney's own aging/weathering detail, not a flat texture.
+// A couple of them land close enough to the border (column 2, several rows) that Phaser's own NineSlice
+// stretches that whole neighborhood into the panel's center quad, and on any panel much taller than
+// this 90px source -- exactly the mini-game cards, sized from their own content, often 250-400px tall
+// (docs/GAME_FEEL.md rule 1) -- the stretch smears that fleck into a visible streak running down near
+// the left edge. This game's own panel spec is a flat fill anyway (STYLE_GUIDE.md "Panels: navy at 92%
+// opacity, 4px cream border"), so the real fix is to never carry that interior noise into the recolor
+// at all: only the outer 2px ring (the hi-bevel line + the border line, `FRAME_RING` below) keeps the
+// source's own pixel; everything strictly inside it becomes the flat fill color, regardless of what
+// the source pixel underneath happens to be.
+const FRAME_RING = 2; // hi-bevel row/col (0) + border-line row/col (1), each side
 function buildUiFrame(atlasPath, colorMap) {
   const atlas = loadAtlas(atlasPath);
   const out = new Img(UI_FRAME_SIZE, UI_FRAME_SIZE);
@@ -3663,7 +3677,10 @@ function buildUiFrame(atlasPath, colorMap) {
       const si = (y * atlas.width + x) * 4;
       const a = atlas.data[si + 3];
       if (a === 0) continue;
-      const key = '#' + [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+      const onRing = x < FRAME_RING || y < FRAME_RING || x >= UI_FRAME_CROP - FRAME_RING || y >= UI_FRAME_CROP - FRAME_RING;
+      const key = onRing
+        ? '#' + [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')
+        : '#d3bf8f'; // the pack's own flat-fill key -- always present in every colorMap above
       const target = colorMap[key];
       if (!target) continue; // this frame only ever has the colors mapped above
       const [hex, alpha] = target;

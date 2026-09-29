@@ -29,7 +29,11 @@ class NameEntryScene extends Phaser.Scene {
   }
 
   preload() {
-    if (!this.textures.exists('mustafa-portrait')) this.load.image('mustafa-portrait', 'assets/cutscenes/mustafa.png');
+    // Quality loop (Cutscenes run 1, 2026-09-29): the old portrait card is gone (see intro-greeting.js's
+    // own header) -- this screen shows the same small idle 'npc-mustafa' sprite instead, for consistency.
+    if (!this.textures.exists('npc-mustafa')) {
+      this.load.spritesheet('npc-mustafa', 'assets/npc-mustafa.png', { frameWidth: TILE, frameHeight: CHAR_HEIGHT });
+    }
     preloadCampusPanBackdrop(this);
     preloadUiKit(this);
   }
@@ -41,12 +45,24 @@ class NameEntryScene extends Phaser.Scene {
     this.touched = false; // clears the pre-filled default on the first keypress -- see typeChar()
 
     // FB-0032: the same live campus pan every screen in this opening sits on, crossfaded in (not a
-    // cut) from whatever alpha the previous screen's own dim rectangle left off at.
-    buildCampusPanBackdrop(this, { alpha: 0.18 });
+    // cut) from whatever alpha the previous screen's own dim rectangle left off at. Quality loop
+    // (Cutscenes run 1, 2026-09-29): the backdrop was too dark to read as the campus -- both the
+    // backdrop's own alpha and the resting dim were raised (was 0.18/0.7, effectively ~5% visible).
+    buildCampusPanBackdrop(this, { alpha: 0.3 });
     this.dim = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x12131a, 0.9).setOrigin(0, 0);
-    this.tweens.add({ targets: this.dim, fillAlpha: 0.7, duration: 200 });
+    this.tweens.add({ targets: this.dim, fillAlpha: 0.35, duration: 200 });
 
-    this.add.image(96, 90, 'mustafa-portrait').setScale(0.9);
+    const mustafa = this.add.sprite(90, 96, 'npc-mustafa', 0).setScale(3);
+    if (!this.anims.exists('greeting-mustafa-idle')) {
+      this.anims.create({
+        key: 'greeting-mustafa-idle',
+        frames: this.anims.generateFrameNumbers('npc-mustafa', { frames: [0, 7] }),
+        frameRate: 2,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+    mustafa.play('greeting-mustafa-idle');
     uiText(this, 170, 60, 'Mustafa', 12, COLORS.highlight);
     uiText(this, 170, 90, "What's your name?", 12, COLORS.text).setWordWrapWidth(600);
 

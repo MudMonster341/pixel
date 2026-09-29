@@ -11,7 +11,7 @@ building. Target: 8+ in every area.
 | 3 | Characters and depth | — | — | |
 | 4 | UI and menus | 7 | 2026-09-29 (run 2) | title backdrop could be brighter; re-check HUD during cutscenes in a playthrough |
 | 5 | Story flow and clarity | 6 | 2026-09-29 (run 1) | control returns with the objective and Mustafa present; greeting screen is a crude portrait over a dim backdrop |
-| 6 | Cutscenes | 5 | 2026-09-29 (run 1) | bus is a side-view picture on a top-down road; Mustafa portrait crude; Physics Lab beat shows rainbow glitch sprites |
+| 6 | Cutscenes | 6 | 2026-09-29 (run 2) | she is not visible after stepping off the bus; bus shadow oversized; bus reads as a van |
 | 7 | Mini-games | 4 | 2026-09-29 (run 1) | platformer + flyer: hero drawn at 1x (a speck), scenes dark and empty; Tetris good |
 | 8 | Audio | — | — | |
 | 9 | Game feel and polish | — | — | |
@@ -21,6 +21,10 @@ building. Target: 8+ in every area.
 ## Log
 
 <!-- newest first: date, category, scores per area, what was fixed -->
+### 2026-09-29 — Cutscenes (run 2) — 6 (was 5)
+- **Greeting (6):** Mustafa now greets her in person as his in-game sprite in front of the brighter Main Block; much more connected than the portrait.
+- **Bus arrival (5):** a top-down coach now, but it reads as a beige van; its ground shadow is far wider than the bus.
+- **Stepped off the bus (3):** she isn't visible at all in this frame (hidden behind the bus by depth, or not placed until later).
 ### 2026-09-29 — Mini-games (run 1) — overall 4
 Now capturable (qa-shots fixed: 96 captured, 0 skipped).
 - **Tetris: 7.** Clean well, NEXT box, level/score panel, classroom backdrop with whiteboard and night window.

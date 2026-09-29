@@ -37,12 +37,30 @@ async function triggerKeyRoomScript(page) {
   await expect.poll(async () => (await state(page)).cutsceneActive, { timeout: 5000 }).toBe(true);
 }
 
+// openGame(map: null) boots on the real (outdoor) campus, whose own WorldScene.create() emits the
+// real "move"/"run" hints immediately (src/scenes/world.js) -- unseen at the start of a fresh test,
+// so they land in the very same HintBanner queue/showing slot these tests force 'talk' into. Left
+// alone, that real hint (not yet shown, or mid-show) is FIFO-ahead of 'talk' and wins the show slot
+// first -- not a bug (the queue is genuinely FIFO, one at a time, by design), just noise these tests
+// need cleared so 'talk' is the only hint in play. Kills any in-flight fade tween too, so `showing`
+// flips to null immediately rather than after its own multi-second hold.
+async function resetHints(page) {
+  await page.evaluate(() => {
+    const hints = game.scene.getScene('ui').hints;
+    if (hints.holdTimer) { hints.holdTimer.remove(); hints.holdTimer = null; }
+    game.scene.getScene('ui').tweens.killTweensOf(hints.parts);
+    hints.parts.forEach((part) => part.setAlpha(0));
+    hints.queue = [];
+    hints.showing = null;
+  });
+}
+
 test('bug 1: a hint queued while a script is running never shows until it ends', async ({ page }) => {
   await openGame(page, { map: null, cutscene: true });
   await triggerKeyRoomScript(page);
+  await resetHints(page);
 
-  // Force a fresh hint id (a real "move"/"talk" hint may already be marked seen by this point in the
-  // test's own playthrough) mid-script, the same event world.js itself would emit.
+  // Force a fresh hint id mid-script, the same event world.js itself would emit.
   await page.evaluate(() => {
     GameState.seenHints.delete('talk');
     game.events.emit('hint', 'talk');
@@ -61,6 +79,7 @@ test('bug 1: a hint queued while a script is running never shows until it ends',
 
 test('bug 1: a hint already showing is hidden the instant a dialog opens on top of it', async ({ page }) => {
   await openGame(page, { map: null, cutscene: true });
+  await resetHints(page);
   // Trigger and let it actually start showing, in the clear (not blocked yet).
   await page.evaluate(() => {
     GameState.seenHints.delete('talk');

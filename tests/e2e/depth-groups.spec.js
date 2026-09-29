@@ -60,17 +60,27 @@ test('FB-0027: stepping through the house door locks input, walks her behind the
     world.playDoorDeparture(warp);
   });
   // Mid-tween (the walk-in is 250ms, DOOR_WALK_MS): still on the meadow, one tile further in than
-  // the door tile, and already hidden behind the house -- well before the fade even starts.
-  await page.waitForTimeout(120);
-  const mid = await page.evaluate(() => {
-    const world = game.scene.getScene('world');
-    return {
-      map: world.mapKey,
-      tile: { x: Math.floor(world.player.x / 16), y: Math.floor(world.player.y / 16) },
-      depth: world.player.depth,
-      animKey: world.player.anims.currentAnim && world.player.anims.currentAnim.key,
-    };
-  });
+  // the door tile, and already hidden behind the house -- well before the fade even starts. ERR-0002:
+  // a fixed `waitForTimeout(120)` here bet on landing inside the ~125ms window between her crossing
+  // into tile (11, 11) and the tween's `onComplete` (which stops the walk anim and starts the fade,
+  // in the same synchronous tick as her reaching the target) -- under load that bet can lose, catching
+  // a frame where the anim already stopped or the map already switched. Poll the real state instead
+  // (docs/TESTING.md rule 5) and capture every field in one atomic read the instant she reaches the
+  // tile, so nothing can shift between reading `tile` and reading `animKey` separately.
+  let mid = null;
+  await expect.poll(async () => {
+    const snapshot = await page.evaluate(() => {
+      const world = game.scene.getScene('world');
+      return {
+        map: world.mapKey,
+        tile: { x: Math.floor(world.player.x / 16), y: Math.floor(world.player.y / 16) },
+        depth: world.player.depth,
+        animKey: world.player.anims.currentAnim && world.player.anims.currentAnim.key,
+      };
+    });
+    if (snapshot.map === 'meadow' && snapshot.tile.x === 11 && snapshot.tile.y === 11) mid = snapshot;
+    return mid !== null;
+  }, { timeout: 2000, intervals: [5, 10, 20] }).toBe(true);
   expect(mid.map).toBe('meadow'); // not warped yet -- still mid walk-in
   expect(mid.tile).toEqual({ x: 11, y: 11 }); // one tile further in, not still on the door tile
   expect(mid.depth).toBeLessThan(group.depth); // hidden behind the house, before the fade even starts

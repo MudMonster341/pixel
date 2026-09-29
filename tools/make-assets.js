@@ -3228,6 +3228,30 @@ const MUSTAFA_MAROON = '#a33b4a';
 const MUSTAFA_MAROON_HI = '#c8637a';
 const MUSTAFA_RECOLOR = { '#805e8e': MUSTAFA_MAROON, '#9f74a8': MUSTAFA_MAROON_HI };
 
+// ---------- ambient campus/Main Block life (quality loop, Characters run 1, 2026-09-29) ----------
+// "The world is empty" -- background students, walking, sitting, chatting (src/maps.js `ambient`,
+// src/scenes/world.js createAmbient()). Same 4 named characters as everything else above (this pack
+// ships nothing else), so variety comes from more recolors of the same 3 non-lead bodies -- each pair
+// reuses that body's own already-established recolor keys (ADAM_RECOLOR's shirt pair, STUDENT_A/B's
+// own shirt/blazer keys) with a fresh color, the same "clothes-only, keep the hair/skin" approach
+// those already use. Amelia (the lead's own body) is deliberately left out of this pool -- she's
+// customisable at the start of a new game, and an ambient NPC that could coincidentally match
+// whichever swatch the player just picked would read as a glitch, not a background student.
+const AMBIENT_A_RECOLOR = { '#805e8e': '#c0602f', '#9f74a8': '#e69a5c' }; // Adam body, rust/orange polo
+const AMBIENT_B_RECOLOR = { '#805e8e': '#2c4a7a', '#9f74a8': '#6f95d6' }; // Adam body, navy polo
+const AMBIENT_C_RECOLOR = { // Alex body, olive/mustard shirt (Alex's own shirt keys, STUDENT_A_RECOLOR's own comment)
+  '#5a444a': '#6b5a1e', '#6f494d': '#6b5a1e', '#a2394b': '#a8812a', '#ae4a52': '#d4ac4a',
+};
+const AMBIENT_D_RECOLOR = { // Alex body, purple shirt
+  '#5a444a': '#4a2d6e', '#6f494d': '#4a2d6e', '#a2394b': '#7a5ad9', '#ae4a52': '#a893ea',
+};
+const AMBIENT_E_RECOLOR = { // Bob body, forest-green blazer (Bob's own blazer keys, STUDENT_B_RECOLOR's own comment)
+  '#5d585f': '#1f5227', '#555157': '#1f5227', '#716b6e': '#2f7a3a', '#6c6e85': '#5ab552',
+};
+const AMBIENT_F_RECOLOR = { // Bob body, crimson blazer
+  '#5d585f': '#6e1f24', '#555157': '#6e1f24', '#716b6e': '#a83b41', '#6c6e85': '#d96a6f',
+};
+
 // ---------- character customisation (M3a, docs/STORY.md "Opening" step 3) ----------
 //
 // The owner's brief asks for clothes-colour swatches (hair/skin "too if the recolour pipeline makes
@@ -3803,6 +3827,14 @@ write('npc-volunteer.png', buildCharacter('Adam', ADAM_RECOLOR)); // the LUG vol
 write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
 write('npc-mustafa.png', buildCharacter('Adam', MUSTAFA_RECOLOR)); // ADR 0016: the opening's own script actor
+// Quality loop, Characters run 1: 6 more recolors (2 each of Adam/Alex/Bob) for ambient campus/Main
+// Block life -- src/maps.js `ambient` entries, src/scenes/world.js createAmbient().
+write('npc-ambient-a.png', buildCharacter('Adam', AMBIENT_A_RECOLOR));
+write('npc-ambient-b.png', buildCharacter('Adam', AMBIENT_B_RECOLOR));
+write('npc-ambient-c.png', buildCharacter('Alex', AMBIENT_C_RECOLOR));
+write('npc-ambient-d.png', buildCharacter('Alex', AMBIENT_D_RECOLOR));
+write('npc-ambient-e.png', buildCharacter('Bob', AMBIENT_E_RECOLOR));
+write('npc-ambient-f.png', buildCharacter('Bob', AMBIENT_F_RECOLOR));
 
 // Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
 // 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.

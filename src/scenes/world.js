@@ -25,6 +25,19 @@ const PICKUP_RANGE = 10;
 const ROOM_BEAT_RANGE = 90;
 const KEY_ROOM_SCRIPT = { physicsLab: 'keyRoomPhysicsLab', icvl: 'keyRoomIcvl', room195: 'keyRoomRoom195' };
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
+// Quality loop, Characters and depth run 1 (2026-09-29): ambient campus/Main Block life
+// (src/ambient.js, createAmbient()/updateAmbient() below). A patrol NPC pauses (holds still, doesn't
+// "push through") while she's this close, rather than colliding into her -- "if she walks into one,
+// they... wait". AMBIENT_CULL_MARGIN is how far outside the camera's own view (in world px) an ambient
+// NPC still gets its per-frame waypoint/pause logic; farther than that, it's simply left alone until
+// back in view (cheap: no pathfinding, and no drift while unseen either) -- "only update ones near the
+// camera". AMBIENT_ARRIVE_RANGE is how close counts as "reached the waypoint" before picking the next
+// one; too small and a patrol can overshoot and jitter at low frame rates.
+const AMBIENT_PAUSE_RANGE = 20;
+const AMBIENT_CULL_MARGIN = 64;
+const AMBIENT_ARRIVE_RANGE = 3;
+const AMBIENT_CHAT_EMOTE_MIN_MS = 2500;
+const AMBIENT_CHAT_EMOTE_MAX_MS = 5500;
 // Frame layout (ADR 0013, FB-0043): 4 real rows (down/up/left/right, no mirroring -- was 3 rows with
 // "right" drawn as a mirrored "left", which turned out to be mirroring the wrong art entirely, see
 // ERR-0007) x 8 columns (idle, 6 walk frames, 1 idle-anim frame) -- see tools/make-assets.js
@@ -122,6 +135,7 @@ class WorldScene extends Phaser.Scene {
     this.createAnimations();
     this.createPlayer();
     this.createNpcs();
+    this.createAmbient();
     this.createPickups();
     this.createKeyStations();
 
@@ -396,6 +410,179 @@ class WorldScene extends Phaser.Scene {
     this.prompt = this.add.image(0, 0, 'prompt', 0).setVisible(false).setDepth(100000);
   }
 
+  // Ambient campus/Main Block life (quality loop, Characters and depth run 1: "the world is empty").
+  // Content is src/ambient.js (docs/ARCHITECTURE.md "content is data"); this only builds the sprites.
+  // A much lighter-weight cousin of createNpcs() above -- same texture/body/collider/shadow shape, so
+  // interact()'s own "turn to face her" logic and nearestNpc() (extended below) work on an ambient
+  // NPC exactly like a story one, without needing to know the difference -- but *moving*, updated
+  // every frame by updateAmbient() (patrol waypoints, the "pause near her" yield, the chat pairs' own
+  // emote), which createNpcs()'s own always-still NPCs never needed.
+  createAmbient() {
+    this.ambientNpcs = (this.def.ambient || []).map((def, i) => this.buildAmbientNpc(def, i));
+  }
+
+  buildAmbientNpc(def, index) {
+    const textureKey = `npc-${def.character}`;
+    this.ensureAmbientAnims(textureKey);
+    const start = def.kind === 'patrol' ? def.waypoints[0] : def;
+    const facing = def.facing || 'down';
+    const sprite = this.physics.add.sprite(toPixel(start.x), toPixel(start.y), textureKey, PLAYER_IDLE[facing]);
+    // Same feet-only body/bottom-edge invariant as any other recolored-pack character (createNpcs()'s
+    // own comment on this has the full story).
+    sprite.body.setSize(10, 6).setOffset(3, 14);
+    sprite.setImmovable(true); // she's stopped by them; they're never shoved around by her or each other
+    this.physics.add.collider(this.player, sprite);
+    const shadow = this.add.ellipse(sprite.x, sprite.y + 9, 12, 4, 0x000000, 0.28);
+    // The same `{ def, idleFrames }` shape a real story NPC carries (createNpcs() above), so
+    // interact()/pickDialogEntry() need no ambient-specific branch at all. A short, neutral one-liner,
+    // never story information (this task's own brief) -- `def.dialog`, if given, overrides the shared
+    // pool (src/ambient.js AMBIENT_DEFAULT_LINES), cycled by index so nearby NPCs don't usually repeat.
+    sprite.def = {
+      id: def.id,
+      name: 'Student',
+      character: def.character,
+      dialog: def.dialog || [{ id: 'chat', lines: [AMBIENT_DEFAULT_LINES[index % AMBIENT_DEFAULT_LINES.length]] }],
+    };
+    sprite.idleFrames = PLAYER_IDLE;
+    const ambient = {
+      def, sprite, shadow, facing,
+      waypointIndex: 0, waypointDir: 1, pausedUntil: 0,
+      emoteAt: this.time.now + AMBIENT_CHAT_EMOTE_MIN_MS + Math.random() * (AMBIENT_CHAT_EMOTE_MAX_MS - AMBIENT_CHAT_EMOTE_MIN_MS),
+    };
+    this.syncAmbientDepth(ambient);
+    return ambient;
+  }
+
+  // Global anim keys are baked to a specific texture's own frames (Phaser AnimationFrame, not
+  // re-resolved per sprite -- see src/scripts-runtime.js ensureActorAnims()'s own comment on this,
+  // the exact same reasoning applies here), so every distinct ambient texture needs its own
+  // '<kind>-<dir>-<textureKey>' set, built once the first time any ambient NPC actually needs it.
+  ensureAmbientAnims(textureKey) {
+    if (this.anims.exists(`walk-down-${textureKey}`)) return;
+    const walks = { down: [1, 2, 3, 4, 5, 6], up: [9, 10, 11, 12, 13, 14], left: [17, 18, 19, 20, 21, 22], right: [25, 26, 27, 28, 29, 30] };
+    const idles = { down: [0, 7], up: [8, 15], left: [16, 23], right: [24, 31] };
+    for (const [dir, frames] of Object.entries(walks)) {
+      this.anims.create({ key: `walk-${dir}-${textureKey}`, frames: this.anims.generateFrameNumbers(textureKey, { frames }), frameRate: 12, repeat: -1 });
+    }
+    for (const [dir, frames] of Object.entries(idles)) {
+      this.anims.create({ key: `idle-${dir}-${textureKey}`, frames: this.anims.generateFrameNumbers(textureKey, { frames }), frameRate: 2, yoyo: true, repeat: -1 });
+    }
+  }
+
+  syncAmbientDepth(ambient) {
+    const s = ambient.sprite;
+    const depth = s.y + PLAYER_FEET_OFFSET;
+    s.setDepth(depth);
+    ambient.shadow.setPosition(s.x, s.y + 9).setDepth(depth - 1);
+  }
+
+  playAmbientAnim(ambient, kind) {
+    const s = ambient.sprite;
+    const key = `${kind}-${ambient.facing}-${s.texture.key}`;
+    if (s.anims.currentAnim?.key !== key) s.anims.play(key, true);
+  }
+
+  // Cheap on purpose: velocity straight at the current waypoint, no pathfinding (this task's own
+  // brief) -- fine for a handful of fixed, hand-picked, always-walkable routes (src/ambient.js,
+  // tests/unit/ambient.test.js). "Only update ones near the camera" is enforced by the caller
+  // (updateAmbient()), not here.
+  updateAmbientPatrol(ambient, time) {
+    const s = ambient.sprite;
+    const def = ambient.def;
+    // "If she walks into one, they... wait" -- holds still (never shoves through her) while she's
+    // this close, and for `pauseMs` after reaching each end of its own route.
+    const nearPlayer = Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < AMBIENT_PAUSE_RANGE;
+    if (nearPlayer || time < ambient.pausedUntil) {
+      s.setVelocity(0, 0);
+      this.playAmbientAnim(ambient, 'idle');
+      this.syncAmbientDepth(ambient);
+      return;
+    }
+
+    const target = def.waypoints[ambient.waypointIndex];
+    const tx = toPixel(target.x);
+    const ty = toPixel(target.y);
+    const dx = tx - s.x;
+    const dy = ty - s.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < AMBIENT_ARRIVE_RANGE) {
+      s.setVelocity(0, 0);
+      if (def.loop) {
+        ambient.waypointIndex = (ambient.waypointIndex + 1) % def.waypoints.length;
+      } else if (def.waypoints.length > 1) {
+        if (ambient.waypointIndex === 0) ambient.waypointDir = 1;
+        else if (ambient.waypointIndex === def.waypoints.length - 1) ambient.waypointDir = -1;
+        ambient.waypointIndex = Phaser.Math.Clamp(ambient.waypointIndex + ambient.waypointDir, 0, def.waypoints.length - 1);
+      }
+      ambient.pausedUntil = time + (def.pauseMs || 0);
+      this.playAmbientAnim(ambient, 'idle');
+      this.syncAmbientDepth(ambient);
+      return;
+    }
+
+    const speed = def.speed || WALK_SPEED * 0.75;
+    s.setVelocity((dx / dist) * speed, (dy / dist) * speed);
+    ambient.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+    this.playAmbientAnim(ambient, 'walk');
+    this.syncAmbientDepth(ambient);
+  }
+
+  // A pair (src/ambient.js `pairId`, matched up front so this never needs to search every frame) taking
+  // turns showing a small "..." bubble every few seconds -- reuses the same small-bubble-above-the-head
+  // shape src/scripts-runtime.js's own `emote` step uses for a script actor, standalone here since an
+  // ambient chat pair isn't a script actor at all.
+  updateAmbientChat(ambient, time) {
+    if (time < ambient.emoteAt) return;
+    ambient.emoteAt = time + AMBIENT_CHAT_EMOTE_MIN_MS + Math.random() * (AMBIENT_CHAT_EMOTE_MAX_MS - AMBIENT_CHAT_EMOTE_MIN_MS);
+    this.spawnAmbientEmote(ambient.sprite.x, ambient.sprite.y - 22);
+  }
+
+  spawnAmbientEmote(x, y) {
+    const container = this.add.container(x, y).setDepth(200000).setScale(0.4);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1c2c, 0.85).fillRoundedRect(-12, -10, 24, 20, 4);
+    const glyph = this.add.text(0, 0, '...', { fontFamily: FONT, fontSize: '10px', color: COLORS.text }).setOrigin(0.5);
+    container.add([bg, glyph]);
+    this.tweens.add({ targets: container, scale: 1, duration: 180, ease: 'Back.easeOut' });
+    this.time.delayedCall(700, () => {
+      this.tweens.add({ targets: container, alpha: 0, duration: 200, onComplete: () => container.destroy() });
+    });
+  }
+
+  // "Only update ones near the camera" (this task's own brief, performance): an ambient NPC outside
+  // the camera's own view (+ a small margin) is simply left exactly where it is -- no waypoint
+  // advance, no pause-timer countdown -- so it neither drifts off its authored route nor "catches up"
+  // all at once the moment it's back on screen; it just quietly waits, the same as a real pedestrian
+  // would if the world weren't looking. 'idle'/'chat' NPCs never move at all, so only 'patrol'/'chat'
+  // need any per-frame work in the first place.
+  updateAmbient(time) {
+    if (!this.ambientNpcs || !this.ambientNpcs.length) return;
+    const view = this.cameras.main.worldView;
+    const left = view.x - AMBIENT_CULL_MARGIN;
+    const right = view.x + view.width + AMBIENT_CULL_MARGIN;
+    const top = view.y - AMBIENT_CULL_MARGIN;
+    const bottom = view.y + view.height + AMBIENT_CULL_MARGIN;
+    for (const ambient of this.ambientNpcs) {
+      const s = ambient.sprite;
+      const onScreen = s.x >= left && s.x <= right && s.y >= top && s.y <= bottom;
+      if (!onScreen) { if (ambient.def.kind === 'patrol') s.setVelocity(0, 0); continue; }
+      if (ambient.def.kind === 'patrol') this.updateAmbientPatrol(ambient, time);
+      else if (ambient.def.kind === 'chat') this.updateAmbientChat(ambient, time);
+    }
+  }
+
+  // ADR 0016: hidden for the whole time a script owns the screen (the bus/Mustafa opening, the Gate 2/
+  // entrance/key-room beats) -- "freeze/hide during scripted cutscenes if they'd be in the way" (this
+  // task's own brief). Freezing is already free (updateAmbient() is only ever called from update(),
+  // which bails out for the whole script via `this.transitioning`); this just also keeps a patrolling
+  // student from wandering through a shot she was never blocked from reaching mid-script.
+  setAmbientVisible(visible) {
+    for (const ambient of this.ambientNpcs || []) {
+      ambient.sprite.setVisible(visible);
+      ambient.shadow.setVisible(visible);
+    }
+  }
+
   createPickups() {
     this.pickups = (this.def.pickups || [])
       .filter((def) => !GameState.collected.has(def.id))
@@ -440,6 +627,7 @@ class WorldScene extends Phaser.Scene {
     this.checkAreas();
     this.checkCutscene();
     this.checkKeyRoomBeats();
+    this.updateAmbient(time);
     this.syncGameState();
   }
 
@@ -658,6 +846,17 @@ class WorldScene extends Phaser.Scene {
     let nearest = null;
     let nearestDistance = INTERACT_RANGE;
     for (const npc of this.npcs) {
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+      if (distance < nearestDistance) {
+        nearest = npc;
+        nearestDistance = distance;
+      }
+    }
+    // Ambient students/staff (createAmbient()) carry the same { def, idleFrames } shape as a real
+    // story NPC above, so they're just a second list to scan here -- no separate branch needed
+    // anywhere else E-interaction touches (pickDialogEntry(), the "face her" turn, the prompt bubble).
+    for (const ambient of this.ambientNpcs || []) {
+      const npc = ambient.sprite;
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
       if (distance < nearestDistance) {
         nearest = npc;
@@ -1069,7 +1268,11 @@ class WorldScene extends Phaser.Scene {
   playScript(key, steps) {
     GameState.seenCutscenes.add(key);
     this.game.events.emit('cutscene-seen', key); // src/save.js autosaves soon after
-    this.scriptRunner.run(steps);
+    // Ambient students/staff never appear in a script's own blocking/staging (they're not script
+    // actors, src/scripts-runtime.js) -- hidden for the run so a patrolling one can't wander through
+    // the shot, back once it ends (this task's own brief: "freeze/hide during scripted cutscenes").
+    this.setAmbientVisible(false);
+    this.scriptRunner.run(steps).then(() => this.setAmbientVisible(true));
   }
 
   // The full M3a opening's own bus-arrival-then-Mustafa-meets-her beat (docs/STORY.md "Opening",
@@ -1081,7 +1284,8 @@ class WorldScene extends Phaser.Scene {
   playOpeningSequence() {
     GameState.seenCutscenes.add('gate2');
     this.game.events.emit('cutscene-seen', 'gate2');
-    this.scriptRunner.run(SCRIPTS.opening);
+    this.setAmbientVisible(false);
+    this.scriptRunner.run(SCRIPTS.opening).then(() => this.setAmbientVisible(true));
   }
 
   // The 3 key-room beats (docs/STORY.md beat 8, ADR 0016): unlike the Gate 2/entrance triggers, no

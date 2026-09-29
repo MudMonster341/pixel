@@ -6,7 +6,7 @@ const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPTS = [
-  'src/items.js', 'src/story.js', 'src/maps.js', 'src/cutscenes.js',
+  'src/items.js', 'src/story.js', 'src/ambient.js', 'src/maps.js', 'src/cutscenes.js',
   // ADR 0016 (in-world cutscene scripts): pure data, no Phaser -- src/objective-routes.js (FB-0033
   // onboarding routing) and src/scripts.js (SCRIPTS, the new cutscene content) load fine here, unlike
   // src/scripts-runtime.js (the engine that runs them), which needs a real Phaser scene and is only
@@ -87,6 +87,8 @@ function loadGameData() {
     gameEvents,
     ITEMS: get('ITEMS'),
     MAPS: get('MAPS'),
+    AMBIENT: get('AMBIENT'),
+    AMBIENT_DEFAULT_LINES: get('AMBIENT_DEFAULT_LINES'),
     STRUCTURES: get('STRUCTURES'),
     START_MAP: get('START_MAP'),
     TILE: get('TILE'),

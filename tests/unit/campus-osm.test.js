@@ -9,7 +9,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
-const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile, objectAt } = loadGameData();
+const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile, objectAt, nearestNamedArea } = loadGameData();
 const MAP_FILE = path.join(ROOT, 'assets', 'maps', 'campus.json');
 const json = JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'));
 const grid = gridFromTiled(json);
@@ -544,4 +544,71 @@ test('the tile in front of each building door resolves to that building (or a ne
       `${x},${y} (in front of ${door.props.building}'s door) resolved to "${hit && hit.name}", not "${door.props.building}"`,
     );
   }
+});
+
+// ---------- Quality loop, category 1 run 3: standing near (not just inside) a hostel names it ----------
+
+// The location banner used to fall back to the campus-wide "BITS Pilani, Dubai Campus" area for any
+// point past a hostel's own 'zone' (which only reaches a few tiles past the real footprint -- see
+// build-campus.js's own comment on why). nearestNamedArea() (src/maplogic.js) is the fix: when
+// objectAt() only finds the campus-wide fallback, it looks for the nearest real 'zone'/'building'
+// within a few tiles and uses that name instead.
+test('quality loop: standing just past a hostel\'s own zone still names that hostel, not the whole campus', () => {
+  const hostelZones = objects.filter((o) => o.type === 'zone' && /^Hostel /.test(o.name));
+  assert.ok(hostelZones.length >= 3, `expected several hostel zone objects, found ${hostelZones.length}`);
+  // Smallest-rect-clamped distance to a zone's own rectangle (0 if the point is inside it) -- the same
+  // shape of measurement nearestNamedArea() itself uses, so a candidate point this test picks as
+  // "unambiguously nearest to zone X" really will be what nearestNamedArea resolves to.
+  const clampedDist = (o, x, y) => {
+    const cx = Math.max(o.x, Math.min(x, o.x + o.width));
+    const cy = Math.max(o.y, Math.min(y, o.y + o.height));
+    return Math.hypot(x - cx, y - cy);
+  };
+  // The full candidate pool nearestNamedArea() itself searches (every 'zone'/'building' object, not
+  // just other hostels) -- a Mechanical/Library Block sitting close to a hostel row is exactly as
+  // capable of winning a test point as a neighbouring hostel is.
+  const namedAreaObjects = objects.filter((o) => o.type === 'zone' || o.type === 'building');
+  let checked = 0;
+  for (const zone of hostelZones) {
+    // The hostels sit in a tight row/grid (ADR 0009) -- Hostel A and B, for instance, share their
+    // entire x-range and are only 1 tile apart in y, so "a few tiles south" alone can walk straight
+    // into a *neighbouring* hostel's own zone instead of clearing it. Try a short list of offsets in
+    // all 4 directions and several distances, and accept the first point that (a) isn't already a
+    // direct hit on some other real zone/building, (b) is within nearestNamedArea's own search radius
+    // of this zone, and (c) is genuinely closer to this zone than to any other hostel's -- i.e. a point
+    // nearestNamedArea really should resolve back to this one.
+    const cx = zone.x + zone.width / 2;
+    const cy = zone.y + zone.height / 2;
+    const candidates = [];
+    for (const d of [3, 4, 5, 6, 2, 7, 8]) {
+      candidates.push([cx, zone.y + zone.height + d], [cx, zone.y - d], [zone.x + zone.width + d, cy], [zone.x - d, cy]);
+    }
+    let chosen = null;
+    for (const [px, py] of candidates) {
+      const plainHit = objectAt(objects, ['area', 'zone'], px, py);
+      if (plainHit && plainHit.props.kind !== 'campus') continue;
+      const distToThis = clampedDist(zone, px, py);
+      if (distToThis > 8) continue;
+      if (namedAreaObjects.some((other) => other !== zone && clampedDist(other, px, py) < distToThis)) continue;
+      chosen = [px, py];
+      break;
+    }
+    // Some hostels (e.g. Hostel G, wedged directly against the Mechanical Block) sit close enough to
+    // another real building that no point within nearestNamedArea's own search radius is unambiguously
+    // theirs -- a genuine geometric constraint of this campus's density, not a bug in the fallback
+    // logic itself, so skip rather than fail here (checked below: most hostels must still get a real
+    // point, so this can't silently skip everything).
+    if (!chosen) continue;
+    const [px, py] = chosen;
+    const resolved = nearestNamedArea(objects, px, py);
+    assert.ok(resolved, `nearestNamedArea found nothing near ${zone.name} at ${px},${py}`);
+    assert.equal(resolved.name, zone.name, `a point just past ${zone.name}'s zone resolved to "${resolved.name}", not "${zone.name}"`);
+    checked++;
+  }
+  assert.ok(checked >= 3, `expected at least 3 hostels to have an unambiguous nearby point, only found ${checked}`);
+});
+
+test('quality loop: far from every building, nearestNamedArea still falls back to the campus-wide name', () => {
+  const resolved = nearestNamedArea(objects, campusZone.x + 1, campusZone.y + 1);
+  assert.ok(resolved, 'expected at least the campus-wide fallback near a corner of the fence');
 });

@@ -13,6 +13,7 @@ npx playwright test tests/e2e/house.spec.js       # one file
 npx playwright test --headed                     # watch the tests play
 npx playwright show-trace test-results/<test>/trace.zip   # step through a failure frame by frame
 npm run qa:shots                                 # visual walkthrough screenshots, not part of npm test (see below)
+npm run pack:offline [-- --zip]                  # the double-click bundle for the Mac (docs/OFFLINE_BUNDLE.md); tests/unit/pack-offline.test.js, tests/e2e/offline-bundle.spec.js
 ```
 
 First time on a new machine: `npm install` then `npx playwright install chromium`.

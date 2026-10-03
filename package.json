@@ -24,6 +24,7 @@
     "electron": "electron .",
     "dist": "node tools/make-icon.js && electron-builder --win portable",
     "pack:win": "node tools/pack-win.js",
+    "pack:offline": "node tools/pack-offline.js",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {

@@ -178,6 +178,7 @@ function startGame() {
 // Dev mode loads developer tools (the feedback overlay). It's on by default when running locally.
 // Add ?dev=0 to the URL to play exactly as players will, or ?dev=1 to force it on.
 const DEV_MODE = (() => {
+  if (window.__OFFLINE_BUNDLE) return false; // the double-click bundle (ADR 0017, src/offline-shim.js): never dev, whatever ?dev says
   const params = new URLSearchParams(location.search);
   if (params.has('dev')) return params.get('dev') !== '0';
   return ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);

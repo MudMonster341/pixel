@@ -306,6 +306,64 @@ function objectiveTarget(mapKey, quest) {
   return route.find((step) => step.map === mapKey) || null;
 }
 
+// ---------- Character sheet registry (FB-0044) ----------
+// Every character spritesheet the game can draw, derived from the content that references it -- a map
+// NPC's `character` (src/maps.js), an ambient entry's `character` (src/ambient.js) and a script actor's
+// `sprite` (src/scripts.js spawnActor, `kind` 'character'; `kind: 'image'` actors like the bus are plain
+// images, not character sheets) -- so BootScene's preload (src/main.js) can never forget a new
+// character: `npc-ambient-a..f` used to be generated but never loaded, so some students drew as
+// Phaser's black-and-green __MISSING box. An NPC def with no `character` uses the legacy hand-drawn
+// 'npc' sheet (Tomas/Guide, src/scenes/world.js createNpcs()). Returns [{ key, file }] sorted by key,
+// `file` relative to the web root ('assets/<key>.png', the name tools/make-assets.js writes).
+function characterSheets(maps, ambient, scripts) {
+  const keys = new Set();
+  for (const def of Object.values(maps || {})) {
+    for (const npc of def.npcs || []) keys.add(npc.character ? `npc-${npc.character}` : 'npc');
+  }
+  for (const list of Object.values(ambient || {})) {
+    for (const entry of list) keys.add(`npc-${entry.character}`);
+  }
+  const visit = (node) => {
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (!node || typeof node !== 'object') return;
+    const spawn = node.spawnActor;
+    if (spawn && spawn.sprite && (spawn.kind || 'character') === 'character') keys.add(spawn.sprite);
+    Object.values(node).forEach(visit);
+  };
+  visit(Object.values(scripts || {}));
+  return [...keys].sort().map((key) => ({ key, file: `assets/${key}.png` }));
+}
+
+// ---------- Interaction priority (bug: an exact distance tie went to an ambient NPC over a key station) ----------
+// What E talks to is chosen by pickInteractable(): the nearest candidate wins *unless* a higher-priority
+// kind is within INTERACT_TIE_MARGIN px of it, in which case the story object wins. Data, not a
+// one-off: every interactable kind gets a priority here (higher wins), so adding one -- every ambient
+// student becoming talkable, say -- is a new row, not a new branch. Quest givers and key stations are
+// story objects; ambient students are atmosphere and must never shadow them. (Doors/stairs aren't
+// E-interactables -- walking onto one warps -- so they don't take part.)
+const INTERACT_PRIORITY = {
+  keyStation: 3, // a key room's desk: the treasure hunt's own objective
+  questNpc: 2, // a story NPC with dialog data (the volunteer, ...)
+  ambientNpc: 1, // campus atmosphere (src/ambient.js)
+};
+const INTERACT_TIE_MARGIN = 4; // px: a story object this much (or less) farther away still wins
+
+// `candidates`: [{ role, distance, ... }] already filtered to the interact range; `role` is a key of
+// INTERACT_PRIORITY. Returns the candidate E should act on, or null if there are none. Among every
+// candidate within `margin` of the nearest one, the highest priority wins; equal priority -> nearer
+// wins (the first listed on an exact tie). An unknown role ranks below every known one.
+function pickInteractable(candidates, margin = INTERACT_TIE_MARGIN, priorities = INTERACT_PRIORITY) {
+  if (!candidates || candidates.length === 0) return null;
+  const rank = (c) => priorities[c.role] ?? 0;
+  const nearest = Math.min(...candidates.map((c) => c.distance));
+  let best = null;
+  for (const c of candidates) {
+    if (c.distance > nearest + margin) continue;
+    if (!best || rank(c) > rank(best) || (rank(c) === rank(best) && c.distance < best.distance)) best = c;
+  }
+  return best;
+}
+
 // ---------- HUD layout (docs/GAME_FEEL.md rule 2, docs/QUALITY_LOOP.md category 4 "UI and menus") ----------
 // Pure layout math for every top-level HUD box (src/scenes/ui.js's Minimap/LocationBanner/HintBanner/
 // QuestTracker/Hotbar all read their own box from this, rather than each computing its own position),

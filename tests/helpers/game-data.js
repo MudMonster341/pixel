@@ -104,6 +104,11 @@ function loadGameData() {
     titleEnabled: get('titleEnabled'),
     introEnabled: get('introEnabled'),
     objectAt: get('objectAt'),
+    // FB-0044 (character sheet registry) and the interaction tie-break (src/maplogic.js)
+    characterSheets: get('characterSheets'),
+    pickInteractable: get('pickInteractable'),
+    INTERACT_PRIORITY: get('INTERACT_PRIORITY'),
+    INTERACT_TIE_MARGIN: get('INTERACT_TIE_MARGIN'),
     nearestNamedArea: get('nearestNamedArea'),
     notSeenCutscene: get('notSeenCutscene'),
     doorLockRule: get('doorLockRule'),

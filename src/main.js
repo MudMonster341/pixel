@@ -83,10 +83,8 @@ class BootScene extends Phaser.Scene {
     for (const { key, file } of characterSheets(MAPS, AMBIENT, SCRIPTS)) {
       this.load.spritesheet(key, file, charSheet);
     }
-    // The bus (ADR 0016, SCRIPTS.opening's own bus arrival): a plain image, not a character sheet --
-    // tools/make-cutscenes.js still draws assets/cutscenes/bus.png (the retired src/scenes/intro-bus.js
-    // BusArrivalScene used the same art; that scene file is gone, the PNG and its generator aren't).
-    this.load.image('bus', 'assets/cutscenes/bus.png');
+    // The RTA bus (SCRIPTS.opening): a door-animation spritesheet, layout in src/scripts.js RTA_BUS_SHEET.
+    this.load.spritesheet(RTA_BUS_SHEET.key, RTA_BUS_SHEET.file, { frameWidth: RTA_BUS_SHEET.frameWidth, frameHeight: RTA_BUS_SHEET.frameHeight });
     this.load.spritesheet('items', 'assets/items.png', sheet);
     // 2 frames: 0 = "E" (talk), 1 = "!" (something new to say, see src/dialog.js hasNewDialog()).
     this.load.spritesheet('prompt', 'assets/prompt.png', sheet);

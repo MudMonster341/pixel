@@ -13,10 +13,9 @@
 //   entrance.png   320x240, the Main Block entrance cutscene (M3a): steps, pillars, the glass front
 //                  under the red arch, close up -- triggered the first time she reaches the door
 //                  (tools/campus/build-campus.js section 17, src/cutscenes.js)
-//   bus.png        a true top-down coach for the M3a arrival animation (M3a step 4/5, ADR 0016
-//                  SCRIPTS.opening) -- see buildBus()'s own header for why this is hand-drawn rather
-//                  than a vendor-pack crop (quality loop, Cutscenes run 1: "perspective clash" with
-//                  the side-view art this replaces).
+//   rta-bus-sheet.png  520x48, five 104x48 frames of an RTA (Dubai) city bus in a 3/4 raised side view
+//                  (closed, halfOpen, open, closing, driving) for the opening's bus arrival and its door
+//                  animation (ADR 0016 SCRIPTS.opening) -- see buildBusFrame()'s own header.
 //   title-fg.png   480x64, a tileable silhouette strip (palms + fence) scrolled for the title
 //                  screen's parallax foreground (docs/GAME_FEEL.md "a little 3D")
 // Full-screen cutscenes are meant to be scaled up 3x by the game (960 wide) and panned vertically
@@ -453,106 +452,194 @@ palm(img, W - 24, H - 30, 1.0);
 return img;
 }
 
-// ---------- the arrival bus (M3a step 4/5, ADR 0016 SCRIPTS.opening): a true top-down coach ----------
-// Quality loop (Cutscenes run 1, 2026-09-29): the old art was a side-view bus (wheels along the
-// bottom, windows in a row) driving on a straight-overhead road -- "a perspective clash". The owner's
-// suggestion was a vendor-pack crop (Kenney RPG Urban Pack or Pixel Vehicle Pack); both were checked
-// pixel-by-pixel (decoding the sheets, the same method MEMORY.md's own asset-survey entries use) and
-// neither has a genuine top-down BUS: the Urban Pack's own "vehicle row" is single-tile 16x16 cars
-// (already used for the campus's parked cars, `URBAN.carFront*`/tools/make-assets.js), and the Pixel
-// Vehicle Pack's own bus.png/van*.png files are the *same* elevated 3/4 side view as the art this
-// replaces (checked: windows in a row, wheels along the bottom edge) -- so this is hand-drawn instead,
-// in the same code-drawn style every other cutscene in this file already uses, viewed genuinely from
-// directly above: a windshield cap (not a side window row), wheels only as small hints peeking from
-// under the body (never a full wheel silhouette), no side view of the body at all.
+// ---------- the arrival bus (docs/STORY.md "Amendments from the birthday sprint", ADR 0016 SCRIPTS.opening):
+// an RTA (Dubai) city bus, drawn as a 3/4 "from slightly above" side view like Pokemon's vehicles ----------
+// Birthday sprint, package D: the old art here was a hand-drawn top-down coach, which could not show a
+// door opening and was not a Dubai bus. FB-0025 says to use packs for art, but no free pack has a Dubai
+// bus (checked), so this is the one allowed hand-drawn exception. Reference only, never traced:
+// docs/research/rta-bus-reference.md (livery colours, door layout, proportions, frame list) and the
+// private photo it names (docs/research/rta-bus/, a Volvo B8R/Sunsundegui SB3 on route F15).
 //
-// Drawn nose-up (front cap at y=0, matching BUS_STEPS' own arrival direction, src/scripts.js). The
-// front and rear caps are deliberately *not* identical any more (quality loop, Cutscenes run 2: "make
-// it read as a bus" wanted a destination display, which only a real front has) -- but flipping still
-// works correctly for the departure leg (src/scripts-runtime.js step_face(), 'kind: image' actors):
-// flipping the whole sprite vertically moves the front cap (display included) to the bottom, which is
-// exactly where the real front belongs once she's turned around to drive back out nose-first.
-function buildBus() {
-const BW = 32;
-const BH = 88;
-const img = new Img(BW, BH);
-const C2 = {
-  body: '#eadbb8', bodyShade: '#c9ae80', bodyHi: '#f5ead0',
-  stripe: '#cf8a6c', stripeDeep: '#9c5a44',
-  glass: '#2f3a44', glassHi: '#9fd3ff',
-  wheel: '#1a1c2c', hub: '#8a8a94',
-  mirror: '#1a1c2c',
-  light: '#ffe38a',
-  display: '#f5ead0', displayText: '#5e2a20',
-  vent: '#a98a63', ac: '#c9ae80', acShade: '#a98a63',
-  outline: '#1a1c2c',
+// Layout: a 104x48 frame (the 96x40 body plus a 4px margin all round, for the outline, the door swing and
+// the ground shadow), one row of BUS_FRAME_NAMES.length frames in one sheet:
+//   0 closed    doors shut, brake lights lit (the bus has just stopped)
+//   1 halfOpen  the leaves parted by about half
+//   2 open      the leaves folded into the frame: dark doorway, grab pole, low step
+//   3 closing   between open and half open (its leaves a different width, so it reads as a new frame)
+//   4 driving   doors shut, brake lights off, the wheel spokes turned (a plain frame for the drive in/out)
+// The bus faces RIGHT (front at the right), its kerb side (the right-hand side, where Dubai buses have
+// their doors) towards the camera: that is a bus travelling east, the way the Gate 2 road lets it (see
+// src/scripts.js BUS_STEPS). Two doors, both animated together: the front one just behind the windscreen
+// and the centre one, exactly on the frame's centre column (so a script can place the bus by its door).
+// Palette: the doc's ten colours and nothing else, with the doc's #14131A as the 1px outline (the same
+// "darker outline" rule as every other sprite here, docs/STYLE_GUIDE.md). The ground shadow is baked
+// into the frame, under the body and never wider than it (the old bus had a shadow far wider than the
+// bus), so the script runner draws no separate one (spawnActor `shadow: false`).
+// The numbers below are mirrored in src/scripts.js RTA_BUS_SHEET (the sheet's dimensions and frame
+// names); tests/unit/rta-bus.test.js fails if the two drift apart.
+const BUS_FRAME_W = 104;
+const BUS_FRAME_H = 48;
+const BUS_FRAME_NAMES = ['closed', 'halfOpen', 'open', 'closing', 'driving'];
+const BUS_PAL = {
+  roof: '#E4E6EC', roofShade: '#C4C7D0',
+  cream: '#EDE8E0', creamShade: '#B9B3AB',
+  red: '#D3232A', redShade: '#8E2021',
+  glass: '#2B2A30', glassHi: '#4A5160',
+  black: '#14131A', rim: '#9AA0A8',
 };
-const cx = BW / 2;
+// Leaf width (px) of each door's two glass leaves per frame: the centre door's interior is 11px wide, the
+// front door's 9px, so a leaf of width `a` leaves a dark gap of (width - 2a) between the leaves.
+const BUS_DOOR_LEAF = {
+  closed: { centre: 5, front: 4 },
+  halfOpen: { centre: 3, front: 2 },
+  open: { centre: 2, front: 1 },
+  closing: { centre: 4, front: 3 },
+  driving: { centre: 5, front: 4 },
+};
 
-// The roof/body: a rounded rectangle (a narrower cap rect over a full-width middle rect -- the
-// corner pixels are simply never painted, Img starts fully transparent, no separate "clear" step
-// needed) filling almost the whole canvas -- from directly above, the roof *is* the bus; there's no
-// side wall to show.
-img.rect(2, 1, BW - 3, BH - 2, C2.body); // narrower cap, top+bottom corners left transparent
-img.rect(0, 5, BW - 1, BH - 6, C2.body); // full width through the middle
-// A soft highlight down the left edge, shade down the right (one light source, top-left). `Img.rect`
-// has no alpha blending (only `px`/`ellipse` do), so these are solid, slightly muted tones rather
-// than a translucent overlay -- same approach buildGate2()/buildEntrance() already use for flat shade
-// bands elsewhere in this file.
-img.rect(2, 20, 5, BH - 21, C2.bodyHi);
-img.rect(BW - 7, 20, BW - 3, BH - 21, C2.bodyShade);
-
-// Front cap: a destination display (a lit sign strip with a few dark "text" ticks, the thing that
-// most reads as "bus" from directly above) over the windshield, headlights tucked at the corners,
-// side mirrors just below.
-img.rect(7, 2, BW - 7, 7, C2.display);
-img.outlineRect(7, 2, BW - 7, 7);
-for (const tx of [10, 15, 20]) img.rect(tx, 4, tx + 3, 5, C2.displayText);
-img.rect(2, 2, 4, 4, C2.light);
-img.rect(BW - 4, 2, BW - 2, 4, C2.light);
-img.rect(6, 9, BW - 6, 21, C2.glass);
-img.ellipse(cx - 4, 13, 3, 2, C2.glassHi, 0.7);
-img.ellipse(cx + 5, 16, 2, 2, C2.glassHi, 0.4);
-img.outlineRect(6, 9, BW - 6, 21);
-img.rect(0, 14, 2, 17, C2.mirror);
-img.rect(BW - 2, 14, BW, 17, C2.mirror);
-
-// Front + rear wheels: hinted only (never a full side-view wheel), small dark rectangles just peeking
-// from under the body on both sides, at roughly the front and rear axle positions.
-for (const wy of [24, BH - 30]) {
-  img.rect(0, wy, 2, wy + 6, C2.wheel);
-  img.rect(BW - 2, wy, BW, wy + 6, C2.wheel);
-  img.rect(0, wy + 1, 1, wy + 5, C2.hub);
-  img.rect(BW - 1, wy + 1, BW, wy + 5, C2.hub);
+function buildBusDoor(img, fx0, fx1, leaf) {
+  const P = BUS_PAL;
+  const ix0 = fx0 + 1;
+  const ix1 = fx1 - 1;
+  img.rect(fx0, 14, fx1, 37, P.roof); // the silver frame
+  img.rect(ix0, 15, ix1, 36, P.black); // the dark doorway behind the leaves
+  const gx0 = ix0 + leaf;
+  const gx1 = ix1 - leaf;
+  if (gx1 - gx0 + 1 >= 3) {
+    img.rect(gx0, 35, gx1, 35, P.roofShade); // the low step
+    img.rect(gx0, 36, gx1, 36, P.creamShade);
+    img.rect(gx0 + 1, 17, gx0 + 1, 34, P.rim); // the grab pole
+  }
+  for (const [lx0, lx1] of [[ix0, ix0 + leaf - 1], [ix1 - leaf + 1, ix1]]) {
+    img.rect(lx0, 15, lx1, 36, P.glass);
+    img.rect(lx0, 15, lx1, 15, P.glassHi); // a lit top edge
+    if (lx1 - lx0 >= 2) { img.px(lx0 + 1, 18, P.glassHi); img.px(lx0 + 1, 19, P.glassHi); img.px(lx0 + 2, 17, P.glassHi); }
+  }
 }
 
-// The passenger body: a row of side windows peeking out from under the roof overhang on both long
-// edges (the thing that reads as "many rows of seats", i.e. a coach, not a car), roof vents and an
-// AC/luggage-rack unit down the centreline, and the campus trim stripe wrapping the full width.
-for (let wy = 34; wy < BH - 32; wy += 9) {
-  img.rect(0, wy, 2, wy + 5, C2.glass);
-  img.rect(BW - 2, wy, BW, wy + 5, C2.glass);
+function buildBusWheel(img, cx, cy, spin) {
+  const P = BUS_PAL;
+  for (let y = 30; y <= 38; y++) {
+    for (let x = cx - 7; x <= cx + 7; x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 <= 6.5 * 6.5) img.px(x, y, P.black); // the dark wheel arch
+    }
+  }
+  for (let y = cy - 5; y <= cy + 5; y++) {
+    for (let x = cx - 5; x <= cx + 5; x++) {
+      const d2 = (x - cx) ** 2 + (y - cy) ** 2;
+      if (d2 <= 22) img.px(x, y, P.glass); // the tyre
+      if (d2 <= 6) img.px(x, y, P.rim); // the rim
+    }
+  }
+  img.px(cx - 3, cy - 3, P.glassHi);
+  img.px(cx, cy, P.black);
+  if (spin) { img.px(cx + 1, cy - 1, P.black); img.px(cx - 1, cy + 1, P.black); } else { img.px(cx - 1, cy - 1, P.black); img.px(cx + 1, cy + 1, P.black); }
 }
-img.rect(cx - 2, 32, cx + 2, 36, C2.vent);
-img.rect(cx - 6, 44, cx + 6, 56, C2.ac);
-img.rect(cx - 6, 44, cx + 6, 47, C2.acShade);
-img.outlineRect(cx - 6, 44, cx + 6, 56);
-img.rect(cx - 2, 62, cx + 2, 66, C2.vent);
-img.rect(3, BH - 34, BW - 4, BH - 31, C2.stripe);
-img.rect(3, BH - 31, BW - 4, BH - 30, C2.stripeDeep);
 
-// Rear cap: a plain window (no display -- the front-facing one, above, is what a flip relocates to
-// the leading edge for the departure leg) and tail-lights.
-img.rect(6, BH - 22, BW - 6, BH - 8, C2.glass);
-img.ellipse(cx, BH - 16, 3, 2, C2.glassHi, 0.5);
-img.outlineRect(6, BH - 22, BW - 6, BH - 8);
-img.rect(2, BH - 6, 4, BH - 4, C2.light);
-img.rect(BW - 4, BH - 6, BW - 2, BH - 4, C2.light);
+function buildBusFrame(name) {
+  const P = BUS_PAL;
+  const img = new Img(BUS_FRAME_W, BUS_FRAME_H);
+  const leaves = BUS_DOOR_LEAF[name];
 
-// Outline the silhouette: the two rects' own edges, giving the cap its rounded-corner step for free.
-img.outlineRect(2, 1, BW - 3, BH - 2);
-img.outlineRect(0, 5, BW - 1, BH - 6);
-return img;
+  // The roof strip (a raised camera sees the top): rounded at the front and rear corners.
+  const roofRows = { 5: [8, 93], 6: [6, 96], 7: [5, 98], 8: [5, 98], 9: [5, 98] };
+  for (const [y, [x0, x1]] of Object.entries(roofRows)) img.rect(x0, Number(y), x1, Number(y), P.roof);
+  img.rect(5, 10, 98, 10, P.roofShade);
+  // The recessed roof hatch near the rear and the raised AC pods over the front half.
+  img.rect(13, 6, 27, 8, P.roofShade);
+  img.rect(14, 7, 26, 7, P.roof);
+  for (const x of [52, 59, 66, 73]) {
+    img.rect(x, 5, x + 5, 8, P.roofShade);
+    img.rect(x + 1, 5, x + 4, 5, P.glassHi);
+    img.rect(x + 1, 6, x + 4, 6, P.black); // the grille slot
+  }
+
+  // The side panel: cream, shaded along the bottom, and the dark window band above the belt line.
+  img.rect(5, 11, 98, 36, P.cream);
+  img.rect(5, 37, 98, 37, P.creamShade);
+  img.rect(6, 38, 97, 38, P.creamShade);
+  img.rect(6, 11, 91, 23, P.glass);
+  for (const x of [16, 26, 36, 66, 75]) img.rect(x, 11, x, 23, P.glassHi); // the thin pane frames
+  for (const x of [8, 18, 28, 38, 61, 68, 77]) { img.px(x + 2, 13, P.glassHi); img.px(x + 1, 14, P.glassHi); img.px(x, 15, P.glassHi); }
+
+  // The RTA red swoosh: starts under the rear windows, sweeps down and forward to the red front bumper.
+  for (let x = 9; x <= 90; x++) {
+    const yc = 25 + Math.floor(((x - 9) * 8) / 82);
+    img.rect(x, yc, x, yc + 2, P.red);
+    img.px(x, yc + 3, P.redShade);
+  }
+  // A small red logo (a triangle) behind the centre door, below the swoosh.
+  img.px(40, 33, P.red);
+  img.rect(39, 34, 41, 34, P.red);
+  img.rect(38, 35, 42, 35, P.red);
+
+  // The tail light pair at the rear: lit while the bus is braking, dark while it drives.
+  const braking = name !== 'driving';
+  img.rect(5, 27, 6, 29, braking ? P.red : P.redShade);
+  if (braking) img.px(5, 27, P.roof);
+
+  // The front face: the big windscreen with its LED destination board, the black lower face with its
+  // headlights and silver mark, and the red bumper.
+  img.rect(91, 11, 91, 33, P.roof);
+  img.rect(92, 11, 98, 24, P.glassHi);
+  img.rect(92, 11, 98, 13, P.black);
+  img.rect(93, 12, 95, 12, P.roof);
+  img.px(97, 12, P.red);
+  img.px(94, 17, P.roof); img.px(95, 16, P.roof); img.px(93, 18, P.roof);
+  img.rect(92, 25, 98, 33, P.black);
+  img.px(97, 31, P.roof); img.px(98, 31, P.roof);
+  img.px(95, 29, P.rim);
+  img.rect(91, 34, 98, 38, P.red);
+  img.rect(92, 38, 97, 38, P.redShade);
+  // The small route-number and destination board on the side, above the front door.
+  img.rect(80, 11, 90, 13, P.black);
+  img.rect(81, 12, 83, 12, P.roof);
+  img.rect(85, 12, 87, 12, P.roof);
+  img.px(89, 12, P.red);
+
+  buildBusDoor(img, 46, 58, leaves.centre);
+  buildBusDoor(img, 80, 90, leaves.front);
+  const spin = name === 'driving';
+  buildBusWheel(img, 22, 37, spin);
+  buildBusWheel(img, 70, 37, spin);
+
+  // The 1px outline: every empty pixel that touches the body.
+  const solid = (x, y) => x >= 0 && y >= 0 && x < BUS_FRAME_W && y < BUS_FRAME_H && img.data[(y * BUS_FRAME_W + x) * 4 + 3] > 0;
+  const outline = [];
+  for (let y = 0; y < BUS_FRAME_H; y++) {
+    for (let x = 0; x < BUS_FRAME_W; x++) {
+      if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) outline.push([x, y]);
+    }
+  }
+  for (const [x, y] of outline) img.px(x, y, P.black);
+
+  // The soft ground shadow, baked in: two translucent steps under the body, between x 9 and x 95, so it
+  // never reaches past the body's own 4..99 span. Written straight into the alpha channel (Img.px would
+  // make a translucent pixel opaque on a transparent canvas).
+  for (let y = 40; y <= 44; y++) {
+    for (let x = 8; x <= 96; x++) {
+      if (solid(x, y) || img.data[(y * BUS_FRAME_W + x) * 4 + 3] > 0) continue;
+      const d = ((x - 52) / 43) ** 2 + ((y - 42) / 2.3) ** 2;
+      if (d > 1) continue;
+      const i = (y * BUS_FRAME_W + x) * 4;
+      img.data[i] = 0; img.data[i + 1] = 0; img.data[i + 2] = 0;
+      img.data[i + 3] = d < 0.4 ? 77 : 38;
+    }
+  }
+  return img;
+}
+
+// All frames in one row: frame i occupies x = i * BUS_FRAME_W. Phaser loads it as a spritesheet
+// (frameWidth/frameHeight from src/scripts.js RTA_BUS_SHEET).
+function buildBusSheet() {
+  const sheet = new Img(BUS_FRAME_W * BUS_FRAME_NAMES.length, BUS_FRAME_H);
+  BUS_FRAME_NAMES.forEach((name, i) => {
+    const frame = buildBusFrame(name);
+    for (let y = 0; y < BUS_FRAME_H; y++) {
+      frame.data.copy(sheet.data, (y * sheet.w + i * BUS_FRAME_W) * 4, y * BUS_FRAME_W * 4, (y + 1) * BUS_FRAME_W * 4);
+    }
+  });
+  return sheet;
 }
 
 // ---------- title screen parallax foreground (docs/GAME_FEEL.md "a little 3D"): a tileable
@@ -594,6 +681,6 @@ fs.mkdirSync(outDir, { recursive: true });
 const write = (name, built) => fs.writeFileSync(path.join(outDir, name), built.toPNG());
 write('gate2.png', buildGate2());
 write('entrance.png', buildEntrance());
-write('bus.png', buildBus());
+write('rta-bus-sheet.png', buildBusSheet());
 write('title-fg.png', buildTitleForeground());
-console.log(`Wrote gate2, entrance, bus and title-fg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+console.log(`Wrote gate2, entrance, rta-bus-sheet and title-fg to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

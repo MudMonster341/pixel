@@ -59,6 +59,7 @@ test('SCRIPTS: every script is a non-empty list of well-formed, single-key steps
     'lockInput', 'unlockInput', 'letterbox', 'fade', 'cameraPan', 'cameraFollow', 'spawnActor',
     'despawnActor', 'move', 'face', 'emote', 'say', 'wait', 'sound', 'setFlag', 'parallel',
     'placeActor', 'setActorVisible',
+    'frame', 'anim', // the RTA bus's sheet-frame steps (tests/unit/rta-bus.test.js covers their data)
   ]);
   const checkStep = (step, where) => {
     const keys = Object.keys(step);

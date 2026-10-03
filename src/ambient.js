@@ -36,7 +36,6 @@
 const AMBIENT_DEFAULT_LINES = [
   'Busy day on campus!',
   "Ugh, I'm going to be late for class.",
-  'Have you tried the food truck by the gate?',
   'This heat is no joke today.',
   "I love it here, honestly.",
   'Anyone know where the LUG stall is?',

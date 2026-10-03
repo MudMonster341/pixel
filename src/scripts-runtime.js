@@ -16,7 +16,8 @@
 // Step shape mirrors src/dialog.js's own action vocabulary (`{ actionName: payload }`, one key per
 // step): `{ lockInput: true }`, `{ unlockInput: true }`, `{ letterbox: 'in' | 'out' }`,
 // `{ fade: { dir: 'in' | 'out', ms } }`, `{ cameraPan: { to, ms, ease } }`, `{ cameraFollow: actorId }`,
-// `{ spawnActor: { id, sprite, at, facing, kind } }`, `{ despawnActor: actorId }`,
+// `{ spawnActor: { id, sprite, at, facing, kind, frame, shadow, feet } }`, `{ despawnActor: actorId }`,
+// `{ frame: { actor, frame } }`, `{ anim: { actor, frames, frameMs } }` (the sheet-frame steps, below),
 // `{ move: { actor, path, speed, ease } }`, `{ face: { actor, dir } }`, `{ emote: { actor, kind } }`,
 // `{ say: { speaker, lines } }`, `{ wait: ms }`, `{ sound: id }`, `{ setFlag: 'name' | { name, value } }`,
 // `{ parallel: [step, ...] }`. `to`/`at`/a `move` path's points are each either a tile `{ x, y }`, a
@@ -157,8 +158,12 @@ class ScriptRunner {
   // depth-sorted as if it were a normal-sized character standing there, when its own drawn pixels
   // actually reached ~44px in every direction -- comfortably covering anything standing at a depth the
   // formula thought was safely "in front".
+  // An image actor may carry its own `feet` (px below its centre where its ground line really is): the
+  // RTA bus sprite has a transparent margin under its wheels, so a person stepping out beside its sill
+  // has to sort against the wheel line, not the bottom of that margin.
   actorFeetOffset(actorEntry) {
-    return actorEntry.kind === 'image' ? actorEntry.sprite.displayHeight / 2 : ACTOR_FEET_OFFSET;
+    if (actorEntry.kind !== 'image') return ACTOR_FEET_OFFSET;
+    return typeof actorEntry.feet === 'number' ? actorEntry.feet : actorEntry.sprite.displayHeight / 2;
   }
 
   // Depth-by-feet (ADR 0015) and the ground shadow, kept current every tick a script actor moves --
@@ -238,26 +243,33 @@ class ScriptRunner {
     this.scene.cameras.main.startFollow(actor.sprite, true, 0.18, 0.18);
   }
 
-  // `kind: 'image'` (the bus): a plain image, no walk cycle. `kind: 'character'` (default): a
-  // 16x24 sheet with the usual idle/walk anims (ensureActorAnims()), the same art shape as any NPC.
-  step_spawnActor({ id, sprite, at, facing = 'down', kind = 'character' } = {}) {
+  // `kind: 'image'` (the bus): a plain image, no walk cycle -- or one frame of a spritesheet (`frame`, an
+  // index; the RTA bus, src/scripts.js RTA_BUS_SHEET), changed later by the `frame` / `anim` steps.
+  // `shadow: false` skips the generated ground ellipse (art with its own shadow baked in); `feet` is the
+  // px below its centre where its ground line is (default: its bottom edge).
+  // `kind: 'character'` (default): a 16x24 sheet with the usual idle/walk anims (ensureActorAnims()),
+  // the same art shape as any NPC.
+  step_spawnActor({ id, sprite, at, facing = 'down', kind = 'character', frame, shadow: wantShadow = true, feet } = {}) {
     const point = this.resolvePoint(at);
     if (!point) { console.warn(`ScriptRunner: spawnActor "${id}" -- anchor/point for "at" not found`); return; }
     const px = toPixel(point.x);
     const py = toPixel(point.y);
     if (kind === 'image') {
-      const image = this.scene.add.image(px, py, sprite);
+      const image = this.scene.add.image(px, py, sprite, frame);
       // Quality loop (Cutscenes run 2): the shadow used to be a fixed 60x12 regardless of the actual
       // image's own size -- far wider than the bus itself. Sized to the sprite's own footprint now
       // (+2px, docs/plans own brief), soft and low-alpha like every other ground shadow in this game
       // (world.js playerShadow/createNpcs()), positioned at its own feet (bottom edge), not a guessed
       // offset.
-      const feet = image.displayHeight / 2;
-      const shadowW = image.displayWidth + 2;
-      const shadowH = Math.max(6, image.displayWidth * 0.32);
-      const shadow = this.scene.add.ellipse(px, py + feet, shadowW, shadowH, 0x000000, 0.22).setDepth(py + feet - 1);
-      image.setDepth(py + feet);
-      this.actors.set(id, { sprite: image, shadow, kind: 'image', textureKey: sprite, facing });
+      const feetOffset = typeof feet === 'number' ? feet : image.displayHeight / 2;
+      let shadow = null;
+      if (wantShadow) {
+        const shadowW = image.displayWidth + 2;
+        const shadowH = Math.max(6, image.displayWidth * 0.32);
+        shadow = this.scene.add.ellipse(px, py + feetOffset, shadowW, shadowH, 0x000000, 0.22).setDepth(py + feetOffset - 1);
+      }
+      image.setDepth(py + feetOffset);
+      this.actors.set(id, { sprite: image, shadow, kind: 'image', textureKey: sprite, facing, feet });
       return;
     }
     this.ensureActorAnims(sprite);
@@ -265,6 +277,36 @@ class ScriptRunner {
     const actorSprite = this.scene.add.sprite(px, py, sprite, idleFrames[facing] ?? 0).setDepth(py + ACTOR_FEET_OFFSET);
     const shadow = this.scene.add.ellipse(px, py + 9, 12, 4, 0x000000, 0.28).setDepth(py + ACTOR_FEET_OFFSET - 1);
     this.actors.set(id, { sprite: actorSprite, shadow, kind: 'character', textureKey: sprite, facing });
+  }
+
+  // Shows one frame of a spritesheet actor at once (the bus's brake lights coming on, its driving frame).
+  step_frame({ actor: actorId, frame } = {}) {
+    const actorEntry = this.getActor(actorId);
+    if (!actorEntry || !actorEntry.sprite.setFrame) return;
+    if (actorEntry.sprite.anims) actorEntry.sprite.anims.stop();
+    actorEntry.sprite.setFrame(frame);
+  }
+
+  // Plays a sequence of sheet frames on an actor (the bus's doors): each frame in `frames` is shown for
+  // `frameMs`, in order, and the last one stays up when the step ends (so the step lasts frames.length *
+  // frameMs). Esc snaps straight to that last frame; a step that starts while skipping does the same.
+  step_anim({ actor: actorId, frames, frameMs = 120 } = {}) {
+    const actorEntry = this.getActor(actorId);
+    if (!actorEntry || !actorEntry.sprite.setFrame || !Array.isArray(frames) || frames.length === 0) return undefined;
+    const sprite = actorEntry.sprite;
+    if (sprite.anims) sprite.anims.stop();
+    const last = frames[frames.length - 1];
+    if (this.skipping) { sprite.setFrame(last); return undefined; }
+    return new Promise((resolve) => {
+      let timer = null;
+      const off = this.onSkip(() => { if (timer) timer.remove(); sprite.setFrame(last); resolve(); });
+      const showFrom = (i) => {
+        if (i >= frames.length) { off(); resolve(); return; }
+        sprite.setFrame(frames[i]);
+        timer = this.scene.time.delayedCall(frameMs, () => showFrom(i + 1));
+      };
+      showFrom(0);
+    });
   }
 
   step_despawnActor(id) {

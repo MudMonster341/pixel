@@ -119,11 +119,12 @@ pack (`assets/vendor/limezu-modern-interiors-free/`, also used for interiors per
   a maroon polo) everywhere he appears -- an idle-animated sprite standing on the live campus backdrop
   on the `greeting`/`name-entry` intro scenes, and a real script actor in the in-world opening/Gate 2
   beat (`src/scripts.js`). One character, one asset.
-- **The arrival bus:** `tools/make-cutscenes.js` `buildBus()` → `assets/cutscenes/bus.png`, 32x72, a
-  true top-down coach (quality loop, Cutscenes run 1: the old side-view art was "a perspective clash"
-  on the straight-overhead road) -- a windshield cap top and bottom, wheels only hinted at the edges,
-  no side view of the body. See that function's own header for why this is hand-drawn rather than a
-  vendor-pack crop (neither suggested pack has a genuine top-down bus, checked pixel-by-pixel).
+- **The arrival bus (birthday sprint, package D):** an RTA (Dubai) city bus, `tools/make-cutscenes.js`
+  `buildBusSheet()` → `assets/cutscenes/rta-bus-sheet.png`, five 104x48 frames (closed, halfOpen, open,
+  closing, driving), a 3/4 raised side view, kerb side to the camera, front to the right. Livery and
+  palette (ten colours + the `#14131A` outline) from `docs/research/rta-bus-reference.md`; the ground
+  shadow is baked in and stays under the body. Hand-drawn because no free pack has a Dubai bus (the one
+  FB-0025 exception). Frame names/size live in `src/scripts.js` `RTA_BUS_SHEET`.
 - **Title screen parallax foreground:** `tools/make-cutscenes.js` `buildTitleForeground()` →
   `assets/cutscenes/title-fg.png`, 480x64, a tileable palm/fence silhouette strip scrolled behind the
   title menu at its own speed (docs/GAME_FEEL.md "a little 3D" rule 3).

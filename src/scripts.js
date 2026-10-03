@@ -59,40 +59,62 @@ const MUSTAFA_MEETS_HER_CORE = [
   { cameraFollow: 'player' },
 ];
 
-// The full M3a opening's own bus arrival (docs/STORY.md "Opening" step 4): a real bus sprite drives in
-// along the real Gate 2 approach, stops, she steps off (revealed for the first time -- world.js hides
-// the real player sprite until this exact moment, see playOpeningSequence()), the bus pulls away. Every
-// point is relative to the 'gate' anchor (the real Gate 2 object, tools/campus/build-campus.js),
-// offsets in tiles, "+y" being further out along the approach (away from campus) per that generator's
-// own coordinate sense.
-// Quality loop (Cutscenes run 2, 2026-09-29): "she is invisible after stepping off the bus". Root
-// cause (fixed at the engine level too, src/scripts-runtime.js syncActorVisuals()/actorFeetOffset())
-// was actually two bugs stacked -- a depth-sort bug (the bus's own "feet" were computed the same
-// fixed 8px-below-center way a 16x24 character's are, wildly wrong for an 88px-tall image) *and* this
-// data bug: her old disembark walk ended at offset [0, 2] -- back on the bus's own centreline (its
-// footprint spans roughly x:[-1,+1]) and squarely inside its vertical extent, i.e. she used to walk
-// back *behind* the bus on purpose. She now disembarks at the bus's own side (x offset 1.5, clear of
-// that footprint with margin to spare) and stays at that same x for her whole "walk clear" -- never
-// crossing back into the bus's column at all, belt-and-suspenders with the depth fix above.
+// The RTA (Dubai) bus's spritesheet (docs/STORY.md "Amendments from the birthday sprint"): one row of
+// 104x48 frames drawn by tools/make-cutscenes.js (buildBusSheet(), assets/cutscenes/rta-bus-sheet.png),
+// loaded by BootScene as a spritesheet under `key` (src/main.js). Content, not engine: a script plays
+// frames by these names/indexes through its `frame` and `anim` steps (src/scripts-runtime.js).
+// tests/unit/rta-bus.test.js keeps these numbers equal to what the generator draws.
+const RTA_BUS_SHEET = {
+  key: 'rta-bus',
+  file: 'assets/cutscenes/rta-bus-sheet.png',
+  frameWidth: 104,
+  frameHeight: 48,
+  frames: { closed: 0, halfOpen: 1, open: 2, closing: 3, driving: 4 },
+};
+const BUS_FRAME = RTA_BUS_SHEET.frames;
+
+// The full M3a opening's own bus arrival (docs/STORY.md "Opening" step 4, amended by the birthday sprint:
+// the bus is an RTA bus): it drives in along the road outside Gate 2, stops at the kerb, opens its doors,
+// she steps out (revealed for the first time -- world.js hides the real player sprite until this exact
+// moment, see playOpeningSequence()), the doors close, the bus pulls away off-screen.
+// Every point is relative to the 'gate' anchor (the real Gate 2 object, tools/campus/build-campus.js),
+// offsets in tiles, "+y" being further out (south, away from campus) per that generator's own coordinate
+// sense. Real geometry (assets/maps/campus.json, tests/unit/rta-bus.test.js re-checks it): Gate 2's avenue
+// runs north-south and meets an east-west road 18-22 tiles south of the gate (asphalt rows y+18..y+22, the
+// road only running east from the avenue's mouth), with open sand south of it. Dubai drives on the right,
+// so an eastbound bus is in the south lane with its right (door) side towards the camera, and the sprite is
+// drawn that way (front to the right). It enters from off-screen left, where the road starts, and leaves
+// off-screen right.
+// The bus's centre door sits on the sprite's centre column, so BUS_STOP_X is also where she steps out.
+// Her step-out is kept clear of the bus on purpose (Quality loop, Cutscenes run 2: "she is invisible after
+// stepping off the bus" was a depth-sort bug plus a walk back behind the bus): she appears at the sill with
+// her feet just below the bus's own ground line (`feet` below), so she always sorts in front of it, then
+// walks south onto the pavement and never back across the bus.
+const BUS_ROAD_Y = 20.55; // tiles south of the gate: the bus's centre row (its wheels sit on the south lane)
+const BUS_STOP_X = 4.75; // tiles east of the gate: the stop (its centre door is at the sprite's centre)
 const BUS_STEPS = [
   { setActorVisible: { actor: 'player', visible: false } },
-  { cameraPan: { to: { anchor: 'Gate 2 (Main Entrance)', offset: [0, 2] }, ms: 10 } }, // settle on the gate before she'd otherwise be framed
-  { spawnActor: { id: 'bus', sprite: 'bus', kind: 'image', at: { anchor: 'Gate 2 (Main Entrance)', offset: [0, 9] }, facing: 'up' } },
-  { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 3] }], speed: 6, ease: 'Cubic.easeOut' } },
-  { wait: 400 },
-  // Steps out at the bus's own side (the "door"), facing back toward it for a beat before walking on.
-  { placeActor: { actor: 'player', at: { anchor: 'Gate 2 (Main Entrance)', offset: [1.5, 3] }, facing: 'left' } },
+  // Frame the stop: the road's west end at the left edge, the pavement below the bus in view.
+  { cameraPan: { to: { anchor: 'Gate 2 (Main Entrance)', offset: [6, 20.5] }, ms: 10 } },
+  { spawnActor: { id: 'bus', sprite: RTA_BUS_SHEET.key, kind: 'image', frame: BUS_FRAME.driving, shadow: false, feet: 19, at: { anchor: 'Gate 2 (Main Entrance)', offset: [-8, BUS_ROAD_Y] }, facing: 'right' } },
+  { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [BUS_STOP_X, BUS_ROAD_Y] }], speed: 4.5, ease: 'Sine.easeOut' } },
+  { frame: { actor: 'bus', frame: BUS_FRAME.closed } }, // stopped: the brake lights come on
+  { wait: 500 },
+  { sound: 'doorOpen' },
+  { anim: { actor: 'bus', frames: [BUS_FRAME.halfOpen, BUS_FRAME.open], frameMs: 130 } },
+  { wait: 450 },
+  // She steps out of the centre door and walks onto the pavement south of the road.
+  { placeActor: { actor: 'player', at: { anchor: 'Gate 2 (Main Entrance)', offset: [BUS_STOP_X, 21.5] }, facing: 'down' } },
   { setActorVisible: { actor: 'player', visible: true } },
-  { wait: 200 },
-  // Walks 1.5 tiles clear, staying at the same x the whole way -- never back over the bus's own column.
-  { move: { actor: 'player', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [1.5, 1.5] }], speed: 3 } },
-  { face: { actor: 'player', dir: 'up' } }, // turns toward the gate as the bus pulls away, below
-  { wait: 250 },
-  // Quality loop (Cutscenes run 1): the bus is drawn nose-up (tools/make-cutscenes.js buildBus());
-  // turning to 'down' before pulling away flips it vertically so it still reads nose-first while
-  // driving back out, not backwards (src/scripts-runtime.js step_face()).
-  { face: { actor: 'bus', dir: 'down' } },
-  { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [0, 10] }], speed: 7, ease: 'Cubic.easeIn' } },
+  { wait: 150 },
+  { move: { actor: 'player', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [BUS_STOP_X, 23.4] }], speed: 2.5 } },
+  { face: { actor: 'player', dir: 'right' } }, // turns to watch the bus go
+  { wait: 400 },
+  { sound: 'doorOpen' },
+  { anim: { actor: 'bus', frames: [BUS_FRAME.closing, BUS_FRAME.closed], frameMs: 130 } },
+  { wait: 350 },
+  { frame: { actor: 'bus', frame: BUS_FRAME.driving } },
+  { move: { actor: 'bus', path: [{ anchor: 'Gate 2 (Main Entrance)', offset: [20, BUS_ROAD_Y] }], speed: 6, ease: 'Sine.easeIn' } },
   { despawnActor: 'bus' },
 ];
 

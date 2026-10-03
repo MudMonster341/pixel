@@ -963,3 +963,24 @@ tie-break; new dialogue lines await owner approval (FB-0032). Audio, game feel, 
 
 **Next:** the owner plays; their feedback first, then the bugs in HANDOFF.md "Known bugs", then the
 quality loop continues.
+
+## 2026-10-03 — Design interview, repo cleanup, birthday sprint plan
+
+**Did:** Grilled the design with the owner (grilling skill). Settled: the game is a birthday gift for
+**Taru's 22nd (next week, ~4 days to finish)**; she has a **MacBook**, so the deliverable is an offline
+double-click `index.html` bundle, not an .exe. Cleanup done (9 agent worktrees, `-intro`, 32 merged local
+branches, `origin-local/main`, `-cutscene`/`-interiors` leftovers; kept `-play`). Scheduled task "Pixel game:
+work the roadmap" **disabled** (owner re-enables). Wrote the sprint plan, ADRs 0017-0019, and updated
+HANDOFF, STORY and QUALITY_LOOP (ratings paused until the owner plays).
+
+**Why:** the owner wants it complete (nothing empty), cute and soft, matching the real campus, with talkable
+students (facts from the BITS Dubai site; real CS professors may be named), cats and birds, an RTA bus
+with a door-opening animation, and a credits scene ("Happy Birthday Taru, Happy 22", wishes one by one).
+
+**Decisions:** ADR 0017 offline bundle for Mac, ADR 0018 talkable campus life, ADR 0019 credits ending and
+recipient. FB-0025 means "use free asset packs, don't hand-draw art" (the bus is the one exception: no pack has one).
+
+**Failures:** none. (The "food truck by the gate" ambient line is wrong and is removed on Day 1.)
+
+**Next:** research agents (facts, RTA bus reference, 3D tour ground floor, animal packs) and Sonnet briefs A-D
+per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the full `npm test` and push are Day 2.

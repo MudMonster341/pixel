@@ -5,6 +5,11 @@ fast, the whole flow. Then the loop fixes bugs and design decisions, and each lo
 one thing, such as art in each area, design, and then everything. Set up a rubric, rate everything,
 figure out what needs improvement, fix category-wise, then run the loop all over: test, rate, fix."
 
+> **Paused 2026-10-03 (owner):** no rating runs during the birthday sprint
+> ([plans/2026-10-03-birthday-sprint.md](plans/2026-10-03-birthday-sprint.md)). Until the owner has
+> played and sent feedback, the aim is complete and working, with one objective defect sweep instead of
+> scores. The loop resumes after the playtest, owner feedback first.
+
 ## Phase A — BUILD (until the whole flow exists)
 
 Applies until every stage of [the premium pass](plans/2026-09-26-premium-pass.md) is merged.

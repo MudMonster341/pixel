@@ -68,6 +68,19 @@ perspective in the cutscene art, and movement that eases rather than snaps.
 10. **The box opens** into a full-screen **animated birthday card**: photos, drawings, animation, and
     a video at the end.
 
+## Amendments from the birthday sprint (2026-10-03; ADRs 0017-0019)
+
+- **The recipient is Taru (22).** The name field at the start is prefilled "Taru" (she may change it). The
+  credits always say "Taru", from `card.json`'s `recipient`, not the typed name.
+- **Credits phase** after the card: "Happy Birthday, Taru", "Happy 22", about 8 wishes fade in one by one,
+  THE END, "Made for you by Mustafa". `card.json` gets optional `wishes` and `age`.
+- **The bus is an RTA (Dubai) bus**, pixelated, door opening, she steps out.
+- **Campus life:** every ambient student can be talked to and shares a campus fact (clubs, quizzes,
+  facilities, events, departments) from `src/campus-facts.js`; cats and birds wander. Facts are sourced
+  from the official site and public pages. **Real CS professors may be named in facts** (owner's call);
+  real people still don't appear as characters.
+- **Delivery:** an offline `index.html` bundle she double-clicks on her MacBook; no .exe.
+
 ## Rules for the world
 
 - Only the route the story uses is open. Other doors, floors and rooms are politely blocked

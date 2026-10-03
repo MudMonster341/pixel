@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Cutscenes",
   "priority": "high",
-  "status": "needs-info",
+  "status": "fixed",
   "createdAt": "2026-09-26T18:03:29.207Z",
-  "updatedAt": "2026-09-29T13:22:57.388Z",
+  "updatedAt": "2026-10-03T09:14:42.577Z",
   "details": "(Owner, in chat, 2026-09-26) \"THE CUTSCENES AND START SCENES ARE PRETTY CHOPPY, THE ANIMATION IS DONE SEPARATE, IT'S NOT CONNECTED SO IT LOOKS REALLY WEIRD, COMPLETE REWORK AND CAN BE MORE VIBRANT AND BETTER\".",
   "context": {},
   "marker": null,
@@ -21,9 +21,18 @@
       "author": "agent",
       "text": "More new lines to approve (students you can talk to around campus): 'Busy day on campus!' / 'Ugh, I'm going to be late for class.' / 'Have you tried the food truck by the gate?' (there's no food truck in the game - keep, change or drop?) / 'This heat is no joke today.' / 'I love it here, honestly.' / 'Anyone know where the LUG stall is?' / 'Three more assignments this week...' / 'Nice weather for once, isn't it?'",
       "at": "2026-09-29T13:22:57.388Z"
+    },
+    {
+      "author": "agent",
+      "text": "Built and merged: cutscenes play in the game world (ADR 0016). New dialogue lines await the owner's review.",
+      "at": "2026-10-03T09:14:42.577Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/e2e/intro.spec.js › FB-0032 in-world opening",
+    "commit": null,
+    "at": "2026-10-03T09:14:42.577Z"
+  },
   "history": [
     {
       "at": "2026-09-26T18:03:29.207Z",
@@ -34,6 +43,11 @@
       "at": "2026-09-27T19:34:17.125Z",
       "by": "agent",
       "status": "needs-info"
+    },
+    {
+      "at": "2026-10-03T09:14:42.577Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

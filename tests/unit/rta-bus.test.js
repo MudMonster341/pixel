@@ -304,9 +304,11 @@ test('the bus stop sits on the real Gate 2 road: asphalt under the wheels, sand 
 // ---------- the ambient dialogue ----------
 
 test('no ambient line mentions a food truck (there is none on the campus)', () => {
-  const { AMBIENT, AMBIENT_DEFAULT_LINES } = loadGameData();
-  const text = JSON.stringify([AMBIENT, AMBIENT_DEFAULT_LINES]).toLowerCase();
+  // ADR 0018: the old generic AMBIENT_DEFAULT_LINES pool is gone; what ambient students say now is the
+  // role openers and campus facts (src/campus-facts.js), so that is the text checked here.
+  const { AMBIENT, CAMPUS_ROLES, CAMPUS_FACTS } = loadGameData();
+  const text = JSON.stringify([AMBIENT, CAMPUS_ROLES, CAMPUS_FACTS]).toLowerCase();
   assert.ok(!text.includes('food truck'));
-  assert.ok(AMBIENT_DEFAULT_LINES.length >= 4, 'the rest of the default pool is intact');
-  assert.ok(read('src/ambient.js').includes('Busy day on campus!'));
+  assert.ok(CAMPUS_FACTS.length >= 30, 'the talk pool is intact');
+  assert.ok(!read('src/ambient.js').includes('AMBIENT_DEFAULT_LINES'), 'the retired generic pool stays gone');
 });

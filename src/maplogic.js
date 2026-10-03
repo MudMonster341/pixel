@@ -334,6 +334,24 @@ function characterSheets(maps, ambient, scripts) {
   return [...keys].sort().map((key) => ({ key, file: `assets/${key}.png` }));
 }
 
+// ---------- Animal sheet registry (decisions/0018) ----------
+// Every animal spritesheet the content can draw, derived from src/animals.js the same way characterSheets()
+// derives the character ones, so BootScene's preload (src/main.js) can never forget a new species.
+// `animals`: ANIMALS ({ mapKey: [{ species, ... }] }), `species`: ANIMAL_SPECIES, `layouts`: ANIMAL_LAYOUTS.
+// Returns [{ key, file, frameWidth, frameHeight }] sorted by key (`file` relative to the web root).
+function animalSheets(animals, species, layouts) {
+  const sheets = new Map();
+  for (const list of Object.values(animals || {})) {
+    for (const entry of list) {
+      const info = species[entry.species];
+      if (!info) throw new Error(`animal "${entry.id}": unknown species "${entry.species}"`);
+      const layout = layouts[info.layout];
+      sheets.set(info.sheet, { key: info.sheet, file: `assets/${info.sheet}.png`, frameWidth: layout.frameW, frameHeight: layout.frameH });
+    }
+  }
+  return [...sheets.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
 // ---------- Interaction priority (bug: an exact distance tie went to an ambient NPC over a key station) ----------
 // What E talks to is chosen by pickInteractable(): the nearest candidate wins *unless* a higher-priority
 // kind is within INTERACT_TIE_MARGIN px of it, in which case the story object wins. Data, not a
@@ -345,6 +363,7 @@ const INTERACT_PRIORITY = {
   keyStation: 3, // a key room's desk: the treasure hunt's own objective
   questNpc: 2, // a story NPC with dialog data (the volunteer, ...)
   ambientNpc: 1, // campus atmosphere (src/ambient.js)
+  animal: 1, // a talkable cat (src/animals.js): atmosphere too, never shadows a story object
 };
 const INTERACT_TIE_MARGIN = 4; // px: a story object this much (or less) farther away still wins
 

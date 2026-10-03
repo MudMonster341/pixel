@@ -357,6 +357,25 @@ current map (or `null` if she's off-route) and resolves it to real tile coordina
 pulsing marker regardless, and a gentle toast repeats the quest tracker's own objective text if she
 hasn't gotten meaningfully closer to it in `WANDER_HINT_MS`.
 
+## Talkable campus life and animals (ADR 0018)
+
+Two more data files, loaded before `src/maps.js` (`index.html`, `tests/helpers/game-data.js`):
+
+- **`src/campus-facts.js`**: `CAMPUS_ROLES` (a label + 1-2 openers per role) and `CAMPUS_FACTS`
+  (`{ id, role, text, source }`, every `source` an F-id of `docs/research/campus-facts.md`). The pure
+  `campusTalkLines(role, studentId, state)` picks what a student says (least-heard fact first; `state` is
+  `GameState.campusTalk`, session-only, never saved). Every `src/ambient.js` entry has a `role`; the engine
+  (`world.js` `interact()`) makes the student stop, turn and talk, with no per-entry dialog. The full list for
+  the owner is `docs/research/campus-lines-review.md`.
+- **`src/animals.js`**: `ANIMALS` (per outdoor map: `{ id, species, x, y, behaviour, talk? }`, cap 8 per map),
+  `ANIMAL_SPECIES`/`ANIMAL_LAYOUTS` (sheets and frame layouts) and the pure behaviour functions
+  (`stepAnimal`, `animalReaction`, `animalFleePoint`, `animalAnim`...). `world.js` `createAnimals()` /
+  `updateAnimals()` only build sprites and play what those say. Animals have no collision and never
+  appear indoors; sheets are preloaded from the data by `animalSheets()` (`src/maplogic.js`).
+- Art: `tools/make-animals.js` (part of `npm run assets`) bakes `assets/animal-*.png` from the git-ignored
+  packs in `assets/External Tilesets/`.
+- Story objects always win E: `INTERACT_PRIORITY` ranks `ambientNpc` and `animal` lowest.
+
 ## Naming
 
 - **ids:** kebab-case, globally unique, prefixed by map: `meadow-chest-1`, `house-sign`.

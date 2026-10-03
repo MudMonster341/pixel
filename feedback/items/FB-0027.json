@@ -4,20 +4,35 @@
   "type": "bug",
   "area": "Maps & buildings",
   "priority": "high",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-09-26T18:03:29.036Z",
-  "updatedAt": "2026-09-26T18:03:29.036Z",
+  "updatedAt": "2026-10-03T09:14:38.918Z",
   "details": "(Owner, in chat, 2026-09-26) \"I FEEL LIKE THE 3D PRESENCE IS NOT THERE, FOR EXAMPLE I WALK OVER DOORS\". Doors/walls/building fronts need proper depth: things in front of her draw over her, she walks INTO a door (it opens) instead of over it.",
   "context": {},
   "marker": null,
   "screenshot": null,
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Built and merged in the premium pass (ADR 0015): y-sorted depth, doors open and she walks in.",
+      "at": "2026-10-03T09:14:38.918Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/depth-groups.spec.js › FB-0027: a map with depth groups bakes one per group, and a map without them has none",
+    "commit": null,
+    "at": "2026-10-03T09:14:38.918Z"
+  },
   "history": [
     {
       "at": "2026-09-26T18:03:29.036Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-03T09:14:38.918Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

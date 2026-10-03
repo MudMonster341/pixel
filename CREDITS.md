@@ -172,3 +172,22 @@ docs/plans/2026-09-26-premium-pass.md)
   "next line" arrow, `assets/ui-icons.png` -- no pack at this exact tiny size/shape was a clean fit, so
   these are original pixel art, drawn the same text-sprite way as everything else in
   `tools/make-assets.js`.
+
+## Animals (added 2026-10-03, see [ADR 0018](decisions/0018-talkable-campus-life.md) and docs/research/animal-packs.md)
+
+Cats and birds only. The raw packs stay in `assets/External Tilesets/` (git-ignored, never committed);
+`tools/make-animals.js` crops and recolours them into `assets/animal-*.png`.
+
+- **Animals Asset Pack** (16x16 top-down animals, supplied by the owner; the pack is
+  ComfyMattres' "Animals Character Asset Pack",
+  [comfymattres.itch.io/animals-character-asset-pack](https://comfymattres.itch.io/animals-character-asset-pack)).
+  Free licence: use and modify in personal and commercial projects, **no reselling or redistributing the
+  pack, no NFT use**. Only the cat is used (the bear, penguin and pig are not), recoloured, as the
+  4-direction wandering campus cats.
+- **Free Pixel Animation: Cat [6 loops]** by **Zeenaz**
+  ([zeenaz.itch.io/free-pixel-animation-cat-6-loops](https://zeenaz.itch.io/free-pixel-animation-cat-6-loops))
+  -- CC0 1.0 (public domain). Stray campus cats, recoloured: sitting, sleeping, standing and startled poses.
+- **[LPC] Birds** by **bluecarrot16** (commissioned by castelonia)
+  ([opengameart.org/content/lpc-birds](https://opengameart.org/content/lpc-birds)) -- CC BY 4.0,
+  attribution required. Campus sparrows, pigeons (the white dove recoloured grey) and crows.
+  Also on the title screen's Credits page (`src/scenes/title.js` `CREDITS_LINES`, ADR 0012's rule).

@@ -7,7 +7,8 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
-    "assets": "node tools/make-assets.js && node tools/make-cutscenes.js && node tools/make-minigame-art.js && node tools/make-card-art.js && node tools/make-audio.js",
+    "assets": "node tools/make-assets.js && node tools/make-cutscenes.js && node tools/make-minigame-art.js && node tools/make-card-art.js && node tools/make-audio.js && node tools/make-animals.js",
+    "animals": "node tools/make-animals.js",
     "cutscenes": "node tools/make-cutscenes.js",
     "minigame-art": "node tools/make-minigame-art.js",
     "card-art": "node tools/make-card-art.js",

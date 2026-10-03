@@ -37,10 +37,12 @@ test.describe('Ambient campus/Main Block life', () => {
   test('campus spawns the authored ambient NPCs, none of them sitting on a door/stairs tile', async ({ page }) => {
     await openGame(page, { map: 'campus' });
     const tiles = await ambientTiles(page);
-    // src/ambient.js AMBIENT.campus: 3 patrol walkers + 1 jogger + 3 sitting + 2 chatting + 1 by the
-    // bus stop -- "8-12 students" (this task's own brief).
-    expect(tiles.length).toBeGreaterThanOrEqual(8);
-    expect(tiles.length).toBeLessThanOrEqual(12);
+    // src/ambient.js AMBIENT.campus: the original Gate 2/avenue group plus (ADR 0018) people at the
+    // library and mechanical fronts, hostels, parking, sports and DIAC Park. The whole list exists;
+    // only the ones near the camera are updated each frame (tests/unit/ambient.test.js caps one screen).
+    const authored = await page.evaluate(() => AMBIENT.campus.length);
+    expect(tiles.length).toBe(authored);
+    expect(tiles.length).toBeGreaterThanOrEqual(30);
 
     const doors = await doorAndStairsTiles(page);
     for (const t of tiles) {
@@ -83,7 +85,7 @@ test.describe('Ambient campus/Main Block life', () => {
     }
   });
 
-  test('talking to an ambient student shows a short neutral line, never story information', async ({ page }) => {
+  test('talking to an ambient student shows a campus fact line, never story information', async ({ page }) => {
     await openGame(page, { map: 'campus' });
     // A stationary (idle/chat) NPC, never a 'patrol' one: updateAmbientPatrol() (world.js) keeps
     // moving a patrol NPC every frame, so its position read here would already be stale by the time

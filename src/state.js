@@ -129,6 +129,12 @@ const GameState = {
   customization: defaultCustomization(),
   // M5 sound: music/sfx volume (0..1 each) and a master mute, read by src/audio.js AudioManager.
   settings: defaultSettings(),
+  // ADR 0018 (talkable students): which campus facts she has heard and who she has spoken to, so
+  // repeats come last (src/campus-facts.js campusTalkLines()). Session-only on purpose: never saved
+  // (src/save.js snapshots an explicit list), reset with a new game below.
+  // Created on first use by src/scenes/world.js (newCampusTalkState()), so this file needs nothing from
+  // campus-facts.js at load time.
+  campusTalk: null,
 };
 
 // Call after changing GameState.flags or GameState.quest so autosave (src/save.js) saves soon.
@@ -158,6 +164,7 @@ function resetGameState(state = GameState) {
   state.quest = defaultQuest();
   state.minigames = {};
   state.journal = [];
+  state.campusTalk = null;
   // Play (new game) also replays the whole opening (title.js startPlay()), which sets these fresh
   // itself -- reset here too so a game that skips the opening entirely (?intro=0) still starts from
   // the documented defaults rather than whatever the previous game happened to leave behind.

@@ -83,6 +83,11 @@ class BootScene extends Phaser.Scene {
     for (const { key, file } of characterSheets(MAPS, AMBIENT, SCRIPTS)) {
       this.load.spritesheet(key, file, charSheet);
     }
+    // The campus animals (decisions/0018): sheets derived from src/animals.js by animalSheets(), the same
+    // never-forget-one rule as the characters above.
+    for (const { key, file, frameWidth, frameHeight } of animalSheets(ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS)) {
+      this.load.spritesheet(key, file, { frameWidth, frameHeight });
+    }
     // The RTA bus (SCRIPTS.opening): a door-animation spritesheet, layout in src/scripts.js RTA_BUS_SHEET.
     this.load.spritesheet(RTA_BUS_SHEET.key, RTA_BUS_SHEET.file, { frameWidth: RTA_BUS_SHEET.frameWidth, frameHeight: RTA_BUS_SHEET.frameHeight });
     this.load.spritesheet('items', 'assets/items.png', sheet);

@@ -6,7 +6,7 @@ const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPTS = [
-  'src/items.js', 'src/story.js', 'src/ambient.js', 'src/maps.js', 'src/cutscenes.js',
+  'src/items.js', 'src/story.js', 'src/ambient.js', 'src/campus-facts.js', 'src/animals.js', 'src/maps.js', 'src/cutscenes.js',
   // ADR 0016 (in-world cutscene scripts): pure data, no Phaser -- src/objective-routes.js (FB-0033
   // onboarding routing) and src/scripts.js (SCRIPTS, the new cutscene content) load fine here, unlike
   // src/scripts-runtime.js (the engine that runs them), which needs a real Phaser scene and is only
@@ -90,7 +90,29 @@ function loadGameData() {
     ITEMS: get('ITEMS'),
     MAPS: get('MAPS'),
     AMBIENT: get('AMBIENT'),
-    AMBIENT_DEFAULT_LINES: get('AMBIENT_DEFAULT_LINES'),
+    // ADR 0018 (talkable campus students): roles, facts and the pure 'what does she say' picker
+    CAMPUS_ROLES: get('CAMPUS_ROLES'),
+    CAMPUS_FACTS: get('CAMPUS_FACTS'),
+    campusFactsFor: get('campusFactsFor'),
+    newCampusTalkState: get('newCampusTalkState'),
+    campusTalkLines: get('campusTalkLines'),
+    // ADR 0018 (animals): content, sheet layouts and the pure behaviour functions (src/animals.js)
+    ANIMALS: get('ANIMALS'),
+    ANIMAL_SPECIES: get('ANIMAL_SPECIES'),
+    ANIMAL_LAYOUTS: get('ANIMAL_LAYOUTS'),
+    ANIMAL_RULES: get('ANIMAL_RULES'),
+    ANIMAL_CAP_PER_MAP: get('ANIMAL_CAP_PER_MAP'),
+    ANIMAL_TALK_LINES: get('ANIMAL_TALK_LINES'),
+    animalReaction: get('animalReaction'),
+    animalFleePoint: get('animalFleePoint'),
+    animalWanderPoint: get('animalWanderPoint'),
+    animalLineWalkable: get('animalLineWalkable'),
+    animalTileBlocked: get('animalTileBlocked'),
+    animalFacing: get('animalFacing'),
+    makeAnimal: get('makeAnimal'),
+    stepAnimal: get('stepAnimal'),
+    animalAnim: get('animalAnim'),
+    animalSheets: get('animalSheets'),
     STRUCTURES: get('STRUCTURES'),
     START_MAP: get('START_MAP'),
     TILE: get('TILE'),

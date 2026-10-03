@@ -38,6 +38,14 @@ const AMBIENT_CULL_MARGIN = 64;
 const AMBIENT_ARRIVE_RANGE = 3;
 const AMBIENT_CHAT_EMOTE_MIN_MS = 2500;
 const AMBIENT_CHAT_EMOTE_MAX_MS = 5500;
+// ADR 0018 (animals): like ambient students, an animal farther than this outside the camera's view is
+// simply left alone until it is back in view (a bird that has flown off keeps its "come back" timer
+// running regardless: a 'gone' animal costs nothing). How long a student stands still after the
+// dialog closes before walking on.
+const ANIMAL_CULL_MARGIN = 96;
+const AMBIENT_TALK_RESUME_MS = 600;
+// The animal's feet sit this many px below its tile centre (a character's feet are 8 below its origin).
+const ANIMAL_FEET_OFFSET = 7;
 // Frame layout (ADR 0013, FB-0043): 4 real rows (down/up/left/right, no mirroring -- was 3 rows with
 // "right" drawn as a mirrored "left", which turned out to be mirroring the wrong art entirely, see
 // ERR-0007) x 8 columns (idle, 6 walk frames, 1 idle-anim frame) -- see tools/make-assets.js
@@ -136,6 +144,7 @@ class WorldScene extends Phaser.Scene {
     this.createPlayer();
     this.createNpcs();
     this.createAmbient();
+    this.createAnimals();
     this.createPickups();
     this.createKeyStations();
 
@@ -434,23 +443,46 @@ class WorldScene extends Phaser.Scene {
     this.physics.add.collider(this.player, sprite);
     const shadow = this.add.ellipse(sprite.x, sprite.y + 9, 12, 4, 0x000000, 0.28);
     // The same `{ def, idleFrames }` shape a real story NPC carries (createNpcs() above), so
-    // interact()/pickDialogEntry() need no ambient-specific branch at all. A short, neutral one-liner,
-    // never story information (this task's own brief) -- `def.dialog`, if given, overrides the shared
-    // pool (src/ambient.js AMBIENT_DEFAULT_LINES), cycled by index so nearby NPCs don't usually repeat.
+    // nearestInteractable()/the prompt bubble need no ambient-specific branch. ADR 0018: every ambient
+    // student is talkable, but what it says is not dialog data on the sprite -- interact() asks
+    // campusTalkLines() (src/campus-facts.js) for the student's role, so `dialog` stays empty (a plain
+    // "E" bubble, never "!"). The name tag is the role label ("LUG member"), never a person's name.
     sprite.def = {
       id: def.id,
-      name: 'Student',
+      name: (CAMPUS_ROLES[def.role] || {}).label || 'Student',
       character: def.character,
-      dialog: def.dialog || [{ id: 'chat', lines: [AMBIENT_DEFAULT_LINES[index % AMBIENT_DEFAULT_LINES.length]] }],
+      role: def.role,
+      dialog: [],
     };
     sprite.idleFrames = PLAYER_IDLE;
     const ambient = {
       def, sprite, shadow, facing,
-      waypointIndex: 0, waypointDir: 1, pausedUntil: 0,
+      waypointIndex: 0, waypointDir: 1, pausedUntil: 0, talking: false,
       emoteAt: this.time.now + AMBIENT_CHAT_EMOTE_MIN_MS + Math.random() * (AMBIENT_CHAT_EMOTE_MAX_MS - AMBIENT_CHAT_EMOTE_MIN_MS),
     };
+    sprite.ambient = ambient;
     this.syncAmbientDepth(ambient);
     return ambient;
+  }
+
+  // ADR 0018: the student stops, turns toward her, and holds that pose until the dialog closes (a
+  // patrol student is held in updateAmbientPatrol(); an idle/chat one never moves, so it is posed here).
+  beginAmbientTalk(ambient) {
+    const s = ambient.sprite;
+    ambient.talking = true;
+    s.setVelocity(0, 0);
+    ambient.facing = animalFacing(this.player.x - s.x, this.player.y - s.y);
+    this.playAmbientAnim(ambient, 'idle');
+  }
+
+  endAmbientTalk(ambient) {
+    ambient.talking = false;
+    ambient.pausedUntil = this.time.now + AMBIENT_TALK_RESUME_MS;
+    if (ambient.def.kind !== 'patrol') { // back to its authored pose
+      ambient.facing = ambient.def.facing || 'down';
+      ambient.sprite.anims.stop();
+      ambient.sprite.setFrame(PLAYER_IDLE[ambient.facing]);
+    }
   }
 
   // Global anim keys are baked to a specific texture's own frames (Phaser AnimationFrame, not
@@ -492,7 +524,7 @@ class WorldScene extends Phaser.Scene {
     // "If she walks into one, they... wait" -- holds still (never shoves through her) while she's
     // this close, and for `pauseMs` after reaching each end of its own route.
     const nearPlayer = Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < AMBIENT_PAUSE_RANGE;
-    if (nearPlayer || time < ambient.pausedUntil) {
+    if (nearPlayer || ambient.talking || time < ambient.pausedUntil) {
       s.setVelocity(0, 0);
       this.playAmbientAnim(ambient, 'idle');
       this.syncAmbientDepth(ambient);
@@ -532,7 +564,7 @@ class WorldScene extends Phaser.Scene {
   // shape src/scripts-runtime.js's own `emote` step uses for a script actor, standalone here since an
   // ambient chat pair isn't a script actor at all.
   updateAmbientChat(ambient, time) {
-    if (time < ambient.emoteAt) return;
+    if (ambient.talking || time < ambient.emoteAt) return;
     ambient.emoteAt = time + AMBIENT_CHAT_EMOTE_MIN_MS + Math.random() * (AMBIENT_CHAT_EMOTE_MAX_MS - AMBIENT_CHAT_EMOTE_MIN_MS);
     this.spawnAmbientEmote(ambient.sprite.x, ambient.sprite.y - 22);
   }
@@ -581,6 +613,109 @@ class WorldScene extends Phaser.Scene {
       ambient.sprite.setVisible(visible);
       ambient.shadow.setVisible(visible);
     }
+    // The campus animals hide for a script too (ADR 0018), and reappear with it.
+    this.animalsHidden = !visible;
+    for (const animal of this.animals || []) this.syncAnimal(animal);
+  }
+
+  // ---------- campus animals (ADR 0018, content + behaviour in src/animals.js) ----------
+  // Cats and birds on the outdoor map. They have no collision (never block her path), no depth games
+  // beyond the usual sort-by-feet, and are never created indoors. What each one does every frame is the
+  // pure stepAnimal(); this only builds the sprites and plays what animalAnim() says.
+  createAnimals() {
+    this.animals = [];
+    this.animalsHidden = false;
+    const defs = this.def.indoors ? [] : (ANIMALS[this.mapKey] || []);
+    if (!defs.length || !this.tileData) return;
+    const objects = this.mapObjects || [];
+    this.animalWalkable = (tx, ty) => isWalkableTile(this.tileData, this.tileInfo, tx, ty) && !animalTileBlocked(objects, tx, ty);
+    this.animals = defs.slice(0, ANIMAL_CAP_PER_MAP).map((def) => this.buildAnimal(def));
+  }
+
+  buildAnimal(def) {
+    const info = ANIMAL_SPECIES[def.species];
+    const layout = ANIMAL_LAYOUTS[info.layout];
+    this.ensureAnimalAnims(def.species);
+    const state = makeAnimal(def);
+    const sprite = this.add.sprite(state.x * TILE, state.y * TILE + ANIMAL_FEET_OFFSET, info.sheet, 0)
+      .setOrigin(0.5, layout.footY / layout.frameH);
+    const shadow = this.add.ellipse(sprite.x, sprite.y - 1, info.kind === 'bird' ? 9 : 10, 3, 0x000000, 0.25);
+    // The same `{ def }` shape every interactable carries (nearestInteractable()); only a tame, talkable
+    // cat is ever offered. "Cat" is a label, not a name; the dialog is the soft meow (interact()).
+    sprite.def = { id: def.id, name: 'Cat', dialog: [] };
+    const animal = { def, sprite, shadow, state };
+    sprite.animalRef = animal;
+    this.syncAnimal(animal);
+    return animal;
+  }
+
+  // One Phaser animation per layout animation, keyed '<species>-<name>', built once per species.
+  ensureAnimalAnims(species) {
+    const info = ANIMAL_SPECIES[species];
+    for (const [name, anim] of Object.entries(ANIMAL_LAYOUTS[info.layout].anims)) {
+      const key = `${species}-${name}`;
+      if (this.anims.exists(key)) continue;
+      this.anims.create({
+        key, frames: this.anims.generateFrameNumbers(info.sheet, { frames: anim.frames }),
+        frameRate: anim.fps, repeat: -1, yoyo: Boolean(anim.yoyo),
+      });
+    }
+  }
+
+  // Puts the sprite/shadow where the pure state says, with the right animation, flip and depth.
+  syncAnimal(animal) {
+    const s = animal.state;
+    const { anim, flipX, timeScale } = animalAnim(s);
+    const visible = s.visible && !this.animalsHidden;
+    const footY = s.y * TILE + ANIMAL_FEET_OFFSET;
+    const sprite = animal.sprite;
+    // In the air (a bird that has taken off) it draws above everything; on the ground it sorts by its feet.
+    sprite.setPosition(s.x * TILE, footY - s.alt).setFlipX(flipX).setVisible(visible)
+      .setDepth(footY + (s.alt > 2 ? 1000 : 0));
+    animal.shadow.setPosition(s.x * TILE, footY - 1).setDepth(footY - 1).setVisible(visible).setAlpha(0.25 * (1 - s.alt / 40));
+    const key = `${animal.def.species}-${anim}`;
+    if (sprite.anims.currentAnim?.key !== key) sprite.anims.play(key, true);
+    sprite.anims.timeScale = timeScale;
+  }
+
+  updateAnimals(time, delta) {
+    if (!this.animals || !this.animals.length) return;
+    const view = this.cameras.main.worldView;
+    const left = view.x - ANIMAL_CULL_MARGIN;
+    const right = view.x + view.width + ANIMAL_CULL_MARGIN;
+    const top = view.y - ANIMAL_CULL_MARGIN;
+    const bottom = view.y + view.height + ANIMAL_CULL_MARGIN;
+    // Her feet, in tile units (the animals' own coordinate space).
+    const player = { x: this.player.x / TILE, y: (this.player.y + PLAYER_FEET_OFFSET) / TILE };
+    const ctx = { now: time, dt: Math.min(delta, 100) / 1000, player, rng: Math.random, isWalkable: this.animalWalkable };
+    for (const animal of this.animals) {
+      const s = animal.state;
+      const px = s.x * TILE;
+      const py = s.y * TILE;
+      const onScreen = px >= left && px <= right && py >= top && py <= bottom;
+      // Off-screen animals sleep, except ones mid-flight or out of sight (so a bird that flew off
+      // always finishes its trip and its "come back" timer keeps running).
+      if (!onScreen && !['gone', 'fly', 'land'].includes(s.state)) continue;
+      animal.state = stepAnimal(s, ctx);
+      this.syncAnimal(animal);
+    }
+  }
+
+  // A small floating heart over a talked-to cat (the same bubble shape as spawnAmbientEmote()).
+  spawnHeartEmote(x, y) {
+    const container = this.add.container(x, y).setDepth(200000).setScale(0.4);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1c2c, 0.85).fillRoundedRect(-12, -10, 24, 20, 4);
+    const heart = this.add.graphics();
+    const rows = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
+    heart.fillStyle(0xff6fb1, 1);
+    rows.forEach((row, ry) => [...row].forEach((c, rx) => { if (c === 'X') heart.fillRect(-7 + rx * 2, -6 + ry * 2, 2, 2); }));
+    container.add([bg, heart]);
+    this.tweens.add({ targets: container, scale: 1, duration: 180, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: container, y: y - 10, duration: 1200, delay: 100 });
+    this.time.delayedCall(1000, () => {
+      this.tweens.add({ targets: container, alpha: 0, duration: 250, onComplete: () => container.destroy() });
+    });
   }
 
   createPickups() {
@@ -628,6 +763,7 @@ class WorldScene extends Phaser.Scene {
     this.checkCutscene();
     this.checkKeyRoomBeats();
     this.updateAmbient(time);
+    this.updateAnimals(time, delta);
     this.syncGameState();
   }
 
@@ -861,6 +997,12 @@ class WorldScene extends Phaser.Scene {
     for (const npc of this.npcs) consider('questNpc', 'npc', npc, npc.def);
     for (const ambient of this.ambientNpcs || []) consider('ambientNpc', 'npc', ambient.sprite, ambient.sprite.def);
     for (const ks of this.keyStations || []) consider('keyStation', 'keyStation', ks, ks.def);
+    // A tame, talkable cat (ADR 0018; lowest priority like an ambient student). Its tile centre is the
+    // target, not its feet-anchored sprite, so the range matches the player's own centre.
+    for (const animal of this.animals || []) {
+      if (!animal.def.talk || !animal.state.visible) continue;
+      consider('animal', 'animal', { x: animal.state.x * TILE, y: animal.state.y * TILE, animalRef: animal }, animal.sprite.def);
+    }
     return pickInteractable(candidates);
   }
 
@@ -868,7 +1010,24 @@ class WorldScene extends Phaser.Scene {
     const found = this.nearestInteractable();
     if (!found) return;
 
-    if (found.kind === 'npc') {
+    // ADR 0018: an ambient student (src/ambient.js) or a talkable cat is not dialog data: the student
+    // stops and turns to her and says an opener + a real campus fact for its role, the cat gives a soft
+    // meow and a heart. Neither is ever story information, and neither writes to GameState.seenDialog.
+    const ambientTalker = found.kind === 'npc' ? found.target.ambient : null;
+    const animalTalker = found.kind === 'animal' ? found.target.animalRef : null;
+    let talk = null; // { name, lines } for the two kinds above
+    if (ambientTalker) {
+      GameState.campusTalk = GameState.campusTalk || newCampusTalkState();
+      talk = campusTalkLines(ambientTalker.def.role, ambientTalker.def.id, GameState.campusTalk);
+      this.beginAmbientTalk(ambientTalker);
+    } else if (animalTalker) {
+      talk = { name: 'Cat', lines: ANIMAL_TALK_LINES };
+      animalTalker.state = { ...animalTalker.state, talking: true };
+      this.syncAnimal(animalTalker);
+      this.spawnHeartEmote(found.target.x, found.target.y - 20);
+    }
+
+    if (found.kind === 'npc' && !ambientTalker) {
       const npc = found.target;
       // Turn the NPC to face the player. FB-0043: a `character` NPC (the recolored pack sprites,
       // `npc.idleFrames === PLAYER_IDLE`) has its own real left *and* right frames now, so it's shown
@@ -886,11 +1045,13 @@ class WorldScene extends Phaser.Scene {
       }
     }
 
-    const picked = pickDialogEntry(found.def, GameState);
+    const picked = talk ? { entry: { id: 'talk', lines: talk.lines }, key: null } : pickDialogEntry(found.def, GameState);
     if (!picked) return; // no dialog data at all -- shouldn't happen for a real NPC/key station
     const { entry, key } = picked;
-    GameState.seenDialog.add(key); // "!" becomes "E" as soon as the line is shown, not after it closes
-    notifyStateChanged(); // src/save.js autosaves soon after (seenDialog is part of the save)
+    if (key) {
+      GameState.seenDialog.add(key); // "!" becomes "E" as soon as the line is shown, not after it closes
+      notifyStateChanged(); // src/save.js autosaves soon after (seenDialog is part of the save)
+    }
 
     // `{name}` in a line is the player's chosen name (src/dialog.js renderLines()) -- both the
     // intro lines and every choice's own follow-up lines, since DialogBox itself doesn't template.
@@ -903,7 +1064,9 @@ class WorldScene extends Phaser.Scene {
     // or, if `choices` is set, shows the picked list and calls back with whichever option the player
     // chose. Either way, only one actions list ever runs: the choice's own, or the entry's own when
     // there was no choice to make.
-    this.scene.get('ui').dialog.open(found.label, lines, (choice) => {
+    this.scene.get('ui').dialog.open(talk ? talk.name : found.label, lines, (choice) => {
+      if (ambientTalker) this.endAmbientTalk(ambientTalker); // she walks on
+      if (animalTalker) animalTalker.state = { ...animalTalker.state, talking: false };
       applyDialogActions((choice || entry).actions, GameState, (result) => {
         // A key station's "take" entry starts with a `minigame` action (src/story.js); the key is
         // only actually given once that mini-game resolves 'won' and the rest of the list finishes
@@ -921,6 +1084,7 @@ class WorldScene extends Phaser.Scene {
     // complete!"; emitting this before the box opened let that check see `isOpen === false` a beat
     // too early and race the conversation instead of actually waiting for it to close.
     if (found.kind === 'npc') this.game.events.emit('npc-talked', found.target.def.id);
+    if (animalTalker) this.game.events.emit('npc-talked', animalTalker.def.id);
   }
 
   // Launches a mini-game (docs/ROADMAP.md M4): pauses 'world' exactly like playCutscene() above

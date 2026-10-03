@@ -89,6 +89,7 @@ const MAPS = {
     // just a through-route to the 3rd, so it opens on the same condition as every other Main Block
     // stairwell rather than being sealed off (docs/STORY.md "the routes to the three key rooms").
     doorLocks: [{ match: 'Main Block Stairs 2 (up)', stages: ['hunting', 'rewarded'] }],
+    ambient: AMBIENT['main-block-2'],
   },
   'main-block-3': {
     name: 'Main Block · 3rd Floor',

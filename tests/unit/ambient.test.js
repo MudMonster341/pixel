@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
-const { AMBIENT, AMBIENT_DEFAULT_LINES, MAPS, gridFromTiled, tiledObjects, isWalkableTile, tileInfo } = loadGameData();
+const { AMBIENT, CAMPUS_ROLES, campusFactsFor, MAPS, gridFromTiled, tiledObjects, isWalkableTile, tileInfo } = loadGameData();
 
 // One decoded map per AMBIENT key, exactly like campus-layout.test.js's own single campus.json load,
 // just for every tiled map that carries ambient content instead of only the campus.
@@ -155,23 +155,131 @@ test('AMBIENT: no idle/chat point or patrol endpoint sits exactly on a key stati
   }
 });
 
-test('AMBIENT_DEFAULT_LINES: a pool of short, neutral lines, no story info leaking through', () => {
-  assert.ok(AMBIENT_DEFAULT_LINES.length >= 4, 'expected a real pool, not just one or two lines');
-  for (const line of AMBIENT_DEFAULT_LINES) {
-    assert.equal(typeof line, 'string');
-    assert.ok(line.length > 0 && line.length <= 60, `line too long for a one-liner: "${line}"`);
-    // None of the hunt's own vocabulary (keys, the volunteer, the box, room names) -- "no story
-    // information" (this task's own brief) -- checked directly rather than trusted.
-    assert.doesNotMatch(line.toLowerCase(), /\bkey\b|volunteer|treasure|physics lab|icvl|room 195|box\b/);
+// ---------- ADR 0018: every ambient student is talkable ----------
+
+test('AMBIENT: every entry has a role with a fact pool (every ambient student can be talked to), and no custom dialog', () => {
+  for (const key of MAP_KEYS) {
+    for (const entry of AMBIENT[key]) {
+      assert.ok(entry.role, `${entry.id}: needs a "role" (src/campus-facts.js CAMPUS_ROLES)`);
+      assert.ok(CAMPUS_ROLES[entry.role], `${entry.id}: unknown role "${entry.role}"`);
+      assert.ok(campusFactsFor(entry.role).length >= 2, `${entry.id}: role "${entry.role}" has no fact pool`);
+      assert.equal(entry.dialog, undefined, `${entry.id}: the old per-entry "dialog" is gone, talk comes from the role (ADR 0018)`);
+    }
   }
 });
 
-test('AMBIENT: any entry with its own custom dialog uses the same {id, lines} shape as every other NPC', () => {
+test('AMBIENT: the old generic AMBIENT_DEFAULT_LINES small-talk pool is gone from the game code', () => {
+  for (const file of ['src/ambient.js', 'src/scenes/world.js']) {
+    assert.doesNotMatch(fs.readFileSync(path.join(ROOT, file), 'utf8'), /AMBIENT_DEFAULT_LINES/, `${file} still uses the retired pool`);
+  }
+});
+
+// A flood fill over walkable tiles from the map's spawn: an ambient student must be somewhere she can actually reach.
+function reachableFromSpawn(map) {
+  const { json, grid, objects } = map;
+  const spawn = objects.find((o) => o.type === 'spawn');
+  const seen = new Uint8Array(json.width * json.height);
+  const stack = [[Math.floor(spawn.x), Math.floor(spawn.y)]];
+  seen[stack[0][1] * json.width + stack[0][0]] = 1;
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= json.width || ny >= json.height || seen[ny * json.width + nx]) continue;
+      if (!isWalkableTile(grid, tileInfo, nx, ny)) continue;
+      seen[ny * json.width + nx] = 1;
+      stack.push([nx, ny]);
+    }
+  }
+  return (x, y) => Boolean(seen[y * json.width + x]);
+}
+
+test('AMBIENT: every stand/waypoint tile is reachable from the map\'s spawn (nobody is stranded in a walled-off yard)', () => {
   for (const key of MAP_KEYS) {
-    for (const entry of AMBIENT[key].filter((e) => e.dialog)) {
-      assert.ok(Array.isArray(entry.dialog) && entry.dialog.length > 0, `${entry.id}: dialog must be a non-empty array`);
-      for (const d of entry.dialog) {
-        assert.ok(Array.isArray(d.lines) && d.lines.length > 0, `${entry.id}: dialog entry needs non-empty lines`);
+    const reachable = reachableFromSpawn(maps[key]);
+    for (const entry of AMBIENT[key]) {
+      for (const p of pointsOf(entry)) assert.ok(reachable(p.x, p.y), `${key}/${entry.id}: (${p.x},${p.y}) can't be reached from the spawn`);
+    }
+  }
+});
+
+test('AMBIENT: the straight line between two neighbouring waypoints is walkable (patrols have no pathfinding)', () => {
+  for (const key of MAP_KEYS) {
+    const { grid } = maps[key];
+    for (const entry of AMBIENT[key].filter((e) => e.kind === 'patrol')) {
+      const w = entry.waypoints;
+      const legs = w.slice(1).map((p, i) => [w[i], p]);
+      if (entry.loop) legs.push([w[w.length - 1], w[0]]);
+      for (const [a, b] of legs) {
+        const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) * 8);
+        for (let i = 0; i <= steps; i++) {
+          const x = Math.floor(a.x + 0.5 + (b.x - a.x) * (i / steps));
+          const y = Math.floor(a.y + 0.5 + (b.y - a.y) * (i / steps));
+          assert.ok(isWalkableTile(grid, tileInfo, x, y), `${key}/${entry.id}: the leg (${a.x},${a.y}) -> (${b.x},${b.y}) crosses a blocked tile at (${x},${y})`);
+        }
+      }
+    }
+  }
+});
+
+// ---------- completeness: everywhere she can roam has people ----------
+
+const inRect = (p, r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
+const anyPoint = (entry, rect) => pointsOf(entry).some((p) => inRect(p, rect));
+
+// The outdoor areas of the campus map (rects in tiles, from the real named areas/buildings in
+// assets/maps/campus.json plus the gate/forecourt/avenue the story walks through), each wanting 2-3 people.
+const CAMPUS_AREAS = {
+  'Gate 2 and the avenue': { x: 215, y: 138, w: 40, h: 40, min: 3 },
+  'Main Block forecourt': { x: 205, y: 128, w: 45, h: 12, min: 3 },
+  'Library front (courtyard)': { x: 224, y: 99, w: 15, h: 10, min: 2 },
+  'Mechanical front': { x: 239, y: 75, w: 10, h: 22, min: 2 },
+  'Boys hostels': { x: 79, y: 57, w: 90, h: 20, min: 3 },
+  'Girls hostels': { x: 222, y: 56, w: 60, h: 20, min: 2 },
+  Courts: { x: 168, y: 59, w: 56, h: 9, min: 2 },
+  'Tennis courts': { x: 86, y: 91, w: 19, h: 19, min: 2 },
+  'Athletics track and infield': { x: 110, y: 82, w: 67, h: 32, min: 2 },
+  'Student parking': { x: 124, y: 112, w: 50, h: 8, min: 2 },
+  'Gate parking': { x: 222, y: 141, w: 46, h: 5, min: 2 },
+  'DIAC Park': { x: 290, y: 104, w: 80, h: 50, min: 3 },
+  'Side Gate': { x: 76, y: 59, w: 6, h: 14, min: 1 },
+};
+
+test('AMBIENT completeness: every outdoor area of the campus has its quota of people', () => {
+  for (const [name, rect] of Object.entries(CAMPUS_AREAS)) {
+    const count = AMBIENT.campus.filter((e) => anyPoint(e, rect)).length;
+    assert.ok(count >= rect.min, `${name}: ${count} ambient student(s), want at least ${rect.min}`);
+  }
+});
+
+test('AMBIENT completeness: every map with ambient life has at least 3 students, every Main Block floor on the story route at least 2', () => {
+  assert.ok(AMBIENT.campus.length >= 3);
+  // The 4 Main Block floors are the story route's interiors.
+  const storyFloors = Object.keys(MAPS).filter((k) => /^main-block-/.test(k));
+  assert.deepEqual([...storyFloors].sort(), ['main-block-1', 'main-block-2', 'main-block-3', 'main-block-g']);
+  for (const key of storyFloors) {
+    assert.ok(MAPS[key].ambient, `${key} has no ambient list`);
+    assert.ok(MAPS[key].ambient.length >= 2, `${key}: only ${MAPS[key].ambient.length} ambient student(s)`);
+    assert.ok(MAPS[key].ambient.length <= 6, `${key}: ${MAPS[key].ambient.length} students is crowded for a corridor`);
+  }
+});
+
+// A camera shows about 20 x 12 tiles (320x180 world px at zoom 3). Performance: never more than ~14 moving
+// sprites on one screen, counting everyone whose area (a patrol's bounding box, or a point) touches it.
+test('AMBIENT performance: no camera-sized window on any map holds more than 14 ambient students', () => {
+  const W = 22;
+  const H = 14;
+  const box = (e) => {
+    const pts = pointsOf(e);
+    return { x0: Math.min(...pts.map((p) => p.x)), x1: Math.max(...pts.map((p) => p.x)), y0: Math.min(...pts.map((p) => p.y)), y1: Math.max(...pts.map((p) => p.y)) };
+  };
+  for (const key of MAP_KEYS) {
+    const boxes = AMBIENT[key].map(box);
+    for (const anchor of boxes) {
+      for (const [wx, wy] of [[anchor.x0, anchor.y0], [anchor.x1 - W + 1, anchor.y1 - H + 1], [anchor.x0, anchor.y1 - H + 1], [anchor.x1 - W + 1, anchor.y0]]) {
+        const inside = boxes.filter((b) => b.x1 >= wx && b.x0 < wx + W && b.y1 >= wy && b.y0 < wy + H).length;
+        assert.ok(inside <= 14, `${key}: ${inside} ambient students within one screen around (${wx},${wy})`);
       }
     }
   }

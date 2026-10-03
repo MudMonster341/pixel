@@ -7,16 +7,21 @@
 // Every coordinate here was checked against the *real* committed map (assets/maps/<key>.json) --
 // decoded with the same gridFromTiled()/isWalkableTile() pair src/maplogic.js already exports, not
 // eyeballed from a screenshot -- so every waypoint and stand/sit spot is a genuinely walkable tile,
-// and none of them sit on a door, stairs, key station or the volunteer's own nook (checked the same
-// way; also covered by tests/unit/ambient.test.js so a future map regen can't silently break this).
+// reachable from the spawn, and none of them sit on a door, stairs, key station or the volunteer's own
+// nook (checked the same way; also covered by tests/unit/ambient.test.js so a future map regen can't
+// silently break this).
 //
 // Shape, one entry per ambient character:
-//   { id, character, kind: 'patrol' | 'idle' | 'chat', dialog? }
+//   { id, character, role, kind: 'patrol' | 'idle' | 'chat' }
+//   role: a key of CAMPUS_ROLES (src/campus-facts.js) -- every ambient student is talkable (ADR 0018):
+//         E makes the student stop and turn to her, and says an opener plus a real campus fact from the
+//         role's pool (campusTalkLines()), then the student walks on. Nothing story-related lives here.
 //   kind: 'patrol'  -- { waypoints: [{x,y}, ...], loop?, speed, pauseMs, facing? }
 //                       `loop: true` cycles through the waypoints in order, wrapping to the first
 //                       (the jogger's own closed lap around the track); otherwise ping-pongs back and
 //                       forth between the first and last, pausing `pauseMs` at each end (a "walking a
-//                       fixed route" pedestrian, not a lap).
+//                       fixed route" pedestrian, not a lap). The straight line between two
+//                       neighbouring waypoints must be walkable (no pathfinding, tests check it).
 //   kind: 'idle'    -- { x, y, facing } -- stationary (a bench, a reception desk, a lab bench --
 //                       there's no seated pose in this pack's own frame data, ADR 0013, so "sitting"
 //                       and "standing/waiting/working" all render the same way: an idle character).
@@ -24,36 +29,25 @@
 //                       (exactly two entries share one) so world.js can show an occasional '...'
 //                       bubble on whichever one's "turn" it is.
 // `character` picks the texture the same way a story NPC's own `character` field already does
-// (src/scenes/world.js createNpcs()): 'npc-<character>'. `dialog`, if given, overrides
-// AMBIENT_DEFAULT_LINES below (src/scenes/world.js createAmbient()) with this entry's own lines --
-// every one of them is short, neutral small talk, never story information (CLAUDE.md "don't invent
-// the story" -- these aren't from docs/STORY.md, they're just campus atmosphere, flagged in this
-// task's own report for the owner same as any other new line).
-
-// The shared fallback pool most ambient NPCs use unless they have their own `dialog` above --
-// deliberately generic ("no story info"), cycled by `AMBIENT[id.hash % pool.length]`-style index in
-// world.js so two NPCs standing near each other don't usually say the exact same thing.
-const AMBIENT_DEFAULT_LINES = [
-  'Busy day on campus!',
-  "Ugh, I'm going to be late for class.",
-  'This heat is no joke today.',
-  "I love it here, honestly.",
-  'Anyone know where the LUG stall is?',
-  'Three more assignments this week...',
-  "Nice weather for once, isn't it?",
-];
+// (src/scenes/world.js createNpcs()): 'npc-<character>'.
+//
+// Coverage (tests/unit/ambient.test.js): every outdoor area she can roam has at least 2-3 people --
+// Gate 2, the avenue, the Main Block forecourt, the Library and Mechanical fronts, the hostels, parking,
+// the courts/track/tennis, the Side Gate and DIAC Park -- and every Main Block floor on the story route
+// has at least 2. Only the ones near the camera are updated each frame (world.js updateAmbient()).
 
 const AMBIENT = {
   campus: [
+    // ---- Gate 2 and the entrance avenue ----
     // Two pedestrians walking a fixed stretch of the entrance avenue, back and forth.
-    { id: 'campus-amb-walk-1', character: 'ambient-a', kind: 'patrol', speed: 60, pauseMs: 1000,
-      waypoints: [{ x: 246, y: 165 }, { x: 233, y: 140 }] },
-    { id: 'campus-amb-walk-2', character: 'ambient-b', kind: 'patrol', speed: 60, pauseMs: 1000,
+    { id: 'campus-amb-walk-1', character: 'ambient-a', role: 'first-year', kind: 'patrol', speed: 60, pauseMs: 1000,
+      waypoints: [{ x: 246, y: 165 }, { x: 241, y: 152 }, { x: 233, y: 140 }] },
+    { id: 'campus-amb-walk-2', character: 'ambient-b', role: 'campus-regular', kind: 'patrol', speed: 60, pauseMs: 1000,
       waypoints: [{ x: 240, y: 150 }, { x: 226, y: 132 }] },
-    { id: 'campus-amb-walk-3', character: 'student-a', kind: 'patrol', speed: 55, pauseMs: 900,
+    { id: 'campus-amb-walk-3', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 55, pauseMs: 900,
       waypoints: [{ x: 232, y: 160 }, { x: 248, y: 165 }] },
     // A closed lap around the Athletics Track (`loop: true`), faster than a walk -- "jogging".
-    { id: 'campus-amb-jog', character: 'ambient-c', kind: 'patrol', speed: 110, pauseMs: 0, loop: true,
+    { id: 'campus-amb-jog', character: 'ambient-c', role: 'sports-player', kind: 'patrol', speed: 110, pauseMs: 0, loop: true,
       waypoints: [{ x: 120, y: 90 }, { x: 165, y: 90 }, { x: 165, y: 108 }, { x: 120, y: 108 }] },
     // 3 sitting on benches along the avenue.
     // x: 229, not 225 -- quality loop, Mini-games/Characters fix round (2026-09-29): 225 sat directly
@@ -61,25 +55,80 @@ const AMBIENT = {
     // a player walking north into it collided with this NPC's body a few tiles out and never reached
     // the door at all (tests/e2e/campus.spec.js "walk from the Gate 2 spawn up to the Main Block
     // entrance"). Shifted clear of that column, still along the same forecourt.
-    { id: 'campus-amb-sit-1', character: 'ambient-d', kind: 'idle', x: 229, y: 135, facing: 'down' },
-    { id: 'campus-amb-sit-2', character: 'ambient-e', kind: 'idle', x: 243, y: 162, facing: 'left' },
-    { id: 'campus-amb-sit-3', character: 'student-b', kind: 'idle', x: 221, y: 137, facing: 'right' },
+    { id: 'campus-amb-sit-1', character: 'ambient-d', role: 'library-regular', kind: 'idle', x: 229, y: 135, facing: 'down' },
+    { id: 'campus-amb-sit-2', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 243, y: 162, facing: 'left' },
+    { id: 'campus-amb-sit-3', character: 'student-b', role: 'ai-student', kind: 'idle', x: 221, y: 137, facing: 'right' },
     // A pair chatting, facing each other.
-    { id: 'campus-amb-chat-1', character: 'ambient-f', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat' },
-    { id: 'campus-amb-chat-2', character: 'ambient-b', kind: 'chat', x: 223, y: 141, facing: 'left', pairId: 'campus-chat' },
+    { id: 'campus-amb-chat-1', character: 'ambient-f', role: 'quiz-club-member', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat' },
+    { id: 'campus-amb-chat-2', character: 'ambient-b', role: 'cultural-club-member', kind: 'chat', x: 223, y: 141, facing: 'left', pairId: 'campus-chat' },
     // By the bus stop, just outside Gate 2.
-    { id: 'campus-amb-busstop', character: 'ambient-c', kind: 'idle', x: 232, y: 160, facing: 'up' },
+    { id: 'campus-amb-busstop', character: 'ambient-c', role: 'senior', kind: 'idle', x: 232, y: 160, facing: 'up' },
+    // Gate parking, east side.
+    { id: 'campus-amb-gatepark', character: 'student-a', role: 'first-year', kind: 'patrol', speed: 50, pauseMs: 1200,
+      waypoints: [{ x: 252, y: 145 }, { x: 264, y: 145 }] },
+
+    // ---- Main Block forecourt ----
+    { id: 'campus-amb-forecourt-1', character: 'ambient-a', role: 'volunteer', kind: 'idle', x: 215, y: 134, facing: 'right' },
+    { id: 'campus-amb-forecourt-2', character: 'student-b', role: 'campus-regular', kind: 'idle', x: 238, y: 136, facing: 'left' },
+
+    // ---- Library front: the courtyard behind the Library Block entrance ----
+    { id: 'campus-amb-lib-1', character: 'ambient-e', role: 'library-regular', kind: 'idle', x: 236, y: 102, facing: 'down' },
+    { id: 'campus-amb-lib-chat-1', character: 'ambient-d', role: 'acm-member', kind: 'chat', x: 227, y: 105, facing: 'right', pairId: 'campus-lib-chat' },
+    { id: 'campus-amb-lib-chat-2', character: 'ambient-f', role: 'first-year', kind: 'chat', x: 228, y: 105, facing: 'left', pairId: 'campus-lib-chat' },
+
+    // ---- Mechanical front: the lawn corridor below the Mechanical Block entrance ----
+    { id: 'campus-amb-mech-1', character: 'ambient-b', role: 'tech-club-member', kind: 'idle', x: 242, y: 78, facing: 'up' },
+    { id: 'campus-amb-mech-2', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 1000,
+      waypoints: [{ x: 241, y: 80 }, { x: 246, y: 92 }] },
+    { id: 'campus-amb-mech-3', character: 'ambient-c', role: 'lug-member', kind: 'idle', x: 246, y: 84, facing: 'left' },
+
+    // ---- Hostels ----
+    // Boys' hostels (A-D): the long path between the two rows of blocks, the lower path, the gap.
+    { id: 'campus-amb-hostel-1', character: 'ambient-d', role: 'hostel-resident', kind: 'idle', x: 101, y: 61, facing: 'down' },
+    { id: 'campus-amb-hostel-2', character: 'ambient-a', role: 'senior', kind: 'patrol', speed: 55, pauseMs: 1000,
+      waypoints: [{ x: 84, y: 61 }, { x: 112, y: 61 }] },
+    { id: 'campus-amb-hostel-3', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 140, y: 66, facing: 'up' },
+    { id: 'campus-amb-hostel-4', character: 'student-b', role: 'acm-member', kind: 'patrol', speed: 55, pauseMs: 900,
+      waypoints: [{ x: 99, y: 74 }, { x: 125, y: 74 }] },
+    // Girls' hostels (G, H).
+    { id: 'campus-amb-girls-1', character: 'ambient-f', role: 'hostel-resident', kind: 'idle', x: 238, y: 66, facing: 'down' },
+    { id: 'campus-amb-girls-2', character: 'ambient-b', role: 'cultural-club-member', kind: 'patrol', speed: 50, pauseMs: 1000,
+      waypoints: [{ x: 226, y: 68 }, { x: 226, y: 72 }] },
+    // The Side Gate.
+    { id: 'campus-amb-sidegate', character: 'ambient-c', role: 'campus-regular', kind: 'idle', x: 80, y: 68, facing: 'right' },
+
+    // ---- Sports: the courts, tennis courts and the track's infield ----
+    { id: 'campus-amb-court-1', character: 'ambient-a', role: 'sports-player', kind: 'idle', x: 190, y: 63, facing: 'down' },
+    { id: 'campus-amb-court-2', character: 'ambient-d', role: 'sports-player', kind: 'idle', x: 211, y: 64, facing: 'left' },
+    { id: 'campus-amb-court-3', character: 'student-a', role: 'quiz-club-member', kind: 'patrol', speed: 55, pauseMs: 900,
+      waypoints: [{ x: 178, y: 61 }, { x: 205, y: 61 }] },
+    { id: 'campus-amb-tennis-1', character: 'ambient-e', role: 'sports-player', kind: 'idle', x: 94, y: 97, facing: 'right' },
+    { id: 'campus-amb-tennis-2', character: 'ambient-f', role: 'tech-club-member', kind: 'patrol', speed: 55, pauseMs: 900,
+      waypoints: [{ x: 89, y: 94 }, { x: 100, y: 94 }] },
+    { id: 'campus-amb-track-1', character: 'ambient-b', role: 'sports-player', kind: 'idle', x: 145, y: 98, facing: 'up' },
+
+    // ---- Student parking ----
+    { id: 'campus-amb-park-1', character: 'student-b', role: 'cs-student', kind: 'idle', x: 150, y: 115, facing: 'down' },
+    { id: 'campus-amb-park-2', character: 'ambient-c', role: 'lug-member', kind: 'patrol', speed: 55, pauseMs: 1000,
+      waypoints: [{ x: 130, y: 116 }, { x: 168, y: 116 }] },
+
+    // ---- DIAC Park (east of the campus wall) ----
+    { id: 'campus-amb-park-diac-1', character: 'ambient-d', role: 'volunteer', kind: 'idle', x: 300, y: 128, facing: 'down' },
+    { id: 'campus-amb-diac-jog', character: 'ambient-a', role: 'sports-player', kind: 'patrol', speed: 90, pauseMs: 0, loop: true,
+      waypoints: [{ x: 305, y: 120 }, { x: 330, y: 120 }, { x: 330, y: 131 }, { x: 305, y: 131 }] },
+    { id: 'campus-amb-diac-chat-1', character: 'ambient-e', role: 'quiz-club-member', kind: 'chat', x: 318, y: 125, facing: 'right', pairId: 'campus-diac-chat' },
+    { id: 'campus-amb-diac-chat-2', character: 'student-a', role: 'lug-member', kind: 'chat', x: 319, y: 125, facing: 'left', pairId: 'campus-diac-chat' },
   ],
 
   'main-block-g': [
     // On the foyer's sofas / waiting near reception (docs/STORY.md "the foyer"): kept well clear of
     // the "LUG Stall" nook (x4-24, y8-10) where the volunteer stands, per this task's own brief.
-    { id: 'mbg-amb-sit-1', character: 'ambient-a', kind: 'idle', x: 6, y: 14, facing: 'down' },
-    { id: 'mbg-amb-sit-2', character: 'ambient-b', kind: 'idle', x: 20, y: 14, facing: 'left' },
+    { id: 'mbg-amb-sit-1', character: 'ambient-a', role: 'first-year', kind: 'idle', x: 6, y: 14, facing: 'down' },
+    { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 20, y: 14, facing: 'left' },
     // Walking between the staircase and the door.
-    { id: 'mbg-amb-walk-1', character: 'student-a', kind: 'patrol', speed: 50, pauseMs: 700,
+    { id: 'mbg-amb-walk-1', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 700,
       waypoints: [{ x: 8, y: 14 }, { x: 8, y: 19 }] },
-    { id: 'mbg-amb-walk-2', character: 'ambient-c', kind: 'patrol', speed: 50, pauseMs: 700,
+    { id: 'mbg-amb-walk-2', character: 'ambient-c', role: 'acm-member', kind: 'patrol', speed: 50, pauseMs: 700,
       waypoints: [{ x: 20, y: 19 }, { x: 14, y: 20 }] },
   ],
 
@@ -92,14 +141,23 @@ const AMBIENT = {
     // tile (16px, one tile) as the key station itself, and nearestInteractable() (src/scenes/world.js)
     // breaks that exact tie in the NPC's favor -- talking there gave this student's own small-talk
     // line instead of ever reaching the ICVL key (tests/e2e/story.spec.js, minigames.spec.js). Shifted
-    // one more tile off so the key station is unambiguously nearer.
-    { id: 'mb1-amb-icvl-1', character: 'ambient-d', kind: 'idle', x: 4, y: 7, facing: 'right' },
-    { id: 'mb1-amb-icvl-2', character: 'ambient-e', kind: 'idle', x: 5, y: 9, facing: 'right' },
+    // one more tile off so the key station is unambiguously nearer. (pickInteractable() now also lets
+    // a story object win near-ties, but the spacing stays as it was.)
+    { id: 'mb1-amb-icvl-1', character: 'ambient-d', role: 'tech-club-member', kind: 'idle', x: 4, y: 7, facing: 'right' },
+    { id: 'mb1-amb-icvl-2', character: 'ambient-e', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right' },
     // 2 in the corridor.
-    { id: 'mb1-amb-corridor-1', character: 'student-b', kind: 'patrol', speed: 50, pauseMs: 800,
+    { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 13, y: 17 }, { x: 25, y: 17 }] },
-    { id: 'mb1-amb-corridor-2', character: 'ambient-f', kind: 'patrol', speed: 50, pauseMs: 800,
+    { id: 'mb1-amb-corridor-2', character: 'ambient-f', role: 'senior', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 8, y: 20 }, { x: 20, y: 20 }] },
+  ],
+
+  // The 2nd floor is a through-route to the 3rd (docs/INTERIORS_PLAN.md): the landing corridor.
+  'main-block-2': [
+    { id: 'mb2-amb-landing-1', character: 'ambient-a', role: 'quiz-club-member', kind: 'idle', x: 10, y: 14, facing: 'down' },
+    { id: 'mb2-amb-landing-2', character: 'student-a', role: 'cultural-club-member', kind: 'patrol', speed: 50, pauseMs: 800,
+      waypoints: [{ x: 7, y: 19 }, { x: 24, y: 19 }] },
+    { id: 'mb2-amb-landing-3', character: 'ambient-e', role: 'volunteer', kind: 'idle', x: 24, y: 14, facing: 'left' },
   ],
 
   'main-block-3': [
@@ -110,6 +168,10 @@ const AMBIENT = {
     // (src/scenes/world.js) breaks that exact tie in the NPC's favor -- talking there gave this
     // student's own small-talk line instead of ever launching the platformer (tests/e2e/story.spec.js,
     // minigames.spec.js). Shifted diagonally off so the key station is unambiguously nearer.
-    { id: 'mb3-amb-bench', character: 'ambient-a', kind: 'idle', x: 4, y: 9, facing: 'up' },
+    { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 4, y: 9, facing: 'up' },
+    // The corridor below the lab and the stairwell landing.
+    { id: 'mb3-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
+      waypoints: [{ x: 14, y: 19 }, { x: 27, y: 19 }] },
+    { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 33, y: 14, facing: 'down' },
   ],
 };

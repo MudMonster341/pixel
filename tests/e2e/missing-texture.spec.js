@@ -44,5 +44,9 @@ test.describe('FB-0044: no __MISSING texture on campus or in the Main Block', ()
     const missingKeys = await page.evaluate(() =>
       characterSheets(MAPS, AMBIENT, SCRIPTS).map((s) => s.key).filter((key) => !game.textures.exists(key)));
     expect(missingKeys).toEqual([]);
+    // ADR 0018: and every animal sheet (derived from src/animals.js the same way).
+    const missingAnimals = await page.evaluate(() =>
+      animalSheets(ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS).map((s) => s.key).filter((key) => !game.textures.exists(key)));
+    expect(missingAnimals).toEqual([]);
   });
 });

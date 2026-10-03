@@ -26,3 +26,21 @@ work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`
 - Follow [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (content is data, the engine is code) and
   [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) for every new asset. Build in the phase order of
   [docs/GAME_PLAN.md](docs/GAME_PLAN.md). Don't invent the story: the owner writes it.
+
+## Knowledge graph (graphify)
+
+A code + docs knowledge graph is built and lives in [graphify-out/](graphify-out/): `graph.json`
+(queryable), `GRAPH_REPORT.md` (god nodes, communities, suggested questions), `graph.html`
+(interactive; open in a browser). Built 2026-10-03: 2,250 nodes, 4,073 edges, 117 communities.
+
+- **Use it before grepping** for "how does X work / what calls Y / what connects A to B":
+  `graphify query "<question>"`, `graphify path "A" "B"`, `graphify explain "X"`. If the `graphify`
+  command isn't on PATH, use the interpreter in `graphify-out/.graphify_python` with `-m graphify`.
+  Skim `GRAPH_REPORT.md` first for the community map.
+- **Scope:** `.graphifyignore` excludes `assets/`, `vendor/` and `node_modules/`. The 95 reference
+  screenshots (docs/research, feedback/screenshots) are not in the graph. Large docs (STYLE_GUIDE, STORY,
+  MEMORY, ERRORS, research) were only skimmed by headings.
+- **Refresh** after big code changes with `/graphify . --update` (AST only for code, cheap). Don't rebuild
+  from scratch unless asked. Treat the graph as a map; verify in the source before editing.
+- Reviewed findings (hub nodes, low-cohesion generator scripts, `ui.js` size) are in
+  [docs/GRAPH_NOTES.md](docs/GRAPH_NOTES.md): none is a bug.

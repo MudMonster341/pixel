@@ -103,7 +103,7 @@ test('locked doors: the Library Block entrance is permanently locked, with a toa
   await holdKey(page, 'w', 800);
   const after = await state(page);
   expect(after.map).toBe('campus'); // never actually transitioned
-  expect(after.toast).toBe('Locked for the event');
+  expect(after.toast).toBe('The Library is closed today.'); // its own doorLocks reason (defect D19)
 });
 
 // ADR 0020 (owner decision: every wing destination is a closed, nameplated door): walking into one says its

@@ -153,7 +153,7 @@ test('FB-0027: a locked door rattles and toasts once per approach, and never war
   await holdKey(page, 'w', 800);
   let s = await state(page);
   expect(s.map).toBe('campus'); // never actually transitioned
-  expect(s.toast).toBe('Locked for the event');
+  expect(s.toast).toBe('The Library is closed today.'); // its own doorLocks reason (defect D19)
 
   // Staying at the door (or approaching again) must not throw, and must still never warp -- the
   // rattle is a one-shot per approach, same throttle as the toast (world.js's own lockedWarned).

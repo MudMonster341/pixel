@@ -570,7 +570,10 @@ function buildCover() {
   // Balloons, three of them, warm colours per docs/STYLE_GUIDE.md's palette.
   const balloons = [
     { x: 70, y: 96, r: 26, hex: C.pink, string: H - 40 },
-    { x: 140, y: 70, r: 22, hex: C.gold, string: H - 40 },
+    // D17 (2026-10-04): the gold balloon used to hang at x 140, and its string ran down through the first letters of
+    // "HAPPY BIRTHDAY," (the title is real text drawn over the middle of this cover, src/scenes/card.js, about local x
+    // 144..256). It now sits beside the red one on the right so the whole middle band is clear (tests/unit/card-cover.test.js).
+    { x: 350, y: 82, r: 22, hex: C.gold, string: H - 40 },
     { x: W - 90, y: 88, r: 24, hex: C.ribbon, string: H - 40 },
   ];
   for (const b of balloons) {

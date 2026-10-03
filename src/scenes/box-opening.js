@@ -19,6 +19,17 @@
 
 const BOX_SKIP_FADE_MS = 300;
 
+// Where the lid sits on the box (defect D04, 2026-10-04: it hung ~55px above the body). Both PNGs come from
+// tools/make-card-art.js; these are facts about their pixels, pinned by tests/unit/box-lid.test.js:
+//   card-box-base.png is 40 rows tall and its body's first opaque row is BOX_BODY_TOP_ROW (rows above it are empty);
+//   card-box-lid.png is 22 rows tall and its last opaque row is 20, so LID_BOTTOM_PAD (1) transparent row sits under it.
+// The lid is drawn with origin (0.5, 1), so its y is the body's top edge plus that padding, at the current scale.
+const BOX_BASE_HEIGHT = 40;
+const BOX_BODY_TOP_ROW = 10;
+const LID_BOTTOM_PAD = 1;
+function boxBodyTopY(baseY, scale) { return baseY - (BOX_BASE_HEIGHT - BOX_BODY_TOP_ROW) * scale; }
+function lidSeatY(baseY, scale) { return boxBodyTopY(baseY, scale) + LID_BOTTOM_PAD * scale; }
+
 class BoxOpeningScene extends Phaser.Scene {
   constructor() {
     super('box-opening');
@@ -97,7 +108,7 @@ class BoxOpeningScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     const scale = 5;
     const baseY = 400; // the box's own bottom edge
-    const mouthY = baseY - 40 * scale + 4; // just inside the box's own top edge (card-box-base.png is 40 tall)
+    const mouthY = boxBodyTopY(baseY, scale) + 4; // just inside the box's own top edge (the body, not the PNG's empty top rows)
 
     this.buildVignette(cx, mouthY);
 
@@ -110,11 +121,13 @@ class BoxOpeningScene extends Phaser.Scene {
     this.glowBloom = this.add.circle(cx, mouthY, 14, 0xfff1a8, 1).setDepth(20).setAlpha(0);
 
     this.box = this.add.image(cx, baseY, 'card-box-base').setOrigin(0.5, 1).setScale(scale).setAlpha(0).setDepth(10);
-    this.lid = this.add.image(cx, mouthY, 'card-box-lid').setOrigin(0.5, 1).setScale(scale).setAlpha(0).setAngle(0).setDepth(11);
+    this.lid = this.add.image(cx, lidSeatY(baseY, scale), 'card-box-lid').setOrigin(0.5, 1).setScale(scale).setAlpha(0).setAngle(0).setDepth(11);
 
     // Beat 1: "the box appears in front of her" -- a little bounce-in, not an instant pop.
     this.tweens.add({
       targets: [this.box, this.lid], alpha: 1, scale: { from: scale * 0.75, to: scale }, duration: 420, ease: 'Back.easeOut',
+      // the lid and box scale about different anchors, so keep the lid seated on the body all through the bounce
+      onUpdate: () => this.lid.setY(lidSeatY(baseY, this.box.scaleY)),
       onComplete: () => this.time.delayedCall(260, () => this.openLid()),
     });
   }

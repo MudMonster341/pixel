@@ -87,11 +87,18 @@ class FlappyScene extends MinigameBaseScene {
     this.vy = 0;
     this.flying = false;
     this.hoverPrompt.setVisible(true);
-    this.bird.setPosition(FL_BIRD_X, GAME_HEIGHT / 2).setRotation(0).setScale(HERO_SCALE, HERO_SCALE);
+    this.bird.setVisible(true).setPosition(FL_BIRD_X, GAME_HEIGHT / 2).setRotation(0).setScale(HERO_SCALE, HERO_SCALE);
     for (const pipe of this.pipes) this.destroyRack(pipe);
     this.pipes = [];
     this.nextPipeX = GAME_WIDTH + 80;
     this.spawnPipesUpTo(GAME_WIDTH + 700);
+  }
+
+  // D08 (2026-10-04): the in-play "PRESS SPACE TO FLAP" hint and the bird used to stay visible behind the game-over and
+  // win cards and bleed through their dim backdrop. Both are hidden while a card is up; startAttempt() shows them again.
+  onPanelShown() {
+    this.hoverPrompt.setVisible(false);
+    this.bird.setVisible(false);
   }
 
   flap() {

@@ -466,17 +466,51 @@ const FURNISHERS = {
     put(ix1 - 1, iy0, 'plant');
     put(Math.round((ix0 + ix1) / 2), iy1, 'intNoticeboard');
   },
+  // The Main Block 2nd-floor landing (the only `lounge`). 2026-10-04 (defect sweep D06): it was 85% bare floor on the
+  // route to the Physics Lab, so it is now a furnished student lounge laid out in three bands inside the 26 x 8
+  // interior (local lx 0..25, ly 0..7): wall-side props along the top row (benches, a vending machine, a water cooler,
+  // plants, a bin), conversation sets (sofa-table-sofa or chair-table-chair) two rows below, a clear 2-wide lane
+  // down the middle (ly 3..4: the stairwell door and the spawn are on it), a lower row of sets, and wall-side props
+  // along the bottom row. Row ly 6 stays free for the ambient student's patrol. Everything is existing tiles; the
+  // density/bare-floor limits are in tests/unit/completeness.test.js. Posters and the two notice boards are mounted on
+  // the front wall. All placement is relative to the room's own interior, so it follows the rect if it ever moves.
   lounge: (put, ix0, iy0, ix1, iy1, ctx) => {
-    put(ix0 + 1, iy0 + 1, 'intSofa');
-    put(ix1 - 1, iy0 + 1, 'intSofa');
-    put(ix0 + 1, iy1 - 1, 'plant');
-    // FB-0031 (the 2nd floor's own "transit corridor/landing... a lounge corner, notice boards"):
-    // a couple of notice boards along the room's own front wall, not just the lone corner sofa.
-    if (ctx && ctx.floor) {
-      const r = ctx.floor.get(ctx.id);
-      ctx.floor.placeStructure(Math.round((r.x0 + r.x1) / 2) - 3, r.y0, 'intNoticeboard');
-      ctx.floor.placeStructure(Math.round((r.x0 + r.x1) / 2) + 3, r.y0, 'intNoticeboard');
-    }
+    if (!ctx || !ctx.floor) return;
+    const { floor, id } = ctx;
+    const r = floor.get(id);
+    const ox = r.x0 + 1;
+    const oy = r.y0 + 1;
+    const S = (lx, ly, name) => floor.placeStructure(ox + lx, oy + ly, name);
+    const potted = (lx, ly) => { S(lx, ly, 'intPottedPlant'); floor.depthGroupRect(ox + lx, oy + ly, ox + lx, oy + ly); };
+    // wall-side props, top row
+    potted(1, 0);
+    S(3, 0, 'intBench'); S(4, 0, 'intBench');
+    S(7, 0, 'intVendingMachine'); S(8, 0, 'intWaterCooler');
+    S(12, 0, 'intBench'); S(13, 0, 'intBench');
+    S(17, 0, 'intBin'); potted(18, 0);
+    S(21, 0, 'intBench'); S(22, 0, 'intBench');
+    potted(24, 0);
+    // upper conversation sets
+    S(2, 2, 'intSofaRed'); S(3, 2, 'table'); S(4, 2, 'intSofaBlue');
+    S(10, 2, 'intChair'); S(11, 2, 'table'); S(12, 2, 'intChair');
+    S(18, 2, 'intSofaBlue'); S(19, 2, 'table'); S(20, 2, 'intSofaRed');
+    // lower conversation sets
+    S(5, 5, 'intBench'); S(6, 5, 'intBench');
+    S(10, 5, 'intChair'); S(11, 5, 'table'); S(12, 5, 'intChair');
+    S(17, 5, 'intSofaRed'); S(18, 5, 'table'); S(19, 5, 'intSofaBlue');
+    S(23, 5, 'intVendingMachine');
+    // wall-side props, bottom row
+    potted(1, 7);
+    S(4, 7, 'intBin');
+    S(8, 7, 'intBench'); S(9, 7, 'intBench');
+    potted(14, 7);
+    S(20, 7, 'intBench'); S(21, 7, 'intBench');
+    potted(24, 7);
+    // wall-mounted: two posters between the two notice boards and one over the east end
+    const midX = Math.round((r.x0 + r.x1) / 2);
+    for (const x of [midX - 8, midX, midX + 8]) floor.placeStructure(x, r.y0, 'intWallPoster');
+    floor.placeStructure(midX - 3, r.y0, 'intNoticeboard');
+    floor.placeStructure(midX + 3, r.y0, 'intNoticeboard');
   },
   // The Main Block reception foyer (map `main-block-g`), rebuilt for ADR 0020 to follow the official 3D virtual
   // tour (docs/research/tour-ground-floor.md) instead of the owner's older photo. Read the plan from the

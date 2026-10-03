@@ -363,7 +363,9 @@ class UIScene extends Phaser.Scene {
 
   update(time, delta) {
     this.dialog.update(time, delta);
-    this.hotbar.setVisible(!this.dialog.isOpen);
+    // D16 (defect sweep 2026-10-04): the hotbar also hides while the pause menu / Controls panel is open (their panel is
+    // translucent and the slots used to show through and over its bottom edge); it comes back when the pause menu closes.
+    this.hotbar.setVisible(hotbarShouldShow({ dialogOpen: this.dialog.isOpen, pauseOpen: this.pause.visible }));
     if (this.fullMap.visible) this.fullMap.update(time);
     // Quality-loop category 4 run 1, bug 1: a hint queued (or already showing) while a dialog opens or
     // a script starts holds/hides itself here every frame -- see HintBanner.tick() below.
@@ -643,20 +645,20 @@ class FullMap {
     // Biggest/most important first, then a simple greedy declutter: skip a label whose position
     // would land right on top of one already placed (real buildings can sit close together).
     this.labels.removeAll(true);
-    const totalArea = cols * rows;
-    const isPlaceholderName = (name) => /^Building \d+$/.test(name);
-    const isInfrastructureArea = (o) => o.type === 'area' && (o.props?.kind === 'road' || o.props?.kind === 'roundabout' || /^Gate Parking \(/.test(o.name));
-    const named = (world.mapObjects || [])
-      .filter((o) => ['area', 'building'].includes(o.type) && o.name && !isPlaceholderName(o.name) && !isInfrastructureArea(o) && o.width * o.height < totalArea * 0.3)
-      .sort((a, b) => b.width * b.height - a.width * a.height);
-    const placed = [];
-    const MIN_GAP = 26; // px: bigger than one label's height, so crowded clusters thin out to a few names
-    for (const o of named) {
-      const lx = this.offsetX + (o.x + o.width / 2) * this.scale;
-      const ly = this.offsetY + (o.y + o.height / 2) * this.scale;
-      if (placed.some((p) => Math.abs(p.x - lx) < MIN_GAP && Math.abs(p.y - ly) < MIN_GAP)) continue;
-      placed.push({ x: lx, y: ly });
-      this.labels.add(uiText(this.scene, lx, ly, o.name, 8, COLORS.text).setOrigin(0.5).setStroke('#1a1c2c', 3));
+    // D01 (2026-10-04): the candidates and the layout come from maplogic.js (fullMapLabelCandidates / placeMapLabels, unit
+    // tested): story-relevant names first, every label clamped inside the map image (and clear of the title and the close
+    // hint), and a label that would overprint one already placed is skipped.
+    const frame = {
+      x0: Math.max(8, this.offsetX),
+      y0: Math.max(40, this.offsetY),
+      x1: Math.min(GAME_WIDTH - 8, this.offsetX + cols * this.scale),
+      y1: Math.min(GAME_HEIGHT - 34, this.offsetY + rows * this.scale),
+    };
+    const candidates = fullMapLabelCandidates(world.mapObjects, cols, rows).map((c) => ({
+      ...c, px: this.offsetX + c.x * this.scale, py: this.offsetY + c.y * this.scale,
+    }));
+    for (const label of placeMapLabels(candidates, frame)) {
+      this.labels.add(uiText(this.scene, label.x, label.y, label.text, 8, COLORS.text).setOrigin(0.5).setStroke('#1a1c2c', 3));
     }
 
     this.parts.forEach((part) => part.setVisible(true));
@@ -1461,7 +1463,10 @@ class HintBanner {
   // Dialog box on screen, or a script/warp-fade holding input -- the same two conditions the bug
   // report named ("never while a dialog is open or a script is running").
   blocked() {
-    return this.scene.dialog.isOpen || !this.scene.worldHasControl();
+    // D16: also while the pause menu (and its Controls page) is up -- a hint drawn then showed through the translucent
+    // panel ("WASD / ARROWS TO MOVE" under the ESC row). tick() hides it at once and puts it back in the queue.
+    const pauseOpen = Boolean(this.scene.pause && this.scene.pause.visible);
+    return this.scene.dialog.isOpen || !this.scene.worldHasControl() || pauseOpen;
   }
 
   // Called for every hint id, every time it could apply (world.js doesn't bother checking "have I
@@ -1634,11 +1639,13 @@ class QuestTracker {
 
     const { x, y, w, h } = this.pillBox;
     this.panel = makePanel(scene, x, y, w, h);
-    this.pillText = uiText(scene, x + 14, y + h / 2, '', 8, COLORS.text).setOrigin(0, 0.5);
+    // D15: a "Keys n/3" line over the whole objective, wrapped (maplogic.js trackerPillText()); the pill's height follows it.
+    this.pillKeys = uiText(scene, x + TRACKER_PILL.pad, y + 10, '', TRACKER_PILL.fontSize, COLORS.done).setOrigin(0, 0);
+    this.pillText = uiText(scene, x + TRACKER_PILL.pad, y + 10, '', TRACKER_PILL.fontSize, COLORS.text).setOrigin(0, 0);
     this.title = uiText(scene, x + 14, y + 16, 'LUG TREASURE HUNT', 8, COLORS.highlight).setVisible(false);
     this.objective = uiText(scene, x + 14, y + 34, '', 8).setWordWrapWidth(this.expandedBox.w - 28, true).setVisible(false);
     this.keysText = uiText(scene, x + 14, y + 34, '', 8, COLORS.done).setVisible(false);
-    this.parts = [this.panel, this.pillText, this.title, this.objective, this.keysText];
+    this.parts = [this.panel, this.pillKeys, this.pillText, this.title, this.objective, this.keysText];
     this.refresh();
   }
 
@@ -1646,9 +1653,18 @@ class QuestTracker {
     const text = questObjectiveText(GameState.quest);
     const keysHeld = Object.values(GameState.quest.keys).filter(Boolean).length;
 
-    // The pill's own fixed-width line (GAME_FEEL.md rule 1 doesn't apply here -- see fitTextInWidth's
-    // own comment -- the whole point of a pill is staying one compact size, not growing to fit).
-    fitTextInWidth(this.pillText, `Keys ${keysHeld}/3 · ${text}`, this.pillBox.w - 28, 6, 8);
+    // The pill: "Keys n/3", then the whole objective on up to two lines (maplogic.js trackerPillText(); the line breaks are
+    // computed for the monospace HUD font, so nothing is shrunk or cut with an ellipsis any more -- defect D15). The panel
+    // is as tall as that text needs, never more than HUD_TRACKER.collapsedH's worst case.
+    const pill = trackerPillText(GameState.quest);
+    const box = this.pillBox;
+    this.pillKeys.setText(pill.keys).setPosition(box.x + TRACKER_PILL.pad, box.y + 10);
+    this.pillText.setText(pill.lines.join('\n'));
+    // Safety net only (a font that is not exactly monospace): shrink, never truncate, if a line still overflows.
+    fitTextInWidth(this.pillText, pill.lines.join('\n'), box.w - 2 * TRACKER_PILL.pad, 5, TRACKER_PILL.fontSize);
+    this.pillText.setPosition(box.x + TRACKER_PILL.pad, box.y + 10 + this.pillKeys.height + 4);
+    box.h = Math.ceil(10 + this.pillKeys.height + 4 + this.pillText.height + 10);
+    if (!this.expanded) this.panel.setPanelSize(box.w, box.h);
 
     this.objective.setText(text);
     const keysY = this.expandedBox.y + 34 + this.objective.height + 8;
@@ -1667,6 +1683,7 @@ class QuestTracker {
     this.expanded = true;
     this.panel.setPosition(this.expandedBox.x, this.expandedBox.y);
     this.panel.setPanelSize(this.expandedBox.w, this.expandedBox.h);
+    this.pillKeys.setVisible(false);
     this.pillText.setVisible(false);
     this.title.setVisible(true);
     this.objective.setVisible(true);
@@ -1680,6 +1697,7 @@ class QuestTracker {
     this.collapseTimer = null;
     this.panel.setPosition(this.pillBox.x, this.pillBox.y);
     this.panel.setPanelSize(this.pillBox.w, this.pillBox.h);
+    this.pillKeys.setVisible(true);
     this.pillText.setVisible(true);
     this.title.setVisible(false);
     this.objective.setVisible(false);

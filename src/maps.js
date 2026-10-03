@@ -4,6 +4,10 @@
 
 const START_MAP = 'campus';
 
+// The line every Main Block "(up)" stairs says while the hunt has not been given (stage 'arrival'). They open for good
+// once the LUG volunteer has set the task (stages hunting/rewarded), so this is the only lock state.
+const STAIRS_ROPED_OFF = 'The stairs are roped off. Talk to the LUG volunteer first.';
+
 // Multi-tile buildings, stamped onto a map at a position (rows of tile names).
 const STRUCTURES = {
   house: [
@@ -26,8 +30,8 @@ const MAPS = {
     // src/maplogic.js isDoorLocked()). The Main Block's own entrance is never in this list: that one
     // stays open from the very start, it's the story's hub.
     doorLocks: [
-      { match: 'Library Block entrance' },
-      { match: 'Mechanical Block entrance' },
+      { match: 'Library Block entrance', reason: 'The Library is closed today.' },
+      { match: 'Mechanical Block entrance', reason: 'The Mechanical Block is closed today.' },
     ],
     // Quality loop, Characters run 1 (2026-09-29): ambient campus life (src/ambient.js,
     // src/scenes/world.js createAmbient()) -- students walking, jogging, sitting, chatting.
@@ -54,7 +58,7 @@ const MAPS = {
     // "Rules for the world": "the key rooms only open once the volunteer has given the task") --
     // 'rewarded' stays listed too so backtracking after the reward never re-locks the stairs.
     doorLocks: [
-      { match: 'Main Block Stairs G (up)', stages: ['hunting', 'rewarded'] },
+      { match: 'Main Block Stairs G (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF },
       // ADR 0020 (owner decision: every wing destination is a closed door): each wall door of the foyer and the
       // two wings, matched by its Tiled object name (tools/interiors/plans.js, FURNISHERS.foyer). No `stages`, so
       // each stays shut for the whole game; `reason` is the line the toast says when she walks into it
@@ -90,7 +94,7 @@ const MAPS = {
     name: 'Main Block · 1st Floor',
     tiled: 'main-block-1',
     indoors: true,
-    doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'] }],
+    doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF }],
     keyStations: [
       // Coordinates sit exactly on a real furniture tile in each room (checked against the
       // generated map, docs/INTERIORS_PLAN.md): ICVL's is a computer bench, Room 195's is the
@@ -109,7 +113,7 @@ const MAPS = {
     // No key here (the Physics Lab moved to the 3rd floor, docs/INTERIORS_PLAN.md) -- this floor is
     // just a through-route to the 3rd, so it opens on the same condition as every other Main Block
     // stairwell rather than being sealed off (docs/STORY.md "the routes to the three key rooms").
-    doorLocks: [{ match: 'Main Block Stairs 2 (up)', stages: ['hunting', 'rewarded'] }],
+    doorLocks: [{ match: 'Main Block Stairs 2 (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF }],
     ambient: AMBIENT['main-block-2'],
   },
   'main-block-3': {

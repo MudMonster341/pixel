@@ -226,7 +226,7 @@ class WorldScene extends Phaser.Scene {
         .map((layer) => this.map.createLayer(layer.name, tileset, 0, 0).setCollision(solidGids));
       const overheadDef = tileLayers.find((layer) => layer.name === 'overhead');
       if (overheadDef) {
-        this.overheadLayer = this.map.createLayer(overheadDef.name, tileset, 0, 0).setDepth(OVERHEAD_DEPTH);
+        this.overheadLayer = this.map.createLayer(overheadDef.name, tileset, 0, 0).setDepth(OVERHEAD_DEPTH).setAlpha(overheadAlpha(this.def)); // D10: see-through indoors
       }
       this.tileData = gridFromTiled(json);
       this.mapObjects = tiledObjects(json);

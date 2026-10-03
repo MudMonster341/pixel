@@ -23,7 +23,10 @@ function stairwell(floor, name, { up, down } = {}) {
   floor.addRect('stairwell', { name, type: 'stairwell', wallKit: 'roomBuilder', ...MAIN_STAIRWELL });
   floor.liftFeature('stairwell', MAIN_STAIRWELL.x0 + 1, MAIN_STAIRWELL.y1 - 1);
   if (up) floor.stairsObject('stairwell', { name: `${name} (up)`, to: up.to, toId: up.toId, facing: 'left', dir: 'up', offset: [-2, 0] });
-  if (down) floor.stairsObject('stairwell', { name: `${name} (down)`, to: down.to, toId: down.toId, facing: 'right', dir: 'down', offset: [2, 0] });
+  // The "(down)" flight sits at x 36, one tile from the stairwell's east wall (x 37). `facing` is the direction the player
+  // faces on ARRIVAL and the arrival tile is one step that way (world.js resolveSpawnAt), so 'right' landed her inside the
+  // wall (D07, 2026-10-04). 'left' puts her on the flight's own tile (35, 17), facing away from the wall.
+  if (down) floor.stairsObject('stairwell', { name: `${name} (down)`, to: down.to, toId: down.toId, facing: 'left', dir: 'down', offset: [2, 0] });
 }
 
 // Quality loop (docs/quality/scorecard.md, Interior art run 1, "corridors are bare"): a corridor

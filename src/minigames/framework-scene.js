@@ -16,6 +16,15 @@
 
 const MG_FADE_MS = 250;
 
+// Pins UI objects to the screen instead of the world (defects D02/D03, 2026-10-04): the platformer's main camera
+// scrolls to follow the hero, so the HUD, the cards, the dim overlay and the win flash were drawn in world space and
+// slid off-screen with it. scrollFactor 0 keeps them where they are drawn. Harmless in Tetris and Flappy, whose
+// camera never moves. Returns its argument so it can wrap an expression.
+function pinToScreen(parts) {
+  (Array.isArray(parts) ? parts : [parts]).forEach((part) => part.setScrollFactor(0));
+  return parts;
+}
+
 class MinigameBaseScene extends Phaser.Scene {
   init(data) {
     this.gameId = data.id;
@@ -52,7 +61,7 @@ class MinigameBaseScene extends Phaser.Scene {
     const y = 12;
     const panel = makePanel(this, x, y, w, h).setDepth(90);
     const text = uiText(this, GAME_WIDTH / 2, y + h / 2, '', 12, COLORS.highlight).setOrigin(0.5).setDepth(91);
-    const parts = [panel, text];
+    const parts = pinToScreen([panel, text]);
     parts.forEach((part) => part.setVisible(false));
     return { parts, text };
   }
@@ -80,6 +89,7 @@ class MinigameBaseScene extends Phaser.Scene {
       const y = GAME_HEIGHT - 74;
       const panel = makePanel(this, x, y, w, h).setDepth(95).setAlpha(0);
       const label = uiText(this, GAME_WIDTH / 2, y + h / 2, '', 10, COLORS.text).setOrigin(0.5).setDepth(96).setAlpha(0);
+      pinToScreen([panel, label]);
       this.message = { panel, label };
     }
     const m = this.message;
@@ -135,6 +145,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState !== 'playing' && this.mgState !== 'gameover') return;
     this.mgState = 'win';
     this.setHudVisible(false);
+    this.onPanelShown();
     AudioManager.play('minigameWin');
     this.flashScreen(); // juice: a brief, subtle win flash, right before the win card eases in
     recordAttempt(GameState, this.gameId, skipped ? 'skipped' : 'won', this.score);
@@ -145,7 +156,7 @@ class MinigameBaseScene extends Phaser.Scene {
   // subtle") -- one plain rect, alpha down to 0 over 220ms, well under GAME_FEEL.md's "nothing flashes
   // faster than 3 times a second" (this is a single one-shot pulse, not a repeating flash at all).
   flashScreen() {
-    const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0.45).setOrigin(0, 0).setDepth(300);
+    const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0.45).setOrigin(0, 0).setDepth(300).setScrollFactor(0);
     this.tweens.add({ targets: flash, alpha: 0, duration: 220, ease: 'Cubic.easeOut', onComplete: () => flash.destroy() });
   }
 
@@ -153,6 +164,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState !== 'playing') return;
     this.mgState = 'gameover';
     this.setHudVisible(false);
+    this.onPanelShown();
     AudioManager.play('minigameLose');
     // A small screen shake (coordinator brief: "small") -- felt, not jarring; the card fades in right
     // on top of it a moment later.
@@ -198,9 +210,12 @@ class MinigameBaseScene extends Phaser.Scene {
   // startAttempt(): (re)set the game to its starting position -- called at the start of every
   //   attempt, including every retry, so it must fully reset anything buildScene() doesn't recreate.
   // playUpdate(time, delta): per-frame gameplay; only ever called while mgState === 'playing'.
+  // onPanelShown(): a game-over or win card is about to appear. A game hides whatever in-play furniture would bleed
+  //   through the dim backdrop (Flappy's "press space" prompt and bird, defect D08); startAttempt() brings it back.
   buildScene() {}
   startAttempt() {}
   playUpdate() {}
+  onPanelShown() {}
 }
 
 // ---------- the shared card: intro / game-over / win, all one small keyboard-driven menu ----------
@@ -250,8 +265,8 @@ class MinigameCard {
     this.hide();
     const scene = this.scene;
     const w = 640;
-    const lineH = 22;
-    const headerH = 56;
+    const lineH = MG_CARD_LINE_H;
+    const headerH = MG_CARD_HEADER_H;
     const wrapWidth = w - 100;
 
     // Wrap each paragraph to the panel's own width *before* measuring the panel's height (the same
@@ -303,7 +318,7 @@ class MinigameCard {
     const footer = uiText(scene, x + w / 2, y + h - footerH / 2, 'ENTER TO CHOOSE -- ESC TO QUIT', 8, COLORS.dim)
       .setOrigin(0.5).setDepth(202);
 
-    this.parts = [dim, panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer];
+    this.parts = pinToScreen([dim, panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer]);
     this.refresh();
 
     // Eased card transition (docs/GAME_FEEL.md "nothing is a flat instant cut"): everything fades in
@@ -374,14 +389,14 @@ class MinigameCard {
   showWin(def, skipped, onContinue) {
     this.show({
       title: skipped ? 'KEY GIFTED!' : 'YOU GOT IT!',
-      // Two blank lines reserve a clear gap under the title for the key icon flourish this.show()
-      // leaves room for (added after show() below, once the panel's real box (x/y/w) is known) --
-      // tall enough (2 * lineH = 44px) that the bounced-in icon (48px, a 16px frame at 3x scale)
-      // never overlaps the message line under it.
+      // MG_WIN_BLANK_LINES blank lines reserve a clear gap under the title for the key icon flourish this.show()
+      // leaves room for (added after show() below, once the panel's real box (x/y/w) is known): the icon's position
+      // and the message row come from winCardLayout() (src/minigames/framework-data.js), whose test checks the icon
+      // never overlaps the message line under it (defect D09).
       // `def.name` already reads as a challenge ("Physics Lab Trial", "ICVL Server Dash", "Room 195
       // Stack-Off") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
       // ("You beat the Physics Lab Trial trial!").
-      paragraphs: ['', '', skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
+      paragraphs: [...Array(MG_WIN_BLANK_LINES).fill(''), skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
       items: [{ label: 'CONTINUE (ENTER)', onSelect: onContinue }],
     });
     this.addWinKeyIcon(def);
@@ -395,10 +410,10 @@ class MinigameCard {
     if (!def.item || !ITEMS[def.item]) return;
     const scene = this.scene;
     const cx = GAME_WIDTH / 2;
-    const cy = this.box.y + 78; // centered in the two-blank-line gap show() reserved, above the message
+    const cy = winCardLayout(this.box.y).iconCenterY; // centered in the blank-line gap show() reserved, above the message
     const shadow = scene.add.ellipse(cx, cy + 14, 26, 8, 0x000000, 0.3).setDepth(202).setAlpha(0);
     const icon = scene.add.image(cx, cy, 'items', ITEMS[def.item].frame).setScale(3).setDepth(203).setAlpha(0);
-    this.parts.push(shadow, icon);
+    this.parts.push(...pinToScreen([shadow, icon]));
     scene.tweens.add({ targets: shadow, alpha: 1, duration: 200, delay: 120 });
     scene.tweens.add({
       targets: icon, alpha: 1, scale: { from: 0.4, to: 3 }, y: { from: cy - 18, to: cy },

@@ -167,6 +167,11 @@ const AMBIENT = {
     { id: 'mb2-amb-landing-2', character: 'student-a', role: 'cultural-club-member', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 7, y: 19 }, { x: 24, y: 19 }] },
     { id: 'mb2-amb-landing-3', character: 'ambient-e', role: 'volunteer', kind: 'idle', x: 24, y: 14, facing: 'left' },
+    // 2026-10-04 (defect sweep D06): the landing is now a furnished lounge, so a chatting pair by the upper seating
+    // sets and one student at the vending machine make it feel lived in. Row 14 and the lower right are open floor.
+    { id: 'mb2-amb-landing-chat-1', character: 'ambient-b', role: 'quiz-club-member', kind: 'chat', x: 15, y: 14, facing: 'right', pairId: 'mb2-landing-chat' },
+    { id: 'mb2-amb-landing-chat-2', character: 'ambient-f', role: 'cultural-club-member', kind: 'chat', x: 16, y: 14, facing: 'left', pairId: 'mb2-landing-chat' },
+    { id: 'mb2-amb-landing-vending', character: 'ambient-d', role: 'first-year', kind: 'idle', x: 26, y: 18, facing: 'left' },
   ],
 
   'main-block-3': [

@@ -378,10 +378,16 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 // the new foyer tiles rewrites that one line in every map, upper floors included. Layers, objects,
 // properties and ids must not move. If the upper floors are ever deliberately rebuilt (the owner's feedback,
 // a later ADR), update these together with that change.
+// 2026-10-04 (defect sweep D07 + D06), a deliberate, justified change: all three hashes were re-pinned.
+//   - main-block-1/2/3: the "(down)" stairs objects now say `facing: left` instead of `right`, so arriving by the stairs
+//     below lands on the flight's own walkable tile instead of inside the stairwell's east wall (tools/interiors/plans.js
+//     stairwell(); the arrival rule is in tests/unit/completeness.test.js and tests/unit/main-block-stairs.test.js).
+//   - main-block-2: the landing is furnished (FURNISHERS.lounge, defect D06).
+// Nothing else on the upper floors moved: the old hashes are in git history (16c79daa..., 9f2e13a8..., 5df58a8e...).
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': '16c79daa027588213a6dbee8460dbbdb20a3175578d079027645cdb6ed8b70ef',
-  'main-block-2': '9f2e13a876acae203352ba792038f8cc8ddf0c8c934d4c6117d7a6c477a9106f',
-  'main-block-3': '5df58a8eca823ac9982d579cae1fa9765bae89b6e9f64ce48c1665fa03e40627',
+  'main-block-1': '332bfaa6647ddcaafbff45202fc0fa9ff7c526c662d610c3274b42e39b5e57fd',
+  'main-block-2': 'b5db0bf7980438d0c8f5a01c1c454dc52c56adb0f4fa61bf61138d4a57be0b8c',
+  'main-block-3': '2a9cadb7b2fedffd72b62650cc03f70b3da129b80a60b8117e390096f842719d',
 };
 for (const [key, hash] of Object.entries(UPPER_FLOOR_CONTENT_HASHES)) {
   test(`ADR 0020: ${key} has exactly its pre-rebuild layers, objects and properties (only the tileset size header may change)`, () => {

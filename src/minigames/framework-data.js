@@ -107,3 +107,28 @@ function resetMinigameProgress(state, id) {
   if (!state.minigames) state.minigames = {};
   state.minigames[id] = freshMinigameProgress();
 }
+
+// ---------- the win card's layout numbers (pure, so a unit test can check the spacing) ----------
+// src/minigames/framework-scene.js MinigameCard.show() lays a card out in rows: a title header, then one text row per
+// paragraph line, `MG_CARD_LINE_H` apart, the first one `MG_CARD_HEADER_H` below the panel's top (each row's CENTRE).
+// The win card puts the key icon in the blank rows above its message. Defect D09 (2026-10-04): with only two blank rows
+// the 48 px icon (a 16 px frame at 3x) reached 24 px below its centre and covered the first line of the message
+// ("IC.L" for the ICVL key). Three blank rows leave a clear gap, for all three mini-games.
+const MG_CARD_LINE_H = 22;
+const MG_CARD_HEADER_H = 56;
+const MG_WIN_BLANK_LINES = 3;
+const MG_WIN_ICON_SIZE = 48;
+const MG_CARD_TEXT_HALF_HEIGHT = 8; // a 12 px line of text reaches about this far above/below its row centre
+
+// Where the key icon sits and where the message row is, relative to the panel's top edge `boxY`.
+function winCardLayout(boxY) {
+  const iconCenterY = boxY + MG_CARD_HEADER_H + MG_CARD_LINE_H;
+  const messageCenterY = boxY + MG_CARD_HEADER_H + MG_WIN_BLANK_LINES * MG_CARD_LINE_H;
+  return {
+    iconCenterY,
+    iconTop: iconCenterY - MG_WIN_ICON_SIZE / 2,
+    iconBottom: iconCenterY + MG_WIN_ICON_SIZE / 2,
+    messageCenterY,
+    messageTop: messageCenterY - MG_CARD_TEXT_HALF_HEIGHT,
+  };
+}

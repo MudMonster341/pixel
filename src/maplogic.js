@@ -239,6 +239,97 @@ function parseOpenTiles(value) {
   return names.length ? names : null;
 }
 
+// How opaque a map's `overhead` tile layer is drawn (src/scenes/world.js). Outdoors it is the tree canopies (ADR 0008) and
+// stays solid. Indoors it is the foyer's gold chandelier, which hid the player's head as she crossed the hall (defect D10,
+// 2026-10-04), so it is drawn see-through: she stays visible and the ceiling piece still reads. Pure, so it is unit-tested.
+const INDOOR_OVERHEAD_ALPHA = 0.45;
+function overheadAlpha(def) {
+  return def && def.indoors ? INDOOR_OVERHEAD_ALPHA : 1;
+}
+
+// ---------- full-screen map labels (defect D01, 2026-10-04) ----------
+// The M-key map used to drop a label at the centre of every named area, spaced only by a 26 px "centres are far enough"
+// test. Wide names overprinted each other ("Side Gate / Hostel D / Courts / Main Block ..."), a name near the edge
+// ("Mechanical Block", "Manipal University Boys Hostel...") ran off the frame, and which of two clashing labels survived
+// was decided by area, not by what a player needs. These pure helpers decide it properly and are unit-tested:
+//   fullMapLabelCandidates(): which named things get a label at all (the filters the old inline code had), each tagged with
+//                             a priority (story-relevant names first: Main Block, gates, Library, Mechanical, then hostels and courts).
+//   placeMapLabels():         lays labels out in priority order, clamps each one inside the map frame, truncates a name that
+//                             is wider than the frame allows, and SKIPS a label whose box would overlap one already placed.
+// The HUD font is monospace ("Press Start 2P"), so a label's box is known from its character count without a browser.
+const MAP_LABEL = { charW: 8, height: 12, pad: 3, gap: 2, maxChars: 24 };
+// Label priority, lower is placed first: the story landmarks, then hostels and courts, then everything else.
+function mapLabelPriority(name) {
+  if (/main block|gate|library|mechanical/i.test(name)) return 0;
+  if (/hostel|court/i.test(name)) return 1;
+  return 2;
+}
+
+function fullMapLabelCandidates(objects, cols, rows) {
+  const totalArea = cols * rows;
+  // Skips the generator's own "no real name" placeholder (`Building <osm id>`), road/roundabout infrastructure areas and the
+  // "Gate Parking (West/East)" lots (FB-0026: they sat close enough to Gate 2 and the Main Block to eat their label's slot),
+  // and anything covering over ~30% of the map (the whole-campus outline).
+  const isPlaceholderName = (name) => /^Building \d+$/.test(name);
+  const isInfrastructureArea = (o) => o.type === 'area' && (o.props?.kind === 'road' || o.props?.kind === 'roundabout' || /^Gate Parking \(/.test(o.name));
+  return (objects || [])
+    .filter((o) => ['area', 'building'].includes(o.type) && o.name && !isPlaceholderName(o.name) && !isInfrastructureArea(o) && o.width * o.height < totalArea * 0.3)
+    .map((o) => ({ name: o.name, x: o.x + o.width / 2, y: o.y + o.height / 2, area: o.width * o.height, priority: mapLabelPriority(o.name) }));
+}
+
+// `candidates`: [{ name, px, py, area, priority }] with px/py the wanted label centre in SCREEN pixels. `bounds`: { x0, y0, x1, y1 }
+// the frame the labels must stay inside. Returns [{ name, text, x, y, w, h }] (centre x/y), in placement order.
+function placeMapLabels(candidates, bounds, opts = {}) {
+  const { charW, height, pad, gap, maxChars } = { ...MAP_LABEL, ...opts };
+  const order = [...candidates].sort((a, b) => (a.priority - b.priority) || (b.area - a.area));
+  const placed = [];
+  for (const c of order) {
+    if (placed.some((p) => p.name === c.name)) continue; // the same name can come twice (an area and a building): label it once
+    const text = c.name.length > maxChars ? `${c.name.slice(0, maxChars - 1)}…` : c.name;
+    const w = text.length * charW + pad * 2;
+    if (w > bounds.x1 - bounds.x0 || height > bounds.y1 - bounds.y0) continue;
+    const x = Math.min(Math.max(c.px, bounds.x0 + w / 2), bounds.x1 - w / 2);
+    const y = Math.min(Math.max(c.py, bounds.y0 + height / 2), bounds.y1 - height / 2);
+    const clash = placed.some((p) => Math.abs(p.x - x) < (p.w + w) / 2 + gap && Math.abs(p.y - y) < (p.h + height) / 2 + gap);
+    if (clash) continue;
+    placed.push({ name: c.name, text, x, y, w, h: height });
+  }
+  return placed;
+}
+
+// Whether the always-on hotbar is drawn this frame (src/scenes/ui.js UIScene.update()): the dialog box replaces it, and
+// the pause menu with its Controls page covers the middle of the screen (defect D16). Pure so it is unit-tested.
+function hotbarShouldShow({ dialogOpen = false, pauseOpen = false } = {}) {
+  return !dialogOpen && !pauseOpen;
+}
+
+// Greedy word wrap for a monospace font (the HUD uses "Press Start 2P": one glyph is exactly `fontSize` px wide), so the
+// quest pill's line breaks are decided here, in pure code, and can be tested without a browser. A word longer than a
+// line is split rather than lost.
+function wrapWords(text, maxChars) {
+  const lines = [];
+  let line = '';
+  for (let word of String(text).split(/\s+/).filter(Boolean)) {
+    while (word.length > maxChars) {
+      if (line) { lines.push(line); line = ''; }
+      lines.push(word.slice(0, maxChars));
+      word = word.slice(maxChars);
+    }
+    if (!line) line = word;
+    else if (line.length + 1 + word.length <= maxChars) line += ` ${word}`;
+    else { lines.push(line); line = word; }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// What the top-right quest pill says: a keys line and the whole objective, wrapped to the pill's inner width. Pure.
+function trackerPillText(quest) {
+  const keysHeld = Object.values(quest.keys).filter(Boolean).length;
+  const maxChars = Math.floor((HUD_TRACKER.w - 2 * TRACKER_PILL.pad) / TRACKER_PILL.fontSize);
+  return { keys: `Keys ${keysHeld}/3`, lines: wrapWords(questObjectiveText(quest), maxChars), maxChars };
+}
+
 // ---------- quest tracker text (M1 leftover, docs/STORY.md) ----------
 // The single line src/scenes/ui.js's QuestTracker shows under "Keys: n / 3" -- pure so it can be
 // unit-tested directly against every stage/key combination without booting a scene.
@@ -397,7 +488,11 @@ function pickInteractable(candidates, margin = INTERACT_TIE_MARGIN, priorities =
 // and center-anchored ones (banner, hint, hotbar) move together, never towards a corner box.
 const HUD_MARGIN = 16;
 const HUD_MINIMAP = { areaW: 120, areaH: 90, pad: 8 }; // ~120x90 map area, declutter pass (was 160x120)
-const HUD_TRACKER = { w: 280, collapsedH: 30, expandedH: 84 }; // a compact pill, expandable on change
+// D15 (defect sweep 2026-10-04): the pill used to be one line, so the objective was shrunk to 6 px and then cut off with an
+// ellipsis ("Keys 0/3 . Find the LUG stall behind the ..."). It is now a "Keys n/3" line plus the WHOLE objective wrapped to
+// at most TRACKER_PILL.maxLines lines at the normal 8 px size, so `collapsedH` is the pill's tallest case.
+const HUD_TRACKER = { w: 280, collapsedH: 56, expandedH: 84 }; // a compact pill, expandable on change
+const TRACKER_PILL = { fontSize: 8, pad: 14, maxLines: 2 };
 // Quality-loop category 4 run 2: moved from top-center (where it sat directly over the Main Block's
 // own entrance sign in the campus backdrop) to a small top-left plate, Pokemon-style -- the same
 // corner the minimap occupies, since the two are never shown at once (the minimap hides for as long

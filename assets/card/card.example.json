@@ -1,5 +1,6 @@
 {
-  "recipient": "Her Name",
+  "recipient": "Taru",
+  "age": 22,
   "messages": [
     "Happy Birthday, {name}!",
     "Here's a photo from that time...",
@@ -8,5 +9,10 @@
   "photos": [
     { "file": "1.jpg", "caption": "Caption for the first photo" },
     { "file": "2.jpg", "caption": "Caption for the second photo" }
+  ],
+  "wishes": [
+    "A short wish, shown on its own for about three seconds.",
+    "Write about eight of them; {name} becomes the recipient.",
+    "Keep each one under about 70 characters."
   ]
 }

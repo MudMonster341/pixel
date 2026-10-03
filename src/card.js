@@ -12,9 +12,10 @@
 // Shape the game understands, every field optional (missing/invalid falls back to a default so a
 // half-written card.json degrades gracefully instead of breaking the ending):
 //   {
-//     "recipient": "Aisha",                          // who the card is for; falls back to
-//                                                     // GameState.playerName (the name typed at the
-//                                                     // start of the game) if left out
+//     "recipient": "Taru",                           // who the card is for; falls back to
+//                                                     // DEFAULT_RECIPIENT ("Taru") if left out -- NOT the
+//                                                     // name typed at the start of the game
+//                                                     // (decisions/0019: the gift always names her)
 //     "messages": [
 //       "Happy Birthday, {name}!",
 //       "..."
@@ -24,11 +25,15 @@
 //       { "file": "2.jpg", "caption": "..." }
 //     ]
 //   }
-// `{name}` in a message is replaced with the resolved recipient name, the same `{name}` convention
-// src/dialog.js already uses for the player's name everywhere else in the game.
+// `{name}` in a message is replaced with the resolved recipient name (the same `{name}` token
+// src/dialog.js uses for the typed player name -- but here it is the recipient, "Taru" by default).
+// card.json also carries the optional credits fields `age` and `wishes`, read by src/credits.js.
 //
 // A ready-to-copy example of this exact shape lives at assets/card/card.example.json (committed --
 // unlike the rest of assets/card/, see .gitignore's own exception for it).
+
+// Who the card (and the credits, src/credits.js) is for until card.json says otherwise.
+const DEFAULT_RECIPIENT = 'Taru';
 
 // Shown until the owner writes their own card.json -- warm, generic, and honest about being a
 // placeholder, so an unfinished setup still plays as a complete (if plain) little card rather than
@@ -52,18 +57,19 @@ const CARD_VIDEO_URL = 'assets/card/video.mp4';
 const BOX_VIDEO_URL = 'assets/cutscenes/video/box-opening.mp4';
 
 // Turns whatever JSON the owner's card.json parsed into (or `null`/`undefined` if it's missing or
-// failed to parse) into a config the card scene can always safely draw. `fallbackName` is
-// GameState.playerName, used when the owner hasn't pinned an explicit recipient of their own.
+// failed to parse) into a config the card scene can always safely draw. The recipient is card.json's
+// own `recipient`, else DEFAULT_RECIPIENT -- never the name typed at the start of the game
+// (decisions/0019); the old second argument (that typed name) is gone.
 //
 // Every field is validated independently so a mistake in one (a typo'd photo entry, say) doesn't
 // take the rest of a real card.json down with it -- the owner is editing this by hand, not through a
 // tool that would catch a mistake before it's played.
-function buildCardConfig(raw, fallbackName) {
+function buildCardConfig(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
 
   const recipient = typeof source.recipient === 'string' && source.recipient.trim()
     ? source.recipient.trim()
-    : (fallbackName || 'you');
+    : DEFAULT_RECIPIENT;
 
   const messages = Array.isArray(source.messages)
     ? source.messages.filter((line) => typeof line === 'string' && line.trim().length > 0)

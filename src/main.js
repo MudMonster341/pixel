@@ -165,7 +165,7 @@ function startGame() {
       // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off straight to
       // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see
       // src/scenes/world.js playBoxOpening()).
-      BoxOpeningScene, CardScene,
+      BoxOpeningScene, CardScene, CreditsScene,
     ], // later scenes draw on top
   });
   // M5 sound: wires the master-mute/volume settings and the browser-autoplay gesture handling

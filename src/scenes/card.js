@@ -1,6 +1,7 @@
 // The birthday card (docs/STORY.md "the ending", docs/ROADMAP.md M3): a full-screen, animated pixel
 // card -- confetti, a cake with candles, floating hearts, a photo slideshow and the owner's own
-// messages, typed out one at a time -- ending on "THE END" and back to the title screen. Started by
+// messages, typed out one at a time -- ending by handing off to the credits scene (src/scenes/credits.js:
+// wishes, "THE END", back to the title screen). Started by
 // src/scenes/box-opening.js once the box has finished opening (never returns to 'world': the game is
 // over from here, docs/ROADMAP.md M3), and also reachable directly from the title screen's "Watch
 // the Card Again" (src/scenes/title.js, once a save with `quest.stage === 'rewarded'` exists).
@@ -56,7 +57,6 @@ const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
-const END_HOLD_MS = 2200;
 
 class CardScene extends Phaser.Scene {
   constructor() {
@@ -105,7 +105,7 @@ class CardScene extends Phaser.Scene {
     }
 
     const raw = this.cache.json.get('card-config');
-    this.config = buildCardConfig(raw, GameState.playerName);
+    this.config = buildCardConfig(raw);
 
     if (this.config.photos.length === 0) {
       this.beginSequence();
@@ -415,7 +415,7 @@ class CardScene extends Phaser.Scene {
     this.playEndingVideoOrFinish();
   }
 
-  // ---------- the closing video (optional) and "THE END" ----------
+  // ---------- the closing video (optional) and the hand-off to the credits ----------
 
   // Checked with a plain fetch() first, not by queuing it straight into Phaser's loader and trusting
   // 'loaderror' -- Phaser's video loader can add a broken <video> to cache.video even after the
@@ -453,69 +453,28 @@ class CardScene extends Phaser.Scene {
     }
   }
 
-  // "the card finishes on a final message" when there's no video -- and, video or not, a gentle
-  // "THE END" either way, then back to the title screen (docs/ROADMAP.md M3), keeping the save
-  // (nothing here touches it -- see src/save.js's own autosave, already triggered when the volunteer
-  // set `quest.stage = 'rewarded'`).
+  // The card is over (last message, the optional closing video, or an Esc skip): fade out and hand
+  // off to the credits phase (src/scenes/credits.js, decisions/0019), which plays the birthday wishes,
+  // shows "THE END" and returns to the title screen, keeping the save (nothing here touches it -- see
+  // src/save.js's own autosave, already triggered when the volunteer set the quest to 'rewarded').
+  // The card.json that was just read is passed along so the credits needn't fetch it a second time.
   showEnding() {
     if (this.ended) return;
     this.ended = true;
     this.killTimers();
     if (this.endingVideo) { try { this.endingVideo.stop(); } catch (error) { /* already stopped */ } }
-    this.children.removeAll(true);
-    this.cameras.main.setBackgroundColor('#1a1610');
-    const end = uiText(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, 'THE END', 24, COLORS.highlight).setOrigin(0.5).setAlpha(0);
-    this.tweens.add({
-      targets: end, alpha: 1, duration: 500,
-      onComplete: () => {
-        // "'THE END' fades in with a sparkle" (owner brief, this pass): a small one-shot burst right
-        // as the text settles in, not a nonstop shower -- it fires once, here, after the fade
-        // completes, never on a timer of its own.
-        this.spawnEndingSparkles();
-        this.time.delayedCall(END_HOLD_MS, () => this.returnToTitle());
-      },
-    });
-  }
-
-  // Same cheap, texture-free technique src/scenes/box-opening.js's own spawnSparkle() uses for the
-  // box's reveal -- small motes radiating outward and fading -- so the ending's two beats (the box,
-  // then this) share one visual language instead of two different effects bolted together. A fixed,
-  // one-time burst (10 motes, each with its own finite tween), not a loop, so this can never keep
-  // spawning objects on its own after the card is already headed back to the title.
-  spawnEndingSparkles() {
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
-    const count = 10;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.2, 0.2);
-      const dist = Phaser.Math.Between(50, 100);
-      const startX = cx + Math.cos(angle) * 16;
-      const startY = cy + Math.sin(angle) * 16;
-      const mote = this.add.circle(startX, startY, Phaser.Math.Between(2, 4), 0xffd23f, 0.95).setDepth(1);
-      this.tweens.add({
-        targets: mote,
-        x: cx + Math.cos(angle) * dist,
-        y: cy + Math.sin(angle) * dist,
-        alpha: 0,
-        duration: 700,
-        ease: 'Cubic.easeOut',
-        onComplete: () => mote.destroy(),
-      });
-    }
-  }
-
-  returnToTitle() {
+    const raw = this.cache.json.get('card-config') || null;
     this.cameras.main.fadeOut(400, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('title'));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('credits', { raw }));
   }
 
-  // Esc: skip everything straight to "THE END" -- from the cover, mid-message, or during the
+  // Esc: skip the rest of the card, straight on to the credits -- from the cover, mid-message, or during the
   // optional closing video alike (docs/ROADMAP.md M3 "is skippable").
   skipToEnd() {
     if (this.ended) return;
     // Detach the dialog's own onClose first: closing it while it's still mid-message would otherwise
     // cascade into afterMessages() -> the optional closing video, which a skip should bypass, not
-    // play out -- see the file header, "Esc: skip everything straight to THE END".
+    // play out -- a skip goes straight on to the credits.
     if (this.dialog && this.dialog.isOpen) {
       this.dialog.onClose = null;
       this.dialog.close();

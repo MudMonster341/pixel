@@ -68,11 +68,19 @@ parallel only in separate worktrees; packages that touch `src/main.js` (the asse
 | D | **RTA bus arrival** | `tools/make-assets.js` (bus art), `src/scripts.js` opening script | A pixel RTA bus (livery from the reference in `docs/research/`) drives in, stops at the Gate 2 kerb, **opens its door**, she steps out, the door closes, it pulls away. 3/4 view. Plays inside the existing `ADR 0016` script runner. |
 | E | **Talkable people + animals** | `src/ambient.js`, new `src/campus-facts.js` (data), `src/dialog.js` hook, animal sprites + AI, `CREDITS.md` | Every ambient student turns toward her on E, says 1 fact from their role pool (rotating), then walks on; never blocks the quest or a door. About 12 types and 30-40 facts, every fact traced to `campus-facts.md`. Cats and birds wander (idle/walk), react to her, cap on movers for performance. Free pack licensed and credited, or generator fallback. |
 | F | **Reception and ground floor match** | `tools/interiors/*` | Foyer, reception, stairs, corridor structure agree with `docs/research/tour-ground-floor.md`. Only clear contradictions are changed. Story rooms and floors unchanged. |
+| G | **Audio that works in Safari** | `tools/pack-offline.js`, `src/audio.js`, `tools/make-audio.js` | The music and sfx are Ogg Vorbis; older Safari cannot decode Ogg, so the bundle could be silent on her MacBook. Bundle both Ogg and a Safari-safe copy (MP3 or AAC, converted at build time with a devDependency or pure-JS encoder; no system install) and pick by `canPlayType`. A unit test checks every sound has both. |
 | R | **Research (read-only)** | `docs/research/` | `campus-facts.md` (sourced; clubs, quizzes, facilities, events, CS professors), `rta-bus-reference.md` + image, `tour-ground-floor.md`, `animal-packs.md` (license, preview, fit). |
 
 Also Day 1: remove the "food truck by the gate" line from `src/ambient.js` (it doesn't exist), and mark
 FB-0027..0034 fixed (`npm run feedback -- fix ...`). FB-0025 is a standing rule (use free packs, don't
 hand-draw art unless no pack exists: the bus is the exception).
+
+## Status log
+
+- **Day 1 (done):** cleanup; A (3 bugs), B (offline bundle, builds at about 20 MB), C (credits + Taru prefill) and D (RTA bus with door animation) merged, 508 unit tests green; research done (campus facts, RTA bus, 3D tour, animal packs). FB-0027..0034 marked fixed. "Food truck" line removed.
+- **Open owner decision:** the 3D tour contradicts the foyer built from the owner's older photo (floor, stair position, terrarium, two desks, two wings). Recommended: follow the tour (docs/research/tour-ground-floor.md).
+- **Animals:** the owner's pack cat (4-direction walk) + Zeenaz cat poses + LPC Birds; the owner said cats and birds only.
+- **Not yet seen in a running game:** everything built on Day 1 is unit-tested only. Day 2 is the first browser pass.
 
 ## Day 2 verification (one test round, then stop everything)
 

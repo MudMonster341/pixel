@@ -996,3 +996,13 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Failures:** ERR-0010..0013 (see ERRORS.md): slow opening backdrop made double-Esc skip the name screen; generated Room 195 layout walled off the key desk; ambient students placed in story doorways; test timing under headless FPS.
 
 **Next:** foyer rebuild per the tour, file:// check of the bundle, defect sweep, full npm test, push, update the play copy, tell the owner. Not pushed yet (main is ahead of origin).
+
+## 2026-10-04 — Foyer and wings rebuilt to the 3D tour (ADR 0020, package F)
+
+**Did:** One Sonnet agent rebuilt `main-block-g`: oak foyer, terrarium on the axis, two reception desks with glass side doors, split stair on the left-back (object "Main Block Stairs G (up)" at the foot, LUG stall + volunteer behind it), ring chandelier, red/blue sofas on the back walls, totem pillars, two long wings with 13 closed nameplated doors (each speaks a `doorLocks` line; small `closed` door support in `world.js`), 9 ambient students re-placed. 26 new tiles (pack crops/recolours only; approximations listed in docs/INTERIORS_PLAN.md). New `tests/unit/foyer-tour.test.js` (20 tests); 599/599 unit tests green. Upper-floor map content is unchanged (hash-pinned); only the shared tileset header line changed in every generated map.
+
+**Why:** the owner chose the tour over the older photo (ADR 0020).
+
+**Open for the playtest:** compass/stair position medium confidence; the foyer west lane by the stair is 1 tile; desks are straight not curved, no white balustrade tile; nothing seen in the running game yet.
+
+**Next:** build the offline bundle and play it from file:// (Chromium + WebKit), defect sweep, full test via the pre-push hook, push.

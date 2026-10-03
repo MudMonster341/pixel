@@ -52,17 +52,34 @@ const REQUIRED_TILES = [
   'intPottedPlant', 'intColumnCapL', 'intColumnCapR', 'intColumnShaftL', 'intColumnShaftR',
   'intColumnBaseL', 'intColumnBaseR', 'intRug', 'intReceptionDeskL', 'intReceptionDeskR',
   'intWallPoster', 'intNameplate', 'intEquipmentTrolley',
+  // ADR 0020 (the ground floor follows the official 3D tour): oak floor, skirted and peach walls, red/blue
+  // sofas, the terrarium, totems, big black-pot plants, frosted glass and the closed wall doors.
+  'intFloorOak', 'intWallPeach', 'intWallPeachEndL', 'intWallPeachEndR',
+  'intWallFaceSkirt', 'intWallFaceSkirtEndL', 'intWallFaceSkirtEndR', 'intSofaRed', 'intSofaBlue',
+  'intTerrariumTL', 'intTerrariumTR', 'intTerrariumML', 'intTerrariumMR', 'intTerrariumBL', 'intTerrariumBR',
+  'intTotemTop', 'intTotemBase', 'intBigPlantTop', 'intBigPlantBase', 'intGlassPanel', 'intGlassPanelB',
+  'intGlassDoor', 'intDoorOffice', 'intDoorFlush', 'intDoorDarkL', 'intDoorDarkR', 'intStairsUp',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
 }
+
+// Wall tile kits (the ring tiles of addRect): the sand BITS wall the Library/Mechanical Block still use, the
+// real LimeZu Room_Builder cream wall (quality loop, Interior art run 1), and ADR 0020's two ground-floor
+// variants -- the cream wall with a wood skirting (corridors) and the peach lower wall (auditorium/sports ends).
+const WALL_DEFAULT = { plain: 'bitsWallPlain', endL: 'bitsWallEndL', endR: 'bitsWallEndR' };
+const WALL_KITS = {
+  roomBuilder: { plain: 'intWallFace', endL: 'intWallFaceEndL', endR: 'intWallFaceEndR' },
+  skirt: { plain: 'intWallFaceSkirt', endL: 'intWallFaceSkirtEndL', endR: 'intWallFaceSkirtEndR' },
+  peach: { plain: 'intWallPeach', endL: 'intWallPeachEndL', endR: 'intWallPeachEndR' },
+};
 
 // Ground floor tile per room type. Everything not listed gets 'intFloorCarpet'.
 const TYPE_FLOOR = {
   office: 'intFloorCarpet', service: 'intFloorCarpet', discussion: 'intFloorCarpet', locker: 'intFloorCarpet', club: 'intFloorCarpet',
   classroom: 'intFloorClassroom', classroom60: 'intFloorClassroom',
   lab: 'intFloorLabVinyl', labHeavy: 'intFloorLabVinyl',
-  reception: 'intFloorFoyer', lobby: 'intFloorFoyer', lounge: 'intFloorFoyer', foyer: 'intFloorMarble', stairwell: 'intFloorFoyer',
+  reception: 'intFloorFoyer', lobby: 'intFloorFoyer', lounge: 'intFloorFoyer', foyer: 'intFloorOak', stairwell: 'intFloorFoyer',
   mart: 'intFloorClassroom', medical: 'intFloorFoyer',
   badminton: 'intFloorCourt', tabletennis: 'intFloorCourt',
   auditorium: 'intFloorCarpet',
@@ -119,9 +136,11 @@ class Floor {
   addRect(id, { name, type, x0, y0, x1, y1, isCorridor = false, floorTile, wallKit }) {
     if (x1 <= x0 || y1 <= y0) throw new Error(`${this.key}: room "${id}" has a non-positive size (${x0},${y0})-(${x1},${y1})`);
     const floor = TILE[floorTile || TYPE_FLOOR[type] || 'intFloorCarpet'];
-    const wallPlain = wallKit === 'roomBuilder' ? 'intWallFace' : 'bitsWallPlain';
-    const wallEndL = wallKit === 'roomBuilder' ? 'intWallFaceEndL' : 'bitsWallEndL';
-    const wallEndR = wallKit === 'roomBuilder' ? 'intWallFaceEndR' : 'bitsWallEndR';
+    if (wallKit && !WALL_KITS[wallKit]) throw new Error(`${this.key}: room "${id}" has an unknown wallKit "${wallKit}"`);
+    const kit = WALL_KITS[wallKit] || WALL_DEFAULT;
+    const wallPlain = kit.plain;
+    const wallEndL = kit.endL;
+    const wallEndR = kit.endR;
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const i = this.idx(x, y);
@@ -133,7 +152,7 @@ class Floor {
     const rect = { id, name, type, x0, y0, x1, y1, isCorridor };
     this.rects.set(id, rect);
     if (!isCorridor && name) this.areaRooms.push(rect);
-    if (wallKit === 'roomBuilder') this.capTopWall(rect);
+    if (wallKit) this.capTopWall(rect);
     return rect;
   }
 
@@ -165,15 +184,17 @@ class Floor {
     return { x0: r.x0 + 1, y0: r.y0 + 1, x1: r.x1 - 1, y1: r.y1 - 1 };
   }
 
-  setDoor(x, y) {
-    this.ground[this.idx(x, y)] = TILE.intDoorway;
+  setDoor(x, y, tileName = 'intDoorway') {
+    this.ground[this.idx(x, y)] = TILE[tileName];
     this.structures[this.idx(x, y)] = -1;
   }
 
   // Clears a door-width opening in the wall the two rects share. Throws if they don't share one
   // (fails loudly on a plan mistake, per docs/ARCHITECTURE.md rule 1), so a typo'd id or a pair of
   // rects that don't actually touch is caught immediately by running the generator.
-  connect(idA, idB, { width = 2 } = {}) {
+  // `openTile` (ADR 0020): the floor laid in the opening -- the wings' wide, door-less mouths continue the floor
+  // instead of showing the dark `intDoorway` threshold.
+  connect(idA, idB, { width = 2, openTile } = {}) {
     const a = this.get(idA);
     const b = this.get(idB);
     if (a.x1 === b.x0 || b.x1 === a.x0) {
@@ -183,7 +204,7 @@ class Floor {
       if (y1 < y0) throw new Error(`${this.key}: "${idA}" and "${idB}" touch but share no open wall for a door`);
       const w = Math.min(width, y1 - y0 + 1);
       const start = y0 + Math.floor((y1 - y0 + 1 - w) / 2);
-      for (let y = start; y < start + w; y++) this.setDoor(wallX, y);
+      for (let y = start; y < start + w; y++) this.setDoor(wallX, y, openTile);
       return;
     }
     if (a.y1 === b.y0 || b.y1 === a.y0) {
@@ -193,7 +214,7 @@ class Floor {
       if (x1 < x0) throw new Error(`${this.key}: "${idA}" and "${idB}" touch but share no open wall for a door`);
       const w = Math.min(width, x1 - x0 + 1);
       const start = x0 + Math.floor((x1 - x0 + 1 - w) / 2);
-      for (let x = start; x < start + w; x++) this.setDoor(x, wallY);
+      for (let x = start; x < start + w; x++) this.setDoor(x, wallY, openTile);
       return;
     }
     throw new Error(`${this.key}: "${idA}" (${a.x0},${a.y0})-(${a.x1},${a.y1}) and "${idB}" (${b.x0},${b.y0})-(${b.x1},${b.y1}) do not share a wall`);
@@ -224,6 +245,42 @@ class Floor {
   // used for the foyer's "BITS Pilani, Dubai Campus" wordmark (a row of bitsSignSeg tiles).
   placeStructureRow(x, y, tileNames) {
     tileNames.forEach((name, i) => this.placeStructure(x + i, y, name));
+  }
+
+  // Re-skins the wall tiles inside a rectangle with another wall kit (ADR 0020: the ramp's stretch of corridor
+  // gets peach lower walls while the rest of the same corridor keeps the skirted cream wall). Only cells that
+  // already hold a wall tile of some kit change; their role (plain / left end / right end) is kept.
+  repaintWalls(x0, y0, x1, y1, kitName) {
+    const kit = WALL_KITS[kitName];
+    if (!kit) throw new Error(`${this.key}: unknown wall kit "${kitName}"`);
+    const roleOf = new Map();
+    for (const k of [WALL_DEFAULT, ...Object.values(WALL_KITS)]) {
+      roleOf.set(TILE[k.plain], 'plain'); roleOf.set(TILE[k.endL], 'endL'); roleOf.set(TILE[k.endR], 'endR');
+    }
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const role = roleOf.get(this.structures[this.idx(x, y)]);
+        if (role) this.structures[this.idx(x, y)] = TILE[kit[role]];
+      }
+    }
+  }
+
+  // A wall door that never opens (ADR 0020 owner decision: every wing destination is a closed, nameplated door).
+  // A walkable door-art tile in the wall plus a `door` object marked `closed` with no `to`: stepping into it
+  // runs the locked-door machinery (src/scenes/world.js computeWarpPoints(): toast + thud + rattle), and the
+  // line it says is the map def's `doorLocks` entry of the same name (src/maps.js). Nothing is behind it: the
+  // tile past the doorway is void, so it never opens onto nothing.
+  closedDoor(x, y, tileName, name) {
+    if (this.ground[this.idx(x, y)] === TILE.intDoorway) throw new Error(`${this.key}: closed door "${name}" sits on a doorway`);
+    this.structures[this.idx(x, y)] = TILE[tileName];
+    this.pointObject('door', name, x, y, { closed: true });
+  }
+
+  // A 1x2 big plant in a black pot, walk-behind (ADR 0015).
+  bigPlant(x, y) {
+    this.placeStructure(x, y, 'intBigPlantTop');
+    this.placeStructure(x, y + 1, 'intBigPlantBase');
+    this.depthGroupRect(x, y, x, y + 1);
   }
 
   // A tile on the `overhead` layer (quality loop: "a chandelier (overhead layer) over the landing")
@@ -266,9 +323,11 @@ class Floor {
   // An exterior/interior door: carves an opening in the room's own OUTER wall on the given side
   // (used where a room's wall is the building's outside wall) and drops a `door`-type object there
   // with `to`/`toId`/`facing` (world.js resolves these generically; see docs/INTERIORS_PLAN.md).
-  exteriorDoor(id, side, { name, to, toId, facing, openTiles }) {
+  // `at` (ADR 0020): the door's own first cell along the wall, for a hall whose wall length is even so the
+  // default rounded midpoint would leave a 2-wide door half a tile off the centre line.
+  exteriorDoor(id, side, { name, to, toId, facing, openTiles, at }) {
     const r = this.get(id);
-    const mid = side === 'top' || side === 'bottom' ? Math.round((r.x0 + r.x1) / 2) : Math.round((r.y0 + r.y1) / 2);
+    const mid = at !== undefined ? at : side === 'top' || side === 'bottom' ? Math.round((r.x0 + r.x1) / 2) : Math.round((r.y0 + r.y1) / 2);
     const horizontal = side === 'top' || side === 'bottom';
     const [x, y] = side === 'top' ? [mid, r.y0] : side === 'bottom' ? [mid, r.y1] : side === 'left' ? [r.x0, mid] : [r.x1, mid];
     this.setDoor(x, y);
@@ -419,140 +478,130 @@ const FURNISHERS = {
       ctx.floor.placeStructure(Math.round((r.x0 + r.x1) / 2) + 3, r.y0, 'intNoticeboard');
     }
   },
-  // The Main Block foyer (FB-0030/0031, premium pass stage 5), redrawn per the owner's own photo
-  // (docs/research/reference/owner-main-block-foyer.png) and docs/research/campus-visual-
-  // reference.md "2. Main reception foyer": a glossy marble floor with a centre runner, tall
-  // walk-behind columns marching down both sides, a twin-flight staircase converging on a landing
-  // (solid + decorative, walked *around* -- the exact "walk around it, not over it" trick the old
-  // straight `intStairsUp` block already used, see INTERIORS_PLAN.md "the lift is decorative only"),
-  // a chandelier over the landing, the "BITS Pilani, Dubai Campus" wordmark on the wall above it, a
-  // reception desk + seating near the entrance (out of the central sightline, per the photo), and the
-  // LUG Stall nook tucked behind the staircase, reachable around either side.
-  // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28): re-read the owner's
-  // own photo and sized to "fill the screen at zoom 3" -- a 20x12-tile play area (ix0..ix1, iy0..iy1
-  // below), not the first pass's huge, mostly-empty hall. Horizontal-tread stairs (not vertical
-  // rails), a full-width mezzanine balcony with the wordmark under it, a real overhead chandelier,
-  // and 4 big 2-wide columns replace that pass's thin, sparse versions of the same ideas.
+  // The Main Block reception foyer (map `main-block-g`), rebuilt for ADR 0020 to follow the official 3D virtual
+  // tour (docs/research/tour-ground-floor.md) instead of the owner's older photo. Read the plan from the
+  // entrance (bottom wall) looking in; LEFT/RIGHT are the player's. Everything below is placed on the shared
+  // 40x40 canvas by absolute coordinates, mirrored about the hall's centre line (x = 20.0) where the tour is
+  // symmetric. Hall interior is x 11..28, y 15..36.
+  //   - Pale oak floor, no runner. Cream walls, the lit wordmark on the back wall above a mezzanine railing.
+  //   - TWO curved white reception desks, one each side of the entrance, each with a frosted-glass partition
+  //     behind it and a glass side door (a closed wall door) between it and the entrance doors, plus a big
+  //     black-pot plant.
+  //   - A glass terrarium on a round plinth on the central axis, 6 rows in from the entrance, flanked by two
+  //     pairs of back-lit totem pillars (no portraits).
+  //   - A split staircase against the LEFT side towards the back: a wide lower flight, a landing, two upper
+  //     flights with a dark wall between them; two round columns frame its foot. The `stairs` object sits at the
+  //     foot. The LUG stall is the nook BEHIND the staircase.
+  //   - A spiral chandelier on the overhead layer over the middle of the hall (not over the stairs).
+  //   - Low red and blue sofas with small tables on the left and right back walls.
+  //   - Library and Career Services: closed doors in the left wall beside the staircase.
+  // Approximations (nothing in the free packs matches): the spiral gold-ring chandelier is two tiers of the
+  // existing chandelier; the terrarium is the pack's glass pane + ficus on a masked wood plinth; the totems
+  // are plain rectangles; the "round" sofas are the pack's low pouf recoloured.
   foyer: (put, ix0, iy0, ix1, iy1, ctx) => {
-    const cx = Math.round((ix0 + ix1) / 2);
     if (!ctx || !ctx.floor) return;
     const { floor, id } = ctx;
     const r = floor.get(id);
+    const S = (x, y, name) => floor.placeStructure(x, y, name);
+    const mirror = (x) => floor.W - 1 - x; // about the hall's centre line (the canvas is 40 wide)
+    const wallTop = r.y0; // the back wall's row
 
-    // The centre runner, from the entrance up to the staircase.
-    floor.paintFloor(cx - 1, iy0, cx, iy1, 'intFloorMarbleRunner');
-
-    // 4 big, 2-wide columns (quality loop run 1: "4 big white columns, 2 tiles wide, full height,
-    // depthGroups") -- a pair flanking the staircase/landing, a pair flanking the entrance, well
-    // clear of the centre runner and the aisles either side of the stairs. Quality loop run 3
-    // ("make them read as round white columns (a shaded cylinder with a capital and base)"): each
-    // 2-wide x 3-tall block is now 6 different tiles -- a capital row, a shaft row and a base row,
-    // each row an L/R half-cylinder pair (tools/make-assets.js intColumnCapL/R etc.).
-    for (const cy0 of [iy0 + 3, iy1 - 3]) {
-      floor.paintFloor(ix0, cy0, ix0 + 1, cy0 + 2, 'intFloorMarble');
-      floor.paintFloor(ix1 - 1, cy0, ix1, cy0 + 2, 'intFloorMarble');
-      for (let i = 0; i < 3; i++) {
-        const y = cy0 + i;
-        const band = i === 0 ? 'Cap' : i === 2 ? 'Base' : 'Shaft';
-        floor.placeStructure(ix0, y, `intColumn${band}L`);
-        floor.placeStructure(ix0 + 1, y, `intColumn${band}R`);
-        floor.placeStructure(ix1 - 1, y, `intColumn${band}L`);
-        floor.placeStructure(ix1, y, `intColumn${band}R`);
-      }
-      floor.depthGroupRect(ix0, cy0, ix0 + 1, cy0 + 2);
-      floor.depthGroupRect(ix1 - 1, cy0, ix1, cy0 + 2);
-    }
-
-    // The twin staircase converging on a landing: horizontal-tread flights (quality loop: "draw it
-    // as steps, not vertical rails") rising to a landing, a full-width mezzanine balcony railing
-    // right behind it, and the LUG Stall nook beyond -- solid, so she walks *around* it, never
-    // through it.
-    // Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "it STILL draws as long vertical
-    // dark lines... draw it as a block of horizontal treads... rails only as a thin line at the two
-    // outer edges... No vertical stripes inside the block"). One continuous wide staircase now (no
-    // left/right flight split), 4 tread rows rising to the landing: `intFoyerTreadPlain` for every
-    // inner column, and the rail tile (`intFoyerStairsL`/`R`, now a *edge-only* rail -- see
-    // tools/make-assets.js) only at the block's own true leftmost/rightmost column.
-    const landingY0 = iy0 + 3;
-    const landingY1 = landingY0 + 1;
-    const flightY0 = landingY1 + 1;
-    const flightY1 = flightY0 + 3;
-    const stairsX0 = cx - 4;
-    const stairsX1 = cx + 3;
-    const midX = cx - 1;
-    floor.paintFloor(stairsX0, landingY0, stairsX1, landingY1, 'intFloorMarble');
-    for (let y = landingY0; y <= landingY1; y++) for (let x = stairsX0; x <= stairsX1; x++) floor.placeStructure(x, y, 'intFoyerLanding');
-    floor.paintFloor(stairsX0, flightY0, stairsX1, flightY1, 'intFloorMarble');
-    for (let y = flightY0; y <= flightY1; y++) {
-      for (let x = stairsX0; x <= stairsX1; x++) {
-        const tile = x === stairsX0 ? 'intFoyerStairsL' : x === stairsX1 ? 'intFoyerStairsR' : 'intFoyerTreadPlain';
-        floor.placeStructure(x, y, tile);
-      }
-    }
-    floor.depthGroupRect(stairsX0, landingY0, stairsX1, flightY1);
-
-    // The mezzanine balcony: a black wrought-iron railing spanning the *entire* back wall (quality
-    // loop: "a mezzanine balcony runs across the back wall"), with potted plants along it, right
-    // above the landing.
-    for (let x = ix0; x <= ix1; x++) floor.placeStructure(x, landingY0 - 1, 'intAtriumRailing');
-    floor.depthGroupRect(ix0, landingY0 - 1, ix1, landingY0 - 1);
-    // Quality loop run 3 ("plants in proper round pots, not on brick tiles"): `intPottedPlant`
-    // (tools/make-assets.js) drops the outdoor `plant()`'s own brick/plank floor background --
-    // LimeZu's own crop already bakes in a round terracotta pot.
-    put(ix0 + 2, landingY0 - 1, 'intPottedPlant');
-    put(ix1 - 2, landingY0 - 1, 'intPottedPlant');
-
-    // The chandelier hangs over the lower landing, on the `overhead` layer (quality loop run 1: "a
-    // chandelier (overhead layer) over the landing") -- always drawn above her, never a ground tile
-    // she could stand "in". Quality loop run 2 ("chandelier bigger, 2x2 tiles, overhead, so it
-    // reads"): a 2x2 block of its own 4 quadrant tiles, not a single 16px fixture.
-    floor.placeOverhead(midX, flightY0, 'intChandelier');
-    floor.placeOverhead(midX + 1, flightY0, 'intChandelierTR');
-    floor.placeOverhead(midX, flightY0 + 1, 'intChandelierBL');
-    floor.placeOverhead(midX + 1, flightY0 + 1, 'intChandelierBR');
-
-    // The wordmark, on the wall directly above the mezzanine railing -- reuses the exact
-    // "BITS PILANI, DUBAI CAMPUS" bitsSignSeg0..8 tiles already generated for the outdoor facade
-    // (tools/make-assets.js SIGN_FONT_4X6), the room's single dominant feature, dead centre, per the
-    // photo.
+    // ---- the back wall: the lit wordmark, and the mezzanine railing in front of the right-hand half ----
     const segs = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`);
-    floor.placeStructureRow(cx - 4, r.y0, segs);
+    floor.placeStructureRow(15, wallTop, segs);
+    for (let x = 22; x <= 27; x++) S(x, wallTop + 1, 'intAtriumRailing');
+    floor.depthGroupRect(22, wallTop + 1, 27, wallTop + 1);
+    floor.bigPlant(21, wallTop + 1); // a plant at each end of the railing
+    floor.bigPlant(28, wallTop + 1);
 
-    // The LUG Stall nook, behind (north of) the staircase -- walkable, reachable around either
-    // side, and registered as its own named `area` (docs/STORY.md "an event stall behind the
-    // stairs").
-    put(stairsX0 + 1, iy0, 'intCanteenCounter');
-    put(stairsX1 - 1, iy0, 'intNoticeboard'); // the LUG banner
-    floor.rectObject('area', 'LUG Stall', ix0, iy0, ix1, landingY0 - 2, { kind: 'stall' });
+    // ---- the LUG stall, in the nook behind the staircase ----
+    const top = r.y0 + 1; // the hall's first interior row (iy0 is one further in)
+    for (const x of [13, 14, 15]) S(x, top, 'intCanteenCounter');
+    S(16, top, 'intNoticeboard'); // the LUG banner
+    floor.rectObject('area', 'LUG Stall', 11, top, 19, top + 2, { kind: 'stall' });
 
-    // A large rug in front of the staircase (quality loop run 3), from the flights' own foot down to
-    // the seating near the entrance (furniture sits on top of it, same as any real rug).
-    floor.paintFloor(stairsX0, flightY1 + 1, stairsX1, iy1, 'intRug');
-
-    // Reception desk + seating near the entrance, off to one side so the central sightline (runner
-    // -> staircase -> wordmark) stays clear, per the photo ("out of frame... belong along the side
-    // walls, not blocking the central sightline"). Quality loop run 3 ("bigger reception desk, 2
-    // sofa groups with a coffee table... a notice board and a directory sign"): a real 3-tile
-    // curved-look counter (tapered end caps either side of the plain centre section), 2 separate
-    // sofa+coffee-table clusters instead of one lone pair, and a directory sign beside the desk.
-    put(ix1 - 4, iy1 - 1, 'intReceptionDeskL');
-    put(ix1 - 3, iy1 - 1, 'intReceptionDesk');
-    put(ix1 - 2, iy1 - 1, 'intReceptionDeskR');
-    put(ix1 - 3, iy1 - 2, 'intNoticeboard'); // the directory sign, just behind the desk
-
-    put(ix0 + 2, iy1 - 1, 'intSofa');
-    put(ix0 + 3, iy1 - 1, 'intSofa');
-    put(ix0 + 2, iy1 - 2, 'table'); // coffee table, in front of the first sofa group
-
-    put(ix0 + 8, iy1 - 1, 'intSofa');
-    put(ix0 + 9, iy1 - 1, 'intSofa');
-    put(ix0 + 8, iy1 - 2, 'table'); // and the second
-
-    // Potted palms flanking the entrance, each its own 1x1 walk-behind depthGroup.
-    for (const [px, py] of [[ix0 + 2, iy1], [ix1 - 2, iy1]]) {
-      put(px, py, 'intPottedPlant');
-      floor.depthGroupRect(px, py, px, py);
+    // ---- the split staircase (x 13..18), against the left side towards the back ----
+    const sx0 = 13, sx1 = 18;
+    const upperY0 = top + 3; // 18
+    const landingY = upperY0 + 3; // 21
+    const lowerY0 = landingY + 1; // 22
+    const lowerY1 = lowerY0 + 2; // 24
+    const treadAt = (x) => (x === sx0 ? 'intFoyerStairsL' : x === sx1 ? 'intFoyerStairsR' : 'intFoyerTreadPlain');
+    for (let y = upperY0; y < landingY; y++) {
+      for (let x = sx0; x <= sx1; x++) {
+        const inUpperFlight = x <= sx0 + 1 || x >= sx1 - 1;
+        S(x, y, inUpperFlight ? treadAt(x) : 'intAtriumVoid'); // the dark plain wall between the two upper flights
+      }
     }
+    for (let x = sx0; x <= sx1; x++) S(x, landingY, 'intFoyerLanding');
+    for (let y = lowerY0; y <= lowerY1; y++) for (let x = sx0; x <= sx1; x++) S(x, y, treadAt(x));
+    floor.depthGroupRect(sx0, upperY0, sx1, lowerY1);
+    // the `stairs` object itself sits on a walkable stair mat at the foot, between the two round columns
+    const footY = lowerY1 + 1; // 25
+    floor.paintFloor(15, footY, 16, footY, 'intStairsUp');
+    floor.pointObject('stairs', 'Main Block Stairs G (up)', 15, footY, { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)', facing: 'down' });
+    // two round columns (a 2-wide x 3-tall cap/shaft/base block each) frame the foot
+    for (const cx0 of [sx0, sx1 - 1]) {
+      for (let i = 0; i < 3; i++) {
+        const band = i === 0 ? 'Cap' : i === 2 ? 'Base' : 'Shaft';
+        S(cx0, footY + i, `intColumn${band}L`);
+        S(cx0 + 1, footY + i, `intColumn${band}R`);
+      }
+      floor.depthGroupRect(cx0, footY, cx0 + 1, footY + 2);
+    }
+
+    // ---- the spiral chandelier: two tiers of the existing chandelier, over the middle of the hall ----
+    const chandelier = (x, y) => {
+      floor.placeOverhead(x, y, 'intChandelier');
+      floor.placeOverhead(x + 1, y, 'intChandelierTR');
+      floor.placeOverhead(x, y + 1, 'intChandelierBL');
+      floor.placeOverhead(x + 1, y + 1, 'intChandelierBR');
+    };
+    chandelier(19, footY);
+    chandelier(21, footY - 3);
+
+    // ---- the terrarium on its round plinth, on the central axis, and the totem pillars either side ----
+    const tx = 19, ty = 29;
+    const terrarium = [['TL', 'TR'], ['ML', 'MR'], ['BL', 'BR']];
+    terrarium.forEach((row, j) => row.forEach((part, i) => S(tx + i, ty + j, `intTerrarium${part}`)));
+    floor.depthGroupRect(tx, ty, tx + 1, ty + 2);
+    for (const x of [15, 17, mirror(17), mirror(15)]) {
+      S(x, ty, 'intTotemTop');
+      S(x, ty + 1, 'intTotemBase');
+      floor.depthGroupRect(x, ty, x, ty + 1);
+    }
+
+    // ---- sofas and small tables on the right and left back walls ----
+    for (const x of [23, 24]) { S(x, 18, 'intSofaRed'); S(x, 20, 'intSofaBlue'); }
+    S(25, 18, 'table');
+    S(25, 20, 'table');
+    S(11, 20, 'intSofaRed');
+    S(11, 21, 'table');
+    S(11, 22, 'intSofaBlue');
+
+    // ---- reception: two desks, one each side of the entrance ----
+    for (const x0 of [11, mirror(13)]) {
+      S(x0, 34, 'intReceptionDeskL');
+      S(x0 + 1, 34, 'intReceptionDesk');
+      S(x0 + 2, 34, 'intReceptionDeskR');
+    }
+    // a frosted-glass partition behind each desk (4 panes, alternating the two edge variants)
+    for (const px0 of [11, mirror(14)]) {
+      for (let i = 0; i < 4; i++) S(px0 + i, 32, i % 2 ? 'intGlassPanelB' : 'intGlassPanel');
+    }
+    // the glass side doors (closed wall doors) between each desk and the entrance doors, and a big plant
+    for (const dx of [15, mirror(16)]) {
+      floor.closedDoor(dx, r.y1, 'intGlassDoor', dx < 20 ? 'Glass side door (left)' : 'Glass side door (right)');
+      floor.closedDoor(dx + 1, r.y1, 'intGlassDoor', dx < 20 ? 'Glass side door (left)' : 'Glass side door (right)');
+    }
+    floor.bigPlant(17, 35);
+    floor.bigPlant(mirror(17), 35);
+
+    // ---- Library and Career Services: closed doors in the left wall, beside the staircase ----
+    floor.closedDoor(r.x0, 17, 'intDoorFlush', 'Library door');
+    S(r.x0, 18, 'intNameplate');
+    floor.closedDoor(r.x0, 25, 'intDoorFlush', 'Career Services door');
+    S(r.x0, 26, 'intNameplate');
   },
   classroom: (put, ix0, iy0, ix1, iy1, ctx) => {
     put(Math.round((ix0 + ix1) / 2), iy0, 'intTeacherDesk');
@@ -810,6 +859,9 @@ const FURNISHERS = {
     }
   },
   stairwell: () => {}, // the stairs graphic itself is the furniture
+  // The two wing-end lobbies (ADR 0020): dressed by mainBlockG's own plan (tools/interiors/plans.js), so no
+  // generic furniture here.
+  wingLobby: () => {},
 };
 
 // ---------- build every floor from the plan ----------

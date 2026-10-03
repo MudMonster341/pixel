@@ -16,7 +16,9 @@ the actual layout; the ASCII sketches below are a coarse guide, not pixel-exact.
 - **1 m per tile indoors** (outdoors is 2 m), per the owner's 2026-09-13 decision.
 - Every building's floors share **one canvas size** and **one fixed stairwell rectangle**, so
   stairs land in the same place on every floor (checked by
-  `tests/unit/interiors.test.js`, "stairs line up between floors").
+  `tests/unit/interiors.test.js`, "stairs line up between floors"). One exception: the Main Block's ground
+  floor (ADR 0020) has a visible split staircase on the left of the foyer instead; floors 1-3 still share
+  the rectangle.
 - Layout engine (`tools/interiors/build-interiors.js`, class `Floor`): a room is an axis-aligned
   rectangle with a 1-tile wall ring (reusing the outdoor `bitsWallPlain`/`bitsWall`/
   `bitsWallEndL`/`bitsWallEndR` tiles, so interiors match the buildings' own outside walls) and a
@@ -170,55 +172,78 @@ FB-0030/0031 rebuild below, using the LimeZu Room_Builder sheet properly for the
 with ~40 named admin/lab/club rooms) was right-sized per the owner's own words (FB-0031: "we don't
 need a proper map, make it nice as per how a university campus looks from the top") after she played
 it and found it "huge... mostly empty cream floor" (FB-0030/0031). It's now a small, furnished
-Pokemon-style building: the foyer (built to her own photo, FB-0030) + the LUG stall nook + a short
-corridor to the (locked, but visible) rest of the ground floor, then one corridor per upper floor
-carrying docs/STORY.md's 3 key rooms and a couple of transit stops -- **canvas: 40x40 tiles**, all 4
-floors, with one shared stairwell rectangle (`x:30-37, y:12-21`) so stairs still line up between
-floors (tested, `tests/unit/interiors.test.js`). Every anchor the cutscene scripts and onboarding
+Pokemon-style building: the foyer (first built to her own photo, FB-0030; rebuilt to the official 3D tour
+on 2026-10-03, ADR 0020, see "Ground floor" below) + the LUG stall nook + two long wings, then one
+corridor per upper floor carrying docs/STORY.md's 3 key rooms and a couple of transit stops --
+**canvas: 40x40 tiles**, all 4 floors, with one shared stairwell rectangle (`x:30-37, y:12-21`) on floors
+1-3 so their stairs line up (tested, `tests/unit/interiors.test.js`). Every anchor the cutscene scripts and onboarding
 routes use (`src/scripts.js`, `src/objective-routes.js`) kept its exact name -- `Main Block Stairs
 <floor> (up)/(down)`, the `lug-volunteer` npc id, the `icvl`/`room195`/`physicsLab` key-station ids
 -- so nothing there needed touching; see `tests/unit/interiors-premium-pass.test.js`, which resolves
 every one of those anchors against the real generated maps.
 
-**Ground floor** (`main-block-g`, entrance at the bottom of the Foyer):
+**Ground floor** (`main-block-g`, entrance at the bottom of the Foyer) -- **rebuilt 2026-10-03 to
+follow the official 3D virtual tour** ([decisions/0020](../decisions/0020-main-block-ground-floor-follows-the-3d-tour.md),
+facts in [research/tour-ground-floor.md](research/tour-ground-floor.md)). It replaces the version built
+from the owner's older photo (FB-0030): the owner chose the tour ("go with the tour version, this is
+correct"). A central **foyer** plus **two long wings**, all on the shared 40x40 canvas:
 
 ```
- .......................................
- :        [Foyer]         :[Corridor]:
- :  col   col   col  col  :  x      :[Stairs]
- :        runner          :  x      :
- :   [LUG Stall nook]      :........:
- :  counter   banner       :
- :........[staircase]......:
- :   flightL | flightR      :
- :  sofa            desk    :
- :........[entrance]........:
+ x:  2        10                      29        37
+ y=5  [ Sports lobby ]  . . . . . . .  [ Audit. lobby ]   Sports Complex / Auditorium doors (north wall)
+      peach walls, tile                  peach walls, tile Prime Medical Centre, Mini Mart, Telepresence
+ y=14 [ ramp, centre rail ] (void)       [ office       ]  Lounge door
+      [ Director's Office  ]             [ corridor     ]  Student Welfare, Deputy Registrar (doors)
+ y=28 [Admissions]---+--[ FOYER  x10..29  y14..37 ]--+---[Academic UG Studies]
+      left wing H    |   wordmark (y14), stall nook (behind the stair, left),
+                     |   split stair (x13..18), sofas (back walls), terrarium (axis),
+                     |   2 totem pairs, 2 desks + glass side doors at the front wall
+ y=37                       [entrance, x19..20]
 ```
 
-The **foyer** (`FURNISHERS.foyer`, `tools/interiors/build-interiors.js`) is one continuously
-composed room, not a furniture grid, built to the owner's own photo
-([owner-main-block-foyer.png](research/reference/owner-main-block-foyer.png)) and
-[docs/research/campus-visual-reference.md](research/campus-visual-reference.md) "2. Main reception
-foyer": glossy marble floor (`intFloorMarble`) with a darker centre "runner" band
-(`intFloorMarbleRunner`) from the entrance to the staircase; 5 walk-behind columns
-(`intColumn`, each its own 1x1 `depthGroup`) down both sides; a **twin-flight staircase converging on
-a landing** (`intFoyerStairsL`/`intFoyerStairsR`/`intFoyerLanding`, solid + decorative like the old
-`intStairsUp` block -- walked *around*, never through -- one `depthGroup` over the whole block, ADR
-0015, so she disappears behind it walking into the nook beyond); a mezzanine balcony-edge railing
-(`intAtriumRailing`, reused from the 1st floor's own atrium-void kit) right at the top of the stairs;
-a chandelier (`intChandelier`, a decorative ground-layer tile over the lower landing, the same
-"looking up at it" trick `intLift` uses); the **"BITS Pilani, Dubai Campus" wordmark** on the wall
-above the landing (the exact `bitsSignSeg0..8` tiles already generated for the outdoor facade,
-`tools/make-assets.js` `SIGN_FONT_4X6` -- reused verbatim, not redrawn); a reception desk + sofas +
-noticeboard off to one side (out of the central sightline, per the photo); and potted palms (`plant`,
-each its own `depthGroup`) flanking the entrance and the staircase's base. The **LUG Stall nook**
-(docs/STORY.md: "an event stall behind the stairs") sits behind (north of) the staircase -- a
-counter, the LUG banner (`intNoticeboard`) and a plant, reachable by walking around either side, its
-own named `area` object (`kind: "stall"`) the volunteer NPC (`src/maps.js`) stands inside.
-
-A short **corridor** off the foyer's east wall leads to the stairwell up, with two purely decorative
-closed doors (`intDoorClosed`, solid, no warp object) standing in for the rest of the ground floor,
-"locked, but visible" (docs/STORY.md: "everywhere else in the building is blocked off for now").
+- **Foyer** (`FURNISHERS.foyer`, `tools/interiors/build-interiors.js`; interior x 11..28, y 15..36; centre line
+  x = 20.0, everything mirrored about it where the tour is symmetric): pale **oak** floor (`intFloorOak`, no
+  runner); cream walls; the lit **"BITS Pilani, Dubai Campus" wordmark** (`bitsSignSeg0..8`) on the back wall
+  above a mezzanine railing (`intAtriumRailing`) with a big plant at each end. **Two** curved white reception
+  desks (`intReceptionDeskL` / `intReceptionDesk` / `intReceptionDeskR`, x 11..13 and 26..28, y 34), each with a
+  frosted-glass partition behind it (`intGlassPanel`/`B`), a glass side door (a closed wall door) between it
+  and the entrance doors, and a big black-pot plant. A **glass terrarium** on a round wooden plinth
+  (`intTerrarium*`, x 19..20, y 29..31) on the central axis, flanked by two pairs of back-lit **totem pillars**
+  (`intTotemTop`/`Base`; plain, no portraits). A **split staircase** against the LEFT side towards the back
+  (x 13..18: a wide lower flight, a landing, two upper flights with a dark wall between them), two round columns
+  at its foot (`intColumn*`), `depthGroup`s so she walks behind it. The `stairs` object **Main Block Stairs G (up)**
+  keeps its name and links; it sits on a stair mat at the foot, between the columns (15,25). **Low red and blue
+  sofas** (`intSofaRed`/`intSofaBlue`) with small tables on the right back wall and along the left wall, never by
+  the entrance. A **spiral chandelier** (two tiers of `intChandelier*`) on the overhead layer over the middle of
+  the hall, not over the stairs. Library and Career Services are closed doors in the left wall beside the stair.
+- **LUG Stall** (docs/STORY.md: "an event stall behind the stairs"): the nook BEHIND the left staircase
+  (x 11..19, y 15..17: a counter, the LUG banner), its own named `area` (`kind: "stall"`); the volunteer NPC
+  (`src/maps.js`, `lug-volunteer`) stands at (14,16).
+- **Wings** (`mainBlockG`, `tools/interiors/plans.js`): each runs out sideways off the hall's front corner,
+  then north along the canvas edge (a U round the atrium void), about 35 tiles long, 3 tiles wide, oak floor and
+  wood-skirted cream walls (`intWallFaceSkirt*`). **Right**: Academic Undergraduate Studies Division, Student
+  Welfare Division, Deputy Registrar's Office, then the **Auditorium Lobby** (cream tile, peach lower walls, dark
+  wood double doors, a water dispenser) and the Parents-Visitor Lounge door. **Left**: Admissions Office,
+  Director's Office, a **shallow ramp** (peach lower walls, tile floor, centre rail), then the **Sports Complex
+  Lobby**: Sports Complex (double doors), Prime Medical Centre, Mini Mart, Telepresence Classroom.
+- **Every wing destination is a CLOSED, nameplated door** (owner decision; no new enterable rooms). A closed door
+  is a walkable door-art tile in the wall plus a `door` object marked `closed` with no `to`
+  (`Floor.closedDoor()`). Walking into it runs the existing locked-door machinery (`src/scenes/world.js`
+  `computeWarpPoints()`: toast + thud + rattle); the line it says is its `doorLocks` entry in `src/maps.js` (no
+  `stages`, so it stays shut for the whole game; `reason` is the toast). Door assist never steers into one. The
+  completeness rule: no door is silent, and no door opens onto nothing (`tests/unit/foyer-tour.test.js`).
+- **Approximations** where the free packs have nothing closer (owner rule FB-0025: no hand-drawn art): the
+  spiral gold-ring chandelier is two tiers of the existing chandelier; the terrarium is the pack's glass pane + a
+  potted ficus on a wood plinth cut round by a mask; the totem pillars are plain rectangles with a blue stripe;
+  the "round" sofas are the pack's low pouf recoloured; the reception desks are the existing 3-piece desk
+  (horizontal, not along the wall); the staircase keeps the existing black iron rails (no white balustrade
+  tile); the foyer walls stay the plain cream wall (the wood skirting is on the wings' walls); no framed
+  portraits (left out on purpose), LED strips or wall-art panels. Compass directions and the stair
+  position are medium confidence in the source (the tour's camera can only be dragged): check in the playtest.
+- **Stairs no longer line up with the upper floors**: the ground floor's staircase is the visible split stair
+  on the left; floors 1-3 still share the stairwell rectangle (`x:30-37, y:12-21`, right side), because the upper
+  floors are not rebuilt yet. The "stairs line up" test now covers floors 1-3, and a new test checks the ground
+  floor's stairs link both ways to floor 1's stairwell.
 
 **1st floor** (`main-block-1`): one corridor carrying **ICVL** and **Room 195** (docs/STORY.md key
 rooms, M3 -- see "Story rooms" below for why they're here), each opening directly off it, plus two
@@ -334,6 +359,20 @@ Also new: `Floor.depthGroupRect()`/`placeStructure()`/`placeStructureRow()`
 (`tools/interiors/build-interiors.js`) and an `openTiles` option on `Floor.exteriorDoor()` -- the
 foyer's own staircase/columns/plants are the first interior `depthGroup`s (ADR 0015 previously only
 had campus/text-map examples).
+
+**ADR 0020 (2026-10-03): the ground floor follows the 3D tour.** 26 more tile names, appended after
+`carFrontGreen` (every existing tile keeps its index): `intFloorOak`; `intWallPeach`/`EndL`/`EndR` (the peach
+lower wall); `intWallFaceSkirt`/`EndL`/`EndR` (cream wall with a wood skirting); `intSofaRed`/`intSofaBlue`;
+`intTerrarium{TL,TR,ML,MR,BL,BR}`; `intTotemTop`/`Base`; `intBigPlantTop`/`Base` (a plant in a black pot);
+`intGlassPanel`/`B`; `intGlassDoor`, `intDoorOffice` (wood-framed frosted glass), `intDoorFlush`,
+`intDoorDarkL`/`R` (dark wood double doors) -- the last five are walkable door art for the closed wall doors. All
+are pack crops recoloured onto the game's ramps or copies of existing tiles with a crop laid over them
+(`tools/make-assets.js`, `copyTile()`); no new hand-drawn sprites. New generator pieces in
+`tools/interiors/build-interiors.js`: wall kits (`addRect` `wallKit`: `roomBuilder`, `skirt`, `peach`),
+`repaintWalls()`, `closedDoor()`, `bigPlant()`, a `connect()` `openTile` and an `exteriorDoor()` `at` option.
+Because every generated map restates the size of the shared tile list, the tileset header (`tilecount`,
+`imageheight`) changed in every map; the upper floors' layers and objects did not (pinned by
+`tests/unit/foyer-tour.test.js`).
 
 ## Rough spots and simplifications (read before the owner asks "why...")
 

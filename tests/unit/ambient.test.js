@@ -261,7 +261,9 @@ test('AMBIENT completeness: every map with ambient life has at least 3 students,
   for (const key of storyFloors) {
     assert.ok(MAPS[key].ambient, `${key} has no ambient list`);
     assert.ok(MAPS[key].ambient.length >= 2, `${key}: only ${MAPS[key].ambient.length} ambient student(s)`);
-    assert.ok(MAPS[key].ambient.length <= 6, `${key}: ${MAPS[key].ambient.length} students is crowded for a corridor`);
+    // ADR 0020: the ground floor is now a hall plus two long wings (about 6 in the hall, a few more in the wings).
+    const cap = key === 'main-block-g' ? 9 : 6;
+    assert.ok(MAPS[key].ambient.length <= cap, `${key}: ${MAPS[key].ambient.length} students is crowded (max ${cap})`);
   }
 });
 

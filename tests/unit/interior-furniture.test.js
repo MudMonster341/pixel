@@ -111,12 +111,12 @@ for (const key of KEYS) {
   });
 }
 
-// FB-0030/0031 (premium pass stage 5): the foyer rebuilt per the owner's own photo
-// (docs/research/reference/owner-main-block-foyer.png) -- marble floor + runner, columns, a
-// twin-flight staircase converging on a landing, a chandelier, the wordmark, reception desk +
-// seating, potted palms, and the LUG Stall nook behind the stairs. Supersedes the old single
-// straight `intStairsUp` block this test used to check for.
-test('Main Block foyer specifically has a reception desk, seating, a plant, a noticeboard, the marble floor + runner, columns, a twin staircase + landing, a chandelier, the wordmark, and the LUG Stall nook', () => {
+// FB-0030/0031 (premium pass stage 5) built the foyer per the owner's photo; ADR 0020 rebuilt it to follow the
+// official 3D tour (docs/research/tour-ground-floor.md): pale oak floor, columns, a split staircase + landing, a
+// spiral chandelier, the wordmark, two reception desks, red and blue sofas, black-pot plants, the glass terrarium,
+// and the LUG Stall nook behind the stairs. (tests/unit/foyer-tour.test.js pins the layout itself; this keeps the
+// original "the foyer has all of its dressing" check, on the new pieces.)
+test('Main Block foyer specifically has a reception desk, seating, a plant, a noticeboard, the oak floor (no marble or runner), columns, a split staircase + landing, a terrarium, a chandelier, the wordmark, and the LUG Stall nook', () => {
   const json = maps['main-block-g'];
   const objs = json.layers.find((l) => l.type === 'objectgroup').objects;
   const foyer = objs.find((o) => o.type === 'area' && o.name === 'Foyer');
@@ -145,16 +145,17 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
       if (sgid && ['intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'].includes(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
     }
   }
-  for (const name of ['intReceptionDesk', 'intSofa', 'intPottedPlant', 'intNoticeboard', 'intColumnShaftL']) {
+  for (const name of ['intReceptionDesk', 'intSofaRed', 'intSofaBlue', 'intBigPlantTop', 'intNoticeboard', 'intColumnShaftL', 'intTerrariumTL', 'intTotemTop']) {
     assert.ok(found.has(name), `expected the Foyer to include "${name}", found [${[...found]}]`);
   }
+  assert.ok(groundFound.has('intFloorOak'), `expected the Foyer's ground layer to include "intFloorOak", found [${[...groundFound]}]`);
   for (const name of ['intFloorMarble', 'intFloorMarbleRunner']) {
-    assert.ok(groundFound.has(name), `expected the Foyer's ground layer to include "${name}", found [${[...groundFound]}]`);
+    assert.ok(!groundFound.has(name), `the Foyer must not have the old "${name}" any more (the tour has plain oak, no runner)`);
   }
   assert.ok(overheadFound.has('intChandelier'), `expected the Foyer's overhead layer to include "intChandelier", found [${[...overheadFound]}]`);
-  assert.ok(stairsTiles >= 6, `expected a real block of twin-staircase/landing tiles in the Foyer, found ${stairsTiles}`);
+  assert.ok(stairsTiles >= 6, `expected a real block of staircase/landing tiles in the Foyer, found ${stairsTiles}`);
   const wordmarkTiles = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`).filter((n) => found.has(n));
-  assert.ok(wordmarkTiles.length >= 8, `expected the "BITS Pilani, Dubai Campus" wordmark on the Foyer's mezzanine fascia, found [${wordmarkTiles}]`);
+  assert.ok(wordmarkTiles.length >= 8, `expected the "BITS Pilani, Dubai Campus" wordmark on the Foyer's back wall, found [${wordmarkTiles}]`);
   const stall = objs.find((o) => o.type === 'area' && o.name === 'LUG Stall');
   assert.ok(stall, 'expected a "LUG Stall" area object on main-block-g (docs/STORY.md: "an event stall behind the stairs")');
   assert.equal(stall.properties?.find((p) => p.name === 'kind')?.value, 'stall');

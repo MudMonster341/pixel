@@ -147,6 +147,8 @@ const PALETTE = {
   columnBody: '#efe9da', columnShade: '#d8d0bd',
   chandelierGold: '#e8c46a', chandelierGlow: '#fff6df',
   icvlBlue: '#2f4a7a', icvlBlueHi: '#3a5a8f',
+  // ADR 0020 (the ground floor follows the 3D tour): the shaded side strip of the peach lower wall.
+  peachShadow: '#c98f74',
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -1541,6 +1543,37 @@ const TILES = [
   { name: 'carFrontYellow', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontYellow.atlas), URBAN.carFrontYellow.sx, URBAN.carFrontYellow.sy, 16, 16) },
   { name: 'carFrontRed', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontRed.atlas), URBAN.carFrontRed.sx, URBAN.carFrontRed.sy, 16, 16) },
   { name: 'carFrontGreen', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontGreen.atlas), URBAN.carFrontGreen.sx, URBAN.carFrontGreen.sy, 16, 16) },
+
+  // ADR 0020 (2026-10-03): the Main Block ground floor follows the official 3D tour. Every tile below is
+  // composed from the free packs already in assets/vendor (blit + recolour, or a copy of an existing tile
+  // with a strip added) -- no new hand-drawn sprites (FB-0025). Appended at the very end so every
+  // existing tile's name/index stays stable.
+  { name: 'intFloorOak', draw: intFloorOak },
+  { name: 'intWallPeach', solid: true, draw: intWallPeach },
+  { name: 'intWallPeachEndL', solid: true, draw: intWallPeachEndL },
+  { name: 'intWallPeachEndR', solid: true, draw: intWallPeachEndR },
+  { name: 'intWallFaceSkirt', solid: true, draw: intWallFaceSkirt },
+  { name: 'intWallFaceSkirtEndL', solid: true, draw: intWallFaceSkirtEndL },
+  { name: 'intWallFaceSkirtEndR', solid: true, draw: intWallFaceSkirtEndR },
+  { name: 'intSofaRed', solid: true, draw: intSofaRed },
+  { name: 'intSofaBlue', solid: true, draw: intSofaBlue },
+  { name: 'intTerrariumTL', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 0, 0) },
+  { name: 'intTerrariumTR', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 1, 0) },
+  { name: 'intTerrariumML', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 0, 1) },
+  { name: 'intTerrariumMR', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 1, 1) },
+  { name: 'intTerrariumBL', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 0, 2) },
+  { name: 'intTerrariumBR', solid: true, draw: (img, x, y) => terrariumTile(img, x, y, 1, 2) },
+  { name: 'intTotemTop', solid: true, draw: (img, x, y) => intTotem(img, x, y, 'top') },
+  { name: 'intTotemBase', solid: true, draw: (img, x, y) => intTotem(img, x, y, 'base') },
+  { name: 'intBigPlantTop', solid: true, draw: (img, x, y) => bigPlantTile(img, x, y, 0) },
+  { name: 'intBigPlantBase', solid: true, draw: (img, x, y) => bigPlantTile(img, x, y, 1) },
+  { name: 'intGlassPanel', solid: true, draw: intGlassPanel },
+  { name: 'intGlassPanelB', solid: true, draw: intGlassPanelB },
+  { name: 'intGlassDoor', draw: intGlassDoor },
+  { name: 'intDoorOffice', draw: intDoorOffice },
+  { name: 'intDoorFlush', draw: intDoorFlush },
+  { name: 'intDoorDarkL', draw: intDoorDarkL },
+  { name: 'intDoorDarkR', draw: intDoorDarkR },
 ];
 
 // ---------- campus tiles ----------
@@ -3069,6 +3102,227 @@ function intEquipmentTrolley(img, x, y) {
   img.set(x + 4, y + 12, 'K');
   img.set(x + 11, y + 12, 'K');
 }
+
+// ---------- ADR 0020: the Main Block ground floor follows the official 3D tour ----------
+// docs/research/tour-ground-floor.md: pale oak floor, white walls with wood skirting, peach lower walls at
+// the sports/auditorium end, red and blue low sofas, a glass terrarium on a round wooden plinth, back-lit
+// totem pillars, frosted glass, wood-framed frosted-glass office doors, dark wood double doors, big plants
+// in black pots. Owner rule FB-0025: no new hand-drawn art, so each is a crop of the LimeZu Modern
+// Interiors Free sheets (already in the game, credited) recoloured onto this game's own ramps, or an
+// existing tile with a crop laid over it. The few plain rectangles (the totem's stripe and glow) are the
+// same kind of fill the existing column and wall tiles are made of.
+
+// Copies an already-drawn tile's pixels (tiles are drawn in list order, so `srcName` must come earlier in
+// TILES) to (x, y), optionally recoloured: a derived tile, not a new drawing.
+function copyTile(img, x, y, srcName, remap = null) {
+  const i = TILES.findIndex((t) => t.name === srcName);
+  if (i < 0) throw new Error(`copyTile: no tile named ${srcName}`);
+  const sx = (i % TILESET_COLUMNS) * TILE;
+  const sy = Math.floor(i / TILESET_COLUMNS) * TILE;
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) {
+      const o = ((sy + yy) * img.w + sx + xx) * 4;
+      let r = img.data[o], g = img.data[o + 1], b = img.data[o + 2], a = img.data[o + 3];
+      if (a === 0) continue;
+      if (remap) [r, g, b, a] = remap(r, g, b, a);
+      img.setRGBA(x + xx, y + yy, r, g, b, a);
+    }
+  }
+}
+
+const lumOf = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+// Pale oak planks: the same LimeZu wood-plank crop the classroom floor uses (RB.floorWood), pulled up onto a
+// light oak ramp. Its dark plank gaps become a soft tan seam, so the floor stays a calm matte oak -- no strong
+// pattern, no runner (the tour: "pale oak-look planks, no darker runner").
+const remapOakFloor = (r, g, b, a) => {
+  const lum = lumOf(r, g, b);
+  if (lum <= 70) return [...hexToRgb('#c9a87a'), a];
+  return [...hexToRgb(lum < 137 ? '#dcc08f' : lum < 155 ? '#e8d0a3' : '#f0dfb9'), a];
+};
+function intFloorOak(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(RB.floorWood.atlas), RB.floorWood.sx, RB.floorWood.sy, 16, 16, { remap: remapOakFloor });
+}
+
+// The peach/salmon lower wall of the auditorium, sports and lab-entrance ends (tour): LimeZu's own salmon
+// wall colourway (the same 2-row family the cream wall comes from), lifted onto a lighter peach ramp.
+const remapPeachWall = (r, g, b, a) => {
+  const lum = lumOf(r, g, b);
+  if (lum <= 70) return [...hexToRgb('#1a1c2c'), a];
+  return [...hexToRgb(lum < 125 ? '#dea184' : lum < 145 ? '#d89e83' : '#f0c6a6'), a];
+};
+function intWallPeach(img, x, y) {
+  const face = rb(0, 6); // the salmon colourway's face row
+  blitAtlas(img, x, y, loadAtlas(face.atlas), face.sx, face.sy, 16, 16, { remap: remapPeachWall });
+}
+function intWallPeachEnd(img, x, y, side) {
+  intWallPeach(img, x, y);
+  img.fill(x + (side === 'L' ? 0 : TILE - 3), y, 3, TILE, 'peachShadow');
+}
+function intWallPeachEndL(img, x, y) { intWallPeachEnd(img, x, y, 'L'); }
+function intWallPeachEndR(img, x, y) { intWallPeachEnd(img, x, y, 'R'); }
+
+// White wall with a wood skirting (tour: "white walls with a thin wood skirting"): the cream wall tile with the
+// bottom rows of the wood-plank crop laid along its foot.
+function skirtStrip(img, x, y) {
+  img.fill(x, y + 12, TILE, 1, 'K');
+  blitAtlas(img, x, y + 13, loadAtlas(RB.floorWood.atlas), RB.floorWood.sx, RB.floorWood.sy + 13, 16, 3);
+}
+function intWallFaceSkirt(img, x, y) { copyTile(img, x, y, 'intWallFace'); skirtStrip(img, x, y); }
+function intWallFaceSkirtEndL(img, x, y) { copyTile(img, x, y, 'intWallFaceEndL'); skirtStrip(img, x, y); }
+function intWallFaceSkirtEndR(img, x, y) { copyTile(img, x, y, 'intWallFaceEndR'); skirtStrip(img, x, y); }
+
+// Low red and blue sofas (tour: low round red/blue units on the back walls): the pack's own low cushioned pouf
+// (a round-cornered seat on short legs, grey-blue in the sheet), recoloured red and blue. The brown
+// `intSofa` is a different, flat crop and stays as it is for the upper floors.
+const POUF = { atlas: LIMEZU_FURNITURE, sx: 49, sy: 1185, sw: 14, sh: 15 };
+const sofaRemap = (body, shade, hi) => (r, g, b, a) => {
+  const lum = lumOf(r, g, b);
+  if (lum < 100) return [r, g, b, a]; // outline and legs stay
+  return [...hexToRgb(lum >= 173 ? hi : lum >= 146 ? body : shade), a];
+};
+function intSofaRed(img, x, y) {
+  blitRect(img, x, y, POUF, { maxW: 14, maxH: 15, bottomPad: 0, remap: sofaRemap('#c0392b', '#8f2a20', '#e0604f') });
+}
+function intSofaBlue(img, x, y) {
+  blitRect(img, x, y, POUF, { maxW: 14, maxH: 15, bottomPad: 0, remap: sofaRemap('#3f6fb5', '#2c4f86', '#5a8bd0') });
+}
+
+// The terrarium: a 32x48 picture (2 x 3 tiles) composed once from three crops -- the pack's glass pane
+// stretched over a hexagon mask (outlined automatically), the pack's potted ficus standing inside it, and a
+// round plinth cut from the wood-plank crop with an elliptical mask -- then split across 6 tile names.
+let terrariumPic = null;
+function terrariumPicture() {
+  if (terrariumPic) return terrariumPic;
+  const pic = new Img(32, 48);
+  const furniture = loadAtlas(LIMEZU_FURNITURE);
+  const wood = loadAtlas(RB.floorWood.atlas);
+  const putPx = (atlas, sx, sy, px, py) => {
+    const si = (sy * atlas.width + sx) * 4;
+    pic.setRGBA(px, py, atlas.data[si], atlas.data[si + 1], atlas.data[si + 2], atlas.data[si + 3]);
+  };
+  const inHex = (px, py) => {
+    if (px < 3 || px > 28 || py < 3 || py > 38) return false;
+    const cut = 5;
+    const d = py < 3 + cut ? 3 + cut - py : py > 38 - cut ? py - (38 - cut) : 0;
+    return px >= 3 + d && px <= 28 - d;
+  };
+  for (let py = 0; py < 48; py++) {
+    for (let px = 0; px < 32; px++) {
+      if (!inHex(px, py)) continue;
+      putPx(furniture, 146 + Math.floor(((px - 3) * 12) / 26), 457 + Math.floor(((py - 3) * 16) / 36), px, py);
+    }
+  }
+  const edge = hexToRgb('#3a3a50');
+  for (let py = 0; py < 48; py++) {
+    for (let px = 0; px < 32; px++) {
+      if (!inHex(px, py)) continue;
+      if (!inHex(px - 1, py) || !inHex(px + 1, py) || !inHex(px, py - 1) || !inHex(px, py + 1)) pic.setRGBA(px, py, edge[0], edge[1], edge[2], 255);
+    }
+  }
+  const FICUS = { sx: 167, sy: 713, sw: 18, sh: 30 };
+  blitAtlas(pic, 7, 6, furniture, FICUS.sx, FICUS.sy, FICUS.sw, FICUS.sh);
+  const inPlinth = (px, py) => ((px - 15.5) / 15) ** 2 + ((py - 43) / 5) ** 2 <= 1;
+  for (let py = 36; py < 48; py++) {
+    for (let px = 0; px < 32; px++) {
+      if (!inPlinth(px, py)) continue;
+      const rim = !inPlinth(px - 1, py) || !inPlinth(px + 1, py) || !inPlinth(px, py - 1) || !inPlinth(px, py + 1);
+      if (rim) pic.setRGBA(px, py, edge[0], edge[1], edge[2], 255);
+      else putPx(wood, RB.floorWood.sx + (px % 16), RB.floorWood.sy + (py % 16), px, py);
+    }
+  }
+  terrariumPic = pic;
+  return pic;
+}
+function terrariumTile(img, x, y, qx, qy) {
+  const pic = terrariumPicture();
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) {
+      const o = ((qy * TILE + yy) * pic.w + qx * TILE + xx) * 4;
+      if (pic.data[o + 3] === 0) continue;
+      img.setRGBA(x + xx, y + yy, pic.data[o], pic.data[o + 1], pic.data[o + 2], pic.data[o + 3]);
+    }
+  }
+}
+
+// A back-lit totem pillar (tour: tall white pillars with a coloured stripe; the portrait panels are left
+// out on purpose): two tiles, built from the same palette fills the round columns use.
+function intTotem(img, x, y, band) {
+  img.fill(x + 3, y, 10, TILE, 'columnBody');
+  img.fill(x + 3, y, 3, TILE, 'wallHi');
+  img.fill(x + 10, y, 3, TILE, 'columnShade');
+  img.fill(x + 7, y, 2, TILE, 'icvlBlue');
+  img.fill(x + 2, y, 1, TILE, 'K');
+  img.fill(x + 13, y, 1, TILE, 'K');
+  if (band === 'top') {
+    img.fill(x + 2, y, 12, 1, 'K');
+    img.fill(x + 3, y + 1, 10, 2, 'chandelierGlow');
+  } else {
+    img.fill(x + 3, y + TILE - 3, 10, 2, 'columnShade');
+    img.fill(x + 2, y + TILE - 1, 12, 1, 'K');
+  }
+}
+
+// A big plant in a black pot, 1 x 2 tiles: the pack's potted ficus scaled to fit, with the pot's tan/wood
+// pixels (the bottom of the crop, anything that is not leaf or outline) pulled onto near-black.
+function bigPlantTile(img, x, y, half) {
+  const pic = new Img(16, 32);
+  blitAtlas(pic, 0, 0, loadAtlas(LIMEZU_FURNITURE), 167, 713, 18, 30, { dw: 16, dh: 27, offsetY: 4 });
+  for (let py = 23; py < 32; py++) {
+    for (let px = 0; px < 16; px++) {
+      const o = (py * 16 + px) * 4;
+      if (pic.data[o + 3] === 0) continue;
+      const r = pic.data[o], g = pic.data[o + 1], b = pic.data[o + 2];
+      if (g > r + 6 && g > b + 6) continue; // leaf
+      const lum = lumOf(r, g, b);
+      if (lum <= 70) continue; // outline
+      const hex = lum < 120 ? '#26262e' : lum < 170 ? '#3a3a46' : '#55555f';
+      const [nr, ng, nb] = hexToRgb(hex);
+      pic.data[o] = nr; pic.data[o + 1] = ng; pic.data[o + 2] = nb;
+    }
+  }
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) {
+      const o = ((half * TILE + yy) * 16 + xx) * 4;
+      if (pic.data[o + 3] === 0) continue;
+      img.setRGBA(x + xx, y + yy, pic.data[o], pic.data[o + 1], pic.data[o + 2], pic.data[o + 3]);
+    }
+  }
+}
+
+// Frosted glass: the pack's two glass-pane tiles (left- and right-edged), alternated along a partition.
+function intGlassPanel(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 32, 464, 16, 16); }
+function intGlassPanelB(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 48, 464, 16, 16); }
+// A full-height glass door in a wall (the foyer's side doors to the garden): the cream wall, the pack's
+// single glass pane over it. Walkable like every closed wall door (the step-in toast says it is shut).
+function intGlassDoor(img, x, y) {
+  copyTile(img, x, y, 'intWallFace');
+  blitAtlas(img, x + 2, y, loadAtlas(LIMEZU_FURNITURE), 146, 457, 12, 16);
+}
+// A wood-framed frosted-glass office door (tour: the corridor doors): the cream wall with the pack's
+// wood-framed frosted window, squeezed to door proportions.
+function intDoorOffice(img, x, y) {
+  copyTile(img, x, y, 'intWallFace');
+  blitAtlas(img, x + 2, y + 1, loadAtlas(LIMEZU_FURNITURE), 114, 457, 28, 21, { dw: 12, dh: 15 });
+}
+// A flush wooden door (Library, Career Services...): the existing closed-door recipe (intDoorClosed) on the
+// cream wall instead of the sand wall.
+function intDoorFlush(img, x, y) {
+  copyTile(img, x, y, 'intWallFace');
+  img.fill(x + 2, y + 1, TILE - 4, TILE - 2, 'n');
+  img.fill(x + 3, y + 2, TILE - 6, TILE - 4, 'N');
+  img.set(x + TILE - 5, y + TILE / 2, 'Y');
+}
+// Dark wood double doors (Auditorium, Sports Complex): the pack's own double door, in two halves,
+// recoloured to dark brown (its glass stays glass).
+const remapDarkWood = (r, g, b, a) => {
+  if (b > r) return [r, g, b, a];
+  const lum = lumOf(r, g, b);
+  if (lum <= 95) return [r, g, b, a];
+  return [...hexToRgb(lum < 140 ? '#5a3a24' : lum < 175 ? '#6f4a2e' : '#8a6038'), a];
+};
+function intDoorDarkL(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 176, 387, 16, 28, { dw: 16, dh: 16, remap: remapDarkWood }); }
+function intDoorDarkR(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 192, 387, 16, 28, { dw: 16, dh: 16, remap: remapDarkWood }); }
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------
 // The player and the new campus NPCs are recolors of LimeZu's free "Characters_free" pack

@@ -121,15 +121,27 @@ const AMBIENT = {
   ],
 
   'main-block-g': [
-    // On the foyer's sofas / waiting near reception (docs/STORY.md "the foyer"): kept well clear of
-    // the "LUG Stall" nook (x4-24, y8-10) where the volunteer stands, per this task's own brief.
-    { id: 'mbg-amb-sit-1', character: 'ambient-a', role: 'first-year', kind: 'idle', x: 6, y: 14, facing: 'down' },
-    { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 20, y: 14, facing: 'left' },
-    // Walking between the staircase and the door.
+    // The reception foyer and the two wings, rebuilt for ADR 0020 (docs/INTERIORS_PLAN.md "Ground floor"). Every
+    // spot is open floor of the NEW layout (checked by tests/unit/foyer-tour.test.js against the real map): at
+    // least 3 tiles from the LUG volunteer (14,16) behind the left staircase, the stairs object (15,25), and every
+    // door, and never in a one-tile lane (the ramp's rail lanes, the staircase's west lane) or a doorway.
+    // By the right-back sofas, and in the open hall west of the terrarium.
+    { id: 'mbg-amb-sit-1', character: 'ambient-a', role: 'first-year', kind: 'idle', x: 26, y: 19, facing: 'left' },
+    { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 14, y: 31, facing: 'right' },
+    // A pair chatting in the front of the hall, between the reception desks.
+    { id: 'mbg-amb-chat-1', character: 'ambient-d', role: 'quiz-club-member', kind: 'chat', x: 22, y: 33, facing: 'right', pairId: 'mbg-chat' },
+    { id: 'mbg-amb-chat-2', character: 'ambient-e', role: 'cultural-club-member', kind: 'chat', x: 23, y: 33, facing: 'left', pairId: 'mbg-chat' },
+    // Walking across the hall past the sofas, and back and forth in front of the reception desks.
     { id: 'mbg-amb-walk-1', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 700,
-      waypoints: [{ x: 8, y: 14 }, { x: 8, y: 19 }] },
+      waypoints: [{ x: 22, y: 24 }, { x: 27, y: 24 }] },
     { id: 'mbg-amb-walk-2', character: 'ambient-c', role: 'acm-member', kind: 'patrol', speed: 50, pauseMs: 700,
-      waypoints: [{ x: 20, y: 19 }, { x: 14, y: 20 }] },
+      waypoints: [{ x: 13, y: 33 }, { x: 24, y: 33 }] },
+    // The wings: one in each wing-end lobby, one waiting in the right-hand office corridor.
+    { id: 'mbg-amb-wing-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 45, pauseMs: 900,
+      waypoints: [{ x: 6, y: 12 }, { x: 6, y: 9 }] },
+    { id: 'mbg-amb-wing-2', character: 'ambient-f', role: 'senior', kind: 'patrol', speed: 45, pauseMs: 900,
+      waypoints: [{ x: 33, y: 12 }, { x: 33, y: 9 }] },
+    { id: 'mbg-amb-wing-3', character: 'ambient-a', role: 'tech-club-member', kind: 'idle', x: 34, y: 27, facing: 'up' },
   ],
 
   'main-block-1': [

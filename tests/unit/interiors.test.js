@@ -160,9 +160,13 @@ test('every interior/campus door or stairs object points at a real map, a real o
 
 // ---------- stairs line up between floors of the same building ----------
 
+// ADR 0020: the Main Block's GROUND floor now follows the 3D tour -- its staircase is the visible split stair on
+// the left of the foyer, not the shared stairwell rectangle (x 30..37, y 12..21) the three upper floors still use
+// (they are not rebuilt yet). So the "same stairwell on every floor" check covers floors 1-3 of the Main Block;
+// the ground floor is checked separately below: its staircase must still link, both ways, to floor 1's stairwell.
 test('stairs line up between floors (same x,y stairwell on every floor of a building)', () => {
   const buildingsByFloors = {
-    main: ['main-block-g', 'main-block-1', 'main-block-2', 'main-block-3'],
+    main: ['main-block-1', 'main-block-2', 'main-block-3'],
     library: ['library-block-g', 'library-block-1'],
     mechanical: ['mechanical-block-g', 'mechanical-block-1'],
   };
@@ -180,6 +184,21 @@ test('stairs line up between floors (same x,y stairwell on every floor of a buil
       assert.deepEqual(rects[i], rects[0], `the stairwell on ${floors[i]} doesn't line up with ${floors[0]}`);
     }
   }
+});
+
+test("ADR 0020: the Main Block ground floor staircase links both ways to the shared stairwell on floor 1", () => {
+  const up = maps['main-block-g'].objects.find((o) => o.type === 'stairs' && o.name === 'Main Block Stairs G (up)');
+  assert.ok(up, 'main-block-g has no "Main Block Stairs G (up)"');
+  assert.equal(up.props.to, 'main-block-1');
+  const down = maps['main-block-1'].objects.find((o) => o.type === 'stairs' && o.name === up.props.toId);
+  assert.ok(down, 'floor 1 has no matching down stairs');
+  assert.equal(down.props.to, 'main-block-g');
+  assert.equal(down.props.toId, up.name, 'floor 1 does not link back to the ground floor stairs');
+  // floor 1's down stairs stand inside the stairwell rectangle shared with floors 2 and 3
+  const room = maps['main-block-1'].objects.find((o) => o.type === 'area' && /stairs/i.test(o.name));
+  assert.ok(down.x >= room.x && down.x < room.x + room.width && down.y >= room.y && down.y < room.y + room.height);
+  // the ground floor has no stairwell room: its staircase is the foyer's split stair (ADR 0020)
+  assert.ok(!maps['main-block-g'].objects.some((o) => o.type === 'area' && /stairs/i.test(o.name)), 'the ground floor should not have a hidden stairwell room any more');
 });
 
 // ---------- every interior room reachable across floors, following stairs (flood fill) ----------

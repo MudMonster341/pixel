@@ -105,3 +105,24 @@ test('locked doors: the Library Block entrance is permanently locked, with a toa
   expect(after.map).toBe('campus'); // never actually transitioned
   expect(after.toast).toBe('Locked for the event');
 });
+
+// ADR 0020 (owner decision: every wing destination is a closed, nameplated door): walking into one says its
+// own line, thuds, and never changes map -- no door is silent. Written, not run (docs/QUALITY_LOOP.md); the
+// data side is checked in tests/unit/foyer-tour.test.js.
+test('closed wing doors on the Main Block ground floor say their line and never open', async ({ page }) => {
+  await openGame(page, { map: 'main-block-g' });
+  await waitForMap(page, 'main-block-g');
+  const door = await page.evaluate(() => {
+    const world = game.scene.getScene('world');
+    const o = world.mapObjects.find((obj) => obj.type === 'door' && obj.name === 'Admissions Office door');
+    const rule = world.def.doorLocks.find((r) => r.match === o.name);
+    return { x: Math.floor(o.x), y: Math.floor(o.y), line: rule.reason };
+  });
+  // The door is in the south wall of the left wing's first stretch: stand just north of it and walk south.
+  await teleport(page, door.x, door.y - 1);
+  await holdKey(page, 's', 600);
+  const after = await state(page);
+  expect(after.map).toBe('main-block-g'); // never opened
+  expect(after.toast).toBe(door.line);
+  expect(door.line).toContain('Admissions Office');
+});

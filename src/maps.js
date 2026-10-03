@@ -53,13 +53,34 @@ const MAPS = {
     // Up to the 1st floor only opens once the volunteer has actually given the quest (docs/STORY.md
     // "Rules for the world": "the key rooms only open once the volunteer has given the task") --
     // 'rewarded' stays listed too so backtracking after the reward never re-locks the stairs.
-    doorLocks: [{ match: 'Main Block Stairs G (up)', stages: ['hunting', 'rewarded'] }],
+    doorLocks: [
+      { match: 'Main Block Stairs G (up)', stages: ['hunting', 'rewarded'] },
+      // ADR 0020 (owner decision: every wing destination is a closed door): each wall door of the foyer and the
+      // two wings, matched by its Tiled object name (tools/interiors/plans.js, FURNISHERS.foyer). No `stages`, so
+      // each stays shut for the whole game; `reason` is the line the toast says when she walks into it
+      // (src/scenes/world.js checkWarps()). Room names are the tour's (docs/research/tour-ground-floor.md).
+      { match: 'Admissions Office door', reason: 'Admissions Office. Closed for now.' },
+      { match: "Director's Office door", reason: "Director's Office. The door is shut." },
+      { match: 'Sports Complex door', reason: 'Sports Complex. Not open yet.' },
+      { match: 'Prime Medical Centre door', reason: 'Prime Medical Centre. Closed for now.' },
+      { match: 'Mini Mart door', reason: 'Mini Mart. Not open right now.' },
+      { match: 'Telepresence Classroom door', reason: 'Telepresence Classroom. Locked for now.' },
+      { match: 'Academic Undergraduate Studies Division door', reason: 'Academic Undergraduate Studies Division. Closed for now.' },
+      { match: 'Student Welfare Division door', reason: 'Student Welfare Division. The door is locked.' },
+      { match: "Deputy Registrar's Office door", reason: "Deputy Registrar's Office. Closed for now." },
+      { match: 'Auditorium door', reason: 'Auditorium. The doors are shut.' },
+      { match: 'Parents-Visitor Lounge door', reason: 'Parents-Visitor Lounge. Closed for now.' },
+      { match: 'Library door', reason: 'Library. Closed for now.' },
+      { match: 'Career Services door', reason: 'Career Services. Come back later.' },
+      { match: 'Glass side door (left)', reason: 'The glass side door is locked.' },
+      { match: 'Glass side door (right)', reason: 'This glass side door is locked too.' },
+    ],
     npcs: [{
       id: 'lug-volunteer',
       name: 'LUG Volunteer',
       character: 'volunteer',
-      x: 13,
-      y: 9, // the nook behind the foyer's staircase (FB-0030/0031, docs/INTERIORS_PLAN.md "LUG Stall")
+      x: 14,
+      y: 16, // the nook BEHIND the foyer's left staircase (ADR 0020, docs/INTERIORS_PLAN.md "LUG Stall")
       facing: 'down',
       dialog: STORY.volunteer,
     }],

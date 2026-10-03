@@ -2,17 +2,19 @@
 // docs/INTERIORS_PLAN.md for the room list, sources and rough spots. Room names are the real
 // virtual-tour scene names where known (docs/research/bits-dubai-tour-scenes.json); floors the tour
 // doesn't specify are a sensible guess, noted in the plan doc. Every building's floors share one
-// canvas size and the same stairwell rectangle, so stairs line up between floors.
+// canvas size and the same stairwell rectangle, so stairs line up between floors (one exception: the Main
+// Block's ground floor, ADR 0020, has the foyer's visible split staircase instead).
 
-// ---------- Main Block: 4 floors, right-sized (FB-0030/0031, premium pass stage 5) ----------
+// ---------- Main Block: 4 floors, right-sized (FB-0030/0031, premium pass stage 5; ground floor ADR 0020) ----------
 // Rebuilt compact per the owner's own words (FB-0031: "we don't need a proper map, make it nice as
 // per how a university campus looks from the top"): today's huge 136x84 floors, mostly empty cream
-// floor, are replaced with a small, furnished Pokemon-style building -- the foyer (the flagship
-// room, built to the owner's photo below) + the LUG stall nook + a short corridor to the (locked,
-// but visible) rest of the ground floor; then one corridor per upper floor carrying the 3 key rooms
-// and a couple of transit stops (docs/STORY.md's own room list -- see docs/INTERIORS_PLAN.md "Story
-// rooms" for why ICVL/Room 195/Physics Lab live where they do). Every floor shares one canvas size
-// and one fixed stairwell rectangle (MAIN_STAIRWELL), so stairs line up between floors (tested).
+// floor, are replaced with small, furnished Pokemon-style floors. The GROUND floor is the reception foyer
+// plus two long wings, rebuilt to match the official 3D virtual tour (ADR 0020, see mainBlockG below);
+// then one corridor per upper floor carrying the 3 key rooms and a couple of transit stops
+// (docs/STORY.md's own room list -- see docs/INTERIORS_PLAN.md "Story rooms" for why ICVL/Room 195/Physics
+// Lab live where they do). All four floors share one canvas size. The three UPPER floors also share one fixed
+// stairwell rectangle (MAIN_STAIRWELL), so their stairs line up (tested); the ground floor's staircase is the
+// visible split stair on the left of the foyer (the tour), so it no longer lines up with that rectangle.
 const MAIN_W = 40;
 const MAIN_H = 40;
 const MAIN_STAIRWELL = { x0: 30, y0: 12, x1: 37, y1: 21 };
@@ -67,38 +69,86 @@ function doorNameplate(floor, roomA, roomB) {
   floor.placeStructure(start - 1, wallY, 'intNameplate');
 }
 
+// ADR 0020 (2026-10-03): the ground floor follows the official 3D virtual tour (docs/research/tour-ground-floor.md),
+// not the owner's older photo. A central reception foyer (a double-height atrium: oak floor, the glass terrarium on
+// its plinth, two curved reception desks flanking the entrance, a split staircase on the left towards the back with
+// the LUG stall behind it, red and blue sofas on the back walls -- all in the `foyer` furnisher,
+// build-interiors.js FURNISHERS.foyer) and TWO LONG WINGS, one off each side wall, drawn here:
+//   - Right wing: an office corridor (Academic Undergraduate Studies Division, Student Welfare Division, Deputy
+//     Registrar's Office) to the Auditorium lobby and the Parents-Visitor Lounge.
+//   - Left wing: Admissions Office, Director's Office, a shallow ramp (peach lower walls, centre rail) up to the
+//     Sports Complex lobby: Sports Complex, Prime Medical Centre, Mini Mart, Telepresence Classroom.
+//   - Library and Career Services are closed doors in the foyer's left wall (placed by the foyer furnisher).
+// The shared 40x40 canvas can't hold two straight wings, so each wing runs out sideways off the hall's front
+// corner, then north along the canvas edge (a U round the atrium void), ending in its lobby: about 35 tiles long.
+// OWNER DECISION: every wing destination is a CLOSED, nameplated door (no new enterable rooms). Each closed door is
+// a `door` object marked `closed` (Floor.closedDoor); the line it says is its `doorLocks` entry in src/maps.js.
+// The upper floors (below) are not rebuilt now. Their stairwell rectangle (MAIN_STAIRWELL) is therefore no longer
+// shared with the ground floor: the visible staircase is on the left, the upper floors' stairwell stays right
+// (docs/INTERIORS_PLAN.md "Ground floor").
 const mainBlockG = {
   name: 'Main Block · Ground Floor',
   width: MAIN_W,
   height: MAIN_H,
-  spawn: { x: 14, y: 18, facing: 'up' },
+  spawn: { x: 19, y: 34, facing: 'up' },
   build(floor) {
-    // The foyer (FB-0030: "the main reception foyer -- make it look like that", the owner's photo),
-    // quality-loop-sized to fill the screen at zoom 3 (a 20x12 play area): glossy marble, 4 big
-    // columns, a twin staircase to a full-width mezzanine, the wordmark, an overhead chandelier,
-    // reception seating and the LUG Stall nook behind the stairs -- all in the `foyer` furnisher
-    // (build-interiors.js FURNISHERS.foyer), since it's one continuous composed room rather than a
-    // grid of repeated props like every other room type. `wallKit: 'roomBuilder'` (quality loop,
-    // Interior art run 1): real LimeZu Room_Builder walls (a cap + a 2-tile-tall face) instead of
-    // the flat hand-drawn BITS wall -- Main Block only, Library/Mechanical Block keep the old wall.
-    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', wallKit: 'roomBuilder', x0: 2, y0: 6, x1: 25, y1: 21 });
+    // Wing end lobbies first (cream tile floor, peach lower walls, as in the auditorium and sports ends).
+    floor.addRect('lobbyL', { name: 'Sports Complex Lobby', type: 'wingLobby', wallKit: 'peach', floorTile: 'intFloorTiled', x0: 2, y0: 5, x1: 10, y1: 14 });
+    floor.addRect('lobbyR', { name: 'Auditorium Lobby', type: 'wingLobby', wallKit: 'peach', floorTile: 'intFloorTiled', x0: 29, y0: 5, x1: 37, y1: 14 });
+    // The wings: a short run out of the hall (H), then north along the canvas edge (V). Oak floor, wood skirting.
+    const wing = { type: 'corridor', wallKit: 'skirt', floorTile: 'intFloorOak', isCorridor: true };
+    floor.addRect('wingLH', { ...wing, name: 'Left wing', x0: 2, y0: 28, x1: 10, y1: 32 });
+    floor.addRect('wingLV', { ...wing, name: 'Left wing', x0: 2, y0: 14, x1: 6, y1: 28 });
+    floor.addRect('wingRH', { ...wing, name: 'Right wing', x0: 29, y0: 28, x1: 37, y1: 32 });
+    floor.addRect('wingRV', { ...wing, name: 'Right wing', x0: 33, y0: 14, x1: 37, y1: 28 });
+
+    // The foyer last, so its own wall ring wins where it shares a wall with a wing.
+    floor.addRect('foyer', { name: 'Foyer', type: 'foyer', wallKit: 'roomBuilder', x0: 10, y0: 14, x1: 29, y1: 37 });
     floor.exteriorDoor('foyer', 'bottom', {
       name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up',
-      openTiles: 'intGlassDoorOpen,intGlassDoorOpen',
+      openTiles: 'intGlassDoorOpen,intGlassDoorOpen', at: 19,
     });
-    floor.wallFeature('foyer', 'left', 'intWallWindow');
-    floor.wallFeature('foyer', 'right', 'intWallWindow');
 
-    // A short corridor to the rest of the ground floor -- locked, but visible (docs/STORY.md:
-    // "everywhere else in the building is blocked off for now") -- and the stairwell up.
-    const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 25, y0: 13, x1: 30, y1: 21, isCorridor: true });
-    floor.connect('foyer', 'corridor');
-    floor.placeStructure(27, 13, 'intDoorClosed');
-    floor.placeStructure(28, 21, 'intDoorClosed');
-    dressCorridor(floor, corridor, { axis: 'v' });
+    // Wide, door-less mouths: foyer <-> wings <-> lobbies.
+    floor.connect('wingLH', 'foyer', { width: 3, openTile: 'intFloorOak' });
+    floor.connect('wingLV', 'wingLH', { width: 3, openTile: 'intFloorOak' });
+    floor.connect('lobbyL', 'wingLV', { width: 3, openTile: 'intFloorTiled' });
+    floor.connect('wingRH', 'foyer', { width: 3, openTile: 'intFloorOak' });
+    floor.connect('wingRV', 'wingRH', { width: 3, openTile: 'intFloorOak' });
+    floor.connect('lobbyR', 'wingRV', { width: 3, openTile: 'intFloorTiled' });
 
-    stairwell(floor, 'Main Block Stairs G', { up: { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)' } });
-    floor.connect('corridor', 'stairwell');
+    // The left wing's ramp (y 14..22): grey/white tile, peach lower walls, a centre rail (the tour's "shallow ramp").
+    floor.paintFloor(3, 14, 5, 22, 'intFloorTiled');
+    floor.repaintWalls(2, 14, 6, 22, 'peach');
+    for (let y = 16; y <= 20; y++) floor.placeStructure(4, y, 'intAtriumRailing');
+    floor.depthGroupRect(4, 16, 4, 20);
+
+    // ---- closed doors, every one with a nameplate beside it and a line in src/maps.js doorLocks ----
+    const closed = (x, y, tile, name, plate) => {
+      floor.closedDoor(x, y, tile, name);
+      if (plate) floor.placeStructure(plate[0], plate[1], 'intNameplate');
+    };
+    // left wing
+    closed(6, 32, 'intDoorOffice', 'Admissions Office door', [7, 32]);
+    closed(2, 24, 'intDoorOffice', "Director's Office door", [2, 25]);
+    // the Sports Complex lobby (x 3..9, y 6..13)
+    closed(5, 5, 'intDoorDarkL', 'Sports Complex door', [4, 5]);
+    closed(6, 5, 'intDoorDarkR', 'Sports Complex door', [7, 5]);
+    closed(10, 8, 'intDoorOffice', 'Prime Medical Centre door', [10, 7]);
+    closed(10, 11, 'intDoorFlush', 'Mini Mart door', [10, 10]);
+    closed(2, 10, 'intDoorOffice', 'Telepresence Classroom door', [2, 11]);
+    // right wing
+    closed(33, 32, 'intDoorOffice', 'Academic Undergraduate Studies Division door', [32, 32]);
+    closed(37, 25, 'intDoorOffice', 'Student Welfare Division door', [37, 24]);
+    closed(33, 21, 'intDoorOffice', "Deputy Registrar's Office door", [33, 22]);
+    // the Auditorium lobby (x 30..36, y 6..13)
+    closed(33, 5, 'intDoorDarkL', 'Auditorium door', [32, 5]);
+    closed(34, 5, 'intDoorDarkR', 'Auditorium door', [35, 5]);
+    closed(29, 9, 'intDoorDarkR', 'Parents-Visitor Lounge door', [29, 8]);
+
+    // ---- dressing: big black-pot plants at the corners, a water dispenser by the auditorium doors ----
+    for (const [x, y] of [[3, 30], [36, 30], [3, 6], [9, 6], [30, 6], [36, 12]]) floor.bigPlant(x, y);
+    floor.placeStructure(36, 6, 'intWaterCooler');
   },
 };
 

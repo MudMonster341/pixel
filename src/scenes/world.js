@@ -874,14 +874,18 @@ class WorldScene extends Phaser.Scene {
       openTiles: parseOpenTiles(w.openTiles),
     }));
     const objectWarps = (this.mapObjects || [])
-      .filter((o) => (o.type === 'door' || o.type === 'stairs') && o.props.to)
+      // ADR 0020: a Tiled `door` marked `closed` has no `to` -- a door in a wing wall that never opens. It is
+      // still a warp trigger so the locked-door machinery speaks for it: its map def's own `doorLocks` rule
+      // (no `stages`, so locked for good) carries the line shown as the toast (`reason`).
+      .filter((o) => (o.type === 'door' || o.type === 'stairs') && (o.props.to || o.props.closed))
       .map((o) => {
         const rule = doorLockRule(this.def.doorLocks, o.name);
         return {
           x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, to: o.props.to, spawnAt: o.props.toId,
+          closed: Boolean(o.props.closed),
           name: o.name, kind: o.type, openTiles: parseOpenTiles(o.props.openTiles),
-          locked: isDoorLocked(rule, GameState.quest.stage), _rule: rule,
-          lockedReason: (rule && rule.reason) || 'Locked for the event',
+          locked: Boolean(o.props.closed) || isDoorLocked(rule, GameState.quest.stage), _rule: rule,
+          lockedReason: (rule && rule.reason) || (o.props.closed ? 'Closed for now.' : 'Locked for the event'),
           // M5 sound (checkWarps() below): a Tiled 'stairs' object gets the warp/stairs sfx, a 'door'
           // (or a plain text-map warp, which has no `type` at all) gets the door-open sfx.
           type: o.type,
@@ -900,7 +904,7 @@ class WorldScene extends Phaser.Scene {
       this._warpStage = GameState.quest.stage;
     } else if (this._warpStage !== GameState.quest.stage) {
       this._warpStage = GameState.quest.stage;
-      for (const w of this._warpPointsCache) w.locked = isDoorLocked(w._rule, GameState.quest.stage);
+      for (const w of this._warpPointsCache) w.locked = w.closed || isDoorLocked(w._rule, GameState.quest.stage);
     }
     return this._warpPointsCache;
   }
@@ -911,7 +915,7 @@ class WorldScene extends Phaser.Scene {
     const body = this.player.body;
     const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
     const warp = this.getWarpPoints().find(
-      (w) => w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE,
+      (w) => !w.closed && w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE, // ADR 0020: never steer into a closed wall door
     );
     if (!warp) return null;
     return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -speed, speed);

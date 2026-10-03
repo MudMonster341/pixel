@@ -1735,6 +1735,162 @@
       "solid": true,
       "overhead": false,
       "color": "#548577"
+    },
+    {
+      "name": "intFloorOak",
+      "solid": false,
+      "overhead": false,
+      "color": "#e2c89b"
+    },
+    {
+      "name": "intWallPeach",
+      "solid": true,
+      "overhead": false,
+      "color": "#cea289"
+    },
+    {
+      "name": "intWallPeachEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#d7a68a"
+    },
+    {
+      "name": "intWallPeachEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#cb9d84"
+    },
+    {
+      "name": "intWallFaceSkirt",
+      "solid": true,
+      "overhead": false,
+      "color": "#c2bbb2"
+    },
+    {
+      "name": "intWallFaceSkirtEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#c5bcaf"
+    },
+    {
+      "name": "intWallFaceSkirtEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#bbb2a7"
+    },
+    {
+      "name": "intSofaRed",
+      "solid": true,
+      "overhead": false,
+      "color": "#a4433d"
+    },
+    {
+      "name": "intSofaBlue",
+      "solid": true,
+      "overhead": false,
+      "color": "#4468a0"
+    },
+    {
+      "name": "intTerrariumTL",
+      "solid": true,
+      "overhead": false,
+      "color": "#5f7572"
+    },
+    {
+      "name": "intTerrariumTR",
+      "solid": true,
+      "overhead": false,
+      "color": "#69807e"
+    },
+    {
+      "name": "intTerrariumML",
+      "solid": true,
+      "overhead": false,
+      "color": "#838a8e"
+    },
+    {
+      "name": "intTerrariumMR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8d9599"
+    },
+    {
+      "name": "intTerrariumBL",
+      "solid": true,
+      "overhead": false,
+      "color": "#90786b"
+    },
+    {
+      "name": "intTerrariumBR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8d786d"
+    },
+    {
+      "name": "intTotemTop",
+      "solid": true,
+      "overhead": false,
+      "color": "#a4a09b"
+    },
+    {
+      "name": "intTotemBase",
+      "solid": true,
+      "overhead": false,
+      "color": "#a09d97"
+    },
+    {
+      "name": "intBigPlantTop",
+      "solid": true,
+      "overhead": false,
+      "color": "#4d715c"
+    },
+    {
+      "name": "intBigPlantBase",
+      "solid": true,
+      "overhead": false,
+      "color": "#41454c"
+    },
+    {
+      "name": "intGlassPanel",
+      "solid": true,
+      "overhead": false,
+      "color": "#adb8c0"
+    },
+    {
+      "name": "intGlassPanelB",
+      "solid": true,
+      "overhead": false,
+      "color": "#b1bec7"
+    },
+    {
+      "name": "intGlassDoor",
+      "solid": false,
+      "overhead": false,
+      "color": "#b2b9c1"
+    },
+    {
+      "name": "intDoorOffice",
+      "solid": false,
+      "overhead": false,
+      "color": "#aca8a7"
+    },
+    {
+      "name": "intDoorFlush",
+      "solid": false,
+      "overhead": false,
+      "color": "#82634a"
+    },
+    {
+      "name": "intDoorDarkL",
+      "solid": false,
+      "overhead": false,
+      "color": "#694933"
+    },
+    {
+      "name": "intDoorDarkR",
+      "solid": false,
+      "overhead": false,
+      "color": "#725f54"
     }
   ]
 }

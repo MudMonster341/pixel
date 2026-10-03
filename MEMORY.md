@@ -948,3 +948,18 @@ all three bugs explicitly, including the reference photo to redraw slide 1 again
 **Next:** re-rate "Card and ending" (a fresh qa-shots/manual look at the card) once the next full test
 round runs; this branch (`quality/card-1`) built under the session's "build only" rule -- unit tests
 only (427 passed), no server/browser/e2e run yet.
+
+## 2026-10-03 — Handoff before the owner's playtest
+
+**Did (2026-09-28..29):** Phase A finished and pushed; quality loop runs 1-4 lifted outdoor art
+4->7, interior 3->6, UI 5->7, card 5->7, cutscenes 5->7, mini-games 4->6, story flow 6. Added
+ambient students, a top-down shuttle, the in-person Mustafa greeting, a real red-paver forecourt,
+the 3x mini-game rescale, a fault-tolerant qa-shots (96 shots). Fix rounds found real bugs:
+ERR-0008/0009, a rainbow tile (unrecoloured Cool School books), ambient NPCs blocking the door route
+and out-competing key stations on exact ties.
+
+**Open:** ambient-student textures not preloaded (missing-texture boxes in the foyer); key-station
+tie-break; new dialogue lines await owner approval (FB-0032). Audio, game feel, performance unrated.
+
+**Next:** the owner plays; their feedback first, then the bugs in HANDOFF.md "Known bugs", then the
+quality loop continues.

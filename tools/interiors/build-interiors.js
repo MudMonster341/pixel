@@ -560,14 +560,13 @@ const FURNISHERS = {
     // side by side (stepX 1, was 2) in every row (stepY 1, was 2) -- a genuinely dense classroom,
     // not a sparse quarter-filled grid.
     rowGrid(put, ix0, iy0, ix1, iy1, 'intDesk', { topMargin: 1, stepX: 1, stepY: 1 });
-    // A few extra desks in the corners of the 1-tile walkway ring furnish() leaves along the side
-    // walls -- alternating with a clear tile, so the ring stays a real connected loop all the way
-    // round the room (never fully blocked on any one side) while still adding real density.
+    // A few extra desks on the RIGHT-hand 1-tile walkway ring furnish() leaves along the side wall,
+    // alternating with a clear tile, for density. The left ring stays fully clear: desks on both rings
+    // used to cut each ring into pieces at every desk row (a ring tile with a desk in it is a wall to
+    // a 1-wide path), which walled the whole top of Room 195 -- the teacher's desk, where the key
+    // station is -- off from the door (found by tests/unit/story-clearance.test.js, 2026-10-03, ERR-0013).
     if (ctx && ctx.floor) {
-      for (let y = iy0 + 1; y <= iy1; y += 2) {
-        ctx.floor.placeStructure(ix0 - 1, y, 'intDesk');
-        ctx.floor.placeStructure(ix1 + 1, y, 'intDesk');
-      }
+      for (let y = iy0 + 1; y <= iy1; y += 2) ctx.floor.placeStructure(ix1 + 1, y, 'intDesk');
     }
     // A whiteboard mounted on the room's own front wall, above the teacher's desk (owner brief:
     // "classrooms with desks facing a whiteboard") -- wallFeature overrides one wall tile, it can

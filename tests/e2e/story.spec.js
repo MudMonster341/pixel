@@ -69,6 +69,10 @@ async function talk(page) {
 }
 
 test('the LUG treasure hunt: a named playthrough from the gate to the reward box', async ({ page }) => {
+  // ERR-0013: a whole-game playthrough (title, name entry, opening, 7 map changes, 3 keys, the reward) takes
+  // ~26 s on a quiet machine, so the 30 s default left no room at all and it timed out under any load.
+  // Only the budget grows; every assertion below is unchanged.
+  test.setTimeout(90_000);
   // ---------- the M3a opening: name entry, so {name} substitution is real, not simulated ----------
   await openTitle(page, { map: null, intro: true });
   await chooseTitleMenu(page, 'play');

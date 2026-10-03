@@ -42,25 +42,53 @@ function backdropTourSpots(mapObjects, cols, rows) {
   return spots.length ? spots : [{ x: cols / 2, y: rows / 2 }];
 }
 
+// ERR-0010: parsing the whole 534x341 campus (546k tiles over 3 layers) cost ~200-400 ms of frozen
+// frames in EVERY one of title/greeting/name/customize, and a second Esc/Enter tapped by an impatient
+// player (or by pressUntil in the e2e suite) landed on the NEXT screen and skipped it. The pan only
+// ever shows the strip between the tour spots, so the backdrop parses a copy of the map cropped to
+// those spots plus half a screen of margin, built once and cached under its own key.
+const BACKDROP_KEY = 'map-campus-backdrop';
+let cropOrigin = { x0: 0, y0: 0 }; // where the cropped copy sits in the full campus, in tiles
+
+function cropCampusForBackdrop(scene, json, spots) {
+  const marginX = Math.ceil(GAME_WIDTH / (TILE * ZOOM) / 2) + 2;
+  const marginY = Math.ceil(GAME_HEIGHT / (TILE * ZOOM) / 2) + 2;
+  const x0 = Math.max(0, Math.floor(Math.min(...spots.map((p) => p.x))) - marginX);
+  const y0 = Math.max(0, Math.floor(Math.min(...spots.map((p) => p.y))) - marginY);
+  const x1 = Math.min(json.width, Math.ceil(Math.max(...spots.map((p) => p.x))) + marginX);
+  const y1 = Math.min(json.height, Math.ceil(Math.max(...spots.map((p) => p.y))) + marginY);
+  const width = x1 - x0;
+  const height = y1 - y0;
+  const layers = json.layers.filter((layer) => layer.type === 'tilelayer').map((layer) => {
+    const data = [];
+    for (let row = y0; row < y1; row++) {
+      for (let col = x0; col < x1; col++) data.push(layer.data[row * json.width + col]);
+    }
+    return { ...layer, data, width, height, x: 0, y: 0 };
+  });
+  const cropped = { ...json, width, height, layers };
+  scene.cache.tilemap.add(BACKDROP_KEY, { format: Phaser.Tilemaps.Formats.TILED_JSON, data: cropped });
+  return { x0, y0 };
+}
+
 // Adds the real campus tilemap's own layers (ground/structures/overhead -- whatever the Tiled map
 // actually has, minus its object layer), already positioned/scaled/dimmed at the first tour stop, and
 // starts the slow pan across every stop in turn -- returns the layers so a scene can layer its own dim
 // rectangle/UI on top exactly as it did over the old canvas image. `scale` is always the world's own
 // ZOOM (config), so this reads as "the real map, the way you'll actually see it in play".
 function buildCampusPanBackdrop(scene, { alpha = 0.32, panMs = 9000 } = {}) {
-  const key = 'map-campus';
-  const json = scene.cache.tilemap.get(key).data;
-  const map = scene.make.tilemap({ key });
-  const tileset = map.addTilesetImage('tiles', 'tiles');
-  const layers = json.layers
-    .filter((layer) => layer.type === 'tilelayer')
-    .map((layer) => map.createLayer(layer.name, tileset, 0, 0).setAlpha(alpha).setScale(ZOOM));
-
+  const json = scene.cache.tilemap.get('map-campus').data;
   const mapObjects = tiledObjects(json);
   const spots = backdropTourSpots(mapObjects, json.width, json.height);
+  if (!scene.cache.tilemap.exists(BACKDROP_KEY)) cropOrigin = cropCampusForBackdrop(scene, json, spots);
+  const map = scene.make.tilemap({ key: BACKDROP_KEY });
+  const tileset = map.addTilesetImage('tiles', 'tiles');
+  const layers = map.layers.map((layer) => map.createLayer(layer.name, tileset, 0, 0).setAlpha(alpha).setScale(ZOOM));
+
+  // Screen position that centers a spot given in full-campus tiles, in the cropped map's own frame.
   const toScreen = (spot) => ({
-    x: GAME_WIDTH / 2 - spot.x * TILE * ZOOM,
-    y: GAME_HEIGHT / 2 - spot.y * TILE * ZOOM,
+    x: GAME_WIDTH / 2 - (spot.x - cropOrigin.x0) * TILE * ZOOM,
+    y: GAME_HEIGHT / 2 - (spot.y - cropOrigin.y0) * TILE * ZOOM,
   });
 
   const start = toScreen(spots[0]);

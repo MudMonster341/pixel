@@ -355,6 +355,33 @@ test('flee point: straight away from her, on a fully walkable line; shortened by
   assert.ok(animalFleePoint(from, from, 4, open));
 });
 
+test('ERR-0011: a startled cat takes a long clear run to the side instead of a 1-tile hop along a blocked line', () => {
+  const from = at(50.5, 50.5);
+  // Row y=49 is blocked from x=51 on (a hedge): straight away from a player slightly below-left drifts
+  // into it after ~1 tile, but running down-right is open for the full 4 tiles.
+  const hedge = (tx, ty) => !(ty <= 49 && tx >= 51);
+  const p = animalFleePoint(from, at(49.5, 50.9), 4, hedge);
+  assert.ok(p && dist(p, from) >= 3.5, `ran only ${p && dist(p, from)} tiles`);
+});
+
+test('ERR-0011: on the real campus every cat runs 2-4 tiles from a player 1 tile away on any side (feet offset included)', () => {
+  const { grid, objects } = loadMap('campus');
+  const walkable = (tx, ty) => isWalkableTile(grid, tileInfo, tx, ty) && !animalTileBlocked(objects, tx, ty);
+  const cats = ALL.filter((a) => ANIMAL_SPECIES[a.species].kind === 'cat');
+  for (const cat of cats) {
+    const home = at(cat.x + 0.5, cat.y + 0.5);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      // her feet sit a bit below the tile centre she is teleported to; try both skews
+      for (const skew of [0, 0.4]) {
+        const p = animalFleePoint(home, at(home.x + dx, home.y + dy + skew), ANIMAL_RULES.cat.fleeRunTiles, walkable);
+        assert.ok(p, `${cat.id}: no flee point from (${dx},${dy})`);
+        assert.ok(dist(p, home) >= 2, `${cat.id}: runs only ${dist(p, home).toFixed(2)} tiles from (${dx},${dy}) skew ${skew}`);
+        assert.ok(dist(p, home) <= ANIMAL_RULES.cat.fleeRunTiles + 1e-6);
+      }
+    }
+  }
+});
+
 test('wander point: within the radius of home, walkable, and null when nothing is walkable', () => {
   const rng = rngOf(0.2, 0.6, 0.9, 0.1);
   for (let i = 0; i < 20; i++) {

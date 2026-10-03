@@ -60,9 +60,14 @@ test('the quest tracker is a compact pill by default, and expands only when the 
   await openGame(page, { map: null });
   await startGame(page);
 
-  // Give it a moment to settle past its very first (construction-time) expand.
-  await page.waitForTimeout(3200);
-  expect(await page.evaluate(() => game.scene.getScene('ui').questTracker.expanded)).toBe(false);
+  // Give it a moment to settle past its very first (construction-time) expand: it must collapse by
+  // itself and stay a pill. ERR-0012: Phaser's delayedCall clock runs ~10-15% slower than the wall
+  // clock at the ~50 fps this headless Chromium manages, so a fixed 3.2 s sleep against the 3 s timer
+  // was a coin flip (it flaked on commit 10dd30f too); wait for the state instead (TESTING.md rule 5).
+  await expect.poll(
+    async () => page.evaluate(() => game.scene.getScene('ui').questTracker.expanded),
+    { timeout: 8000 },
+  ).toBe(false);
 
   // Finding a key changes the objective text -- the tracker should expand, then collapse again on
   // its own after a few seconds without needing anything else to happen.
@@ -74,7 +79,7 @@ test('the quest tracker is a compact pill by default, and expands only when the 
   await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').questTracker.expanded)).toBe(true);
   await expect.poll(
     async () => page.evaluate(() => game.scene.getScene('ui').questTracker.expanded),
-    { timeout: 5000 },
+    { timeout: 8000 }, // 3 s timer on a clock that lags the wall clock, sampled at <= 1 s steps (ERR-0012)
   ).toBe(false);
 });
 
@@ -90,7 +95,7 @@ test('FB-XXXX: the hotbar auto-hides after being idle while empty, and returns o
   });
   await expect.poll(
     async () => page.evaluate(() => game.scene.getScene('ui').hotbar.autoHidden),
-    { timeout: 4000 },
+    { timeout: 8000 }, // 3 s idle timer on a lagging clock, sampled at <= 1 s steps: 4 s was razor thin (ERR-0012)
   ).toBe(true);
 
   // A number key is "activity" even with nothing to select -- the bar should return immediately.

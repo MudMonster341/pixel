@@ -133,17 +133,14 @@ const AMBIENT = {
   ],
 
   'main-block-1': [
-    // Working at ICVL desks, facing into the room (docs/STORY.md beat 7) -- a tile clear of the desk
-    // block itself, the same "she interacts from nearby, not standing on the furniture" shape the
-    // real key station already uses.
-    // x: 4, not 5 -- quality loop, Mini-games/Characters fix round (2026-09-29): the icvl key station
-    // (src/maps.js, x:6 y:6) is approached from (6,7); (5,7) sat exactly as far from that approach
-    // tile (16px, one tile) as the key station itself, and nearestInteractable() (src/scenes/world.js)
-    // breaks that exact tie in the NPC's favor -- talking there gave this student's own small-talk
-    // line instead of ever reaching the ICVL key (tests/e2e/story.spec.js, minigames.spec.js). Shifted
-    // one more tile off so the key station is unambiguously nearer. (pickInteractable() now also lets
-    // a story object win near-ties, but the spacing stays as it was.)
-    { id: 'mb1-amb-icvl-1', character: 'ambient-d', role: 'tech-club-member', kind: 'idle', x: 4, y: 7, facing: 'right' },
+    // Working at the ICVL's neighbouring classroom row (docs/STORY.md beat 7), NOT at the ICVL room's
+    // own door. First full browser run (2026-10-03, tests/unit/story-clearance.test.js): the ICVL is a
+    // closet reached only through the one-tile corridor tile (4,7), and a student standing there (an
+    // immovable collider) sealed the key station off; earlier fixes had only nudged this student around
+    // the station to settle an E-tie. The rule now is geometric: idle/chat students keep at least two
+    // interact ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile
+    // corridor or a room's only doorway.
+    { id: 'mb1-amb-icvl-1', character: 'ambient-d', role: 'tech-club-member', kind: 'idle', x: 6, y: 11, facing: 'left' },
     { id: 'mb1-amb-icvl-2', character: 'ambient-e', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right' },
     // 2 in the corridor.
     { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
@@ -161,14 +158,10 @@ const AMBIENT = {
   ],
 
   'main-block-3': [
-    // At a Physics Lab bench, facing the key station's own desk (docs/STORY.md beat 6).
-    // x: 4, not 5 -- quality loop, Mini-games/Characters fix round (2026-09-29): the physicsLab key
-    // station (src/maps.js, x:5 y:7) is approached from (5,8); (5,9) sat exactly as far from that
-    // approach tile (16px, one tile) as the key station itself, and nearestInteractable()
-    // (src/scenes/world.js) breaks that exact tie in the NPC's favor -- talking there gave this
-    // student's own small-talk line instead of ever launching the platformer (tests/e2e/story.spec.js,
-    // minigames.spec.js). Shifted diagonally off so the key station is unambiguously nearer.
-    { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 4, y: 9, facing: 'up' },
+    // Waiting in the wide hall below, well clear of the Physics Lab key station and of the one-tile
+    // corridor (x 4, rows 10-12) she climbs to reach it. Was (4,9), 2.2 tiles from the desk and standing in
+    // that corridor (tests/unit/story-clearance.test.js, 2026-10-03).
+    { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 9, y: 20, facing: 'up' },
     // The corridor below the lab and the stairwell landing.
     { id: 'mb3-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 14, y: 19 }, { x: 27, y: 19 }] },

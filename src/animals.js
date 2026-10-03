@@ -155,8 +155,11 @@ function animalLineWalkable(ax, ay, bx, by, isWalkable) {
   return true;
 }
 
-// Where a startled cat runs: straight away from her, up to `tiles` tiles, trying a few angles and
-// shortening the run until the whole line is walkable. null if every attempt is blocked.
+// Where a startled cat runs: away from her, up to `tiles` tiles. Tries a few angles around "straight
+// away" and, for each, the longest walkable run; a full-length run wins at once (straight away first),
+// otherwise the longest run found over all the angles does, so a cat never settles for a 1-tile hop
+// along its first angle when a clear 4-tile run exists a little to the side (ERR-0011). null if every
+// attempt is blocked.
 function animalFleePoint(from, player, tiles, isWalkable) {
   let dx = from.x - player.x;
   let dy = from.y - player.y;
@@ -164,18 +167,25 @@ function animalFleePoint(from, player, tiles, isWalkable) {
   dx /= len;
   dy /= len;
   if (dx === 0 && dy === 0) dx = 1;
+  let best = null;
+  let bestD = 0;
   for (const turn of [0, 0.7, -0.7, 1.4, -1.4]) {
     const cos = Math.cos(turn);
     const sin = Math.sin(turn);
     const ux = dx * cos - dy * sin;
     const uy = dx * sin + dy * cos;
-    for (let d = tiles; d >= 1; d -= 0.5) {
+    for (let d = tiles; d >= 1 && d > bestD; d -= 0.5) {
       const x = from.x + ux * d;
       const y = from.y + uy * d;
-      if (isWalkable(Math.floor(x), Math.floor(y)) && animalLineWalkable(from.x, from.y, x, y, isWalkable)) return { x, y };
+      if (isWalkable(Math.floor(x), Math.floor(y)) && animalLineWalkable(from.x, from.y, x, y, isWalkable)) {
+        if (d >= tiles) return { x, y };
+        best = { x, y };
+        bestD = d;
+        break;
+      }
     }
   }
-  return null;
+  return best;
 }
 
 // A short stroll from home (cats) or a hop (birds): a random walkable point within `radius` tiles of

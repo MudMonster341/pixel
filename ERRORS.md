@@ -345,3 +345,55 @@ per iteration. A "severe regression" performance test with a generous, whole-pag
 15s) can hide a real per-operation regression indefinitely if nothing isolates the specific operation
 that got expensive -- prefer measuring the specific expensive call directly, with a tighter budget,
 alongside (not instead of) the coarser end-to-end smoke test.
+
+## ERR-0010 — Every opening screen froze ~0.5 s on entry; a second Esc/Enter skipped the next screen (2026-10-03)
+
+**Symptom:** First full browser run: intro.spec.js "typed name", "typing straight over the pre-filled
+default" and "chosen clothes colour" failed (name field stayed TARU, `pressUntil(ArrowRight)` never saw
+the colour change). Passed alone, failed in the suite.
+
+**Root cause:** `buildCampusPanBackdrop()` (title/greeting/name/customize) parsed the whole 534x341 campus
+(546k tiles, 3 layers) with `make.tilemap` in every scene: ~200 ms parse + render, 400-900 ms from Esc to the
+name screen being active. `pressUntil(page, 'Escape', name-entry active)` re-presses after 700 ms, so the
+second Esc landed on the name screen (Esc = accept) and skipped it; every later key went to the customize
+screen. A real player tapping Esc twice would skip a screen the same way.
+
+**Fix:** src/scenes/opening-backdrop.js builds a cropped copy of the map (tour spots plus half a screen of
+margin, ~45x40 tiles), cached under `map-campus-backdrop`; name screen is now active ~310 ms after Esc.
+Covered by the three intro specs above.
+
+**Recognise it next time:** a keyed test that passes alone and fails in the suite, with state "one screen
+ahead" -> look for a slow scene transition plus a re-pressing helper.
+
+## ERR-0011 — A shy cat ran 1 tile instead of 2-4 (2026-10-03)
+
+**Root cause:** `animalFleePoint()` returned the first angle that had *any* walkable length, so a straight-away
+line that hit a fence-post row after 1 tile produced a 1-tile hop even though a clear 4-tile run existed
+a little to the side.
+**Fix:** src/animals.js tries every angle and takes a full-length run at once, otherwise the longest.
+Tests: tests/unit/animals.test.js "ERR-0011" (2) and campus-life.spec.js "a shy cat runs a short way off".
+
+## ERR-0012 — HUD timer specs flaked: quest tracker pill, hotbar auto-hide (2026-10-03)
+
+**Root cause:** not a game regression (also flaky on commit 10dd30f). Phaser `delayedCall` timers run
+~10-15% slower than the wall clock at the ~50 fps headless Chromium manages, and the specs gave a 3 s timer
+only 3.2 s (fixed sleep) / 4 s (`expect.poll` sampling at 1 s steps).
+**Fix:** tests/e2e/hud-layout.spec.js waits for the state with an 8 s poll budget (TESTING.md rule 5); the
+assertions are unchanged.
+
+## ERR-0013 — Room 195's key station was unreachable on foot; students could seal the ICVL; story playthrough timed out (2026-10-03)
+
+**Symptom:** story.spec.js "LUG treasure hunt" hit the 30 s test timeout (it takes ~26 s on a quiet machine).
+Chasing the "ambient student in front of a story object" suspicion with a new geometric test
+(tests/unit/story-clearance.test.js) found two real soft-locks:
+1. **Room 195** (Main Block 1st floor): the classroom generator put extra desks on *both* side rings at
+   every other row, cutting each ring at every desk row, so the teacher's desk (key station, 24,5) was 8
+   tiles from the nearest reachable tile. The third key could not be collected by walking.
+   Fix: tools/interiors/build-interiors.js keeps the left ring clear (desks only on the right ring);
+   `npm run interiors` regenerated assets/maps/main-block-1.json (+ preview PNG). Nothing else changed.
+2. **ICVL**: idle student `mb1-amb-icvl-1` stood on (4,7), the only way into the ICVL closet (immovable
+   collider). Also `mb3-amb-bench` stood 2.2 tiles from the Physics Lab desk inside a 1-tile corridor.
+   Fix: src/ambient.js moved them (to (6,11) and (9,20)).
+**Rule now tested:** idle/chat students and talkable cats stay >= 2 interact ranges from story NPCs/key
+stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4-neighbour BFS).
+**Fix for the timeout:** story.spec.js `test.setTimeout(90_000)`; assertions unchanged.

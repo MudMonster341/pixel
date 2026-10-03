@@ -34,6 +34,9 @@ technical: it must open with a double-click, no install, no server, no security 
 - It reads the gitignored `assets/card/` at build time, so the owner's real photos land in the bundle.
 - Verified here under `file://` in Chrome/Edge. Safari can't be tested; the note to her says to use
   Safari or Chrome.
+- Audio is embedded as MP3, not Ogg (older Safari cannot decode Ogg Vorbis): the bundler converts every `.ogg`
+  at build time with pure-JS/WASM dev dependencies (no ffmpeg), and the shim answers `x.ogg` requests with the
+  `x.mp3` data. The game and the dev build still use the Ogg files. Details: docs/OFFLINE_BUNDLE.md "Audio".
 - The Windows .exe path (`pack:win`) is kept in the repo but not built unless the owner asks.
 
 ## Consequences

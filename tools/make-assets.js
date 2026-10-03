@@ -474,7 +474,16 @@ const NINJA = {
   // does, so this is a texture sample for canopyQuadrantFromAtlas's per-pixel fill, not a shape match;
   // palmCanopyShape (unchanged, ours) still draws the actual frond silhouette).
   palmCanopy: { atlas: NINJA_DESERT, sx: 163, sy: 70, sw: 24, sh: 12 },
-  treeCanopy: { atlas: NINJA_NATURE, sx: 204, sy: 254, sw: 32, sh: 18 },
+  // D05 (2026-10-04): the old crop {sx 204, sy 254, sw 32, sh 18} was wrong twice over. The pack's round
+  // canopy is only 22 px wide (x 205-226, outline at x 204/227) and its outline starts at row 257, so a
+  // 32x18 window also swept in 8 columns of empty atlas to the right (canopyQuadrantFromAtlas leaves
+  // a=0 pixels transparent, which left the silhouette's right side as a bare outline "second ring") and
+  // 3 rows of the tree log sprites stacked above it (the orange "crate" over the canopy). This crop is
+  // the canopy's fully opaque, outline-free interior (x 207-224, y 258-269) and nothing else.
+  treeCanopy: { atlas: NINJA_NATURE, sx: 207, sy: 258, sw: 18, sh: 12 },
+  // The pack tree's own trunk, a plain column (outline x 211 and x 220, 8 px of orange between) that
+  // is 16 rows tall and constant over y 272-287 (below the canopy, above the root flare).
+  treeTrunk: { atlas: NINJA_NATURE, sx: 211, sy: 272, sw: 10, sh: 16 },
   flag: (color) => ({ atlas: `ninja-adventure/Backgrounds/Animated/Flag/Flag${color}16x16.png`, sx: 0, sy: 0, sw: 16, sh: 16 }),
 };
 
@@ -1267,8 +1276,12 @@ const TILES = [
   { name: 'bitsRoofR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { right: true }) },
   { name: 'bitsRoofTL', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, left: true }) },
   { name: 'bitsRoofTR', solid: true, draw: (img, x, y) => bitsRoofEdge(img, x, y, { top: true, right: true }) },
-  { name: 'bitsEntranceL', draw: (img, x, y) => bitsEntrance(img, x, y, true, false) },
-  { name: 'bitsEntranceR', draw: (img, x, y) => bitsEntrance(img, x, y, false, false) },
+  // D11 (2026-10-04): the ordinary entrance (hostels, Library, Mechanical) used to be bitsEntrance(),
+  // a flat dark panel with two white dots that read as a face / blank board. It is now the same pack
+  // glass double door the Main Block uses (Kenney BLDG.doorL/doorR, terracotta frame), so every
+  // building entrance reads as a real door; only the Main Block adds the portico, sign and open tiles.
+  { name: 'bitsEntranceL', draw: (img, x, y) => bitsEntranceGrand(img, x, y, true, false) },
+  { name: 'bitsEntranceR', draw: (img, x, y) => bitsEntranceGrand(img, x, y, false, false) },
   { name: 'bitsPillar', solid: true, draw: bitsPillar },
   { name: 'otherWallPlain', solid: true, draw: otherWallPlain },
   { name: 'otherWallEndL', solid: true, draw: (img, x, y) => otherWallEnd(img, x, y, 'L') },
@@ -1960,8 +1973,19 @@ function flowerbed(img, x, y) {
 // seam instead of apart from it.
 function treeTrunk(img, x, y) {
   grass(img, x, y, 79);
-  img.box(x + 8, y + 1, 6, 15, 'n');
-  img.fill(x + 9, y + 2, 2, 13, 'N');
+  // D05: the pack tree's own trunk (outline, 6 px of bark, outline = 8 px wide), right-aligned in the
+  // tile (tile columns 8-15) so it sits under the canopy's centre (roundCanopyShape is centred on
+  // column 12 of the canopy's 32 px space, i.e. the trunk's middle) and runs the full tile height so
+  // it is joined to the canopy's skirt above it instead of floating below a gap.
+  const t = NINJA.treeTrunk;
+  const atlas = loadAtlas(t.atlas);
+  const srcCols = [0, 1, 2, 3, 4, 5, 6, 9]; // outline, 6 bark columns (skip 3 of the 8), outline
+  for (let dy = 0; dy < TILE; dy++) {
+    srcCols.forEach((sc, i) => {
+      const si = ((t.sy + dy) * atlas.width + (t.sx + sc)) * 4;
+      img.setRGBA(x + 8 + i, y + dy, atlas.data[si], atlas.data[si + 1], atlas.data[si + 2], 255);
+    });
+  }
 }
 
 function palmTrunk(img, x, y) {
@@ -1988,9 +2012,14 @@ function canopyQuadrant(img, x, y, qx, qy, shapeFn, toneFn) {
 // of the ellipse's centre) the silhouette fell well short of the tile's bottom edge, leaving a
 // visible gap above the trunk. A flat "skirt" band near the bottom, wide enough to cover the
 // trunk's columns regardless of the ellipse's curve, guarantees the two always touch.
+// D05: re-centred on column 12.5 (was 16) so the ellipse's middle is the trunk's middle -- the trunk
+// is one tile wide and sits under the canopy's LEFT column, so a canopy centred on the seam between
+// its two columns looked like it was perched off to the right of its own trunk. It now spans columns
+// 0-25 of the 32 px space (about 1.6 tiles wide, 2 tiles tall) and reaches row 31 (the tile bottom),
+// so the outline meets the trunk's first row with no gap.
 const roundCanopyShape = (gx, gy) => {
-  if (((gx - 16) / 15.5) ** 2 + ((gy - 15) / 14) ** 2 <= 1) return true;
-  return gy >= 27 && gy <= 30 && Math.abs(gx - 16) <= 12;
+  if (((gx - 12.5) / 12.7) ** 2 + ((gy - 16) / 15.6) ** 2 <= 1) return true;
+  return gy >= 29 && gy <= 31 && gx >= 7 && gx <= 17;
 };
 // FB-0025 addendum (2026-09-21): like canopyQuadrant above, but instead of a hand-picked palette
 // tone, samples the recolored pack tree's own pixels -- shapeFn (still ours, unchanged) decides the
@@ -2131,22 +2160,7 @@ function otherRoofEdge(img, x, y, edges) {
 // lintel band instead of the ordinary buildings' thin salmon trim, which is too close to the wall's
 // own body color to read as "an arch" on its own. Two tile names use this (bitsEntranceGrandL/R),
 // so an ordinary building's front doesn't get the grand look by accident.
-function bitsEntrance(img, x, y, isLeft, grand) {
-  img.fill(x, y, TILE, TILE, '$');
-  img.fill(x, y, TILE, 1, 'K');
-  const glassTop = grand ? 7 : 4;
-  if (grand) {
-    img.fill(x, y + 1, TILE, 5, 'archRed');
-    img.fill(x, y + 6, TILE, 1, '&'); // soft shadow where the arch meets the glass below
-  } else {
-    img.fill(x, y + 1, TILE, 3, '&');
-  }
-  img.fill(x + (isLeft ? 3 : 0), y + glassTop, 13, 13 - glassTop, '*');
-  img.set(x + (isLeft ? 5 : 10), y + glassTop + 2, 'W');
-  img.fill(x, y + 13, TILE, 1, '%'); // shadow line above the steps
-  img.fill(x, y + 14, TILE, 1, '-'); // step tread, lit
-  img.fill(x, y + 15, TILE, 1, 'O'); // step riser, in shadow
-}
+// (D11: the old hand-drawn bitsEntrance() is gone -- both entrance pairs are bitsEntranceGrand() now.)
 
 // Coordinator review round 3 (2026-09-27): composed from a Kenney wall crop (backdrop) plus its own
 // free-standing pillar prop (BLDG.pillar, a transparent-margin sprite -- the same "grass then prop"

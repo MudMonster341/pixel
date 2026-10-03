@@ -390,31 +390,31 @@
       "name": "treeTrunk",
       "solid": true,
       "overhead": false,
-      "color": "#548642"
+      "color": "#868c46"
     },
     {
       "name": "treeCanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#899635"
+      "color": "#9caa38"
     },
     {
       "name": "treeCanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#697530"
+      "color": "#96a338"
     },
     {
       "name": "treeCanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#79933a"
+      "color": "#809c38"
     },
     {
       "name": "treeCanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#5b7235"
+      "color": "#839b36"
     },
     {
       "name": "palmTrunk",
@@ -546,13 +546,13 @@
       "name": "bitsEntranceL",
       "solid": false,
       "overhead": false,
-      "color": "#7b6a62"
+      "color": "#b3a2af"
     },
     {
       "name": "bitsEntranceR",
       "solid": false,
       "overhead": false,
-      "color": "#7b6a62"
+      "color": "#b3a2af"
     },
     {
       "name": "bitsPillar",

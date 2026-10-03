@@ -364,6 +364,9 @@ for (const w of ways) {
     wallTiles: meta?.wallTiles ?? layout.otherBuildingWallTiles,
     door: Boolean(meta?.door),
     grand: Boolean(meta?.grand),
+    // D11: drawBuilding reads b.portico (Library/Mechanical, layout.js) but it was never copied here, so
+    // those two blocks never got their portico frame/glass front and their door sat alone in a wall.
+    portico: Boolean(meta?.portico),
     to: meta?.to || null,
     unverified: Boolean(meta?.unverified),
     isBits: Boolean(meta),
@@ -783,6 +786,9 @@ function drawBuilding(b, index) {
   // entrance keeps looking exactly as it did.
   const entranceLOpen = b.grand ? TILE.bitsEntranceGrandLOpen : null;
   const entranceROpen = b.grand ? TILE.bitsEntranceGrandROpen : null;
+  // D11: every tile of the front facade band as first drawn, so the band can be restored after the walkway
+  // network (which erases `structures` across walls on purpose, see fillRectFrame's crossWalls) is painted.
+  const frontCells = [];
   for (const run of runs) {
     const doorBasis = run.clear || run; // the door only ever goes in the clear part of the run (see clearSpan above)
     // Clamped to doorBasis.x1 - 1 so doorX1 (= doorX0 + 1) never lands one past the clear span's own
@@ -859,6 +865,7 @@ function drawBuilding(b, index) {
           if (segIdx >= 0 && segIdx < SIGN_SEGMENT_COUNT) tile = TILE[`bitsSignSeg${segIdx}`];
         }
         structures[wy * W + x] = tile;
+        if (isFrontVisual) frontCells.push([x, wy, tile]);
         // wallOwner (declared with roofOwner, section 8): every road/walkway paving helper below
         // refuses to paint over a cell owned here, and the routing that picks a path in the first
         // place (BITS_FOOTPRINTS, padded with each building's own wall depth, just below) treats
@@ -890,7 +897,7 @@ function drawBuilding(b, index) {
       // the way it already does for a building's roof -- wallOwner stops the paint, but leaves a gap
       // instead of a route, which is what broke several buildings' reachability while this was being
       // built (2026-09-21).
-      b.frontBand = { y0: run.y + 1, y1: doorY, x0: run.x0, x1: run.x1, doorX0, doorX1, entranceL, entranceR, entranceLOpen, entranceROpen };
+      b.frontBand = { y0: run.y + 1, y1: doorY, x0: run.x0, x1: run.x1, doorX0, doorX1, entranceL, entranceR, entranceLOpen, entranceROpen, frontCells };
       // premium pass round 2 (2026-09-27): every portico-table column at the window/body rows (the
       // base row's door/glass is already re-stamped just above) -- recorded here so they can be
       // re-stamped alongside the door itself, below (a run drawn later in this same building's own
@@ -1528,7 +1535,13 @@ function placeParkingCars(u0, v0, u1, v1, avoidColumns = []) {
   // RPG Urban cars are top-down 3/4, use those)" -- mixed into the same round-robin pool as the
   // existing Modern City/Pixel Vehicle Pack cars, rather than replacing them outright (the owner asked
   // for "a few", not a wholesale swap, and every parking lot on campus draws from this one pool).
-  const PARKING_CARS = [TILE.carSedan, TILE.carSedanBlue, TILE.carSuv, TILE.carVan, TILE.carFrontYellow, TILE.carFrontRed, TILE.carFrontGreen];
+  // D13 (2026-10-04): the pool used to mix the Pixel Vehicle Pack's side-view cars (29x13 sprites squeezed
+  // into one tile, so about 16x7 px: a car smaller than the player, lying across a bay that runs the other
+  // way) with these front-view Urban Pack cars (16x16, one tile). Two scales and two orientations in one lot.
+  // Lots now use only the Urban Pack front-view cars: one orientation (nose toward the camera, matching the
+  // bays) and one scale (one full tile, about the player's width). The carSedan/carSuv/carVan tiles are left in
+  // the tileset (tile order is pinned by tests) but are no longer placed anywhere.
+  const PARKING_CARS = [TILE.carFrontYellow, TILE.carFrontRed, TILE.carFrontGreen];
   const x0 = gx(u0) + 1;
   const x1 = gx(u1) - 1;
   const y0 = gy(v0) + 1;
@@ -1730,7 +1743,13 @@ function plantTree(cx, topY, kind) {
 // Date palms lining the entrance avenue, and flanking the Main Block steps (docs/research/
 // campus-visual-reference.md: "palms belong at entrances/plazas... a placement rule, not just an
 // asset choice" -- the everyday avenues get ordinary round shade trees instead, below).
-for (let y = gy(mainDoor[1]); y <= gy(fenceFrame.v1) - 3; y += 5) {
+// D14 (2026-10-04): the loop used to run to `v1 - 3`, so its last palm (canopy rows topY..topY+1, trunk on
+// topY+2) was planted right at the gate line: its canopy hid the west gate pillar, the BITS plaque and the
+// planter beside it, and its trunk sat in the planter's own slot, in the very first scene the player sees.
+// Stop 8 rows short of the fence instead: the palm's whole footprint (and its 1-tile clearance ring) ends at
+// least 5 rows above the gate cluster (sign row = gateLineRow - 1, pillar/booth row = gateLineRow).
+const GATE_CLUSTER_PALM_MARGIN = 8;
+for (let y = gy(mainDoor[1]); y <= gy(fenceFrame.v1) - GATE_CLUSTER_PALM_MARGIN; y += 5) {
   plantTree(gx(gate2U - AVENUE_W / 2) - 3, y, 'palm');
   plantTree(gx(gate2U + AVENUE_W / 2) + 1, y, 'palm');
 }
@@ -2099,6 +2118,17 @@ if (mainBlock.frontBand) {
 for (const b of buildingList) {
   if (!b.frontBand) continue;
   const { doorX0, doorX1, y1: doorY, entranceL, entranceR, portico } = b.frontBand;
+  // D11: put back the facade tiles the walkway network erased (cap/window/body/base beside the door), so the
+  // door is set INTO the wall line instead of floating on bare paving one row below a thin strip of wall.
+  // Only cells that are still empty (-1) are restored: nothing placed on top since is overwritten.
+  for (const [x, y, tile] of b.frontBand.frontCells) {
+    if (!inGrid(x, y) || structures[y * W + x] !== -1) continue;
+    structures[y * W + x] = tile;
+    // The walkway also repainted the GROUND under the wall; give it back its lawn so no walkway tile
+    // sits under (or is stranded behind) a solid wall tile -- the door itself (also given back its
+    // lawn, as the walkway-hardscape tests expect) is reached from the plaza row below the band.
+    ground[y * W + x] = lawnPatch(x, y);
+  }
   if (inGrid(doorX0, doorY)) structures[doorY * W + doorX0] = entranceL;
   if (inGrid(doorX1, doorY)) structures[doorY * W + doorX1] = entranceR;
   // premium pass (FB-0029): the portico columns/canopy (drawBuilding's own comment on `b.frontBand.

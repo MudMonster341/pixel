@@ -84,9 +84,11 @@ const AMBIENT = {
 
     // ---- Hostels ----
     // Boys' hostels (A-D): the long path between the two rows of blocks, the lower path, the gap.
-    { id: 'campus-amb-hostel-1', character: 'ambient-d', role: 'hostel-resident', kind: 'idle', x: 101, y: 61, facing: 'down' },
+    // (D11, 2026-10-04: row 61 used to be a walkway cut through the hostel's front wall; the wall is back, so the
+    // 'long path' is now the plaza strip along the foot of the facade, row 64.)
+    { id: 'campus-amb-hostel-1', character: 'ambient-d', role: 'hostel-resident', kind: 'idle', x: 101, y: 64, facing: 'down' },
     { id: 'campus-amb-hostel-2', character: 'ambient-a', role: 'senior', kind: 'patrol', speed: 55, pauseMs: 1000,
-      waypoints: [{ x: 84, y: 61 }, { x: 112, y: 61 }] },
+      waypoints: [{ x: 84, y: 64 }, { x: 112, y: 64 }] },
     { id: 'campus-amb-hostel-3', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 140, y: 66, facing: 'up' },
     { id: 'campus-amb-hostel-4', character: 'student-b', role: 'acm-member', kind: 'patrol', speed: 55, pauseMs: 900,
       waypoints: [{ x: 99, y: 74 }, { x: 125, y: 74 }] },

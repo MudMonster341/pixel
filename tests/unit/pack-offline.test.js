@@ -13,7 +13,7 @@ const zlib = require('zlib');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 const pack = require('../../tools/pack-offline');
 
-const { MAPS, AMBIENT, SCRIPTS, SOUNDS, CUTSCENES, TEMP_CARD_SLIDES, characterSheets } = loadGameData();
+const { MAPS, AMBIENT, SCRIPTS, SOUNDS, CUTSCENES, TEMP_CARD_SLIDES, characterSheets, ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS, animalSheets } = loadGameData();
 const manifest = () => pack.collectRuntimeAssets();
 const paths = (m) => new Set(m.assets.map((a) => a.path));
 
@@ -258,6 +258,14 @@ test('offline shim: is plain ES5 (no module syntax, no arrow functions, no let/c
   assert.doesNotMatch(src, /\bimport\b|\bexport\b|=>|\blet\b|\bconst\b|\bawait\b|\.at\(|\?\.|\?\?/);
 });
 
+test('offline: every animal sheet from animalSheets() is in the manifest, and the animal data scripts are loaded for it', () => {
+  const have = paths(manifest());
+  const sheets = animalSheets(ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS);
+  assert.ok(sheets.length >= 7, 'sanity: the campus animals really contribute sheets');
+  for (const { file } of sheets) assert.ok(have.has(file), `${file} is preloaded by BootScene but missing from the offline manifest`);
+  assert.ok(pack.DATA_SCRIPTS.includes('src/campus-facts.js') && pack.DATA_SCRIPTS.includes('src/animals.js'));
+});
+
 // ---------- (d) the bundle's index.html ----------
 
 test('offline: the bundle index.html has no dev overlay, loads the shim first, and the dev index.html is unchanged', () => {
@@ -275,6 +283,9 @@ test('offline: the bundle index.html has no dev overlay, loads the shim first, a
   const devSrcs = pack.scriptSrcs(devHtml);
   assert.deepEqual(srcs.filter((s) => devSrcs.includes(s)), devSrcs);
   assert.ok(srcs.every((s) => !s.includes('dev/')));
+  // ADR 0018: the two data scripts ride along, and before maps.js (which reads AMBIENT/ANIMALS-era globals)
+  assert.ok(srcs.includes('src/campus-facts.js') && srcs.includes('src/animals.js'), 'campus-facts.js and animals.js are in the bundle index');
+  assert.ok(srcs.indexOf('src/animals.js') < srcs.indexOf('src/maps.js'));
   // and the one hook in the game itself: the bundle flag wins over ?dev=1
   const main = fs.readFileSync(path.join(ROOT, 'src/main.js'), 'utf8');
   assert.match(main, /const DEV_MODE = \(\(\) => \{\s*\n\s*if \(window\.__OFFLINE_BUNDLE\) return false;/);

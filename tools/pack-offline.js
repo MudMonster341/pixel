@@ -35,7 +35,7 @@ const BUNDLE_FOLDER_NAME = 'LUG-Treasure-Hunt'; // the folder she gets when she 
 
 // Data scripts the content-derived list needs (pure data, no Phaser) -- same set tests/helpers/game-data.js loads.
 const DATA_SCRIPTS = [
-  'src/items.js', 'src/story.js', 'src/ambient.js', 'src/maps.js', 'src/cutscenes.js',
+  'src/items.js', 'src/story.js', 'src/ambient.js', 'src/campus-facts.js', 'src/animals.js', 'src/maps.js', 'src/cutscenes.js',
   'src/objective-routes.js', 'src/scripts.js', 'src/card.js', 'src/maplogic.js', 'src/state.js', 'src/audio.js',
 ];
 
@@ -144,6 +144,7 @@ function loadContent(root = ROOT) {
   return {
     MAPS: get('MAPS'), AMBIENT: get('AMBIENT'), SCRIPTS: get('SCRIPTS'), CUTSCENES: get('CUTSCENES'), SOUNDS: get('SOUNDS'),
     TEMP_CARD_SLIDES: get('TEMP_CARD_SLIDES'), characterSheets: get('characterSheets'),
+    ANIMALS: get('ANIMALS'), ANIMAL_SPECIES: get('ANIMAL_SPECIES'), ANIMAL_LAYOUTS: get('ANIMAL_LAYOUTS'), animalSheets: get('animalSheets'),
   };
 }
 
@@ -181,6 +182,8 @@ function collectRuntimeAssets({ root = ROOT, exists = fs.existsSync, readFile = 
 
   // 1. content tables
   for (const { key, file } of content.characterSheets(content.MAPS, content.AMBIENT, content.SCRIPTS)) add(file, `character sheet "${key}"`);
+  // Campus animals (ADR 0018): BootScene preloads animalSheets() from src/animals.js
+  for (const { key, file } of content.animalSheets(content.ANIMALS, content.ANIMAL_SPECIES, content.ANIMAL_LAYOUTS)) add(file, `animal sheet "${key}"`);
   for (const [id, def] of Object.entries(content.SOUNDS)) add(def.file, `sound "${id}"`);
   for (const def of Object.values(content.MAPS)) if (def.tiled) add(`assets/maps/${def.tiled}.json`, `map "${def.tiled}"`);
   for (const [id, def] of Object.entries(content.CUTSCENES)) add(`assets/cutscenes/${def.image.replace(/^cutscene-/, '')}.png`, `cutscene "${id}"`);

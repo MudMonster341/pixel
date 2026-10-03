@@ -178,12 +178,10 @@ docs/plans/2026-09-26-premium-pass.md)
 Cats and birds only. The raw packs stay in `assets/External Tilesets/` (git-ignored, never committed);
 `tools/make-animals.js` crops and recolours them into `assets/animal-*.png`.
 
-- **Animals Asset Pack** (16x16 top-down animals, supplied by the owner; the pack is
-  ComfyMattres' "Animals Character Asset Pack",
-  [comfymattres.itch.io/animals-character-asset-pack](https://comfymattres.itch.io/animals-character-asset-pack)).
-  Free licence: use and modify in personal and commercial projects, **no reselling or redistributing the
-  pack, no NFT use**. Only the cat is used (the bear, penguin and pig are not), recoloured, as the
-  4-direction wandering campus cats.
+- **Animals Asset Pack** (16x16 top-down animals, supplied by the owner; free licence: no resale, no NFTs;
+  author not named in the pack, so none is claimed here). Use and modification are allowed, but the pack
+  itself must not be resold or redistributed. Only the cat is used (the bear, penguin and pig are not),
+  recoloured, as the 4-direction wandering campus cats.
 - **Free Pixel Animation: Cat [6 loops]** by **Zeenaz**
   ([zeenaz.itch.io/free-pixel-animation-cat-6-loops](https://zeenaz.itch.io/free-pixel-animation-cat-6-loops))
   -- CC0 1.0 (public domain). Stray campus cats, recoloured: sitting, sleeping, standing and startled poses.

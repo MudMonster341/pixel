@@ -984,3 +984,15 @@ recipient. FB-0025 means "use free asset packs, don't hand-draw art" (the bus is
 
 **Next:** research agents (facts, RTA bus reference, 3D tour ground floor, animal packs) and Sonnet briefs A-D
 per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the full `npm test` and push are Day 2.
+
+## 2026-10-03 (evening) — Sprint Day 1 done; handoff written
+
+**Did:** Merged packages A (3 bugs), B (offline bundle), G (MP3 audio for Safari), C (credits + Taru prefill), D (RTA bus), E (talkable students + cats/birds); first full e2e run (177/184) and a fix round that also removed real soft-locks (Room 195 key unreachable, two students blocking the ICVL closet and the Physics Lab desk). Research: campus facts (77), RTA bus, 3D tour, animal packs. Marked FB-0027..0034 fixed. Wrote ADR 0020 (ground floor follows the tour; owner chose it) and rewrote HANDOFF.md plus docs/NEXT_SESSION_PROMPT.md.
+
+**Why:** the owner wants it complete and working before they playtest (end of Day 2); ratings paused.
+
+**Decisions:** ADR 0017-0020.
+
+**Failures:** ERR-0010..0013 (see ERRORS.md): slow opening backdrop made double-Esc skip the name screen; generated Room 195 layout walled off the key desk; ambient students placed in story doorways; test timing under headless FPS.
+
+**Next:** foyer rebuild per the tour, file:// check of the bundle, defect sweep, full npm test, push, update the play copy, tell the owner. Not pushed yet (main is ahead of origin).

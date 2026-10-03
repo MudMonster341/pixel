@@ -78,7 +78,8 @@ hand-draw art unless no pack exists: the bus is the exception).
 ## Status log
 
 - **Day 1 (done):** cleanup; A (3 bugs), B (offline bundle, builds at about 20 MB), C (credits + Taru prefill) and D (RTA bus with door animation) merged, 508 unit tests green; research done (campus facts, RTA bus, 3D tour, animal packs). FB-0027..0034 marked fixed. "Food truck" line removed.
-- **Open owner decision:** the 3D tour contradicts the foyer built from the owner's older photo (floor, stair position, terrarium, two desks, two wings). Recommended: follow the tour (docs/research/tour-ground-floor.md).
+- **Decided (owner, 2026-10-03):** the ground floor follows the 3D tour, not the older photo: ADR 0020, docs/research/tour-ground-floor.md. Package F is next.
+- **Fix round done:** 7 e2e failures fixed incl. 3 real soft-locks (Room 195 key unreachable, ICVL closet, Physics Lab desk); 578 unit tests green; full e2e not yet re-run.
 - **Animals:** the owner's pack cat (4-direction walk) + Zeenaz cat poses + LPC Birds; the owner said cats and birds only.
 - **Not yet seen in a running game:** everything built on Day 1 is unit-tested only. Day 2 is the first browser pass.
 

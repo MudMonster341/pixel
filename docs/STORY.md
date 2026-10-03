@@ -79,6 +79,7 @@ perspective in the cutscene art, and movement that eases rather than snaps.
   facilities, events, departments) from `src/campus-facts.js`; cats and birds wander. Facts are sourced
   from the official site and public pages. **Real CS professors may be named in facts** (owner's call);
   real people still don't appear as characters.
+- **Ground floor:** the foyer, reception and wings follow the official 3D tour (ADR 0020), which supersedes the older owner photo.
 - **Delivery:** an offline `index.html` bundle she double-clicks on her MacBook; no .exe.
 
 ## Rules for the world

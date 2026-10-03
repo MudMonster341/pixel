@@ -554,23 +554,28 @@ async function shootMinigames(browser) {
           await page.keyboard.press('Space');
         }
       } else if (id === 'platformer') {
-        // At PLATFORMER_RUN_SPEED (140px/s) over a 1500px level (PF_LEVEL_WIDTH), running from the
-        // spawn point for a fraction of a second only ever reached the first platform, nowhere near
-        // "mid-level" -- and scripting real jumps timed against the actual gaps (platformer-physics.js
-        // coyote-time/jump-buffer rules) just to get further in risks dropping her into a pit and
-        // losing the attempt before the shot, for no visual benefit over the same shortcut this file
-        // already uses for game-over/win: real engine state (the same reset()/setVelocityY() her own
-        // jump and startAttempt() already use), not a scripted playthrough. Places her airborne over
-        // the 3rd platform (PF_PLATFORMS, x 760-940) with the camera centered on her, and keeps ArrowRight
-        // held through it so she reads as running/jumping, not idly floating.
+        // The level is 3x-scaled (PF_LEVEL_WIDTH 1602, PF_PLATFORMS in src/minigames/platformer.js; the
+        // hero draws at HERO_SCALE 3x too), so running from the spawn point for a fraction of a second
+        // only ever reached the first platform (x 0-270), nowhere near "mid-level" -- and scripting
+        // real jumps timed against the actual gaps (platformer-physics.js coyote-time/jump-buffer
+        // rules) risks dropping her into a pit and losing the attempt before the shot, for no visual
+        // benefit over the same shortcut this file already uses for game-over/win: real engine state
+        // (the same reset() her own startAttempt() uses), not a scripted playthrough. Places her
+        // standing on the middle of the 4th platform (PF_PLATFORMS[3], x 819-1011 -- 3x-scale
+        // coordinates; the old x:820 put her on this platform's very left edge, half over the pit),
+        // one pixel above its top surface so she settles without a landing squash, and puts the
+        // camera on her (clamped to the level) with ArrowRight held through it so she reads as
+        // running along the bench -- ~21px in the 150ms below, well inside the platform's own
+        // 819-1011 span (hero body 42px wide, so x stays in 936 +/- 21). The platform's own coin
+        // (PF_COINS[3], x 915) is in her path, so the score HUD shows a real pickup too.
         await page.keyboard.down('ArrowRight');
         await page.evaluate((key) => {
           const s = game.scene.getScene(key);
-          const x = 820;
-          const y = PF_GROUND_Y - 70;
+          const platform = PF_PLATFORMS[3];
+          const x = platform.x + platform.w / 2;
+          const y = platform.y - 34; // body is 66px tall: centre 33px above the surface, +1px to settle
           s.player.setPosition(x, y);
           s.player.body.reset(x, y);
-          s.player.body.setVelocityY(PLATFORMER_JUMP_VELOCITY);
           s.cameras.main.scrollX = Math.max(0, Math.min(x - GAME_WIDTH / 2, PF_LEVEL_WIDTH - GAME_WIDTH));
         }, sceneKey);
         await page.waitForTimeout(150); // let playUpdate() apply this frame's anim/hero-sprite sync

@@ -413,7 +413,7 @@ class WorldScene extends Phaser.Scene {
   // Ambient campus/Main Block life (quality loop, Characters and depth run 1: "the world is empty").
   // Content is src/ambient.js (docs/ARCHITECTURE.md "content is data"); this only builds the sprites.
   // A much lighter-weight cousin of createNpcs() above -- same texture/body/collider/shadow shape, so
-  // interact()'s own "turn to face her" logic and nearestNpc() (extended below) work on an ambient
+  // interact()'s own "turn to face her" logic and nearestInteractable() work on an ambient
   // NPC exactly like a story one, without needing to know the difference -- but *moving*, updated
   // every frame by updateAmbient() (patrol waypoints, the "pause near her" yield, the chat pairs' own
   // emote), which createNpcs()'s own always-still NPCs never needed.
@@ -842,56 +842,26 @@ class WorldScene extends Phaser.Scene {
     return set[this.footstepCycle];
   }
 
-  nearestNpc() {
-    let nearest = null;
-    let nearestDistance = INTERACT_RANGE;
-    for (const npc of this.npcs) {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
-      if (distance < nearestDistance) {
-        nearest = npc;
-        nearestDistance = distance;
-      }
-    }
-    // Ambient students/staff (createAmbient()) carry the same { def, idleFrames } shape as a real
-    // story NPC above, so they're just a second list to scan here -- no separate branch needed
-    // anywhere else E-interaction touches (pickDialogEntry(), the "face her" turn, the prompt bubble).
-    for (const ambient of this.ambientNpcs || []) {
-      const npc = ambient.sprite;
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
-      if (distance < nearestDistance) {
-        nearest = npc;
-        nearestDistance = distance;
-      }
-    }
-    return nearest;
-  }
-
-  // The nearest key station (docs/STORY.md, M3), within the same INTERACT_RANGE an NPC uses.
-  nearestKeyStation() {
-    let nearest = null;
-    let nearestDistance = INTERACT_RANGE;
-    for (const ks of this.keyStations || []) {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, ks.x, ks.y);
-      if (distance < nearestDistance) {
-        nearest = ks;
-        nearestDistance = distance;
-      }
-    }
-    return nearest;
-  }
-
-  // Whatever E would interact with right now: an NPC or a key station, whichever is nearer (both use
-  // the same INTERACT_RANGE and the same underlying dialog data, docs/ARCHITECTURE.md "content is
-  // data") -- null if nothing is in range. `def` is what pickDialogEntry()/hasNewDialog() need
+  // Whatever E would interact with right now, or null if nothing is in INTERACT_RANGE: a story NPC, an
+  // ambient student or a key station (all share the same INTERACT_RANGE and the same underlying dialog
+  // data, docs/ARCHITECTURE.md "content is data"). Which one wins is src/maplogic.js
+  // pickInteractable(): the nearest, except a story object (INTERACT_PRIORITY: key station > quest
+  // giver > ambient student) within INTERACT_TIE_MARGIN of it wins -- an exact tie never goes to an
+  // ambient student any more. Ambient students/staff (createAmbient()) carry the same { def,
+  // idleFrames } shape as a real story NPC, so they need no separate branch anywhere else E-interaction
+  // touches (pickDialogEntry(), the "face her" turn, the prompt bubble): `kind` is 'npc' for both, only
+  // `role` (the priority key) tells them apart. `def` is what pickDialogEntry()/hasNewDialog() need
   // ({ id, dialog }); `label` is what the dialog box's name tag shows.
   nearestInteractable() {
-    const npc = this.nearestNpc();
-    const npcDistance = npc ? Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y) : Infinity;
-    const ks = this.nearestKeyStation();
-    const ksDistance = ks ? Phaser.Math.Distance.Between(this.player.x, this.player.y, ks.x, ks.y) : Infinity;
-    if (!npc && !ks) return null;
-    if (ksDistance < npcDistance) return { kind: 'keyStation', target: ks, def: ks.def, label: ks.def.name };
-    return { kind: 'npc', target: npc, def: npc.def, label: npc.def.name };
+    const candidates = [];
+    const consider = (role, kind, target, def) => {
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y);
+      if (distance < INTERACT_RANGE) candidates.push({ role, kind, target, def, label: def.name, distance });
+    };
+    for (const npc of this.npcs) consider('questNpc', 'npc', npc, npc.def);
+    for (const ambient of this.ambientNpcs || []) consider('ambientNpc', 'npc', ambient.sprite, ambient.sprite.def);
+    for (const ks of this.keyStations || []) consider('keyStation', 'keyStation', ks, ks.def);
+    return pickInteractable(candidates);
   }
 
   interact() {

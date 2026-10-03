@@ -74,16 +74,15 @@ class BootScene extends Phaser.Scene {
       }
     }
     this.load.spritesheet('player', playerFile, charSheet);
-    this.load.spritesheet('npc', 'assets/npc.png', charSheet);
-    // Campus NPCs (FB-0025): recolored pack characters, same sheet layout as the player, used by
-    // NPC defs with a `character` field (src/maps.js, src/scenes/world.js createNpcs()).
-    this.load.spritesheet('npc-volunteer', 'assets/npc-volunteer.png', charSheet);
-    this.load.spritesheet('npc-student-a', 'assets/npc-student-a.png', charSheet);
-    this.load.spritesheet('npc-student-b', 'assets/npc-student-b.png', charSheet);
-    // Mustafa (ADR 0016, the M3a opening): a script actor (src/scripts.js SCRIPTS.opening/gate2), not
-    // a placed map NPC, but the same recolored-sheet pipeline either way -- loaded here alongside every
-    // other character sheet so it's always ready by the time WorldScene's script runner spawns him.
-    this.load.spritesheet('npc-mustafa', 'assets/npc-mustafa.png', charSheet);
+    // Every character sheet the content references (FB-0044): map NPCs (src/maps.js `character`, or the
+    // legacy 'npc' sheet when absent), ambient students (src/ambient.js) and script actors like Mustafa
+    // (src/scripts.js spawnActor, ADR 0016) -- derived by src/maplogic.js characterSheets() from that
+    // content, never a hand-kept list, so a new character can't be generated yet forgotten here (that is
+    // how npc-ambient-a..f once drew as Phaser's black-and-green __MISSING box). Same recolored-sheet
+    // layout as the player, CHAR_HEIGHT tall.
+    for (const { key, file } of characterSheets(MAPS, AMBIENT, SCRIPTS)) {
+      this.load.spritesheet(key, file, charSheet);
+    }
     // The bus (ADR 0016, SCRIPTS.opening's own bus arrival): a plain image, not a character sheet --
     // tools/make-cutscenes.js still draws assets/cutscenes/bus.png (the retired src/scenes/intro-bus.js
     // BusArrivalScene used the same art; that scene file is gone, the PNG and its generator aren't).

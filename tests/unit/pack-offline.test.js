@@ -353,3 +353,116 @@ test('offline: HOW_TO_OPEN.txt covers the steps she needs', () => {
   const text = pack.howToOpenText();
   for (const phrase of [/unzip/i, /double-click/, /index\.html/, /Safari or Chrome/, /nothing needs to be installed/i, /SAME browser/, /click once/]) assert.match(text, phrase);
 });
+
+// ---------- audio: the bundle ships MP3, never Ogg (older Safari cannot decode Ogg Vorbis) ----------
+
+const { mp3Info } = require('../../tools/lib/mp3-info');
+
+// Length and rate of an Ogg Vorbis file, read from the container (identification header + last page's granule position).
+function oggInfo(buf) {
+  const id = buf.indexOf(Buffer.from([0x01, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73])); // 0x01 "vorbis"
+  assert.ok(id >= 0, 'not an Ogg Vorbis file');
+  const sampleRate = buf.readUInt32LE(id + 7 + 5); // after the 7-byte packet start, version (4) and channels (1)
+  const lastPage = buf.lastIndexOf(Buffer.from('OggS', 'latin1'));
+  const granule = Number(buf.readBigUInt64LE(lastPage + 6));
+  return { sampleRate, seconds: granule / sampleRate };
+}
+
+let bundled; // the converted manifest, built once (the conversion is cached in dist/.audio-cache, so reruns are fast)
+const bundledManifest = () => bundled || (bundled = pack.bundleAssets(manifest().assets));
+
+test('offline audio: the bundle manifest has an mp3 for every ogg the game references and no ogg at all', () => {
+  const rawOgg = manifest().assets.filter((a) => a.path.endsWith('.ogg')).map((a) => a.path);
+  assert.ok(rawOgg.length >= 24, `sanity: the game references its ogg files (found ${rawOgg.length})`);
+  for (const def of Object.values(SOUNDS)) {
+    if (def.file.endsWith('.ogg')) assert.ok(rawOgg.includes(def.file), `${def.file} (SOUNDS) is referenced`);
+  }
+  const have = paths({ assets: bundledManifest() });
+  for (const rel of rawOgg) assert.ok(have.has(rel.replace(/\.ogg$/, '.mp3')), `${rel} has no mp3 in the bundle`);
+  for (const rel of have) assert.ok(!/\.ogg$/i.test(rel), `${rel}: the bundle must not embed Ogg`);
+  assert.equal(pack.mimeFor('assets/audio/music/title.mp3'), 'audio/mpeg');
+  assert.equal(pack.mp3PathFor('assets/audio/sfx/a.ogg'), 'assets/audio/sfx/a.mp3');
+  assert.equal(pack.mp3PathFor('assets/audio/generated/a.wav'), 'assets/audio/generated/a.wav', 'wav is left alone');
+  const wavs = bundledManifest().filter((a) => a.path.endsWith('.wav'));
+  assert.ok(wavs.length >= 1 && wavs.every((a) => fs.statSync(a.abs).size < 100 * 1024), 'the generated wav sfx stay as small WAV files');
+});
+
+test('offline audio: every converted file is a valid MP3 whose length matches its Ogg source (within 2%, in fact exact)', () => {
+  let totalBytes = 0;
+  for (const a of bundledManifest().filter((x) => x.source)) {
+    const mp3 = fs.readFileSync(a.abs);
+    totalBytes += mp3.length;
+    assert.ok(mp3.length > 0, a.path);
+    const startsRight = mp3.toString('latin1', 0, 3) === 'ID3' || (mp3[0] === 0xff && (mp3[1] & 0xe0) === 0xe0);
+    assert.ok(startsRight, `${a.path} must start with an ID3 tag or an MPEG sync word`);
+    const info = mp3Info(mp3);
+    assert.ok(info.valid && info.frames > 0, `${a.path} has MPEG frames`);
+    const src = oggInfo(fs.readFileSync(path.join(ROOT, ...a.source.split('/'))));
+    assert.equal(info.sampleRate, src.sampleRate, `${a.path} keeps the source sample rate`);
+    assert.ok(Math.abs(info.seconds - src.seconds) <= src.seconds * 0.02, `${a.path}: ${info.seconds}s vs source ${src.seconds}s`);
+    assert.ok(info.hasInfoTag && info.delay > 0, `${a.path} carries the gapless Info tag`);
+    assert.ok(Math.abs(info.seconds - src.seconds) < 0.001, `${a.path}: the gapless tag makes the length exact`);
+  }
+  assert.ok(totalBytes < 15 * 1024 * 1024, `the whole audio set stays under 15 MB (it is ${(totalBytes / 1048576).toFixed(1)} MB)`);
+});
+
+test('offline audio: the mp3 reader rejects junk and reads a hand-made frame', () => {
+  assert.equal(mp3Info(Buffer.from('not an mp3 at all, just text')).valid, false);
+  assert.equal(mp3Info(Buffer.alloc(0)).valid, false);
+  // two MPEG1 Layer III 128 kbps 44.1 kHz stereo frames (417 bytes each), no tag
+  const frame = Buffer.alloc(417);
+  frame.set([0xff, 0xfb, 0x90, 0x00], 0);
+  const info = mp3Info(Buffer.concat([frame, frame]));
+  assert.equal(info.valid, true);
+  assert.equal(info.frames, 2);
+  assert.equal(info.sampleRate, 44100);
+  assert.equal(info.channels, 2);
+  assert.ok(Math.abs(info.seconds - 2304 / 44100) < 1e-9);
+});
+
+test('offline audio shim: a request for x.ogg is answered with the x.mp3 entry; other paths still behave', async () => {
+  const registry = {
+    'assets/audio/music/t.mp3': uri('audio/mpeg', 'MP3BYTES'),
+    'assets/audio/sfx/both.ogg': uri('audio/ogg', 'REALOGG'),
+    'assets/audio/sfx/both.mp3': uri('audio/mpeg', 'ALSOMP3'),
+    'assets/audio/generated/w.wav': uri('audio/wav', 'WAVBYTES'),
+  };
+  const { sandbox } = loadShim(registry);
+  const asked = await xhr(sandbox, 'assets/audio/music/t.ogg', 'arraybuffer');
+  assert.equal(asked.x.status, 200);
+  assert.equal(asked.x.nativeSent, undefined, 'not the network');
+  assert.equal(Buffer.from(asked.x.response).toString(), 'MP3BYTES');
+  assert.equal(Buffer.from((await xhr(sandbox, './assets/audio/music/t.ogg?x=1', 'arraybuffer')).x.response).toString(), 'MP3BYTES', 'query string and ./ still map');
+  assert.equal(Buffer.from((await xhr(sandbox, 'assets/audio/sfx/both.ogg', 'arraybuffer')).x.response).toString(), 'REALOGG', 'an exact registry hit wins over the mapping');
+  assert.equal(Buffer.from((await xhr(sandbox, 'assets/audio/generated/w.wav', 'arraybuffer')).x.response).toString(), 'WAVBYTES');
+  assert.equal((await xhr(sandbox, 'assets/audio/music/nothing.ogg', 'arraybuffer')).x.status, 404, 'an ogg with no mp3 is a quiet 404');
+  assert.equal(sandbox.__OFFLINE_SHIM.has('assets/audio/music/t.ogg'), true);
+  const passthrough = new sandbox.XMLHttpRequest();
+  passthrough.open('GET', 'https://example.com/x.ogg');
+  passthrough.send();
+  assert.equal(passthrough.nativeSent, true, 'unknown, non-assets paths still pass through');
+  assert.equal((await sandbox.fetch('https://example.com/x.ogg')).passedThrough, 'https://example.com/x.ogg');
+  const audio = new sandbox.HTMLMediaElement();
+  audio.src = 'assets/audio/music/t.ogg';
+  assert.equal(audio.src, 'blob:fake');
+});
+
+test('offline audio shim: a browser that cannot play Ogg is told Ogg Vorbis is fine (Phaser checks the extension first) when MP3 plays', () => {
+  const answers = (table) => {
+    const sandbox = { __OFFLINE_ASSETS: { 'assets/a.mp3': uri('audio/mpeg', 'x') }, setTimeout, console, WeakMap, atob, Blob, location: { href: 'file:///x/index.html' } };
+    function MediaElement() {}
+    MediaElement.prototype.canPlayType = function (type) { return Object.prototype.hasOwnProperty.call(table, type) ? table[type] : ''; };
+    sandbox.HTMLMediaElement = MediaElement;
+    sandbox.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+    sandbox.window = sandbox;
+    vm.runInContext(fs.readFileSync(path.join(ROOT, pack.SHIM_REL), 'utf8'), vm.createContext(sandbox), { filename: pack.SHIM_REL });
+    return new MediaElement();
+  };
+  const OGG = 'audio/ogg; codecs="vorbis"';
+  const oldSafari = answers({ 'audio/mpeg': 'maybe' });
+  assert.ok(oldSafari.canPlayType(OGG), 'Phaser then sets device.audio.ogg and requests the .ogg name');
+  assert.equal(oldSafari.canPlayType('audio/ogg; codecs="opus"'), '', 'other formats keep their honest answer');
+  assert.equal(oldSafari.canPlayType('audio/wav'), '');
+  assert.equal(answers({ 'audio/mpeg': 'maybe', [OGG]: 'probably' }).canPlayType(OGG), 'probably', 'a browser that plays Ogg keeps its own answer');
+  assert.equal(answers({}).canPlayType(OGG), '', 'no MP3 either: no lie');
+});

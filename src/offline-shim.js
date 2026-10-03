@@ -13,6 +13,9 @@
 //   - Image / <audio> / <video> `.src` (HTML5-audio fallback, Phaser's Video object)
 //   - URL.createObjectURL for registry image blobs (hands back the data URI itself, so the image is
 //     never "tainted" for WebGL no matter how the browser treats blob: origins on file://)
+//   - audio: the bundle embeds MP3 only (older Safari cannot decode Ogg Vorbis). A request for
+//     assets/audio/.../x.ogg is answered with the x.mp3 entry, and canPlayType is made to admit Ogg Vorbis
+//     (when MP3 plays) so Phaser does not skip the .ogg file names before asking.
 //   - localStorage: if the browser blocks it, falls back to an in-memory store so the game still
 //     plays (it just can't save).
 // A path under assets/ that is NOT in the registry (an optional file the owner never supplied) gets a
@@ -65,6 +68,14 @@
       var list = candidates(typeof url === 'string' ? url : (url.href || String(url)));
       for (var i = 0; i < list.length; i++) {
         if (Object.prototype.hasOwnProperty.call(registry, list[i])) return { key: list[i], uri: registry[list[i]] };
+      }
+      // Audio: the bundle embeds MP3 only (older Safari cannot decode Ogg Vorbis), but the game still asks
+      // for 'assets/audio/.../x.ogg'. Answer that with the x.mp3 entry (tools/pack-offline.js writes it).
+      for (var a = 0; a < list.length; a++) {
+        if (/\.ogg$/i.test(list[a])) {
+          var alt = list[a].replace(/\.ogg$/i, '.mp3');
+          if (Object.prototype.hasOwnProperty.call(registry, alt)) return { key: alt, uri: registry[alt] };
+        }
       }
       for (var j = 0; j < list.length; j++) {
         if (list[j].indexOf(ASSET_PREFIX) === 0) return { missing: true, key: list[j] };
@@ -227,6 +238,31 @@
       Object.defineProperty(proto, 'src', { configurable: true, enumerable: desc.enumerable, get: desc.get, set: setter });
     }
 
+    // ---------- Ogg-as-MP3 (Phaser's audio support check) ----------
+
+    // Phaser only requests a file whose extension the browser claims to play (device.audio.ogg comes from
+    // canPlayType('audio/ogg; codecs="vorbis"')). A Safari that cannot decode Ogg answers "" there, so
+    // Phaser would skip every .ogg sound before the request ever reached lookup() above. The bundle's
+    // sounds are MP3 under the .ogg names, so when the browser can play MP3 it is told Ogg Vorbis is fine
+    // too. decodeAudioData sniffs the bytes, not the name, so the MP3 data decodes. A browser that really
+    // plays Ogg keeps its own honest answer.
+    function patchCanPlayType() {
+      var M = g.HTMLMediaElement;
+      var proto = M && M.prototype;
+      if (!proto || typeof proto.canPlayType !== 'function' || proto.canPlayType.__offlinePatched) return;
+      var original = proto.canPlayType;
+      var wrapped = function (type) {
+        var answer = original.apply(this, arguments);
+        if (!answer && /^audio\/ogg\s*;\s*codecs\s*=\s*["']?vorbis/i.test(String(type))) {
+          var mp3 = original.call(this, 'audio/mpeg');
+          if (mp3) return mp3;
+        }
+        return answer;
+      };
+      wrapped.__offlinePatched = true;
+      proto.canPlayType = wrapped;
+    }
+
     // ---------- localStorage ----------
 
     function guardLocalStorage() {
@@ -257,6 +293,7 @@
       patchObjectUrl();
       patchSrc(g.HTMLImageElement, 'image');
       patchSrc(g.HTMLMediaElement, 'media');
+      patchCanPlayType();
       guardLocalStorage();
     }
 

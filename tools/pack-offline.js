@@ -22,12 +22,15 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const zlib = require('zlib');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const DEFAULT_OUT = path.join(ROOT, 'dist', 'offline');
 const SHIM_REL = 'src/offline-shim.js';
 const CHUNK_BYTES = 6 * 1024 * 1024; // target size of one assets-NN.js (an oversized asset gets a file of its own)
 const MAX_OPTIONAL_VIDEO_BYTES = 150 * 1024 * 1024;
+const AUDIO_CACHE_REL = 'dist/.audio-cache'; // converted MP3s keyed by the Ogg's hash (a build artifact, gitignored with dist/)
+const OGG_TO_MP3_SCRIPT = path.join(__dirname, 'lib', 'ogg-to-mp3.mjs');
 const BUNDLE_FOLDER_NAME = 'LUG-Treasure-Hunt'; // the folder she gets when she unzips
 
 // Data scripts the content-derived list needs (pure data, no Phaser) -- same set tests/helpers/game-data.js loads.
@@ -231,6 +234,45 @@ function collectRuntimeAssets({ root = ROOT, exists = fs.existsSync, readFile = 
   return { assets, notes };
 }
 
+// ---------- audio: Ogg -> MP3 (docs/OFFLINE_BUNDLE.md "Audio") ----------
+
+const isOgg = (rel) => /\.ogg$/i.test(rel);
+
+// 'assets/audio/music/title.ogg' -> 'assets/audio/music/title.mp3'; any other path comes back unchanged.
+function mp3PathFor(rel) {
+  return isOgg(rel) ? rel.replace(/\.ogg$/i, '.mp3') : rel;
+}
+
+// The manifest as the bundle embeds it: every .ogg entry becomes its converted .mp3 (path 'x.mp3', bytes from
+// the conversion cache), everything else is untouched. The game still asks for x.ogg; the shim answers with
+// the x.mp3 entry. `convert(oggAbsPaths)` -> [{ ogg, mp3, converted, bytes, seconds }] is injectable for tests.
+function bundleAssets(assets, { root = ROOT, log = () => {}, convert = null } = {}) {
+  const oggs = assets.filter((a) => isOgg(a.path));
+  if (!oggs.length) return assets;
+  const convertFn = convert || ((files) => convertOggFiles(files, path.join(root, ...AUDIO_CACHE_REL.split('/'))));
+  const results = convertFn(oggs.map((a) => a.abs));
+  const byOgg = new Map(results.map((r) => [path.resolve(r.ogg), r]));
+  const fresh = results.filter((r) => r.converted).length;
+  log(`pack-offline: audio: ${oggs.length} Ogg file(s) -> MP3 (${fresh} converted now, ${oggs.length - fresh} from the cache in ${AUDIO_CACHE_REL})`);
+  return assets.map((a) => {
+    if (!isOgg(a.path)) return a;
+    const r = byOgg.get(path.resolve(a.abs));
+    if (!r) throw new Error(`pack-offline: no MP3 was produced for ${a.path}`);
+    return { ...a, path: mp3PathFor(a.path), abs: r.mp3, source: a.path, reason: `${a.reason} (MP3 of ${a.path})` };
+  });
+}
+
+// Runs tools/lib/ogg-to-mp3.mjs (ESM + WASM, so a child process keeps this build synchronous). Only files not
+// in the cache yet are converted: the first full run takes some seconds, later runs none.
+function convertOggFiles(files, cacheDir) {
+  const run = spawnSync(process.execPath, [OGG_TO_MP3_SCRIPT, '--cache', cacheDir, ...files], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (run.error) throw new Error(`pack-offline: could not run the audio converter (${run.error.message})`);
+  if (run.status !== 0) {
+    throw new Error(`pack-offline: converting the audio to MP3 failed (is "npm install" done? the converter needs the dev dependencies).\n${(run.stderr || '').trim()}`);
+  }
+  return JSON.parse(run.stdout);
+}
+
 // ---------- the bundle's index.html ----------
 
 function dataUri(file, mime) {
@@ -325,7 +367,8 @@ function howToOpenText() {
     '  the game does not need any of it.',
     '- Keep the files in the folder together. Do not move index.html out of its folder.',
     '- If there is no sound, click once anywhere on the page (browsers wait for a click before',
-    '  playing sound). If Safari still plays no music, open the same index.html in Chrome.',
+    '  playing sound), and check that the Mac volume is up and not muted. Still nothing? Open the same',
+    '  index.html in Chrome.',
     '- Your progress is saved automatically inside the browser you used. "Continue" only finds your',
     '  save when you open the game in the SAME browser (a save made in Safari will not show up in Chrome).',
     '- A loading screen appears for a few seconds the first time. That is normal.',
@@ -420,7 +463,9 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(2)} MB`;
 
 function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, log = console.log } = {}) {
   if (!path.basename(outDir).startsWith('offline')) throw new Error(`pack-offline: refusing to wipe "${outDir}" (output folder must be named offline*)`);
-  const { assets, notes } = collectRuntimeAssets({ root });
+  const collected = collectRuntimeAssets({ root });
+  const notes = collected.notes;
+  const assets = bundleAssets(collected.assets, { root, log });
   notes.forEach((note) => log(`pack-offline: NOTE ${note}`));
 
   fs.rmSync(outDir, { recursive: true, force: true });
@@ -481,5 +526,5 @@ if (require.main === module) {
 
 module.exports = {
   collectRuntimeAssets, scanSourceAssetRefs, stringLiterals, buildIndexHtml, scriptSrcs, clothesIds, loadContent,
-  writeZip, crc32, mimeFor, howToOpenText, build, SHIM_REL, DATA_SCRIPTS, TEMPLATE_HANDLERS,
+  writeZip, crc32, mimeFor, mp3PathFor, bundleAssets, convertOggFiles, AUDIO_CACHE_REL, howToOpenText, build, SHIM_REL, DATA_SCRIPTS, TEMPLATE_HANDLERS,
 };

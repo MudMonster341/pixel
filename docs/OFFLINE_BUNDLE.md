@@ -10,8 +10,9 @@ npm run pack:offline            # -> dist/offline/   (a folder you can double-cl
 npm run pack:offline -- --zip   # -> also dist/offline.zip  (unzips to a "LUG-Treasure-Hunt" folder)
 ```
 
-Plain Node, no extra dependencies (the zip is written by a small built-in writer on top of Node's `zlib`;
-it opens with macOS Archive Utility and Windows Explorer). The script prints the per-folder and total
+Plain Node plus two dev dependencies for the audio conversion (`@wasm-audio-decoders/ogg-vorbis`,
+`@breezystack/lamejs`; `npm install` brings them, see "Audio" below). The zip is written by a small built-in
+writer on top of Node's `zlib`; it opens with macOS Archive Utility and Windows Explorer. The script prints the per-folder and total
 sizes and **fails** if any asset the game loads is missing. `dist/` is gitignored.
 
 The folder contains `index.html`, `src/*.js` (the game's own scripts), `vendor/phaser/`, `data/assets-NN.js`
@@ -50,7 +51,40 @@ that way) and treats `file://` images as cross-origin, so WebGL refuses them as 
    - It sets `window.__OFFLINE_BUNDLE = true`. `src/main.js` reads it (one line in `DEV_MODE`) so the dev
      overlay (the O feedback tool) stays off in the bundle even with `?dev=1`.
 4. Audio: Phaser unlocks Web Audio on the first key press or click, and `AudioManager.bindGestureResume()`
-   resumes a suspended context on every later gesture. Nothing extra is needed in the bundle.
+   resumes a suspended context on every later gesture. The files themselves are converted to MP3, below.
+
+## Audio: the bundle ships MP3, not Ogg
+
+The game's music and sound effects are Ogg Vorbis (`assets/audio/**/*.ogg`). Older Safari on macOS cannot
+decode Ogg Vorbis, so the bundle would be silent on the recipient's MacBook, and she cannot install anything.
+MP3 plays in Safari, Chrome, Firefox and Edge. So, **at bundle build time only**:
+
+- `tools/pack-offline.js` (`bundleAssets()`) converts every `.ogg` the game references to MP3 and embeds
+  **only the MP3**: `assets/audio/music/title.ogg` becomes the registry key `assets/audio/music/title.mp3`.
+  The `.wav` files (the generated sfx, under 25 KB each) stay WAV, which every browser plays.
+- The game does not change: `src/audio.js` still asks for `assets/audio/.../x.ogg`, and the dev build keeps
+  playing the Ogg files. `src/offline-shim.js` answers a request for `x.ogg` with the `x.mp3` entry (an exact
+  registry hit, if there ever is one, wins; an ogg with no mp3 gets the usual quiet 404).
+- Phaser decides what to request from the file extension and `canPlayType('audio/ogg; codecs="vorbis"')`;
+  a Safari that cannot play Ogg would make Phaser skip every `.ogg` name before any request happened. So the
+  shim makes `canPlayType` admit Ogg Vorbis, only when the browser says no to it and yes to MP3. The data is
+  MP3 under an .ogg name, which is fine: `decodeAudioData` reads the bytes, not the name.
+- Converter: `tools/lib/ogg-to-mp3.mjs`, pure JS/WASM (libvorbis via `@wasm-audio-decoders/ogg-vorbis`, LAME
+  via `@breezystack/lamejs`), no ffmpeg and nothing system-wide. It runs as a child process so the build stays
+  synchronous. 128 kbps stereo, or 96 kbps mono when both channels are identical; the source sample rate
+  (44.1/48 kHz) is kept. The five music tracks come to about 7 MB (the Ogg originals are 12 MB), the whole
+  audio set stays well under 15 MB.
+- Cache: converted files live in `dist/.audio-cache/<hash>.mp3`, keyed by the Ogg's content hash plus the
+  converter version (`CONVERTER_VERSION` in the script: bump it when the settings change). `dist/` is gitignored,
+  so the MP3s are build artifacts and never committed. The first build converts everything (about 20 s),
+  later builds reuse the cache.
+- **Loops (gapless).** An MP3 encoder adds ~1105 samples (26 ms) of delay at the start, which would open a gap at
+  the loop point of the music (and lag every footstep). The converter writes a silent first frame with an
+  "Info" tag in the LAME layout that states the encoder delay (576 samples) and the end padding, which Chrome,
+  Firefox, Edge (ffmpeg decoding) and Safari (AudioToolbox) use to trim the file to its exact length. We checked
+  with mpg123 (WASM) that the decoded length equals the Ogg's sample count exactly. A decoder that ignores the
+  tag plays the Info frame as 26 ms of silence: the same small gap an untagged MP3 would have, never a failure.
+  Not checked here: how Safari/Chrome themselves loop the result (no browser may run during the build phase).
 
 ## Which assets are embedded
 
@@ -84,7 +118,9 @@ messages and the generated slideshow, exactly as in dev.
 
 - `tests/unit/pack-offline.test.js`: the manifest covers the content and every `load.*` literal; a missing
   asset or an unhandled dynamic path throws; the shim serves registry paths, passes others through and
-  404s unregistered `assets/` paths; the bundle's `index.html` has no dev scripts; a scratch build is
+  404s unregistered `assets/` paths; every referenced ogg has an mp3 in the bundle and no ogg is embedded, each
+  converted MP3 is valid and has the Ogg's exact length, `x.ogg` requests get the `x.mp3` data, `canPlayType` is
+  patched only when MP3 plays and Ogg does not; the bundle's `index.html` has no dev scripts; a scratch build is
   self-contained and every registry entry round-trips; the zip is valid. Runs in `npm run test:unit`.
 - `tests/e2e/offline-bundle.spec.js`: builds the bundle and opens `dist/offline/index.html` via `file://`
   in Chromium: title scene up, zero console errors, no dev overlay, blocked `localStorage` survived.
@@ -95,8 +131,9 @@ messages and the generated slideshow, exactly as in dev.
 2. In Chrome and in Safari: title appears; Play; walk; click once and music/footsteps play; finish a
    mini-game; reach the box, the card, the credits; quit and reopen in the same browser: Continue works.
 3. Open the console: no errors. Try with the photos/video in `assets/card/` before the final build.
-4. Known Safari risk: the audio is `.ogg`. Older Safari versions cannot decode Ogg Vorbis, which would
-   mean silence there (the game still plays). `HOW_TO_OPEN.txt` tells her to try Chrome if Safari is silent.
+4. Audio: the bundle embeds MP3 (see "Audio" above), so Safari should play it. Still to be confirmed on a real
+   MacBook: music starts after the first click, loops without an audible gap, footsteps and menu clicks are not
+   delayed. `HOW_TO_OPEN.txt` tells her to check the volume and try Chrome if there is still no sound.
 
 ## How the owner sends it
 

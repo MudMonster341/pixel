@@ -26,7 +26,8 @@
     "dist": "node tools/make-icon.js && electron-builder --win portable",
     "pack:win": "node tools/pack-win.js",
     "pack:offline": "node tools/pack-offline.js",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "qa:offline": "node tools/qa-offline-play.js"
   },
   "devDependencies": {
     "@breezystack/lamejs": "^1.2.7",

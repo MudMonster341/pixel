@@ -1006,3 +1006,11 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Open for the playtest:** compass/stair position medium confidence; the foyer west lane by the stair is 1 tile; desks are straight not curved, no white balustrade tile; nothing seen in the running game yet.
 
 **Next:** build the offline bundle and play it from file:// (Chromium + WebKit), defect sweep, full test via the pre-push hook, push.
+
+## 2026-10-04 (later) — Offline bundle played from file:// (Chromium + WebKit)
+
+**Did:** `npm run pack:offline` (13.2 MB), then `tools/qa-offline-play.js` (new, `npm run qa:offline`) plays the bundle title -> name (prefilled TARU) -> RTA bus -> volunteer -> 3 keys -> box -> card (recipient Taru) -> credits -> title -> reload (Continue + Watch card present). Chromium and Playwright WebKit 26.6 (downloaded with the owner's OK): zero console/page errors, zero external requests, save kept in localStorage. Chromium audio context running after the first click. The built-in browser pane cannot test it (it opens local files as data: URLs, so relative scripts do not load): use Playwright.
+
+**Limits:** Playwright's Windows WebKit has no Web Audio (AudioContext undefined), so audio is verified only in Chromium; real Safari is still untested. Owner has no Mac: plan a hostable-site option for the zip.
+
+**Next:** defect sweep (qa:shots), completeness check, full test via pre-push, push, update the play copy.

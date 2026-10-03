@@ -1014,3 +1014,11 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Limits:** Playwright's Windows WebKit has no Web Audio (AudioContext undefined), so audio is verified only in Chromium; real Safari is still untested. Owner has no Mac: plan a hostable-site option for the zip.
 
 **Next:** defect sweep (qa:shots), completeness check, full test via pre-push, push, update the play copy.
+
+## 2026-10-04 (evening) — Defect sweep fixed; card typewriter bug; ready for the full test
+
+**Did:** One review agent (97 screenshots, 23 objective faults + `tests/unit/completeness.test.js`), two fix agents (story-route/UI/mini-game/stairs/landing; campus art: tree, entrances, cars, gate palm), me: card message box typewriter (ERR-0014). Re-ran qa:shots and looked at the fixed shots (library front, gate 2, parking, box, landing, platformer game-over): fixed. Rebuilt the bundle. 690 unit tests green.
+
+**Decisions:** Library/Mechanical interiors are exempt from furniture/life rules by a named list (locked for the whole game). D12/D18 left. Birthday is 2026-10-11 (owner); a hosted-site option is wanted because there is no Mac to test on.
+
+**Next:** push (the pre-push hook runs the full `npm test`, about 17 min, quiet machine), update ../2D_pixel_game-play, tell the owner it is ready; hosted-site option; owner feedback via the O overlay.

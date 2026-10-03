@@ -20,6 +20,16 @@ insane but must have no bugs (pavements, walls with no rounding, blocky building
 match the real campus); complete, nothing empty; smooth game feel; people and animals moving; talk to everyone
 and learn campus facts. **Ratings are paused** until the owner has played; the aim is *complete and working*.
 
+## Update 2026-10-04 (Day 2): items 1-3 below are DONE
+
+- **Foyer + wings rebuilt to the 3D tour** (ADR 0020): `tests/unit/foyer-tour.test.js`; 13 closed nameplated wing doors, each with its own `doorLocks` line; small `closed`-door support in `src/scenes/world.js`. Approximations (no pack tile): straight desks, red/blue pouf sofas, no white balustrade, plain totem pillars, two-tier ring chandelier (see docs/INTERIORS_PLAN.md).
+- **Offline bundle played from file://** with `npm run qa:offline` (`tools/qa-offline-play.js`; title -> credits -> reload) in Chromium and Playwright WebKit: zero console errors, audio running in Chromium (Playwright's Windows WebKit has no Web Audio, so Safari audio is still unverified). The built-in browser pane cannot run the bundle (data: URL); use Playwright.
+- **Defect sweep** (docs/quality/defect-sweep-2026-10-04.md): D01-D11, D13-D17, D19 fixed (stairs arrival in a wall, HUD, mini-game panels, box lid, trees, entrances, cars, gate palm...). Not fixed on purpose: D12 (bare grass/sand), D18 (side-gate road), D20-D23 (the Library and Mechanical interiors are locked for the whole game; the completeness test exempts them by name and fails if they become reachable). Unsure items U1-U11 were not chased except U4 (below).
+- **Real bug found by the sweep:** the card's message box never typed (ERR-0014, fixed + tested).
+- `tests/unit/completeness.test.js`: textures, door targets/arrivals, lock reasons, furniture density, life per reachable map.
+- Unit tests: **690 green** (run `npm run test:unit`). Full `npm test` (pre-push hook) and push: see MEMORY.md for whether it has run.
+- **Owner answers (grilling, 2026-10-04):** wing doors closed + each says a line; no ruler portraits; Taru's birthday is **2026-10-11**; no Mac to test on, so also prepare a hostable-site version (confirm host/privacy with the owner before publishing); the pre-push hook is the single full run.
+
 ## State at the end of this session
 
 `main` is at commit `8de5df8` (or later) and is **NOT pushed** (origin/main is at `97b2b00`; about 14 commits ahead).

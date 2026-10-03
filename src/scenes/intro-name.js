@@ -41,7 +41,9 @@ class NameEntryScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#12131a');
     this.finished = false;
-    this.name = (GameState.playerName || '').toUpperCase();
+    // Prefilled with "Taru" (decisions/0019; GameState.playerName's default, src/state.js) -- still
+    // editable: the first keypress replaces it (see typeChar()), Enter/OK accepts it as it stands.
+    this.name = (GameState.playerName || DEFAULT_PLAYER_NAME).toUpperCase();
     this.touched = false; // clears the pre-filled default on the first keypress -- see typeChar()
 
     // FB-0032: the same live campus pan every screen in this opening sits on, crossfaded in (not a
@@ -153,7 +155,7 @@ class NameEntryScene extends Phaser.Scene {
   // itself on the very first keypress (`this.touched`), like a form field's placeholder text --
   // otherwise a player who starts typing straight over it (a very natural thing to do, and exactly
   // how `tools/qa-shots-intro.js` first caught this) ends up with the default and their own typing
-  // mashed together (e.g. "AISHANADIA"), not the name they meant to type.
+  // mashed together (e.g. "TARUNADIA"), not the name they meant to type.
   typeChar(char) {
     if (!this.touched) { this.name = ''; this.touched = true; }
     if (this.name.length >= NAME_MAX) return;

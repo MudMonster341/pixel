@@ -80,8 +80,9 @@ const defaultQuest = () => ({
 // picked once at the start of a new game (name entry + customisation) and used everywhere the game
 // refers to her from then on -- Mustafa's own follow-up line, the title screen's "Continue" label,
 // and (once M1's tracker exists) the quest tracker. A sensible default so both screens can be
-// skipped outright: "Aisha" reads as a real name for a new student, well inside the 10-char cap.
-const DEFAULT_PLAYER_NAME = 'Aisha';
+// skipped outright. It is "Taru" (decisions/0019: the gift is hers; the field is prefilled and editable)
+// and well inside the 10-char cap.
+const DEFAULT_PLAYER_NAME = 'Taru';
 // `clothes` is one of the swatch ids tools/make-assets.js generates a `player-<id>.png` sheet for
 // (CLOTHES_SWATCHES there): 'pink' is the original 2026-09-13 look, kept as the default so a game
 // that never sees the customisation screen (an old save, `?intro=0` in tests) looks exactly as it

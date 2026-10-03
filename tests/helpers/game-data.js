@@ -26,6 +26,8 @@ const SCRIPTS = [
   // The ending's card content (docs/STORY.md "the ending"): pure data/validation, no Phaser -- see
   // src/card.js's own header comment for why this needs to tolerate a missing/malformed card.json.
   'src/card.js',
+  // The credits phase after the card (decisions/0019): pure data + the timeline, loaded right after card.js.
+  'src/credits.js',
 ];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.
@@ -196,6 +198,12 @@ function loadGameData() {
     DEFAULT_CARD_MESSAGES: get('DEFAULT_CARD_MESSAGES'),
     buildCardSlides: get('buildCardSlides'),
     TEMP_CARD_SLIDES: get('TEMP_CARD_SLIDES'),
+    DEFAULT_RECIPIENT: get('DEFAULT_RECIPIENT'),
+    DEFAULT_PLAYER_NAME: get('DEFAULT_PLAYER_NAME'),
+    DEFAULT_CREDITS: get('DEFAULT_CREDITS'),
+    buildCreditsConfig: get('buildCreditsConfig'),
+    creditsTimeline: get('creditsTimeline'),
+    CREDITS_DEFAULT_TIMING: get('CREDITS_DEFAULT_TIMING'),
     // M5 sound
     SOUNDS: get('SOUNDS'),
     AUDIO_CATEGORIES: get('AUDIO_CATEGORIES'),

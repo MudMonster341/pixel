@@ -50,6 +50,16 @@ function cardState(page) {
   });
 }
 
+// The credits ignore skip keys for their first moments (so the key that closes the card can't skip them by
+// accident); this waits that out, skips to THE END, waits for the end-grace, and presses once more to leave.
+async function skipCredits(page) {
+  await page.waitForTimeout(1400);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => page.evaluate(() => game.scene.getScene('credits').phase), { timeout: 5_000 }).toBe('end');
+  await page.waitForTimeout(1700);
+  await page.keyboard.press('Escape');
+}
+
 // Talks to the volunteer and presses through however many lines his current entry has (docs/STORY.md
 // "reward"), the same "press E/Enter until the box closes" idea tests/e2e/story.spec.js's own
 // finishDialog() uses, but stopping the instant the box-opening sequence has actually started --
@@ -96,7 +106,7 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   // ---------- the card ----------
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
   const card = await cardState(page);
-  expect(card.recipient).toBe('Zara'); // {name} comes from GameState.playerName with no card.json
+  expect(card.recipient).toBe('Taru'); // {name} is the card's recipient (default Taru), not the typed player name (ADR 0019)
   // No assets/card/photos/ in this checkout -- the slideshow falls back to the temporary slideshow
   // (src/card.js TEMP_CARD_SLIDES, "add in a temporary card as well") instead of breaking
   // (docs/ROADMAP.md M3 "a missing video or empty photo folder must not break anything"), and looks
@@ -111,8 +121,11 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await cardState(page)).dialogOpen, { timeout: 5_000 }).toBe(true);
 
-  // Skippable: Esc jumps straight through to "THE END" and back to the title, from mid-message.
+  // Skippable: Esc skips the rest of the card and goes on to the credits (tests/e2e/credits.spec.js covers
+  // those in full); Esc again, past the credits' short grace period, skips to THE END and then the title.
   await page.keyboard.press('Escape');
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('credits')), { timeout: 10_000 }).toBe(true);
+  await skipCredits(page);
   await expect.poll(async () => page.evaluate(() => game.scene.isActive('title')), { timeout: 10_000 }).toBe(true);
 
   // The save was kept (not reset), so "Continue"/"Watch the Card Again" both see the finished quest.
@@ -139,7 +152,9 @@ test('"Watch the Card Again" from the title jumps straight to the card, skipping
   await expect.poll(async () => (await boxState(page)).canSkip, { timeout: 10_000 }).toBe(true);
   await page.keyboard.press('Escape'); // straight through the box
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
-  await page.keyboard.press('Escape'); // straight through the card, back to the title
+  await page.keyboard.press('Escape'); // straight through the card, on to the credits
+  await expect.poll(async () => page.evaluate(() => game.scene.isActive('credits')), { timeout: 10_000 }).toBe(true);
+  await skipCredits(page); // straight through the credits, back to the title
   await expect.poll(async () => page.evaluate(() => game.scene.isActive('title')), { timeout: 10_000 }).toBe(true);
 
   // Reload straight to the title (a fresh page, same save) and pick "Watch the Card Again".
@@ -151,7 +166,7 @@ test('"Watch the Card Again" from the title jumps straight to the card, skipping
   await chooseTitleMenu(page, 'watch-card');
 
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
-  expect((await cardState(page)).recipient).toBe('Nadia');
+  expect((await cardState(page)).recipient).toBe('Taru'); // the recipient, not the typed name 'Nadia' (ADR 0019)
   // 'world'/'ui' were never (re)started -- Watch the Card Again never re-enters the game itself.
   expect(await page.evaluate(() => game.scene.isActive('world'))).toBe(false);
 

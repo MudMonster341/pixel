@@ -159,7 +159,7 @@ test('M3a: a save from before playerName/customization existed falls back to the
   }));
 
   assert.doesNotThrow(() => loadGame('default', GameState));
-  assert.equal(GameState.playerName, 'Aisha'); // untouched, still whatever GameState already had
+  assert.equal(GameState.playerName, 'Taru'); // untouched, still whatever GameState already had
   assert.deepEqual(plain(GameState.customization), { clothes: 'pink' });
 });
 

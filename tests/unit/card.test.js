@@ -6,20 +6,20 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadGameData, plain } = require('../helpers/game-data');
 
-test('buildCardConfig(null, name): no card.json at all falls back to placeholder messages and the player name', () => {
+test('buildCardConfig(null): no card.json at all falls back to placeholder messages addressed to Taru', () => {
   const { buildCardConfig, DEFAULT_CARD_MESSAGES } = loadGameData();
-  const config = buildCardConfig(null, 'Zara');
-  assert.equal(config.recipient, 'Zara');
+  const config = buildCardConfig(null);
+  assert.equal(config.recipient, 'Taru');
   assert.equal(config.messages.length, DEFAULT_CARD_MESSAGES.length);
-  assert.equal(config.messages[0], 'Happy Birthday, Zara!'); // {name} templated
+  assert.equal(config.messages[0], 'Happy Birthday, Taru!'); // {name} templated
   assert.deepEqual(plain(config.photos), []);
 });
 
-test('buildCardConfig(null, name): falls back to a generic word if even the player name is missing', () => {
+test('decisions/0019: the card recipient is never the typed player name (a stray 2nd argument is ignored)', () => {
   const { buildCardConfig } = loadGameData();
-  const config = buildCardConfig(null, '');
-  assert.equal(config.recipient, 'you');
-  assert.ok(config.messages[0].includes('you'));
+  assert.equal(buildCardConfig(null, 'Zara').recipient, 'Taru');
+  assert.equal(buildCardConfig({}, 'Zara').messages[0], 'Happy Birthday, Taru!');
+  assert.equal(buildCardConfig({ recipient: '   ' }).recipient, 'Taru'); // a blank recipient falls back too
 });
 
 test('buildCardConfig: a valid card.json is used as-is, with {name} templated to the configured recipient', () => {
@@ -32,8 +32,8 @@ test('buildCardConfig: a valid card.json is used as-is, with {name} templated to
       { file: '2.png', caption: '' },
     ],
   };
-  const config = buildCardConfig(raw, 'FallbackName');
-  assert.equal(config.recipient, 'Amina'); // explicit recipient wins over the player's typed name
+  const config = buildCardConfig(raw);
+  assert.equal(config.recipient, 'Amina'); // an explicit recipient wins over the default
   assert.deepEqual(plain(config.messages), ['Happy Birthday, Amina!', 'From everyone at LUG.']);
   assert.deepEqual(plain(config.photos), [
     { file: '1.jpg', caption: 'The first day' },
@@ -78,7 +78,7 @@ test('buildCardConfig: garbage top-level input (a string, a number, an array) ne
   for (const garbage of ['nonsense', 42, [], true, undefined]) {
     assert.doesNotThrow(() => buildCardConfig(garbage, 'Name'));
     const config = buildCardConfig(garbage, 'Name');
-    assert.equal(config.recipient, 'Name');
+    assert.equal(config.recipient, 'Taru');
     assert.deepEqual(plain(config.photos), []);
   }
 });

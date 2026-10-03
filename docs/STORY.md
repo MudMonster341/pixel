@@ -103,7 +103,7 @@ gift can never be blocked by a hard game.
 ## The box and the birthday card (the ending, built 2026-09-22)
 
 When she turns in all 3 keys, the volunteer hands over a small box (`GameState.quest.stage` becomes
-`'rewarded'`). That immediately plays two things back to back, then returns to the title screen:
+`'rewarded'`). That immediately plays three things back to back, then returns to the title screen:
 
 1. **The box opens** (`src/scenes/box-opening.js`): it appears, the lid creaks open, golden light
    and pixel sparkles rise, and the screen fills with light. Skippable with Esc, but only *after* the
@@ -112,10 +112,12 @@ When she turns in all 3 keys, the volunteer hands over a small box (`GameState.q
    version (see `docs/research/cutscene-video-prompts.md` "Prompt 3").
 2. **The birthday card** (`src/scenes/card.js`): a full-screen pixel card that opens, with confetti,
    a cake with candles, floating hearts, a photo slideshow and the messages below, typed out one at a
-   time. It ends on a gentle "THE END" and returns to the title screen -- the save is kept, so
+   time. When the last message closes it hands on to the credits.
+3. **The credits** (`src/scenes/credits.js`, ADR 0019, see "The credits" below): "Happy Birthday, Taru",
+   "Happy 22", the wishes one by one, "THE END", then back to the title screen -- the save is kept, so
    **"Continue"** picks up exactly where she was, and a new **"Watch the Card Again"** option (only
-   shown once a save has actually reached this point) jumps straight back to the card without
-   replaying the box or the hunt.
+   shown once a save has actually reached this point) jumps straight back to the card (and then the
+   credits) without replaying the box or the hunt.
 
 The game runs on placeholders (a generic message, a temporary 5-slide photo slideshow of campus/story
 moments -- see below) until the owner supplies real content -- nothing here can be "unfinished" in a
@@ -148,7 +150,8 @@ never breaks the card):
 
 ```json
 {
-  "recipient": "Her Name",
+  "recipient": "Taru",
+  "age": 22,
   "messages": [
     "Happy Birthday, {name}!",
     "Here's a photo from that time...",
@@ -157,14 +160,20 @@ never breaks the card):
   "photos": [
     { "file": "1.jpg", "caption": "Caption for the first photo" },
     { "file": "2.jpg", "caption": "Caption for the second photo" }
+  ],
+  "wishes": [
+    "A short wish, shown on its own for about three seconds.",
+    "Write about eight of them; {name} becomes the recipient."
   ]
 }
 ```
 
-- `recipient`: her real name, used everywhere `{name}` appears in a message. Left out entirely, it
-  falls back to whatever name was actually typed on the game's own name-entry screen -- set this
-  explicitly if you want the card to always say the same real name regardless of what a player types
-  when playing the game itself.
+- `recipient`: her real name, used everywhere `{name}` appears in a message or wish, and in the
+  credits' "Happy Birthday, ...". Left out entirely, it is **"Taru"** (ADR 0019) -- it is *not* the
+  name typed on the game's own name-entry screen, so the gift always names her whatever a player types.
+- `age`: the number in the credits' "Happy 22". Optional, default 22.
+- `wishes`: the credits' wishes (see "The credits" below), one string each, about eight, each under
+  about 70 characters. Optional: the built-in generic placeholders in `src/credits.js` play if left out.
 - `messages`: shown one at a time, typed out, advanced with E/Space/Enter -- the same textbox every
   conversation in the game already uses. `{name}` anywhere in a line is replaced with `recipient`.
 - `photos`: **order matters** -- they play in this order, cross-fading, holding a few seconds each,
@@ -172,6 +181,18 @@ never breaks the card):
   optional; leave it out (or empty) for no caption on that photo. A `file` that doesn't actually
   exist in the folder falls back to the placeholder illustration for that one slide (its caption
   still shows), rather than breaking the rest of the slideshow.
+
+### The credits (after the card, built 2026-10-03, ADR 0019)
+
+After the card's last message (and the closing video, if any) the credits scene
+(`src/scenes/credits.js`) plays, then returns to the title. On a calm dusk sky with twinkling stars and
+slowly drifting hearts and confetti: "Happy Birthday, Taru" (the recipient), then "Happy 22", then
+about eight wishes fading in one at a time (about 3 s each, 30 s in all), then "THE END" and "Made
+for you by Mustafa" (about 42 s overall). Esc/Space/Enter skips ahead to THE END (and, once THE END is up,
+back to the title); the card's music keeps playing. "Watch the Card Again" replays the card and then
+the credits. The wishes shipped in `src/credits.js` are generic placeholders; the owner replaces them
+with `wishes` in card.json. Content and pacing live in `src/credits.js` (`DEFAULT_CREDITS`,
+`buildCreditsConfig()`, `creditsTimeline()`).
 
 ## Open questions for the owner
 

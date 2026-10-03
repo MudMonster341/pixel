@@ -397,3 +397,9 @@ Chasing the "ambient student in front of a story object" suspicion with a new ge
 **Rule now tested:** idle/chat students and talkable cats stay >= 2 interact ranges from story NPCs/key
 stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4-neighbour BFS).
 **Fix for the timeout:** story.spec.js `test.setTimeout(90_000)`; assertions unchanged.
+
+## ERR-0014 — The birthday card's message box never typed (2026-10-04)
+**Symptom:** qa:shots `ending-05/06` and the offline playthrough showed an empty cream message box under the card photo; `dialog.typing` stayed true with an empty body for 8+ s.
+**Cause:** `DialogBox` only types text and bobs its arrow from `DialogBox.update(time, delta)`. `src/scenes/cutscene.js` calls it from its own `update()`; `src/scenes/card.js` built a DialogBox but had no `update()` at all, so the box stayed blank until a key forced the whole line (advance() skips typing). e2e only asserted `dialogOpen`, so nothing caught it.
+**Fix:** `card.js` gets `update(time, delta)` calling `this.dialog.update`; unit test in tests/unit/card.test.js: every scene that builds a DialogBox (except ui.js) must call `this.dialog.update(time, delta)` from `update()` (fails without the fix). Verified in the offline bundle: the body reads "Happy Birthday, Taru!".
+**Lesson:** a screenshot sweep finds "empty" states that the logic tests treat as healthy; look at the ones marked "unsure".

@@ -124,6 +124,12 @@ class CardScene extends Phaser.Scene {
     if (this.coverOpening === false) this.openCover();
   }
 
+  // Drives the message box's typewriter and its bouncing arrow (DialogBox.update), exactly like the cutscene
+  // player does. Without this the card's messages never type: the box stays blank while it reports typing.
+  update(time, delta) {
+    if (this.dialog) this.dialog.update(time, delta);
+  }
+
   // ---------- the sequence ----------
 
   beginSequence() {

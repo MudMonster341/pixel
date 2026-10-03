@@ -129,3 +129,19 @@ test('buildCardSlides: a single real photo still wins over the 5-slide temporary
   const slides = buildCardSlides(photos, () => 'card-photo-0');
   assert.deepEqual(plain(slides), [{ key: 'card-photo-0', caption: 'Just one' }]);
 });
+
+// The card's message box typed nothing in the whole game until 2026-10-04: DialogBox only types and bobs its arrow
+// from DialogBox.update(time, delta), and the card scene (unlike the cutscene scene) never called it, so the box
+// stayed blank while reporting "typing". Any scene that owns a DialogBox must drive it.
+test('every scene that builds its own DialogBox calls dialog.update from its own update()', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '..', '..', 'src', 'scenes');
+  const owners = fs.readdirSync(dir).filter((f) => f.endsWith('.js') && f !== 'ui.js')
+    .filter((f) => /new DialogBox\(/.test(fs.readFileSync(path.join(dir, f), 'utf8')));
+  assert.ok(owners.includes('card.js') && owners.includes('cutscene.js'), `expected card.js and cutscene.js to own a DialogBox, saw ${owners}`);
+  for (const file of owners) {
+    const src = fs.readFileSync(path.join(dir, file), 'utf8');
+    assert.match(src, /^\s*update\(time, delta\) \{[\s\S]*?this\.dialog\.update\(time, delta\)/m, `${file} builds a DialogBox but never calls this.dialog.update(time, delta) from update()`);
+  }
+});

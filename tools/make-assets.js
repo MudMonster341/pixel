@@ -29,6 +29,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { decodePNG } = require('./lib/png-decode');
 const TreeArt = require('./lib/tree-art');
+const { DOOR_KINDS } = require('./lib/door-kinds');
 
 const TILE = 16;
 const TILESET_COLUMNS = 8;
@@ -1698,7 +1699,144 @@ const TILES = [
   { name: 'intLiftOpenL', draw: (img, x, y) => liftDoorTile(img, x, y, 'L', true) },
   { name: 'intLiftOpenR', draw: (img, x, y) => liftDoorTile(img, x, y, 'R', true) },
   { name: 'intLiftPanel', solid: true, draw: intLiftPanel },
+
+  // ---- P4c (FB-0067: every door opens and closes), appended at the end so no earlier index moves ----
+  // The in-between frame of every door kind (tools/lib/door-kinds.js is the one table naming them), derived from the pixels of the
+  // kind's closed and open tiles by doorFrameTile() below: the campus glass leaves slide a third apart, the lift's steel doors
+  // slide a third apart, the test map's wood door swings partly open. Plus the interior exit's own glass double door (closed, half,
+  // open) that those buildings' doorways show at rest now, so they have a door to open and close.
+  ...['L', 'R'].map((side, i) => ({ name: `bitsEntranceHalf${side}`, draw: (img, x, y) => doorFrameTile(img, x, y, 'campusGlass', i) })),
+  ...['L', 'R'].map((side, i) => ({ name: `intLiftThird${side}`, draw: (img, x, y) => doorFrameTile(img, x, y, 'lift', i) })),
+  { name: 'doorHalf', draw: (img, x, y) => doorFrameTile(img, x, y, 'houseDoor', 0, 'half') },
+  { name: 'doorOpen', draw: (img, x, y) => doorFrameTile(img, x, y, 'houseDoor', 0, 'open') },
+  ...['closed', 'half', 'open'].flatMap((state) => ['L', 'R'].map((side, i) => ({
+    name: DOOR_KINDS.exitGlass[state][i],
+    draw: (img, x, y) => doorFrameTile(img, x, y, 'exitGlass', i, state),
+  }))),
 ];
+
+
+// ---------- P4c (FB-0067): door animation frames, derived from the existing door pixels ----------
+// Every enterable door plays closed -> half -> open (tools/lib/door-kinds.js names the tiles). The closed and open tiles were
+// already in the sheet (or, for the interior exit, are built here from the pack's glass pane and the doorway frame); the in-between
+// frames are a resample of those pixels, never freehand art. Two motions cover every kind:
+//   slide  the leaves of a sliding door (the campus glass entrance, the lift) move apart: each leaf's pixels are shifted toward its
+//          own side by `shift` px, over the OPEN frame's backdrop (the dark doorway / the lit lift car), so the gap grows.
+//   swing  a hinged leaf opening: the closed leaf's columns are squeezed toward the hinge (foreshortening) and its free edge drops
+//          a few rows (the slant), over the doorway's own backdrop. Fraction `f` is the width left (1 = closed).
+// The tiles are fully opaque (backdrop included) because the engine swaps them over the door's own tile as an overlay.
+
+// A copy of one already-drawn tile's pixels (tiles are drawn in list order, so `name` must come earlier in TILES).
+function readTile(img, name) {
+  const i = TILES.findIndex((t) => t.name === name);
+  if (i < 0) throw new Error(`readTile: no tile named ${name}`);
+  const sx = (i % TILESET_COLUMNS) * TILE;
+  const sy = Math.floor(i / TILESET_COLUMNS) * TILE;
+  const out = new Img(TILE, TILE);
+  for (let yy = 0; yy < TILE; yy++) {
+    const from = ((sy + yy) * img.w + sx) * 4;
+    img.data.copy(out.data, yy * TILE * 4, from, from + TILE * 4);
+  }
+  return out;
+}
+
+// Copies a w x h block of `src` (from sx0, sy0) over `img` at (x, y), alpha included.
+function putImg(img, x, y, src, sx0 = 0, sy0 = 0, w = src.w, h = src.h) {
+  for (let yy = 0; yy < h; yy++) {
+    for (let xx = 0; xx < w; xx++) {
+      const o = ((sy0 + yy) * src.w + sx0 + xx) * 4;
+      img.data.set(src.data.subarray(o, o + 4), ((y + yy) * img.w + x + xx) * 4);
+    }
+  }
+}
+
+// A 2-tile-wide picture (left tile, right tile side by side) read from two named tiles.
+function readTilePair(img, names) {
+  const out = new Img(TILE * 2, TILE);
+  names.forEach((name, i) => putImg(out, i * TILE, 0, readTile(img, name)));
+  return out;
+}
+
+// The slide frame of a two-leaf sliding door as a 32x16 picture: the `open` pair as the backdrop, each leaf of the `closed` pair slid
+// `shift` px toward its own side inside its pane columns (`left`/`right`, inclusive) over rows `rows`.
+function slideDoorPair(closed, open, { left, right, rows, shift }) {
+  const out = new Img(TILE * 2, TILE);
+  putImg(out, 0, 0, open);
+  for (let yy = rows[0]; yy <= rows[1]; yy++) {
+    for (let xx = left[0]; xx <= left[1] - shift; xx++) putImg(out, xx, yy, closed, xx + shift, yy, 1, 1);
+    for (let xx = right[0] + shift; xx <= right[1]; xx++) putImg(out, xx, yy, closed, xx - shift, yy, 1, 1);
+  }
+  return out;
+}
+
+// A hinged leaf drawn at fraction `f` of its width: `leaf` is the closed leaf's pixels (an Img), (x0, y0) where its full-size
+// top-left corner sits in the tile, `hinge` 'left' or 'right', `taper` how many rows the free edge drops (the slant).
+// Nearest-neighbour like every other resample here.
+function swingLeaf(img, x, y, leaf, { x0, y0, hinge, f, taper }) {
+  const destW = Math.max(1, Math.round(leaf.w * f));
+  for (let dx = 0; dx < destW; dx++) {
+    const t = destW > 1 ? dx / (destW - 1) : 0;
+    const drop = Math.round(taper * t);
+    const h = leaf.h - drop;
+    const srcFromHinge = Math.min(leaf.w - 1, Math.floor((dx + 0.5) / f));
+    const sx = hinge === 'left' ? srcFromHinge : leaf.w - 1 - srcFromHinge;
+    const destX = hinge === 'left' ? x0 + dx : x0 + leaf.w - 1 - dx;
+    for (let yy = 0; yy < h; yy++) {
+      const sy = Math.min(leaf.h - 1, Math.floor(((yy + 0.5) * leaf.h) / h));
+      const o = (sy * leaf.w + sx) * 4;
+      if (leaf.data[o + 3] === 0) continue;
+      img.setRGBA(x + destX, y + y0 + drop + yy, leaf.data[o], leaf.data[o + 1], leaf.data[o + 2], leaf.data[o + 3]);
+    }
+  }
+}
+
+// The interior exit's glass leaf: the pack's glass pane (the one the foyer's side doors use, intGlassDoor), squeezed to the doorway.
+const EXIT_LEAF = { x0: 2, y0: 5, w: 12, h: TILE - 5 };
+let exitLeafCache = null;
+function exitGlassLeaf() {
+  if (!exitLeafCache) {
+    exitLeafCache = new Img(EXIT_LEAF.w, EXIT_LEAF.h);
+    blitAtlas(exitLeafCache, 0, 0, loadAtlas(LIMEZU_FURNITURE), 146, 457, 12, 16, { dw: EXIT_LEAF.w, dh: EXIT_LEAF.h });
+  }
+  return exitLeafCache;
+}
+// The doorway frame of the interior exit with no leaf in it: the existing `intDoorway` (lintel, jambs, lit threshold) minus its
+// open leaf (the 4-px slab against the right jamb), the sill put back.
+function exitDoorFrame(img, x, y) {
+  intDoorway(img, x, y);
+  img.fill(x + 10, y + 5, 4, TILE - 5, 'doorLight');
+  img.fill(x + 3, y + TILE - 1, 7, 1, 'doorLightDeep');
+}
+
+// `kind` is a DOOR_KINDS key; `leaf` 0/1 is the left/right tile of the doorway; `state` only matters for the swinging exit door.
+function doorFrameTile(img, x, y, kind, leaf, state = 'half') {
+  if (kind === 'campusGlass') {
+    // two 12x12 glass panes either side of the centre post: slide 4 px (a third of the way) toward the outer jambs
+    const names = DOOR_KINDS.campusGlass;
+    const out = slideDoorPair(readTilePair(img, names.closed), readTilePair(img, names.open), { left: [2, 13], right: [18, 29], rows: [2, 13], shift: 4 });
+    putImg(img, x, y, out, leaf * TILE, 0, TILE, TILE);
+  } else if (kind === 'lift') {
+    // the two steel leaves meet at the middle; the fully open frame leaves 5 px each side, so a third of that 10 px travel is 3 px
+    const names = DOOR_KINDS.lift;
+    const out = slideDoorPair(readTilePair(img, names.closed), readTilePair(img, names.open), { left: [1, 15], right: [16, 30], rows: [7, 14], shift: 3 });
+    putImg(img, x, y, out, leaf * TILE, 0, TILE, TILE);
+  } else if (kind === 'houseDoor') {
+    // a wood slab (x 3..12, y 2..15) hinged on its left edge, swung to 60% (half) or 25% (open) of its width over the dark doorway
+    const door = readTile(img, 'door');
+    const slab = new Img(10, 14);
+    putImg(slab, 0, 0, door, 3, 2, 10, 14);
+    putImg(img, x, y, door);
+    img.fill(x + 3, y + 2, 10, 14, 'q');
+    img.fill(x + 3, y + 2, 10, 1, 'f');
+    swingLeaf(img, x, y, slab, { x0: 3, y0: 2, hinge: 'left', f: state === 'open' ? 0.25 : 0.6, taper: state === 'open' ? 0 : 3 });
+  } else if (kind === 'exitGlass') {
+    const f = state === 'closed' ? 1 : state === 'half' ? 0.66 : 0.33;
+    exitDoorFrame(img, x, y);
+    swingLeaf(img, x, y, exitGlassLeaf(), { x0: EXIT_LEAF.x0, y0: EXIT_LEAF.y0, hinge: leaf === 0 ? 'left' : 'right', f, taper: state === 'half' ? 3 : 0 });
+  } else {
+    throw new Error(`doorFrameTile: unknown door kind "${kind}"`);
+  }
+}
 
 // ---------- campus tiles ----------
 

@@ -76,6 +76,9 @@ const DOOR_WALK_MS = Math.round((16 / WALK_SPEED) * 1000); // one 16px tile at w
 const DOOR_WALK_MIN_MS = 120;
 const STAIRS_WALK_MS = 150;
 const DOOR_RATTLE_MS = 200;
+// P4c (FB-0067): every door and lift opens and closes in DOOR_FRAME_MS steps (src/maplogic.js doorFrames(): closed, half, open = 160 ms).
+// A lift she arrives at opens, stays open a beat (she is standing right in front of it) and closes again.
+const LIFT_ARRIVAL_HOLD_MS = 450;
 // Footstep dust (ADR 0015): a puff roughly every couple of steps while running outdoors, not every
 // frame -- 220ms is a little faster than one full run-animation cycle (12fps, 6 frames ~ 500ms) so it
 // reads as "every other step", not a fixed clock unrelated to her stride.
@@ -132,6 +135,9 @@ class WorldScene extends Phaser.Scene {
     this._warpPointsCache = null;
     this._warpStage = null;
     this.dustAccum = 0; // footstep dust puff timer (outdoors, while running)
+    // P4c (FB-0067): every door-animation overlay alive right now (showDoorOverlay()), by door, so a second animation on the same door
+    // replaces the first and the scene's shutdown (a restart mid-animation) can sweep up whatever is left.
+    this.doorAnims = new Map();
   }
 
   // FB-0072 (the one choke point): `transitioning` is the flag every "the player does not have the
@@ -188,6 +194,8 @@ class WorldScene extends Phaser.Scene {
     this.createPickups();
     this.createKeyStations();
     this.createLifts();
+    // P4c: a restart mid-animation (a warp's fade ending, the player quitting) must never leave a door overlay or its timers behind.
+    this.events.once('shutdown', () => this.destroyDoorAnims());
 
     const { widthInPixels: width, heightInPixels: height } = this.map;
     this.physics.world.setBounds(0, 0, width, height);
@@ -247,6 +255,7 @@ class WorldScene extends Phaser.Scene {
     // P4b: she arrives from a lift ride (warpTo() below) standing in front of its doors, no walk-out: the lift "dings".
     if (this.viaWarpKind === 'lift') AudioManager.play('liftDing');
     else if (this.viaWarpKind) this.playDoorArrival(this.viaWarpKind);
+    if (this.viaWarpKind === 'lift') this.playLiftArrival();
 
     // ADR 0016 / docs/STORY.md "Opening": the full M3a chain's own bus-arrival-then-Mustafa-meets-her
     // beat, only on a genuinely fresh arrival at the campus's own default spawn (never on a debug
@@ -797,7 +806,9 @@ class WorldScene extends Phaser.Scene {
       .map((o) => {
         const cells = parseDoorCells(o.props.cells);
         const centre = doorCenterPx({ x: Math.floor(o.x), y: Math.floor(o.y), cellsW: cells.w });
-        return { x: centre.x, y: centre.y, name: o.name, def: { id: `lift:${o.name}`, name: 'Lift', dialog: liftDialog(this.def.lift, this.mapKey) } };
+        // P4c: `door` is the lift's doorway as the door animation sees any door (showDoorOverlay()): its tile, cells and frames.
+        const door = { x: Math.floor(o.x), y: Math.floor(o.y), cellsW: cells.w, cellsH: cells.h, name: o.name, kind: 'lift', frames: doorFrames(o.props) };
+        return { x: centre.x, y: centre.y, name: o.name, door, def: { id: `lift:${o.name}`, name: 'Lift', dialog: liftDialog(this.def.lift, this.mapKey) } };
       });
   }
 
@@ -940,7 +951,7 @@ class WorldScene extends Phaser.Scene {
   computeWarpPoints() {
     const textWarps = (this.def.warps || []).map((w) => ({
       ...w, kind: w.kind || 'door', locked: false, lockedReason: null, _rule: null,
-      openTiles: parseOpenTiles(w.openTiles),
+      openTiles: parseOpenTiles(w.openTiles), frames: doorFrames(w),
       cellsW: 1, cellsH: 1,
     }));
     const objectWarps = (this.mapObjects || [])
@@ -956,7 +967,7 @@ class WorldScene extends Phaser.Scene {
         return {
           x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, cellsW: cells.w, cellsH: cells.h, to: o.props.to, spawnAt: o.props.toId,
           closed: Boolean(o.props.closed),
-          name: o.name, kind: o.type, openTiles: parseOpenTiles(o.props.openTiles),
+          name: o.name, kind: o.type, openTiles: parseOpenTiles(o.props.openTiles), frames: doorFrames(o.props),
           locked: Boolean(o.props.closed) || isDoorLocked(rule, GameState.quest.stage), _rule: rule,
           lockedReason: (rule && rule.reason) || (o.props.closed ? 'Closed for now.' : 'Locked for the event'),
           // M5 sound (checkWarps() below): a Tiled 'stairs' object gets the warp/stairs sfx, a 'door'
@@ -1305,14 +1316,19 @@ class WorldScene extends Phaser.Scene {
     const centre = doorCenterPx(warp);
     const lineUp = (warp.cellsW || 1) > 1 && dirX === 0 && dirY !== 0;
     const to = lineUp ? { x: centre.x, y: this.player.y + dirY * TILE } : undefined;
-    this.walkThroughDoor(facing, warp.kind, () => {
+    // P4c (FB-0067): the door OPENS first (closed -> half -> open, 160 ms), then she walks in, then it CLOSES behind her while the
+    // screen fades (the same 160 ms, inside the 250 ms fade). A door with no frames (or an overlay-less stand-in) skips straight to the walk.
+    const walk = () => this.walkThroughDoor(facing, warp.kind, () => {
       this.player.anims.stop();
+      if (overlay && overlay.close) { AudioManager.play('doorClose'); overlay.close(); }
       this.cameras.main.fadeOut(250, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         if (overlay) overlay.destroy();
         this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt, viaWarpKind: warp.kind });
       });
     }, to);
+    if (overlay && overlay.open) overlay.open(walk);
+    else walk();
   }
 
   // P4b (FB-0064 / FB-0069): the lift ride. A dialog `{ warp: { to, spawnAt } }` action (src/dialog.js, the lift's floor choice, relayed
@@ -1328,9 +1344,46 @@ class WorldScene extends Phaser.Scene {
     }
     this.transitioning = true; // (this also stops her dead -- haltPlayer(), see the accessor above)
     this.prompt.setVisible(false);
-    this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({ map: to, spawnAt, viaWarpKind: 'lift' });
+    // P4c (FB-0067): the lift's doors open (160 ms), then the fade starts and they close again inside it: she rides.
+    const overlay = this.showLiftOverlay(this.nearestLift());
+    const ride = () => {
+      if (overlay && overlay.close) { AudioManager.play('doorClose'); overlay.close(); }
+      this.cameras.main.fadeOut(250, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.restart({ map: to, spawnAt, viaWarpKind: 'lift' });
+      });
+    };
+    if (overlay && overlay.open) overlay.open(ride);
+    else ride();
+  }
+
+  // P4c: the lift she is standing at (the nearest of this map's, there is one a floor), or null.
+  nearestLift() {
+    const p = this.player;
+    let best = null;
+    let bestD = Infinity;
+    for (const lift of this.lifts || []) {
+      const d = Phaser.Math.Distance.Between(p.x, p.y, lift.x, lift.y);
+      if (d < bestD) { best = lift; bestD = d; }
+    }
+    return best;
+  }
+
+  showLiftOverlay(lift) {
+    return lift && lift.door && lift.door.frames ? this.showDoorOverlay(lift.door) : null;
+  }
+
+  // P4c: arriving from a lift ride (create(), right after the ding): the doors of the lift she was sent to (`spawnAt`) open, stay open a
+  // beat and close again. She is already standing in front of them with the controls (nothing here blocks input), so it is only a picture.
+  playLiftArrival() {
+    const lift = (this.lifts || []).find((l) => l.name === this.spawnAt);
+    const overlay = this.showLiftOverlay(lift);
+    if (!overlay) return;
+    overlay.open(() => {
+      this.time.delayedCall(LIFT_ARRIVAL_HOLD_MS, () => {
+        AudioManager.play('doorClose');
+        overlay.close(() => overlay.destroy());
+      });
     });
   }
 
@@ -1358,10 +1411,15 @@ class WorldScene extends Phaser.Scene {
     // is a second, real "the door opens" moment -- she appears behind a closed door and it opens for
     // her to walk out, the reverse of playDoorDeparture()'s own opening beat above.
     AudioManager.play(kind === 'stairs' ? 'warpStairs' : 'doorOpen');
-    this.walkThroughDoor(facing, kind, () => {
-      if (overlay) overlay.destroy();
+    // P4c (FB-0067): the reverse of the departure: she appears behind the CLOSED door, it opens (160 ms), she steps out, and it closes
+    // behind her (input is back the moment she has stepped out, the closing is only a picture and removes its own overlay).
+    const walk = () => this.walkThroughDoor(facing, kind, () => {
       this.transitioning = false;
+      if (overlay && overlay.close) { AudioManager.play('doorClose'); overlay.close(() => overlay.destroy()); }
+      else if (overlay) overlay.destroy();
     }, { x: toPixel(this.spawn.x), y: toPixel(this.spawn.y) });
+    if (overlay && overlay.open) overlay.open(walk);
+    else walk();
   }
 
   // Shared walk animation for both halves above: plays the walk cycle in `facing` while tweening the
@@ -1423,24 +1481,92 @@ class WorldScene extends Phaser.Scene {
     return this.add.image(px, py, 'tiles', tileIndex).setOrigin(0, 0);
   }
 
-  // ADR 0015: the open-doorway overlay, shown over a door's own tile(s) while she walks through --
-  // null (no overlay at all) when the warp has no `openTiles` (the graceful fallback: the walk-in/out
-  // still happens regardless, docs/plans/2026-09-26-premium-pass.md "your code must work with [real
-  // openTiles] data when it lands"). Tiles are laid out left to right starting at the warp's own tile.
+  // ADR 0015 + P4c (FB-0067): the door's animated overlay, shown over the door's own tile(s) while she goes through. A door's frames
+  // (src/maplogic.js doorFrames(): closed, half, open, each one tile name per cell of the doorway, left to right) become one Image per
+  // cell whose tile is swapped frame by frame: `open(onDone)` plays them forward, `close(onDone)` backward, DOOR_FRAME_MS a frame, and
+  // `destroy()` removes it (every overlay is also swept at scene shutdown, and each animation has a failsafe that finishes it a beat
+  // late if a tween never reports in: a door can never be left stuck half open). The overlay starts on its first frame, which is the
+  // door as drawn at rest, so showing it changes nothing until it plays. null (no overlay, the walk-in/out still happens) when the warp
+  // has no frames at all: a closed/locked door, or one with no art. A door with a single frame (data from before P4c) just shows it.
   showDoorOverlay(warp) {
-    if (!warp.openTiles) return null;
+    const frames = warp.frames || (warp.openTiles ? [warp.openTiles] : null);
+    if (!frames || !frames.length) return null;
+    const key = `${warp.name || warp.to}@${warp.x},${warp.y}`;
+    if (!this.doorAnims) this.doorAnims = new Map();
+    const previous = this.doorAnims.get(key);
+    if (previous) previous.destroy();
     const depth = this.doorOverlayDepth(warp);
-    const images = warp.openTiles
-      .map((name, i) => {
-        const index = this.tileInfo.tiles.findIndex((t) => t.name === name);
-        if (index === -1) {
-          console.warn(`"${warp.name || warp.to}": unknown openTiles tile "${name}"`);
-          return null;
-        }
-        return this.tileImage((warp.x + i) * TILE, warp.y * TILE, index).setDepth(depth);
-      })
-      .filter(Boolean);
-    return { destroy: () => images.forEach((img) => img.destroy()) };
+    const indexOfTile = (name) => {
+      const index = this.tileInfo.tiles.findIndex((t) => t.name === name);
+      if (index === -1) console.warn(`"${warp.name || warp.to}": unknown door tile "${name}"`);
+      return index;
+    };
+    const frameTiles = frames.map((names) => names.map(indexOfTile));
+    const cellCount = frames[frames.length - 1].length;
+    const across = (warp.cellsH || 1) > 1 && (warp.cellsW || 1) === 1 ? 1 : Math.max(1, cellCount); // a door in a vertical wall stacks its cells
+    const images = [];
+    for (let i = 0; i < cellCount; i++) {
+      const first = (frameTiles[0][i] ?? -1) >= 0 ? frameTiles[0][i] : frameTiles[frameTiles.length - 1][i];
+      if (!(first >= 0)) { images.push(null); continue; }
+      images.push(this.tileImage((warp.x + (i % across)) * TILE, (warp.y + Math.floor(i / across)) * TILE, first).setDepth(depth));
+    }
+    const show = (k) => images.forEach((img, i) => {
+      if (!img) return;
+      const index = frameTiles[k][i];
+      if (index >= 0) img.setFrame(index).setVisible(true);
+      else img.setVisible(false);
+    });
+    let destroyed = false;
+    let counter = null;
+    let failsafe = null;
+    let finishCurrent = null;
+    const stop = () => {
+      if (counter) { counter.stop(); counter = null; }
+      if (failsafe) { failsafe.remove(false); failsafe = null; }
+      finishCurrent = null;
+    };
+    const play = (reverse, onDone) => {
+      if (destroyed) return;
+      stop();
+      const n = frames.length;
+      const total = doorAnimDuration(n);
+      show(reverse ? n - 1 : 0);
+      const finish = () => {
+        if (destroyed || finishCurrent !== finish) return;
+        stop();
+        show(reverse ? 0 : n - 1);
+        if (onDone) onDone();
+      };
+      finishCurrent = finish;
+      if (total === 0) { finish(); return; }
+      counter = this.tweens.addCounter({
+        from: 0, to: total, duration: total,
+        onUpdate: (tween) => { if (!destroyed && finishCurrent === finish) show(doorFrameAt(tween.getValue(), n, DOOR_FRAME_MS, reverse)); },
+        onComplete: finish,
+      });
+      failsafe = this.time.delayedCall(total + DOOR_ANIM_FAILSAFE_MS, finish);
+    };
+    const anim = {
+      key,
+      open: (onDone) => play(false, onDone),
+      close: (onDone) => play(true, onDone),
+      destroy: () => {
+        if (destroyed) return;
+        destroyed = true;
+        stop();
+        images.forEach((img) => img && img.destroy());
+        if (this.doorAnims && this.doorAnims.get(key) === anim) this.doorAnims.delete(key);
+      },
+    };
+    this.doorAnims.set(key, anim);
+    return anim;
+  }
+
+  // P4c: scene shutdown (a restart, the player quitting): no door overlay, tween or timer outlives the scene.
+  destroyDoorAnims() {
+    if (!this.doorAnims) return;
+    for (const anim of [...this.doorAnims.values()]) anim.destroy();
+    this.doorAnims.clear();
   }
 
   // Locked door feedback (ADR 0015): the door itself shakes a couple of px for ~200ms -- using

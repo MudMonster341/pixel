@@ -2461,6 +2461,78 @@
       "solid": true,
       "overhead": false,
       "color": "#b7b3ac"
+    },
+    {
+      "name": "bitsEntranceHalfL",
+      "solid": false,
+      "overhead": false,
+      "color": "#978a97"
+    },
+    {
+      "name": "bitsEntranceHalfR",
+      "solid": false,
+      "overhead": false,
+      "color": "#978a97"
+    },
+    {
+      "name": "intLiftThirdL",
+      "solid": false,
+      "overhead": false,
+      "color": "#918e92"
+    },
+    {
+      "name": "intLiftThirdR",
+      "solid": false,
+      "overhead": false,
+      "color": "#939296"
+    },
+    {
+      "name": "doorHalf",
+      "solid": false,
+      "overhead": false,
+      "color": "#8c775e"
+    },
+    {
+      "name": "doorOpen",
+      "solid": false,
+      "overhead": false,
+      "color": "#84725a"
+    },
+    {
+      "name": "intExitGlassL",
+      "solid": false,
+      "overhead": false,
+      "color": "#8f8987"
+    },
+    {
+      "name": "intExitGlassR",
+      "solid": false,
+      "overhead": false,
+      "color": "#8f8987"
+    },
+    {
+      "name": "intExitGlassHalfL",
+      "solid": false,
+      "overhead": false,
+      "color": "#938679"
+    },
+    {
+      "name": "intExitGlassHalfR",
+      "solid": false,
+      "overhead": false,
+      "color": "#918477"
+    },
+    {
+      "name": "intExitGlassOpenL",
+      "solid": false,
+      "overhead": false,
+      "color": "#9f907c"
+    },
+    {
+      "name": "intExitGlassOpenR",
+      "solid": false,
+      "overhead": false,
+      "color": "#9d8e7a"
     }
   ]
 }

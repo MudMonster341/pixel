@@ -147,12 +147,22 @@ function synthLiftDing() {
   return concat(note(1318.51, 0.2), note(1046.5, 0.45));
 }
 
+// P4c (FB-0067): the soft click a door (or lift) makes as it finishes closing behind her: a short burst of noise over a low sine "thunk",
+// both dying away fast, quiet enough to sit under the footsteps. (The opening sound is the pack's door-open sample.)
+function synthDoorClose() {
+  const dur = 0.11;
+  const click = tone(dur, () => 0, { wave: 'noise', seed: 7, ampFn: (t) => Math.exp(-t * 55) * 0.5 });
+  const thunk = tone(dur, () => 150, { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.003) * Math.exp(-t * 38) * 0.6 });
+  return click.map((v, i) => v + thunk[i]);
+}
+
 const GENERATED = [
   { to: 'generated/minigame-jump.wav', build: synthJump },
   { to: 'generated/minigame-flap.wav', build: synthFlap },
   { to: 'generated/minigame-line-clear.wav', build: synthLineClear },
   { to: 'generated/card-whoosh.wav', build: synthCardWhoosh },
   { to: 'generated/lift-ding.wav', build: synthLiftDing },
+  { to: 'generated/door-close.wav', build: synthDoorClose },
 ];
 
 // ---------- everything else: copied byte-for-byte from an already-credited CC0 pack ----------

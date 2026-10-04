@@ -239,6 +239,37 @@ function parseOpenTiles(value) {
   return names.length ? names : null;
 }
 
+// ---------- door animation (P4c, FB-0067: every door opens and closes) ----------
+// An enterable door (a Tiled `door` with a `to`, a text map's `warps` entry) or a lift carries up to three comma-separated tile lists:
+//   `closedTiles`  what it looks like at rest   `halfTiles`  the in-between frame   `openTiles`  the open frame (ADR 0015's own list)
+// one tile name per cell of the doorway, left to right. The frames play in that order when it opens and backward when it closes
+// (tools/lib/door-kinds.js is the one table the generators take them from). A door with only `openTiles` (data from before P4c) still
+// works: its list is one frame, which the engine just shows, as ADR 0015 always did. A door that never opens has none at all.
+const DOOR_FRAME_MS = 80; // one frame of the opening/closing, so closed -> half -> open takes 160 ms
+const DOOR_ANIM_FAILSAFE_MS = 400; // slack past the animation's own length before the engine force-finishes it (never stuck open)
+
+// The ordered frames of a door: an array of tile-name arrays (closed, half, open; a missing stage is skipped), or null when the door
+// has no open frame (a closed/locked door, or one with no art). `props` is any object with the three properties as strings.
+function doorFrames(props) {
+  if (!props) return null;
+  const open = parseOpenTiles(props.openTiles);
+  if (!open) return null;
+  return [parseOpenTiles(props.closedTiles), parseOpenTiles(props.halfTiles), open].filter(Boolean);
+}
+
+// How long an animation of `frameCount` frames lasts (a single frame, or none, is instant).
+function doorAnimDuration(frameCount, frameMs = DOOR_FRAME_MS) {
+  return Math.max(0, frameCount - 1) * frameMs;
+}
+
+// Which frame is showing `elapsedMs` into the animation: forward (opening) 0 -> frameCount - 1, `reverse` (closing) the other way.
+// Clamped to the first/last frame, so a late tick or a negative time never indexes outside the list.
+function doorFrameAt(elapsedMs, frameCount, frameMs = DOOR_FRAME_MS, reverse = false) {
+  if (frameCount <= 1) return 0;
+  const step = Math.min(frameCount - 1, Math.max(0, Math.floor(elapsedMs / frameMs)));
+  return reverse ? frameCount - 1 - step : step;
+}
+
 // ---------- the lift (P4b, FB-0064 / FB-0069) ----------
 // A map def's `lift` (src/maps.js MAIN_BLOCK_LIFT) is plain data: `floors` (each `{ label, map, liftName }`: what the choice says, the
 // map it lands on and the name of that floor's `lift` object, whose front tile she arrives on), a `question`, and optionally

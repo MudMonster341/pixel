@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const PLANS = require('./plans');
 const { encodePNG } = require('../lib/png');
+const { doorProps, DOOR_KINDS } = require('../lib/door-kinds');
 
 const ROOT = path.join(__dirname, '..', '..');
 const TILE_PX = 16;
@@ -360,18 +361,23 @@ class Floor {
   // with `to`/`toId`/`facing` (world.js resolves these generically; see docs/INTERIORS_PLAN.md).
   // `at` (ADR 0020): the door's own first cell along the wall, for a hall whose wall length is even so the
   // default rounded midpoint would leave a 2-wide door half a tile off the centre line.
-  exteriorDoor(id, side, { name, to, toId, facing, openTiles, at }) {
+  exteriorDoor(id, side, { name, to, toId, facing, at }) {
     const r = this.get(id);
     const mid = at !== undefined ? at : side === 'top' || side === 'bottom' ? Math.round((r.x0 + r.x1) / 2) : Math.round((r.y0 + r.y1) / 2);
     const horizontal = side === 'top' || side === 'bottom';
     const [x, y] = side === 'top' ? [mid, r.y0] : side === 'bottom' ? [mid, r.y1] : side === 'left' ? [r.x0, mid] : [r.x1, mid];
     this.setDoor(x, y);
     this.setDoor(x + (horizontal ? 1 : 0), y + (horizontal ? 0 : 1));
+    // P4c (FB-0067, every door opens and closes): the doorway is not an empty opening at rest any more but a closed glass double door
+    // (the `exitGlass` kind's closed pair, walkable like every door tile) standing over the lit threshold, so the engine has a door to
+    // open when she walks out and to close behind her when she walks in (tools/lib/door-kinds.js). A door in a vertical wall (1x2) keeps
+    // the bare doorway: no map has one, and the kind's art is front-on.
+    if (horizontal) DOOR_KINDS.exitGlass.closed.forEach((tileName, i) => { this.structures[this.idx(x + i, y)] = TILE[tileName]; });
     // FB-0046: the doorway is two tiles wide (the two setDoor() cells above) while the object is a point on the
     // first one -- `cells` ("2x1", or "1x2" for a door in a vertical wall) makes every cell of it the door
     // (src/maplogic.js parseDoorCells()), so she can't stand in the second half of a doorway without entering.
     const props = { to, toId, facing, cells: horizontal ? '2x1' : '1x2' };
-    if (openTiles) props.openTiles = openTiles;
+    if (horizontal) Object.assign(props, doorProps('exitGlass'));
     this.pointObject('door', name, x, y, props);
   }
 
@@ -395,13 +401,13 @@ class Floor {
   // P4b (FB-0064/0069): a working lift in a horizontal wall -- two stainless door tiles with the floor-indicator lamp over them
   // (the `lift` object's own cells), the call-button plate on the wall just right of them, and the `lift` object itself. Like a
   // door it is a point on the first tile with `cells` "2x1", `facing` is the way she faces on arrival (the front tile is one
-  // step that way, resolveSpawnAt()) and `openTiles` names the open-door art the door animation will play (a later package).
+  // step that way, resolveSpawnAt()) and `closedTiles` / `halfTiles` / `openTiles` name the frames the door animation plays (P4c, the `lift` kind in tools/lib/door-kinds.js).
   // Pressing E in front of it opens the floor-choice list (src/maps.js `lift`, src/maplogic.js liftDialog()).
   liftDoor(x, y, name) {
     this.placeStructure(x, y, 'intLiftDoorL');
     this.placeStructure(x + 1, y, 'intLiftDoorR');
     this.placeStructure(x + 2, y, 'intLiftPanel');
-    this.pointObject('lift', name, x, y, { facing: 'down', cells: '2x1', openTiles: 'intLiftOpenL,intLiftOpenR' });
+    this.pointObject('lift', name, x, y, { facing: 'down', cells: '2x1', ...doorProps('lift') });
   }
 
   // The atrium void + railing (mezzanine looking down into the foyer below): a rectangle of

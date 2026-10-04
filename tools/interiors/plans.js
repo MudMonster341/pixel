@@ -135,8 +135,7 @@ const mainBlockG = {
     // The foyer last, so its own wall ring wins where it shares a wall with a wing.
     floor.addRect('foyer', { name: 'Foyer', type: 'foyer', wallKit: 'roomBuilder', x0: 10, y0: 14, x1: 29, y1: 37 });
     floor.exteriorDoor('foyer', 'bottom', {
-      name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up',
-      openTiles: 'intGlassDoorOpen,intGlassDoorOpen', at: 19,
+      name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up', at: 19,
     });
 
     // The open double door from the foyer's back wall into the Library lobby (a 2-wide doorway at x 19..20, y 14).

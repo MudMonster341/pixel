@@ -406,10 +406,13 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 //   names, destinations, positions, `facing`): tests/unit/p4b-stairs-lift.test.js pins those exactly. main-block-3's idle student
 //   moved from (33,14), the lift's front tile, to (34,19) (src/ambient.js; that is data, not map content). Previous hashes: 4d5aacd2...,
 //   d6ca049b..., c65216dd....
+// 2026-10-05 (P4c, FB-0067), a deliberate property change only: all three were re-pinned because each floor's `lift` object gained the two
+//   animation-frame properties `closedTiles` and `halfTiles` beside its `openTiles` (tools/lib/door-kinds.js, the `lift` kind). Same
+//   tiles, rooms, objects, names and positions (previous hashes: b7f76ca3..., d56d0152..., 16da40cf...).
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': 'b7f76ca376bcb2a4dfd7df39f525e5e274344554e575cfbd8d8930124c2c208a',
-  'main-block-2': 'd56d0152a2533acddf26c5abd627496592d00917d2ae32727266c50111cbbb92',
-  'main-block-3': '16da40cffb99855e55bd0919525d44ad435aa92502e7e4f5737027f16ecb9203',
+  'main-block-1': '9df44427b6456c9cc1b1ea2095659a5062faaae1ba1d88fa2344d6507bc07d70',
+  'main-block-2': '959af792c52cc727f95a4b9feaf2d34d7b26da086533c7daaf77b270e1114137',
+  'main-block-3': '053530d9b908df35f53a9d5c1c55596bef836d14afd7ca4197ad8c587bd0f21d',
 };
 for (const [key, hash] of Object.entries(UPPER_FLOOR_CONTENT_HASHES)) {
   test(`ADR 0020: ${key} has exactly its pre-rebuild layers, objects and properties (only the tileset size header may change)`, () => {

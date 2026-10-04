@@ -168,11 +168,22 @@ for (const key of KEYS) {
     const json = maps[key];
     const ground = json.layers.find((l) => l.name === 'ground').data;
     const struct = json.layers.find((l) => l.name === 'structures').data;
+    // P4c (FB-0067): the one thing allowed on a doorway is a door's OWN closed frame (the glass double door an exit shows at rest,
+    // tools/lib/door-kinds.js), on exactly the cells of a `door` object that names it in `closedTiles`.
+    const ownDoor = new Map();
+    for (const layer of json.layers.filter((l) => l.type === 'objectgroup')) {
+      for (const o of layer.objects.filter((o) => o.type === 'door')) {
+        const props = Object.fromEntries((o.properties || []).map((p) => [p.name, p.value]));
+        if (!props.closedTiles) continue;
+        props.closedTiles.split(',').forEach((name, i) => ownDoor.set(Math.floor(o.x / 16) + i + Math.floor(o.y / 16) * json.width, name));
+      }
+    }
     const offenders = [];
     for (let i = 0; i < ground.length; i++) {
       const groundGid = ground[i];
       if (!groundGid || !['intDoorway', 'intDoorwaySide'].includes(tileInfo.tiles[groundGid - 1].name)) continue;
       const structGid = struct[i];
+      if (structGid && ownDoor.get(i) === tileInfo.tiles[structGid - 1].name) continue;
       if (structGid) offenders.push(`(${i % json.width},${Math.floor(i / json.width)}): ${tileInfo.tiles[structGid - 1].name}`);
     }
     assert.equal(offenders.length, 0, `${key}: found furniture/walls on a doorway tile: ${offenders.join('; ')}`);

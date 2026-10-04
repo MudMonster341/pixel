@@ -111,12 +111,16 @@ test('FB-0027: arriving through a door starts hidden in the doorway, walks out, 
   expect(start.depth).toBeLessThanOrEqual(group.depth); // hidden behind (or exactly at) the house's own base line
   expect(start.transitioning).toBe(true); // input stays locked for the whole walk-out
 
-  // Mid-tween, she should already have moved off the door tile, still hidden.
-  await page.waitForTimeout(80);
-  const mid = await page.evaluate(() => {
-    const world = game.scene.getScene('world');
-    return { y: world.player.y, depth: world.player.depth };
-  });
+  // P4c (FB-0067): the door opens first (closed -> half -> open, 160 ms), then she walks out. Mid-walk she is off the door tile, still
+  // hidden: poll for it (docs/TESTING.md rule 5) instead of betting on a fixed delay.
+  let mid = null;
+  await expect.poll(async () => {
+    mid = await page.evaluate(() => {
+      const world = game.scene.getScene('world');
+      return { y: world.player.y, depth: world.player.depth, map: world.mapKey };
+    });
+    return mid.y > start.y;
+  }, { timeout: 2000, intervals: [10, 20, 40] }).toBe(true);
   expect(mid.y).toBeGreaterThan(start.y);
 
   await expect.poll(async () => (await state(page)).ready).toBe(true);

@@ -11,6 +11,7 @@ const path = require('path');
 const layout = require('./layout');
 const autotile = require('./autotile');
 const { encodePNG } = require('../lib/png');
+const { doorProps } = require('../lib/door-kinds');
 
 const ROOT = path.join(__dirname, '..', '..');
 const TILE_PX = 16;
@@ -2369,19 +2370,22 @@ rectObjectFrame('cutscene', 'Gate 2 entrance', gate2U - AVENUE_W / 2, fenceFrame
 // back onto campus). world.js resolves `to`/`toId` generically for any Tiled door/stairs object;
 // an unknown `to` map logs a warning and shows a toast instead of crashing.
 for (const b of buildingList.filter((b) => b.doorCell)) {
-  // premium pass (FB-0029/ADR 0015): `openTiles` names the door's own "open" tile variant(s), left to
-  // right across the door's width, for the door-entry animation the engine adds later (ADR 0015: the
-  // door opens, she steps in, then the fade/warp) -- a comma-joined list of tile names since a Tiled
-  // object's properties are flat strings; empty for an ordinary door that has no open variant yet.
-  const openTiles = b.frontBand && b.frontBand.entranceLOpen != null
-    ? [tileInfo.tiles[b.frontBand.entranceLOpen].name, tileInfo.tiles[b.frontBand.entranceROpen].name].join(',')
-    : '';
+  // premium pass (FB-0029/ADR 0015) + P4c (FB-0067, every door opens and closes): `closedTiles` / `halfTiles` / `openTiles` name the
+  // door's three animation frames, left to right across its width (tools/lib/door-kinds.js, the one table; the engine plays
+  // closed -> half -> open when it opens and backward when it closes) -- comma-joined lists of tile names since a Tiled object's
+  // properties are flat strings. Every campus entrance with a real interior is the same glass double door; the closed pair is the
+  // tile the facade actually drew there (the Main Block's grand pair, or the plain pair on the Library and Mechanical blocks).
+  const frames = doorProps(b.grand ? 'campusGlass' : 'campusGlassPlain');
+  const drawnClosed = [tileInfo.tiles[b.frontBand.entranceL].name, tileInfo.tiles[b.frontBand.entranceR].name].join(',');
+  if (drawnClosed !== frames.closedTiles) throw new Error(`${b.name}: the facade drew ${drawnClosed} but its door kind's closed frames are ${frames.closedTiles}`);
   pointObject('door', `${b.name} entrance`, b.doorCell[0], b.doorCell[1], [
     { name: 'building', type: 'string', value: b.name },
     { name: 'to', type: 'string', value: b.to },
     { name: 'toId', type: 'string', value: `${b.name} Ground Floor entrance` },
     { name: 'facing', type: 'string', value: 'down' }, // arriving here (exiting the building) faces away from it, into the avenue/plaza
-    { name: 'openTiles', type: 'string', value: openTiles },
+    { name: 'closedTiles', type: 'string', value: frames.closedTiles },
+    { name: 'halfTiles', type: 'string', value: frames.halfTiles },
+    { name: 'openTiles', type: 'string', value: frames.openTiles },
     // FB-0046: the doorway is TWO tiles wide (doorX0 and doorX1, the entrance L/R pair) while this object is a point
     // on the first one -- `cells` tells the engine every cell of it is the door (src/maplogic.js parseDoorCells()),
     // so she can't stand on the second leaf without entering.

@@ -55,6 +55,8 @@ const SOUNDS = {
   lockedDoorThud: { file: 'assets/audio/sfx/locked-door-thud.ogg', volume: 0.5, loop: false, category: 'sfx' },
   // P4b (FB-0064 / FB-0069): the Main Block lift's arrival chime, synthesized (no pack has a clean two-note lift ding).
   liftDing: { file: 'assets/audio/generated/lift-ding.wav', volume: 0.5, loop: false, category: 'sfx' },
+  // P4c (FB-0067): the soft click of a door or lift finishing its closing animation, synthesized (tools/make-audio.js synthDoorClose()).
+  doorClose: { file: 'assets/audio/generated/door-close.wav', volume: 0.3, loop: false, category: 'sfx' },
 
   // ---------- mini-games (src/minigames/): jump/flap/line-clear are synth-generated (no pack had a
   // clean match, docs/ROADMAP.md M5 rule 6); win/lose reuse Kenney jingles ----------

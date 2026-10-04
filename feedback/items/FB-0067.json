@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:31:59.887Z",
-  "updatedAt": "2026-10-04T17:31:59.887Z",
+  "updatedAt": "2026-10-04T23:18:27.977Z",
   "details": "",
   "context": {
     "map": "main-block-3",
@@ -52,13 +52,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0067.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Every enterable door and the lifts now animate closed, half-open, open and back (campus glass doors slide, exits swing, lifts slide); locked and wing doors still only rattle.",
+      "at": "2026-10-04T23:18:27.977Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/p4c-door-animation.test.js › FB-0067",
+    "commit": null,
+    "at": "2026-10-04T23:18:27.977Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:31:59.887Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T23:18:27.977Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

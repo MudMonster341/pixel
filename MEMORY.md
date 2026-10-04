@@ -1092,3 +1092,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Open:** "centre the stairs" interpreted as symmetric within the alcove (stair stays left per ADR 0020); a follow-up if the owner meant the hall's middle. Not played; e2e not run.
 **For P4c:** lifts are `this.lifts` objects (not `type: door`), art `intLiftDoorL/R` closed and `intLiftOpenL/R` open.
 **Next:** P4c (all doors open/close, lift included), then P5 (games).
+
+## 2026-10-05 (Day 3 cont.) — P4c done (door open/close animation): 872 unit tests green
+
+**Did:** door model `closedTiles/halfTiles/openTiles` per door object (shared table `tools/lib/door-kinds.js`, `doorProps(kind)`), pure helpers `doorFrames/doorFrameAt/doorAnimDuration` in src/maplogic.js (80 ms/frame, failsafe 400 ms), `showDoorOverlay()` returns an animator (open/close/destroy, shutdown sweep), departing: open -> walk -> close inside the fade; arriving: appear behind the closed door, it opens, step out, closes; lifts open/hold 450 ms/close; `doorClose` click synthesized. Kinds: campusGlass(+Plain), exitGlass, lift, houseDoor; 12 tiles appended. Interior exits are now closed glass double doors at rest (were bare doorways). 23 `FB-0067:` tests. e2e `depth-groups.spec.js` arrival wait changed to a poll (not run); other door e2e specs may assume the old timing (+~160 ms).
+**Check in game:** real motion/feel, Phaser calls (`tweens.addCounter`, `setFrame`), depth of overlays, a small lit-fragment seam on the campus glass half frame, the foyer exit look.
+**Next:** P5 (mini-games: tower climb = Room 195, hero vs villain = Physics Lab, ICL fingerprint door + lab with Alice; sumo as a bonus later).

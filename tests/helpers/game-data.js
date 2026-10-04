@@ -158,6 +158,12 @@ function loadGameData() {
     doorTileFromSpawn: get('doorTileFromSpawn'),
     depthGroupAt: get('depthGroupAt'),
     parseOpenTiles: get('parseOpenTiles'),
+    // P4c (FB-0067): the door animation's pure parts (src/maplogic.js)
+    doorFrames: get('doorFrames'),
+    doorFrameAt: get('doorFrameAt'),
+    doorAnimDuration: get('doorAnimDuration'),
+    DOOR_FRAME_MS: get('DOOR_FRAME_MS'),
+    DOOR_ANIM_FAILSAFE_MS: get('DOOR_ANIM_FAILSAFE_MS'),
     questObjectiveText: get('questObjectiveText'),
     hudLayout: get('hudLayout'),
     wrapWords: get('wrapWords'),

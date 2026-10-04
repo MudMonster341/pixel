@@ -206,11 +206,11 @@ const MAPS = {
       { x: 22, y: 10, width: 1, height: 1 }, // another lone tree, east of the house
     ],
     // Step on a warp tile to go to another map. The house door is at (11, 12), the house structure's
-    // own bottom-middle `door` tile (STRUCTURES.house above). `openTiles` (ADR 0015): shown as an
-    // open-doorway overlay while she's walking through, reusing the 'doorway' tile art the house's
-    // own interior threshold already uses -- a closed 'door' tile is what the depth group's own
-    // baked image already shows, so nothing extra is needed for the closed state.
-    warps: [{ x: 11, y: 12, to: 'house', spawn: { x: 9.5, y: 10, facing: 'up' }, openTiles: 'doorway' }],
+    // own bottom-middle `door` tile (STRUCTURES.house above). Its animation frames (ADR 0015, P4c FB-0067: the same three
+    // properties a Tiled door object carries, src/maplogic.js doorFrames()): the 'door' tile is what the depth group's own baked image
+    // already shows at rest, then a half-swung leaf, then the open doorway (the `houseDoor` kind of tools/lib/door-kinds.js, which
+    // tests/unit/p4c-door-animation.test.js keeps equal to these names).
+    warps: [{ x: 11, y: 12, to: 'house', spawn: { x: 9.5, y: 10, facing: 'up' }, closedTiles: 'door', halfTiles: 'doorHalf', openTiles: 'doorOpen' }],
     pickups: [
       { id: 'meadow-apple-1', item: 'apple', x: 20, y: 12 },
       { id: 'meadow-apple-2', item: 'apple', x: 6, y: 17 },
@@ -279,7 +279,7 @@ const MAPS = {
     legend: {
       '^': 'wallUpper', '|': 'wallLower', W: 'wallWindow', B: 'bookshelf', E: 'edge',
       '.': 'floor', r: 'rug', t: 'table', h: 'bedHead', f: 'bedFoot', p: 'plant',
-      m: 'doormat', d: 'doorway',
+      m: 'doormat', d: 'door', // P4c: the exit is a real door tile now (it opens and closes), not the bare 'doorway' opening
     },
     rows: [
       'E^^^^^^^^^^^^^^^^^^E',
@@ -297,8 +297,8 @@ const MAPS = {
     ],
     spawn: { x: 9.5, y: 10, facing: 'up' },
     warps: [
-      { x: 9, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' } },
-      { x: 10, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' } },
+      { x: 9, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' }, closedTiles: 'door', halfTiles: 'doorHalf', openTiles: 'doorOpen' },
+      { x: 10, y: 11, to: 'meadow', spawn: { x: 11, y: 13, facing: 'down' }, closedTiles: 'door', halfTiles: 'doorHalf', openTiles: 'doorOpen' },
     ],
     pickups: [
       { id: 'house-keycard', item: 'keycard', x: 3, y: 5 },

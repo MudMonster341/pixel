@@ -84,6 +84,24 @@ campus from OSM (ADR 0009) should emit `door` objects in this exact shape at the
 Mechanical Block entrances -- same `to`/`toId`/`facing` properties, any position, and it will work
 with no changes on the interiors side.
 
+### Door animation (P4c, FB-0067: every door opens and closes)
+
+Every enterable door (a `door` with a `to`, a text map's `warps` entry) and every `lift` carries three more properties, comma-separated tile
+names, one per cell of the doorway, left to right: `closedTiles` (the tile the map already shows there), `halfTiles` (the in-between frame) and
+`openTiles` (the open frame, as ADR 0015 always had it). The engine plays them closed -> half -> open when the door opens and backward when it
+closes (`DOOR_FRAME_MS` = 80 ms a frame, so 160 ms; src/maplogic.js `doorFrames()` / `doorFrameAt()`, src/scenes/world.js `showDoorOverlay()`).
+A door that never opens (`closed` wing doors, locked doors) has none of the three and keeps rattling. Sequence: departing, the door opens, she
+walks in, it closes behind her inside the 250 ms fade; arriving, she appears behind the closed door, it opens, she steps out (controls back at
+once) and it closes behind her; a lift opens, then closes inside the fade of the ride, and on arrival opens, holds a beat, closes. Every overlay is
+destroyed at scene shutdown, each animation has a failsafe timer, and a second animation on the same door replaces the first.
+
+The frame names live in one table, `tools/lib/door-kinds.js` (kinds `campusGlass`, `campusGlassPlain`, `exitGlass`, `lift`, `houseDoor`), which the
+generators write onto the objects (`doorProps(kind)`) and `tools/make-assets.js` draws the missing tiles from (`doorFrameTile()`): the half
+frames are a resample of the closed/open pixels (sliding leaves shifted a third of the way for the campus glass and the lift, a hinged leaf
+squeezed and slanted for the swinging ones), no freehand art. The interior exits (Main/Library/Mechanical Block) used to be a bare lit doorway
+(`intDoorway`) at rest; they now stand a closed glass double door (`intExitGlassL/R`, walkable like every door tile) over that doorway, so
+there is a door to open and close. `src/maps.js` repeats the `houseDoor` names by hand for the two test maps (a unit test keeps them equal).
+
 ## Main Block (4 floors) -- rebuilt compact, FB-0030/0031 (2026-09-27/28); quality loop (2026-09-28/29)
 
 **Quality loop, Interior art run 3 (2026-09-29, docs/quality/scorecard.md "5/10... bland: white

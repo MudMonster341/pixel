@@ -1038,3 +1038,11 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Decisions:** owner's friends allowed as NPCs (their lines approved by the owner); generic stand-ins for Hello Kitty/Batman; one Sonnet agent at a time, monitored, committed after each; birthday 2026-10-11, deliver by 10-09.
 
 **Next:** triage the 33 items (view each screenshot), P1 -> P5, then the wow layer; second playtest ~10-08; final zip + link by 10-09.
+
+## 2026-10-04 (Day 3) — Triage, P1 started, the owner's "moments" ideas written down
+
+**Did:** Viewed all 33 feedback screenshots. Found the shared bug behind FB-0045/0068/0073 (right border of every bordered panel missing), that FB-0051 names ~15 people (friends, 3 professors, Sana/Shraddha/Palak), that the pause menu already has "Quit to Title" (FB-0075 is discoverability + a real quit), and asked FB-0076 in the thread. Wrote `docs/plans/agent-rules.md` (shared brief rules for build agents), extended ADR 0021, started the P1 agent (controls/UI). The owner then sent 5 small scene ideas (unicorn and prince, a tower-climb game, Mevin the drummer, a Hello Kitty/Batman cover, a ball pit): written up as `docs/plans/2026-10-04-moments-and-small-touches.md` (designed, not built, 6 open questions).
+
+**Decisions:** library door goes to the back-centre of the foyer (FB-0062); working lift (FB-0069); ICL fingerprint door opened by the existing flyer game, then the lab with Alice (FB-0071); only the NPC the owner pointed at becomes "Deanne" (FB-0050); "Welakkiya" = Dr. Elakkiya R (already in the sourced facts). Protected characters (Hello Kitty/Batman) stay generic stand-ins even for the cover; it takes the mood of the owner's picture only.
+
+**Next:** review + commit P1, then P2a (ICL rename, Deanne, club colours), P2b (friends, professors, funnier lines), P3 a/b, P4, P5; moments after P5 (one per agent).

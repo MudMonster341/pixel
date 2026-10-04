@@ -48,6 +48,8 @@ M = a day, L = more. All art from packs/generators; effects are code (tints, par
 
 **Recommended set:** W1, W4, W3, W2 and W6, with W5 folded into P4/P1 (doors) and W9 into P3. W7/W8 are the first cuts.
 
+**Added by the owner later on 2026-10-04:** small unskippable "moments" (a unicorn and a prince at the entrance, Mevin the drummer, Prof. Raja's chariot, Sana/Shraddha/Palak, a themed game cover, a ball pit, a tower-climb game). They widen W1: designed in [2026-10-04-moments-and-small-touches.md](2026-10-04-moments-and-small-touches.md) (not built yet, with open questions).
+
 ## C. Schedule (re-planned to the 2026-10-11 birthday)
 
 | Day | Date | Work | Owner action |

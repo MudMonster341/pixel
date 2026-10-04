@@ -62,7 +62,7 @@ roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent a
 ## What is LEFT (in order)
 1. **Triage** the 33 items (`npm run feedback`), ask the owner about the unclear ones, then execute packages **P1 -> P5** one agent at a time
    (plan section A and the schedule in section C). Mark fixed items (`npm run feedback -- fix FB-00xx "..."`). Add `FB-XXXX:` regression tests.
-2. **Wow layer** (P6) with the owner's picks; needs the friends' lines/jokes and the card photos from the owner.
+2. **Wow layer** (P6) with the owner's picks, incl. the owner's "moments" ([docs/plans/2026-10-04-moments-and-small-touches.md](docs/plans/2026-10-04-moments-and-small-touches.md): unicorn+prince, Mevin, Raja's chariot, ball pit, tower-climb game; 6 open questions); needs the friends' lines/jokes and the card photos from the owner.
 3. After each visual package: `npm run qa:shots` and LOOK at the shots; `npm run qa:offline` for the bundle. Full test once per day (pre-push hook).
 4. **Final handover (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; update
    `../2D_pixel_game-play`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + the zip + `HOW_TO_OPEN.txt`.

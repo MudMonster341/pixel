@@ -154,7 +154,7 @@ test('outcome routing: quitting a key station\'s mini-game never awards the key'
 
 test('outcome routing: winning a key station\'s mini-game runs the rest of the list and awards the key', () => {
   const { GameState, keyStationDialog, applyDialogActions, gameEvents } = loadGameData();
-  const [take] = keyStationDialog('icvl');
+  const [take] = keyStationDialog('icl');
   let payload = null;
   gameEvents.on('minigame:requested', (p) => { payload = p; });
   let done;
@@ -162,9 +162,9 @@ test('outcome routing: winning a key station\'s mini-game runs the rest of the l
   applyDialogActions(take.actions, GameState, (result) => { done = result; });
   payload.onResult('won');
 
-  assert.equal(GameState.quest.keys.icvl, true);
+  assert.equal(GameState.quest.keys.icl, true);
   assert.equal(done, 'done');
-  assert.equal(countItem(GameState.inventory.slots, 'keyIcvl'), 1);
+  assert.equal(countItem(GameState.inventory.slots, 'keyIcl'), 1);
 });
 
 test('outcome routing: a skip (the 3-fail gift) reaches the story exactly like a real win', () => {

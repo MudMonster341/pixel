@@ -197,7 +197,7 @@ rather than legible text) covering most of the wall above the bench line. Floor 
 vinyl/terrazzo, cooler grey than the classroom's. This matches and extends the existing
 `intComputerBench`/`intLabBench` pieces -- the distinguishing feature to add is the blue cabinetry
 colour and poster-covered wall, to make the ICL feel different from a generic classroom-turned-lab
-(currently `qa-shots/indoor-main-block-1-icvl.png` uses plain grey benches with no wall dressing).
+(currently `qa-shots/indoor-main-block-1-icl.png` uses plain grey benches with no wall dressing).
 
 ## 6. Physics / science lab
 

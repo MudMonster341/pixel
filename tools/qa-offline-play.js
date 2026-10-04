@@ -134,14 +134,14 @@ const active = (page, k) => page.evaluate((s) => game.scene.isActive(s), k);
       }
       const open = await page.evaluate(() => game.scene.getScene('ui').dialog.isOpen);
       if (open) await page.keyboard.press('e');
-      const got = await page.evaluate((k) => GameState.quest.keys[k], id === 'icvl' ? 'icvl' : id);
+      const got = await page.evaluate((k) => GameState.quest.keys[k], id === 'icl' ? 'icl' : id);
       if (got) break;
       await sleep(250);
     }
     log('key', id, await page.evaluate((k) => GameState.quest.keys[k], id));
   };
   await stairsGo('Main Block Stairs G (up)', 'main-block-1');
-  await getKey('icvl'); await getKey('room195');
+  await getKey('icl'); await getKey('room195');
   await stairsGo('Main Block Stairs 1 (up)', 'main-block-2');
   await stairsGo('Main Block Stairs 2 (up)', 'main-block-3');
   await getKey('physicsLab');

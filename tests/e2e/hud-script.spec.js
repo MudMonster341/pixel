@@ -5,7 +5,7 @@
 // (HintBanner.blocked()/tick()/interrupt(), UIScene.setHudScriptHidden(), Letterbox playIn/playOut/
 // snap, DialogBox.setLetterboxed()/applyBox(), Toast.setLetterboxed()) and src/maplogic.js
 // (hudLayout()'s own `dialogBox`, reserved for by `hint`). These specs use the 3 key-room beats
-// (src/scripts.js keyRoomPhysicsLab/Icvl/Room195) as a simple, reliable letterboxed script -- same
+// (src/scripts.js keyRoomPhysicsLab/Icl/Room195) as a simple, reliable letterboxed script -- same
 // shape as the Gate 2/entrance beats, without the bus-arrival setup those need.
 const { test, expect } = require('@playwright/test');
 const { openGame, state, teleport, waitForMap, skipWorldScript } = require('./helpers');

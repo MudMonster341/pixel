@@ -289,3 +289,40 @@ test('FB-0032/ADR 0016: Mustafa is recolored distinctly from the LUG volunteer (
   assert.ok(!mustafa.has('#2f9e8f') && !mustafa.has('#4fc2ae'), "Mustafa should not use the volunteer's teal");
   assert.ok(!volunteer.has('#a33b4a') && !volunteer.has('#c8637a'), "the volunteer should not use Mustafa's maroon");
 });
+
+// FB-0057: the club-outfit sheets are the plain sheets with only the clothes recolored to the club's colours.
+test('FB-0057: the club-outfit sheets wear the club colours (sky blue, dark pink, orange and black, black and white)', () => {
+  const { decodePNG } = require('../../tools/lib/png-decode');
+  const load = (name) => decodePNG(fs.readFileSync(path.join(ASSETS, name)));
+  const colorsOf = (img) => {
+    const set = new Set();
+    for (let i = 0; i < img.data.length; i += 4) {
+      if (img.data[i + 3] === 0) continue;
+      set.add(`#${[img.data[i], img.data[i + 1], img.data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`);
+    }
+    return set;
+  };
+  // [sheet, colours that must appear]
+  const expected = {
+    sky: ['#3fa0e6', '#9bd6ff'], // sky blue
+    acm: ['#b0245f', '#d9578f'], // dark pink
+    lug: ['#f28c1e', '#ffbb55', '#1e1e24'], // orange and black
+    mtc: ['#f4f4f6', '#ffffff', '#1e1e24'], // black and white
+  };
+  for (const character of ['ambient-a', 'ambient-c', 'ambient-e', 'student-a', 'student-b']) {
+    const plain = load(`npc-${character}.png`);
+    for (const [outfit, colors] of Object.entries(expected)) {
+      const sheet = load(`npc-${character}-${outfit}.png`);
+      assert.equal(sheet.width, plain.width, `${character}-${outfit}: same sheet width as the plain sheet`);
+      assert.equal(sheet.height, plain.height, `${character}-${outfit}: same sheet height as the plain sheet`);
+      const has = colorsOf(sheet);
+      // Every body shows the club's main colour (the shirt, or Bob's jacket); the second colour only shows on the lighter-shaded pixels.
+      assert.ok(has.has(colors[0]), `${character}-${outfit}: should wear ${colors[0]}`);
+      if (outfit === 'lug' || outfit === 'mtc') assert.ok(has.has('#1e1e24') || has.has('#26262e'), `${character}-${outfit}: should have black trousers or jacket`);
+    }
+  }
+  // The LUG stall volunteer wears the LUG colours too, no longer the teal polo.
+  const volunteer = colorsOf(load('npc-volunteer.png'));
+  assert.ok(volunteer.has('#f28c1e') && volunteer.has('#1e1e24'), 'the LUG volunteer wears orange and black');
+  assert.ok(!volunteer.has('#2f9e8f'), 'the old teal polo is gone');
+});

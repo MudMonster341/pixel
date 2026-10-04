@@ -143,8 +143,35 @@ function loadGame(profile = currentProfile(), state = GameState) {
 // When a v2 exists, add `if (payload.version === 1) return migrate({ ...payload, version: 2, state: upgradeV1ToV2(payload.state) });`.
 function migrate(payload) {
   if (!payload || typeof payload !== 'object' || !payload.state) return null;
-  if (payload.version === SAVE_VERSION) return payload;
+  if (payload.version === SAVE_VERSION) return { ...payload, state: renameLegacyIds(payload.state) };
   return null; // an older version we've never shipped, or a newer one this build predates
+}
+
+// FB-0070: the 2nd key room was first called the "ICVL" and is the "ICL" (Intelligent Computing Lab).
+// Same save version, so this is a content migration rather than a new ladder step: every id and text
+// an old save could hold -- quest.keys.icvl, the 'keyIcvl' inventory item, seen cutscene/dialog/hint
+// ids ('keyRoomIcvl', 'key-icvl' ...), mini-game and collected ids, the journal line -- is renamed to
+// the new spelling, keys and string values alike, at any depth. The player's own typed name is left
+// alone. Safe to run on an already-migrated save (nothing left to rename), and it never mutates the input.
+const LEGACY_ICVL = /icvl/gi;
+function renameLegacyString(text) {
+  return text.replace(LEGACY_ICVL, (m) => (m === 'ICVL' ? 'ICL' : m === 'icvl' ? 'icl' : 'Icl'));
+}
+function renameLegacyValue(value) {
+  if (typeof value === 'string') return renameLegacyString(value);
+  if (Array.isArray(value)) return value.map(renameLegacyValue);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[renameLegacyString(k)] = renameLegacyValue(v);
+    return out;
+  }
+  return value;
+}
+function renameLegacyIds(state) {
+  if (!state || typeof state !== 'object') return state;
+  const renamed = renameLegacyValue(state);
+  if (typeof state.playerName === 'string') renamed.playerName = state.playerName;
+  return renamed;
 }
 
 // Read-only peek at a profile's saved state, without applying it to any GameState (the title

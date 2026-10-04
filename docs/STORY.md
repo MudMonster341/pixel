@@ -40,7 +40,7 @@ seconds without getting closer, a gentle toast repeats the objective.
 **New dialogue written for this rework** (owner: please review/edit -- everything else is reused
 verbatim from the lines that already existed): Mustafa's "Right this way — let's get you started."
 and "The LUG stall is inside the Main Block — behind the staircase."; the three key-room beats'
-own naming lines, "The Physics Lab.", "The ICVL — the computing lab." and "Room 195." (docs/STORY.md
+own naming lines, "The Physics Lab.", "The ICL — the computing lab." and "Room 195." (docs/STORY.md
 beat 8, kept deliberately short and functional).
 
 **Look:** the owner's words are "currently it looks very blocky and 2D, a little 3D please". Everything
@@ -59,7 +59,7 @@ perspective in the cutscene art, and movement that eases rather than snaps.
 5. **The LUG volunteer.** A student stands at the stall. An **E** prompt floats over his head. He
    explains the treasure hunt: **find 3 keys hidden around campus.**
 6. **Key 1: the Physics Lab**, 3rd floor. She goes up and to the right.
-7. **Key 2: the ICVL**, the computing lab on the 1st floor.
+7. **Key 2: the ICL**, the computing lab on the 1st floor.
 8. **Key 3: Room 195.**
    - Each room gets its own small cutscene when she walks in.
    - Each key is won by beating a **mini-game** (see below).
@@ -98,7 +98,7 @@ gift can never be blocked by a hard game.
 | Key | Room | Mini-game |
 |---|---|---|
 | 1 | Physics Lab (3rd floor) | Platformer jump-and-run (Mario-like) |
-| 2 | ICVL (1st floor) | Flappy-bird style flyer |
+| 2 | ICL (1st floor) | Flappy-bird style flyer |
 | 3 | Room 195 | Tetris |
 
 ## The box and the birthday card (the ending, built 2026-09-22)
@@ -197,7 +197,7 @@ with `wishes` in card.json. Content and pacing live in `src/credits.js` (`DEFAUL
 
 ## Open questions for the owner
 
-- Where exactly are the **Physics Lab**, the **ICVL** and **Room 195**? A photo or a description of
+- Where exactly are the **Physics Lab**, the **ICL** and **Room 195**? A photo or a description of
   each would make those three rooms real instead of guessed. No public floor plans exist (checked
   2026-09-20: official site, prospectus PDF, Wikipedia, 2GIS, Google).
 - Where is the real **main entrance (Gate 2)**? Still assumed (FB-0022).
@@ -210,10 +210,10 @@ The rooms/entrance above are still open questions, so the story spine (the volun
 the gating) had to pick *something* real to stand on. Flagging what was decided, so the owner can
 correct any of it once the real answer is known:
 
-- **Room placement**: the Physics Lab moved to the 3rd floor (was a 2nd-floor guess); ICVL and
-  Room 195 are two of the 1st floor's plain "50 Seater Classroom" rooms, renamed (ICVL refurnished
+- **Room placement**: the Physics Lab moved to the 3rd floor (was a 2nd-floor guess); ICL and
+  Room 195 are two of the 1st floor's plain "50 Seater Classroom" rooms, renamed (ICL refurnished
   as a computing lab, Room 195 left as a classroom) -- see docs/INTERIORS_PLAN.md "Story rooms" for
-  exactly what changed. "ICVL" itself is this task's own placeholder name, not a sourced one.
+  exactly what changed. The room is the **ICL** (Intelligent Computing Lab); the owner corrected an earlier placeholder name (FB-0070).
 - **Quest stages**: `GameState.quest.stage` is `'arrival'` -> `'hunting'` -> `'rewarded'` (the
   original M1 scaffolding had `'briefed'`/`'done'` placeholders that nothing in this story actually
   needed as a separate step).
@@ -224,7 +224,7 @@ correct any of it once the real answer is known:
 - **The volunteer's hint is keyed to how many keys she's holding, not which ones are still
   missing** (matching this task's own brief) -- so a player who collects them out of order gets a
   hint for a key she may already have. The quest tracker (top-right panel) is smarter about this: it
-  always names the first *actually missing* key, in the Physics Lab -> ICVL -> Room 195 order.
+  always names the first *actually missing* key, in the Physics Lab -> ICL -> Room 195 order.
 - **The box opening and the birthday card were built 2026-09-22** -- see "The box and the birthday
   card (the ending)" above; at the time this M3 spine was first written they were still a later
   milestone, noted here only so the history of this decision log stays honest.

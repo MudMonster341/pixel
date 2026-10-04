@@ -36,7 +36,7 @@ const REQUIRED_TILES = [
   'intGlobe', 'intWaterCooler', 'intVendingMachine', 'intBin',
   // FB-0030/0031 (premium pass stage 5): the Main Block foyer rebuild + key-room dressing.
   'intFloorMarble', 'intFloorMarbleRunner', 'intColumn', 'intFoyerStairsL', 'intFoyerStairsR',
-  'intFoyerLanding', 'intChandelier', 'intGlassDoorOpen', 'intDoorClosed', 'intIcvlBench',
+  'intFoyerLanding', 'intChandelier', 'intGlassDoorOpen', 'intDoorClosed', 'intIclBench',
   'intServerRack', 'intLabBenchWood', 'intProjectorScreen',
   ...Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`), // "BITS PILANI, DUBAI CAMPUS" wordmark
   // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28): real LimeZu
@@ -44,9 +44,9 @@ const REQUIRED_TILES = [
   'intWallCap', 'intWallFace', 'intWallFaceEndL', 'intWallFaceEndR', 'intWallWindow',
   'intFloorTiled', 'intFloorLabLight',
   // Quality loop, Interior art run 2 (2026-09-28): plain stair treads, the chandelier's other 3
-  // quadrants, and the ICVL/Physics Lab's extra furniture variety.
+  // quadrants, and the ICL/Physics Lab's extra furniture variety.
   'intFoyerTreadPlain', 'intChandelierTR', 'intChandelierBL', 'intChandelierBR', 'intChair',
-  'intIcvlCabinet', 'intFumeHood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop',
+  'intIclCabinet', 'intFumeHood', 'intLabBenchScope', 'intLabBenchFlask', 'intLabBenchLaptop',
   // Quality loop, Interior art run 3 (2026-09-29): round columns, the interior potted plant, a rug,
   // a bigger reception desk, wall posters/nameplates, and an equipment trolley.
   'intPottedPlant', 'intColumnCapL', 'intColumnCapR', 'intColumnShaftL', 'intColumnShaftR',
@@ -88,10 +88,10 @@ const TYPE_FLOOR = {
   // Quality loop (Interior art run 1: "corridors are bare"): a real tiled floor instead of the plain
   // foyer fleck reuse.
   corridor: 'intFloorTiled',
-  // FB-0030/0031: the ICVL/Physics Lab key rooms get their own light floor (matches the ICL/lab
+  // FB-0030/0031: the ICL/Physics Lab key rooms get their own light floor (matches the ICL/lab
   // photos, docs/research/campus-visual-reference.md), distinct from the shared 'lab' type
   // Mechanical Block's own labs still use.
-  labIcvl: 'intFloorLabLight', labPhysics: 'intFloorLabLight',
+  labIcl: 'intFloorLabLight', labPhysics: 'intFloorLabLight',
 };
 
 // A room type this small (walkable interior) skips furniture rather than risk blocking itself.
@@ -667,7 +667,7 @@ const FURNISHERS = {
       if (mid + 3 <= r.x1 - 1) ctx.floor.placeStructure(mid + 3, r.y0, 'intProjectorScreen');
     }
   },
-  // ICVL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
+  // ICL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
   // benches along both ends, a server rack, and a poster-covered wall -- distinct from the shared
   // `lab` type Mechanical Block's own labs use, so that furniture never changes here.
   // Quality loop (docs/quality/scorecard.md, Interior art run 1: "a big pale empty floor... no rows
@@ -680,16 +680,16 @@ const FURNISHERS = {
   // along the left wall, a 1-tile walkway along the right wall (plus the always-clear ring beyond
   // it -- 2 tiles of walking space along that side), a teacher/instructor desk + whiteboard at the
   // front, and server racks in the front-right corner.
-  labIcvl: (put, ix0, iy0, ix1, iy1, ctx) => {
+  labIcl: (put, ix0, iy0, ix1, iy1, ctx) => {
     const mid = Math.round((ix0 + ix1) / 2);
     put(mid, iy0, 'intTeacherDesk');
     // Cabinets along the rest of the front wall too, either side of the teacher's desk.
-    for (let x = ix0; x <= ix1 - 2; x++) if (x !== mid) put(x, iy0, 'intIcvlCabinet');
+    for (let x = ix0; x <= ix1 - 2; x++) if (x !== mid) put(x, iy0, 'intIclCabinet');
     const deskRows = [iy0 + 1, iy0 + 3, iy0 + 5, iy0 + 7].filter((y) => y <= iy1);
     const aisleRows = [iy0 + 2, iy0 + 4, iy0 + 6].filter((y) => y <= iy1);
     for (const y of deskRows) {
-      put(ix0, y, 'intIcvlCabinet'); // blue cabinets along the left wall
-      for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, (x - ix0) % 2 === 1 ? 'intIcvlBench' : 'intChair');
+      put(ix0, y, 'intIclCabinet'); // blue cabinets along the left wall
+      for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, (x - ix0) % 2 === 1 ? 'intIclBench' : 'intChair');
       // ix1 itself stays clear: a walkway down the right side, alongside the ring furnish() always
       // leaves just beyond it.
     }

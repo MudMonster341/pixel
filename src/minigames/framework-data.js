@@ -47,9 +47,9 @@ const MINIGAMES = {
   },
   flappy: {
     id: 'flappy',
-    name: 'ICVL Server Dash',
+    name: 'ICL Server Dash',
     sceneKey: 'minigame-flappy',
-    item: 'keyIcvl',
+    item: 'keyIcl',
     instructions: [
       'SPACE / UP / W: FLAP',
       'FLY THROUGH 8 GAPS IN THE SERVER RACKS',
@@ -119,7 +119,7 @@ function resetMinigameProgress(state, id) {
 // paragraph line, `MG_CARD_LINE_H` apart, the first one `MG_CARD_HEADER_H` below the panel's top (each row's CENTRE).
 // The win card puts the key icon in the blank rows above its message. Defect D09 (2026-10-04): with only two blank rows
 // the 48 px icon (a 16 px frame at 3x) reached 24 px below its centre and covered the first line of the message
-// ("IC.L" for the ICVL key). Three blank rows leave a clear gap, for all three mini-games.
+// ("IC.L" for the ICL key). Three blank rows leave a clear gap, for all three mini-games.
 const MG_CARD_LINE_H = 22;
 const MG_CARD_HEADER_H = 56;
 // FB-0073: the card is as wide as its longest line plus MG_CARD_SIDE_PAD (50 px of margin either side), never narrower than

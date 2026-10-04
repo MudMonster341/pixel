@@ -38,7 +38,7 @@ function structureNameAt(json, x, y) {
 // ---------- FB-0030: every key station sits on its own room's specific furniture ----------
 
 const KEY_STATION_FURNITURE = {
-  'main-block-1': { icvl: 'intIcvlBench', room195: 'intTeacherDesk' },
+  'main-block-1': { icl: 'intIclBench', room195: 'intTeacherDesk' },
   'main-block-3': { physicsLab: 'intLabBenchWood' },
 };
 
@@ -131,7 +131,7 @@ const SCRIPT_MAP = {
   opening: 'campus',
   entrance: 'campus',
   keyRoomPhysicsLab: 'main-block-3',
-  keyRoomIcvl: 'main-block-1',
+  keyRoomIcl: 'main-block-1',
   keyRoomRoom195: 'main-block-1',
 };
 
@@ -191,7 +191,7 @@ function walkableFloorRatio(json, areaName) {
 }
 
 const DENSE_STORY_ROOMS = {
-  'main-block-1': ['ICVL', 'Room 195'],
+  'main-block-1': ['ICL', 'Room 195'],
   'main-block-3': ['Physics Lab'],
 };
 

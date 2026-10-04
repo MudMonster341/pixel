@@ -1056,3 +1056,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Grilling (moments doc):** round 1 settled (tower climb is the Room 195 key, match-3 dropped, moments play once, etc.); round 2 questions Q8-Q12 are with the owner.
 
 **Next:** P2a (ICL rename, Deanne, club colours), P2b (friends, professors, funnier lines), P3, P4, P5.
+
+## 2026-10-04 (Day 3) — P2a done (ICL rename, Deanne, club colours): 770 unit tests green
+
+**Did:** One Sonnet agent: ICVL -> ICL everywhere incl. ids (`quest.keys.icl`, `keyIcl`, route `key-icl`) with a save migration (`renameLegacyIds()` in src/save.js, any depth, case-preserving); `name` + `lines` fields on ambient entries (named NPCs; Deanne = campus-amb-sit-2; other hostel residents "Hostel mate"); club outfits (role `outfit` -> 32 baked sheets `npc-<body>-<outfit>`, `ambientSheetKey()`; ACM dark pink, LUG/volunteer orange+black, new role `mtc-member` black/white with 3 placeholder-line students, other clubs sky blue; the LUG stall volunteer now in LUG colours). Reviewed, ran test:unit (770).
+**Not run:** e2e (specs edited for the rename). Check in the game: no missing-texture boxes for club variants, the old playtest save loading under ICL ids.
+**Next:** P2b (friends, professors, funnier CS-student lines, Mustafa near games), then P3.

@@ -378,13 +378,13 @@ function trackerPillText(quest) {
 //
 // Unlike the volunteer's own spoken hint (src/story.js, keyed to how many keys she's holding, per
 // the task brief's literal wording), the tracker checks which *specific* key is still missing, in
-// docs/STORY.md's own room order (Physics Lab -> ICVL -> Room 195) -- so it never tells her to go
+// docs/STORY.md's own room order (Physics Lab -> ICL -> Room 195) -- so it never tells her to go
 // find a key she's already carrying just because she happened to collect them out of order.
 function questObjectiveText(quest) {
   if (quest.stage === 'arrival') return 'Find the LUG stall behind the Main Block staircase.';
   if (quest.stage === 'hunting') {
     if (!quest.keys.physicsLab) return 'Find the first key: the Physics Lab, 3rd floor.';
-    if (!quest.keys.icvl) return 'Find the next key: the ICVL, 1st floor.';
+    if (!quest.keys.icl) return 'Find the next key: the ICL, 1st floor.';
     if (!quest.keys.room195) return 'Find the last key: Room 195.';
     return 'Bring all 3 keys back to the LUG stall.';
   }
@@ -418,7 +418,7 @@ function objectiveId(quest) {
   if (quest.stage === 'arrival') return 'find-stall';
   if (quest.stage === 'hunting') {
     if (!quest.keys.physicsLab) return 'key-physicsLab';
-    if (!quest.keys.icvl) return 'key-icvl';
+    if (!quest.keys.icl) return 'key-icl';
     if (!quest.keys.room195) return 'key-room195';
     return 'return-stall';
   }
@@ -454,7 +454,7 @@ function characterSheets(maps, ambient, scripts) {
     for (const npc of def.npcs || []) keys.add(npc.character ? `npc-${npc.character}` : 'npc');
   }
   for (const list of Object.values(ambient || {})) {
-    for (const entry of list) keys.add(`npc-${entry.character}`);
+    for (const entry of list) keys.add(ambientSheetKey(entry)); // club outfit variant (FB-0057), src/campus-facts.js
   }
   const visit = (node) => {
     if (Array.isArray(node)) { node.forEach(visit); return; }

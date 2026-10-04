@@ -8,7 +8,7 @@ const { loadGameData } = require('../helpers/game-data');
 
 const { trackerPillText, wrapWords, questObjectiveText, TRACKER_PILL, HUD_TRACKER, hudLayout } = loadGameData();
 
-const KEY_IDS = ['physicsLab', 'icvl', 'room195'];
+const KEY_IDS = ['physicsLab', 'icl', 'room195'];
 const everyQuestState = () => {
   const states = [];
   for (const stage of ['arrival', 'hunting', 'rewarded']) {
@@ -45,7 +45,7 @@ test('D15: for every stage and key combination the whole objective fits the pill
 });
 
 test('D15: the reported case ("Find the LUG stall behind the Main Block staircase.") is shown in full', () => {
-  const pill = trackerPillText({ stage: 'arrival', keys: { physicsLab: false, icvl: false, room195: false } });
+  const pill = trackerPillText({ stage: 'arrival', keys: { physicsLab: false, icl: false, room195: false } });
   assert.equal(pill.keys, 'Keys 0/3');
   assert.equal(pill.lines.join(' '), 'Find the LUG stall behind the Main Block staircase.');
 });

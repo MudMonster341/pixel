@@ -26,7 +26,7 @@
 //   platformer-bg-mid.png  PF_LEVEL_WIDTH x 180 (534 compact, = the real level width / 3),
 //                           scrollFactor ~0.4: shelving units and a specimen tank, spread across the
 //                           whole level so it has room to pan.
-//   flappy-bg.png           320x180 (compact scale), pinned: the ICVL server room, brighter and more
+//   flappy-bg.png           320x180 (compact scale), pinned: the ICL server room, brighter and more
 //                           layered than before -- cable tray, two depth-graded rack rows, a cool
 //                           ambient glow.
 //   tetris-bg.png            960x540 (unchanged -- Tetris rated fine, this pass leaves it alone):
@@ -202,7 +202,7 @@ function buildPlatformerMid() {
   return img;
 }
 
-// ---------- ICVL server room (flappy) ----------
+// ---------- ICL server room (flappy) ----------
 // Cold blue light, brightened and more layered than before (owner: "dark and muddy"): a lighter sky
 // gradient, a cable tray, two depth-graded rack rows (a dim far row, a brighter mid row) receding
 // toward the top of the frame, and a raised-floor tile band -- the actual obstacle racks are drawn by

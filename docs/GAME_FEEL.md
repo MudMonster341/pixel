@@ -196,7 +196,7 @@ on screen at 960x540/1280x720/1920x1080, proving rule 2 below instead of just as
 changed: the minimap shrank to a ~120x90 map area with its caption tucked inside (was 160x120 plus a
 separate caption row); the hint banner moved bottom-center above the hotbar (was stacked under the
 location banner, see the hint table below); the quest tracker is now a compact single-line pill
-("Keys 1/3 · Find the ICVL, 1st floor"), expanding to the full objective for ~3s only when the
+("Keys 1/3 · Find the ICL, 1st floor"), expanding to the full objective for ~3s only when the
 objective text itself changes; the hotbar fades out after ~3s idle while genuinely empty and fades
 back in the instant an item's added or a slot's picked (never while it holds something).
 
@@ -317,7 +317,7 @@ rule set. What changed:
 
 - **Each game gets a themed, generated backdrop**, not black: `tools/make-minigame-art.js` (same
   technique as `tools/make-cutscenes.js` -- a tiny Img/PNG writer, no dependencies) draws a 960x540
-  illustration per game (the Physics Lab's benches/shelves/a tank under warm lamps, the ICVL server
+  illustration per game (the Physics Lab's benches/shelves/a tank under warm lamps, the ICL server
   room's racks-and-cable-trays under cold blue light, Room 195 at night with a whiteboard/desks/a
   skyline window) and each scene loads its own, pinned with `scrollFactor(0)` so it never needs to
   tile across a scrolling level. `npm run assets` regenerates it; `tests/unit/assets.test.js` checks

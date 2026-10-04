@@ -647,7 +647,7 @@ async function shootEnding(browser) {
     await page.evaluate(() => {
       GameState.playerName = 'Zara';
       GameState.quest.stage = 'hunting';
-      GameState.quest.keys = { physicsLab: true, icvl: true, room195: true };
+      GameState.quest.keys = { physicsLab: true, icl: true, room195: true };
     });
 
     const volunteer = await page.evaluate(() => {

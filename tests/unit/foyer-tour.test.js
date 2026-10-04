@@ -383,9 +383,11 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 //     below lands on the flight's own walkable tile instead of inside the stairwell's east wall (tools/interiors/plans.js
 //     stairwell(); the arrival rule is in tests/unit/completeness.test.js and tests/unit/main-block-stairs.test.js).
 //   - main-block-2: the landing is furnished (FURNISHERS.lounge, defect D06).
+// 2026-10-04 (FB-0070): main-block-1 was re-pinned again, a deliberate one-word change: the room nameplate now reads "ICL" (Intelligent
+//   Computing Lab) instead of the earlier wrong name (tools/interiors/plans.js). Nothing else in the file moved (previous hash: 332bfaa6...).
 // Nothing else on the upper floors moved: the old hashes are in git history (16c79daa..., 9f2e13a8..., 5df58a8e...).
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': '332bfaa6647ddcaafbff45202fc0fa9ff7c526c662d610c3274b42e39b5e57fd',
+  'main-block-1': 'bbc171e5e227a48b9f4961d0cb4080c0a366cff3df3f57d368d8c5c9672d3571',
   'main-block-2': 'b5db0bf7980438d0c8f5a01c1c454dc52c56adb0f4fa61bf61138d4a57be0b8c',
   'main-block-3': '2a9cadb7b2fedffd72b62650cc03f70b3da129b80a60b8117e390096f842719d',
 };

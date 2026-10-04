@@ -83,7 +83,7 @@ source asset packages... change all the trees, pavements, everything."
 - [x] Entrance cutscene: the Main Block steps, pillars and red arch (2026-09-21)
 - [x] Main Block foyer is the story hub: the LUG stall behind the staircase, other exits politely blocked (2026-09-22)
 - [x] The volunteer: full dialog, gives the hunt, reacts to progress, hands over the box (2026-09-22)
-- [ ] The three key rooms get their own cutscenes: Physics Lab (3rd floor), ICVL (1st floor), Room 195
+- [ ] The three key rooms get their own cutscenes: Physics Lab (3rd floor), ICL (1st floor), Room 195
 - [x] Keys as real items, with the tracker and journal updating (2026-09-22)
 - [x] The reward box: opening animation, then the card (2026-09-22)
 - [x] The birthday card: animated pixel card, photo slots from `assets/card/`, the owner's messages, optional video (2026-09-22)
@@ -92,7 +92,7 @@ source asset packages... change all the trees, pavements, everything."
 
 - [x] Mini-game framework: launched from a dialog action, score target, retry, skip after 3 losses (2026-09-22)
 - [x] Platformer (Physics Lab), lab backdrop, the lead as hero (2026-09-22)
-- [x] Flappy-style flyer (ICVL), server-room backdrop (2026-09-22)
+- [x] Flappy-style flyer (ICL), server-room backdrop (2026-09-22)
 - [x] Tetris (Room 195), night classroom, NEXT box and score panel (2026-09-22)
 - [x] Each one: its own art and Playwright tests that play it headlessly (2026-09-22)
 

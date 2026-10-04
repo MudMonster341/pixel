@@ -15,7 +15,7 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   GameState.flags.tomasGaveSword = true;
   GameState.flags.tomasChats = 3;
   GameState.quest.stage = 'hunting';
-  GameState.quest.keys.icvl = true;
+  GameState.quest.keys.icl = true;
   GameState.collected.add('meadow-apple-1');
   GameState.seenCutscenes.add('gate2-welcome');
   GameState.playerName = 'ZARA';
@@ -32,7 +32,7 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   GameState.inventory.select(0);
   GameState.flags.tomasGaveSword = false;
   GameState.quest.stage = 'arrival';
-  GameState.quest.keys.icvl = false;
+  GameState.quest.keys.icl = false;
   GameState.collected.clear();
   GameState.seenCutscenes.clear();
   GameState.playerName = 'Aisha';
@@ -49,7 +49,7 @@ test('round trip: save then load restores an identical, plain-data state', () =>
   assert.equal(GameState.flags.tomasGaveSword, true);
   assert.equal(GameState.flags.tomasChats, 3);
   assert.equal(GameState.quest.stage, 'hunting');
-  assert.equal(GameState.quest.keys.icvl, true);
+  assert.equal(GameState.quest.keys.icl, true);
   // M3a: her chosen name and look round-trip like everything else.
   assert.equal(GameState.playerName, 'ZARA');
   assert.deepEqual(plain(GameState.customization), { clothes: 'lavender' });
@@ -131,7 +131,7 @@ test('unknown/extra fields in a save do not crash loading', () => {
       facing: 'down',
       inventory: { slots: [{ item: 'sword', count: 1 }], selected: 0 },
       flags: { tomasGaveSword: true, futureFlag: 'ignored' },
-      quest: { stage: 'briefed', keys: { icvl: true }, futureQuestField: 42 },
+      quest: { stage: 'briefed', keys: { icl: true }, futureQuestField: 42 },
       collected: ['x'],
       seenCutscenes: ['y'],
       somethingFromTheFuture: { nested: true },
@@ -143,7 +143,7 @@ test('unknown/extra fields in a save do not crash loading', () => {
   assert.equal(GameState.map, 'campus');
   assert.equal(GameState.flags.tomasGaveSword, true);
   assert.equal(GameState.quest.stage, 'briefed');
-  assert.equal(GameState.quest.keys.icvl, true);
+  assert.equal(GameState.quest.keys.icl, true);
 });
 
 test('M3a: a save from before playerName/customization existed falls back to the live defaults, not a crash', () => {
@@ -183,4 +183,73 @@ test('saveGame reports failure instead of throwing when localStorage itself is b
   const { GameState, saveGame, localStorage } = loadGameData();
   localStorage.setItem = () => { throw new Error('quota exceeded'); };
   assert.equal(saveGame('default', GameState), false);
+});
+
+// FB-0070: the lab was first called the ICVL; an old save (the owner has one from their playtest)
+// must load into the new ICL ids. This is the only test that mentions the old spelling on purpose.
+test('FB-0070: an old save with ICVL ids loads into the ICL ids', () => {
+  const { GameState, loadGame, peekSave, localStorage } = loadGameData();
+  localStorage.setItem(SAVE_KEY, JSON.stringify({
+    version: 1, savedAt: Date.now(), profile: 'default',
+    state: {
+      map: 'main-block-1', position: { x: 6, y: 8 }, facing: 'up',
+      inventory: { slots: [{ item: 'keyPhysicsLab', count: 1 }, { item: 'keyIcvl', count: 1 }, null, null, null], selected: 1 },
+      flags: { keyRoomIcvlDone: true },
+      quest: { stage: 'hunting', keys: { physicsLab: true, icvl: true, room195: false } },
+      minigames: { icvl: { attempts: 2, bestScore: 5, won: true, skipped: false } },
+      journal: ['Found a key taped under a bench in the ICVL.'],
+      collected: [],
+      seenCutscenes: ['keyRoomIcvl'], seenDialog: ['key-icvl'], seenHints: ['hint-ICVL'],
+      playerName: 'Icvl-fan',
+    },
+  }));
+
+  // Reading without applying (the title screen's Continue) migrates too.
+  assert.equal(peekSave('default').quest.keys.icl, true);
+
+  assert.equal(loadGame('default', GameState), true);
+  assert.equal(GameState.quest.keys.icl, true);
+  assert.equal('icvl' in GameState.quest.keys, false);
+  assert.equal(GameState.quest.keys.physicsLab, true);
+  assert.equal(GameState.quest.keys.room195, false);
+  // The key item survived (an unknown item id would have been dropped from the slot).
+  assert.equal(GameState.inventory.slots[1].item, 'keyIcl');
+  assert.equal(GameState.inventory.slots[0].item, 'keyPhysicsLab');
+  assert.equal(GameState.flags.keyRoomIclDone, true);
+  assert.ok(GameState.minigames.icl && GameState.minigames.icl.won === true);
+  assert.deepEqual(plain(GameState.journal), ['Found a key taped under a bench in the ICL.']);
+  assert.ok(GameState.seenCutscenes.has('keyRoomIcl'));
+  assert.ok(GameState.seenDialog.has('key-icl'));
+  assert.ok(GameState.seenHints.has('hint-ICL'));
+  // Her own typed name is never rewritten.
+  assert.equal(GameState.playerName, 'Icvl-fan');
+});
+
+test('FB-0070: a save that already uses the ICL ids is left unchanged by the migration', () => {
+  const { GameState, saveGame, loadGame } = loadGameData();
+  GameState.quest.keys.icl = true;
+  GameState.inventory.add('keyIcl');
+  saveGame('default', GameState);
+  GameState.quest.keys.icl = false;
+  assert.equal(loadGame('default', GameState), true);
+  assert.equal(GameState.quest.keys.icl, true);
+  assert.equal(GameState.inventory.slots.some((s) => s && s.item === 'keyIcl'), true);
+});
+
+test('FB-0070: no source, tool or test file still uses the old name (except the save migration and its test)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.resolve(__dirname, '..', '..');
+  const allowed = new Set(['src/save.js', 'tests/unit/save.test.js']);
+  const hits = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else if (/\.(js|json)$/.test(entry.name) && !allowed.has(rel)
+        && /icvl/i.test(fs.readFileSync(path.join(root, rel), 'utf8'))) hits.push(rel);
+    }
+  };
+  for (const dir of ['src', 'tools', 'tests']) walk(dir);
+  assert.deepEqual(hits, []);
 });

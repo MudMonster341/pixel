@@ -8,11 +8,18 @@
 // doesn't. A claim that file marks unsure or "Left out" is not used. Real CS professors may be *named*
 // (owner's decision), limited to the names, titles and areas that file lists. For the two people whose
 // titles conflict there (Elakkiya R and J. Angel Arul Jothi) the name appears with NO title at all.
-// Name tags are role labels ("LUG member"), never a person's name. The full list for review is
+// Name tags are role labels ("LUG member") unless an ambient entry is a NAMED character (FB-0050, ADR 0021:
+// the owner's friends and professors): its `name` replaces the label and its `lines` are what it says (see the
+// src/ambient.js header and campusTalkLines() below). The full list for review is
 // docs/research/campus-lines-review.md.
 //
 // Shapes:
-//   CAMPUS_ROLES[roleId] = { label, openers: [1-2 short role-flavoured greetings, no facts] }
+//   CAMPUS_ROLES[roleId] = { label, outfit?, openers: [1-2 short role-flavoured greetings, no facts], smallTalk? }
+//     outfit:    a club colour (FB-0057): 'sky' | 'acm' | 'lug' | 'mtc'. A club role's students wear it:
+//                the sheet is `npc-<character>-<outfit>` (tools/make-assets.js CLUB_OUTFITS), see ambientSheetKey().
+//                No outfit = the student's plain clothes.
+//     smallTalk: 2-3 light, NON-factual lines, used as the pool only when a role has no sourced facts (a club
+//                the research has nothing on yet, e.g. 'mtc-member'); marked as placeholders in the review doc.
 //   CAMPUS_FACTS         = [{ id, role, text, source }]   (text <= 160 chars; source = an F-id)
 
 const CAMPUS_ROLES = {
@@ -22,6 +29,7 @@ const CAMPUS_ROLES = {
   },
   'lug-member': {
     label: 'LUG member',
+    outfit: 'lug', // orange and black, like the Linux logo (FB-0057)
     openers: ['Hey! Have you tried Linux yet? Just asking.', 'Penguins are underrated, you know.'],
   },
   'library-regular': {
@@ -30,6 +38,7 @@ const CAMPUS_ROLES = {
   },
   'tech-club-member': {
     label: 'Tech club member',
+    outfit: 'sky',
     openers: ["Hi! Sorry, I was thinking about a circuit.", "Hey! I'm on my way to the lab."],
   },
   'sports-player': {
@@ -37,7 +46,7 @@ const CAMPUS_ROLES = {
     openers: ["Hey! Just warming up, don't mind me.", 'Hi! Great day for a game.'],
   },
   'hostel-resident': {
-    label: 'Hostel resident',
+    label: 'Hostel mate',
     openers: ["Hi! Just heading back to the hostel.", 'Hey! Is it dinner time yet?'],
   },
   'cs-student': {
@@ -50,10 +59,12 @@ const CAMPUS_ROLES = {
   },
   'quiz-club-member': {
     label: 'Quiz club member',
+    outfit: 'sky',
     openers: ['Hi! Quick question: how good is your trivia?', "Hey! I'm in a quizzing mood today."],
   },
   'cultural-club-member': {
     label: 'Cultural club member',
+    outfit: 'sky',
     openers: ["Hi! I'm rushing to a rehearsal.", 'Hey! Do you like music or art more?'],
   },
   'senior': {
@@ -62,6 +73,7 @@ const CAMPUS_ROLES = {
   },
   'volunteer': {
     label: 'Volunteer',
+    outfit: 'lug', // the volunteers here are the LUG's (FB-0057)
     openers: ['Hi there! Always happy to help.', 'Hey! Got a minute to chat?'],
   },
   'campus-regular': {
@@ -70,7 +82,17 @@ const CAMPUS_ROLES = {
   },
   'acm-member': {
     label: 'ACM member',
+    outfit: 'acm', // dark pink (FB-0057)
     openers: ['Hi! Got a minute? I could talk about computing all day.', "Hey! I'm heading to a chapter meeting."],
+  },
+  // MTC: the owner asked for black and white (FB-0057). The research has no sourced facts about it, so it talks
+  // small talk only (PLACEHOLDERS, owner to replace: docs/research/campus-lines-review.md) and is the one role
+  // the "at least 2 facts" test makes an explicit exception for.
+  'mtc-member': {
+    label: 'MTC member',
+    outfit: 'mtc',
+    openers: ['Hi! Black and white, always. It saves time in the morning.', "Hey! I'm off to a club meeting."],
+    smallTalk: ['Our club room is the best place to lose track of time.', 'We like to keep things simple: black, white and good ideas.', 'Come by one day, we are always up for new faces.'],
   },
 };
 
@@ -148,6 +170,15 @@ function campusFactsFor(role) {
   return CAMPUS_FACTS.filter((fact) => fact.role === role);
 }
 
+// FB-0057: the texture a student draws with. A club role has an `outfit` (CAMPUS_ROLES), and the generator
+// (tools/make-assets.js CLUB_OUTFITS) bakes one sheet per ambient body and club colour, `npc-<character>-<outfit>`.
+// A role with no outfit (or an unknown role) keeps the plain `npc-<character>` sheet. `entry` is an
+// src/ambient.js entry; src/maplogic.js characterSheets() preloads exactly these keys, src/scenes/world.js draws them.
+function ambientSheetKey(entry) {
+  const role = CAMPUS_ROLES[entry.role];
+  return role && role.outfit ? `npc-${entry.character}-${role.outfit}` : `npc-${entry.character}`;
+}
+
 // Session state (GameState.campusTalk, src/state.js; never saved): `heard[factId]` = how many times
 // that fact has been said, `talks[studentId]` = how many times she has spoken to that student.
 function newCampusTalkState() {
@@ -158,12 +189,21 @@ function newCampusTalkState() {
 // least-heard one in the role's pool (ties go in the pool order rotated by the student's own hash), so
 // every fact is said before any repeats -- for one student, and across the students of one role.
 // The first time she talks to a given student the line starts with a role-flavoured opener; later
-// visits go straight to the next fact.
-function campusTalkLines(role, studentId, state) {
+// visits go straight to the next fact. A role with no sourced facts uses its `smallTalk` lines as the pool.
+//
+// `named` (FB-0050, optional; pass the src/ambient.js entry): { name?, lines? } makes the student a named
+// character. `name` is the name tag instead of the role label. `lines` are fixed lines she says in full the
+// first time she talks to this student, INSTEAD of the role's opener and fact; later talks continue with the
+// role's facts (the opener is never repeated), or, if the role has none, say the fixed lines again.
+function campusTalkLines(role, studentId, state, named) {
   const info = CAMPUS_ROLES[role];
-  const name = info ? info.label : 'Student';
-  const pool = campusFactsFor(role);
-  if (!info || pool.length === 0) return { name, lines: ['Hi there!'], factId: null };
+  const name = (named && named.name) || (info ? info.label : 'Student');
+  const fixed = named && Array.isArray(named.lines) && named.lines.length > 0 ? named.lines.slice() : null;
+  let pool = campusFactsFor(role);
+  if (pool.length === 0 && info && Array.isArray(info.smallTalk)) {
+    pool = info.smallTalk.map((text, i) => ({ id: `${role}#${i}`, text })); // placeholders, not sourced facts
+  }
+  if (!info || pool.length === 0) return { name, lines: fixed || ['Hi there!'], factId: null };
   const hash = campusHash(studentId);
   const start = hash % pool.length;
   let best = null;
@@ -173,8 +213,12 @@ function campusTalkLines(role, studentId, state) {
     if (best === null || count < (state.heard[best.id] || 0)) best = fact;
   }
   const talks = state.talks[studentId] || 0;
+  if (fixed && talks === 0) { // a named character's own words come first, and use up no fact
+    state.talks[studentId] = 1;
+    return { name, lines: fixed, factId: null };
+  }
   state.heard[best.id] = (state.heard[best.id] || 0) + 1;
   state.talks[studentId] = talks + 1;
-  const lines = talks === 0 ? [info.openers[hash % info.openers.length], best.text] : [best.text];
+  const lines = talks === 0 && !fixed ? [info.openers[hash % info.openers.length], best.text] : [best.text];
   return { name, lines, factId: best.id };
 }

@@ -82,7 +82,7 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   await page.evaluate(() => {
     GameState.playerName = 'Zara';
     GameState.quest.stage = 'hunting';
-    GameState.quest.keys = { physicsLab: true, icvl: true, room195: true };
+    GameState.quest.keys = { physicsLab: true, icl: true, room195: true };
   });
 
   const tile = await volunteerTile(page);
@@ -144,7 +144,7 @@ test('"Watch the Card Again" from the title jumps straight to the card, skipping
   await page.evaluate(() => {
     GameState.playerName = 'Nadia';
     GameState.quest.stage = 'hunting';
-    GameState.quest.keys = { physicsLab: true, icvl: true, room195: true };
+    GameState.quest.keys = { physicsLab: true, icl: true, room195: true };
   });
   const tile = await volunteerTile(page);
   await teleport(page, tile.x, tile.y + 1);

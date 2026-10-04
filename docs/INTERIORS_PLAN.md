@@ -93,7 +93,7 @@ decoration"):**
 - **Plants, everywhere**: `intPottedPlant` (tools/make-assets.js) is the same LimeZu potted-plant
   crop as the old `plant` tile, minus that tile's own `floor()` call -- a warm plank/brick background
   meant for the outdoor meadow-house test map, never appropriate indoors, which is exactly what "on
-  brick tiles" was. Used in the foyer, the ICVL's aisles and every corridor; `plant` itself is
+  brick tiles" was. Used in the foyer, the ICL's aisles and every corridor; `plant` itself is
   untouched (Library/Mechanical Block and other shared room types still use it).
 - **Round columns**: 6 tiles (`intColumnCapL/R`, `ShaftL/R`, `BaseL/R`) instead of 1 -- each half
   shades from light at the seam between the pair (the cylinder's own lit centre) to dark at the
@@ -112,7 +112,7 @@ decoration"):**
   way `Floor.connect()` itself centres a door (`doorNameplate()`, tools/interiors/plans.js), and
   `intWallPoster` added to the regular prop-dressing cycle alongside the existing noticeboard/bench/
   bin/plant.
-- Key-station coordinates that moved because the room's own furniture layout changed: ICVL's `icvl`
+- Key-station coordinates that moved because the room's own furniture layout changed: ICL's `icl`
   stayed at its run-2 position; the Physics Lab's `physicsLab` moved to `(5,7)` (the new layout's
   first bench) -- both still verified to sit exactly on the right furniture tile.
 
@@ -135,12 +135,12 @@ all. Both walked back this round:
   into a row of parallel bars.
 - **Chandelier bigger**: a real 2x2-tile fixture (`intChandelier`/`TR`/`BL`/`BR`, one 32x32 picture
   split across 4 tile names, `chandelierPixels()`) instead of a single 16px one.
-- **ICVL/Physics Lab, real aisles**: both rebuilt with actual gaps between rows (a 1-tile aisle every
-  other ICVL desk row, multi-row aisles between the Physics Lab's 3 bench rows), a dedicated walkway
-  column, and more furniture variety (a chair/stool, a plain `intIcvlCabinet`, 3 differently-topped
+- **ICL/Physics Lab, real aisles**: both rebuilt with actual gaps between rows (a 1-tile aisle every
+  other ICL desk row, multi-row aisles between the Physics Lab's 3 bench rows), a dedicated walkway
+  column, and more furniture variety (a chair/stool, a plain `intIclCabinet`, 3 differently-topped
   lab benches `intLabBenchScope`/`Flask`/`Laptop`, `intFumeHood`) so neither reads as one tile
   repeated. `tests/unit/interiors-premium-pass.test.js` now checks each stays inside a 35-60%
-  *walkable* band, not "as dense as possible" -- the ICVL key station moved from (5,5) to (6,6) to
+  *walkable* band, not "as dense as possible" -- the ICL key station moved from (5,5) to (6,6) to
   land back on real furniture (`src/maps.js`); Physics Lab's stayed at (5,5).
 
 **Quality loop, Interior art run 1 (2026-09-28, docs/quality/scorecard.md "3/10... the marble reads
@@ -154,7 +154,7 @@ FB-0030/0031 rebuild below, using the LimeZu Room_Builder sheet properly for the
   Library/Mechanical Block still use the old single-tile `bitsWallPlain` -- untouched.
 - **Floors**: the foyer's marble (`intFloorMarble`/`intFloorMarbleRunner`) is now a real LimeZu stone
   crop recolored cooler/less golden (the "reads as sand" fix), corridors get a real tiled floor
-  (`intFloorTiled`), and the ICVL/Physics Lab get their own light lab floor (`intFloorLabLight`,
+  (`intFloorTiled`), and the ICL/Physics Lab get their own light lab floor (`intFloorLabLight`,
   distinct from the shared `intFloorLabVinyl` Mechanical Block's own labs still use). Room 195's
   wood floor (`intFloorClassroom`) is now a real LimeZu wood-plank crop too.
 - **The foyer**: resized to a 20x12 play area ("fill the screen at zoom 3", was much larger); the
@@ -163,7 +163,7 @@ FB-0030/0031 rebuild below, using the LimeZu Room_Builder sheet properly for the
   chandelier is a real `overhead` Tiled layer tile (`Floor.placeOverhead()`, the same layer/depth
   outdoor tree canopies use, ADR 0008) instead of a ground-layer trick; 4 big 2-wide columns replace
   the first pass's thin 1-tile ones.
-- **Dense furnishing**: ICVL, Room 195 and the Physics Lab are now packed close to wall-to-wall
+- **Dense furnishing**: ICL, Room 195 and the Physics Lab are now packed close to wall-to-wall
   (`tests/unit/interiors-premium-pass.test.js` checks each is under 40% plain floor) instead of a
   sparse quarter-filled grid; corridors get benches/plants/notice boards/bins every few tiles
   (`dressCorridor()`, `tools/interiors/plans.js`) instead of standing bare.
@@ -178,7 +178,7 @@ corridor per upper floor carrying docs/STORY.md's 3 key rooms and a couple of tr
 **canvas: 40x40 tiles**, all 4 floors, with one shared stairwell rectangle (`x:30-37, y:12-21`) on floors
 1-3 so their stairs line up (tested, `tests/unit/interiors.test.js`). Every anchor the cutscene scripts and onboarding
 routes use (`src/scripts.js`, `src/objective-routes.js`) kept its exact name -- `Main Block Stairs
-<floor> (up)/(down)`, the `lug-volunteer` npc id, the `icvl`/`room195`/`physicsLab` key-station ids
+<floor> (up)/(down)`, the `lug-volunteer` npc id, the `icl`/`room195`/`physicsLab` key-station ids
 -- so nothing there needed touching; see `tests/unit/interiors-premium-pass.test.js`, which resolves
 every one of those anchors against the real generated maps.
 
@@ -245,7 +245,7 @@ correct"). A central **foyer** plus **two long wings**, all on the shared 40x40 
   floors are not rebuilt yet. The "stairs line up" test now covers floors 1-3, and a new test checks the ground
   floor's stairs link both ways to floor 1's stairwell.
 
-**1st floor** (`main-block-1`): one corridor carrying **ICVL** and **Room 195** (docs/STORY.md key
+**1st floor** (`main-block-1`): one corridor carrying **ICL** and **Room 195** (docs/STORY.md key
 rooms, M3 -- see "Story rooms" below for why they're here), each opening directly off it, plus two
 more decorative locked doors further along. Stairs down to G, up to 2nd.
 
@@ -268,15 +268,14 @@ placed the key station on a specific piece of furniture, not just "some tile in 
   benches (`intLabBenchWood`, the same wood-ramp tone as the rest of the kit, over the metal-topped
   `intLabBench` Mechanical Block's own labs still use) at both ends, a rack (`intLabRack`, its own
   `depthGroup`) and a sink. Key station: the first bench.
-- **ICVL** (1st floor, `labIcvl` type): royal-blue built-in cabinetry (`intIcvlBench`, distinct from
+- **ICL** (1st floor, `labIcl` type): royal-blue built-in cabinetry (`intIclBench`, distinct from
   the grey `intComputerBench` shared with Mechanical Block), a server rack (`intServerRack`, each
   instance its own `depthGroup`) and a poster-covered wall (`intNoticeboard` tiles along the front
-  wall). Key station: the first bench. "ICVL" isn't a real BITS Dubai room name found in research,
-  it's a placeholder for "a computing lab on the 1st floor"; **the owner should confirm or correct
-  this name** if the real one is known.
+  wall). Key station: the first bench. The room is the **ICL** (Intelligent Computing Lab), the name
+  the owner gave (FB-0070).
 - **Room 195** (1st floor, plain `classroom` type): rows of desks, a teacher's desk, a whiteboard
   *and* a pull-down projector screen (`intProjectorScreen`, new) beside it. Key station: the
-  teacher's desk. Docs/STORY.md names the room but not its floor; 1st floor (next to ICVL) was
+  teacher's desk. Docs/STORY.md names the room but not its floor; 1st floor (next to ICL) was
   chosen for a short, sensible route, not sourced from anything real.
 
 All three key stations (a desk/bench interactable, not a floor pickup) and the LUG volunteer's own
@@ -350,7 +349,7 @@ the 2026-09-22 refresh's own additions (so every existing tile keeps its index):
 columns), `intFoyerStairsL`/`intFoyerStairsR`/`intFoyerLanding` (the twin staircase + landing,
 replacing the old single `intStairsUp` block), `intChandelier`, `intGlassDoorOpen` (the entrance's
 own `openTiles` overlay), `intDoorClosed` (the "locked, but visible" side-wing/classroom doors --
-solid, no warp object, wall dressing only), `intIcvlBench`/`intServerRack` (ICVL's blue cabinetry),
+solid, no warp object, wall dressing only), `intIclBench`/`intServerRack` (ICL's blue cabinetry),
 `intLabBenchWood` (the Physics Lab's wood-topped benches) and `intProjectorScreen` (Room 195's
 whiteboard-side screen). All hand-drawn in the existing box/fill idiom (no new vendor pack, so
 CREDITS.md needed no changes) -- reaching for the actual LimeZu Room_Builder atlas pieces for these

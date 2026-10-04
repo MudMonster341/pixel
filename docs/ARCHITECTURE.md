@@ -343,7 +343,7 @@ script fast-forwards to its end state (actors where they'd end, flags set), neve
 **E/Space** still advances a `say` step's dialog mid-script (`WorldScene.onInteractKey()` lets an
 already-open dialog advance even while `transitioning` is set, the one deliberate hole in that gate).
 
-The 3 key-room beats (`SCRIPTS.keyRoomPhysicsLab`/`Icvl`/`Room195`, docs/STORY.md beat 8) have no Tiled
+The 3 key-room beats (`SCRIPTS.keyRoomPhysicsLab`/`Icl`/`Room195`, docs/STORY.md beat 8) have no Tiled
 trigger of their own -- `WorldScene.checkKeyRoomBeats()` fires the matching script the first time she
 comes within `ROOM_BEAT_RANGE` of that key's own (not-yet-taken) desk, keyed the same way as any other
 cutscene (`GameState.seenCutscenes`, `` `keyRoom:${id}` ``).

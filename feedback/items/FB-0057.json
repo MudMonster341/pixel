@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Dialog & NPCs",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:24:22.005Z",
-  "updatedAt": "2026-10-04T17:24:22.005Z",
+  "updatedAt": "2026-10-04T18:40:03.889Z",
   "details": "whne we have people form clubs, make then wear a sky blue, then for MTC memners a balck and white, ACMw should wear adark pinkl and then LUG should wear orange and balck liek the linus logo",
   "context": {
     "map": "main-block-g",
@@ -49,13 +49,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0057.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Club members wear club colours: ACM dark pink, LUG orange/black, MTC black/white, other clubs sky blue; the LUG stall volunteer too.",
+      "at": "2026-10-04T18:40:03.889Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/campus-facts.test.js › FB-0057",
+    "commit": null,
+    "at": "2026-10-04T18:40:03.889Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:24:22.005Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:40:03.889Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

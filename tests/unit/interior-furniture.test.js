@@ -74,9 +74,9 @@ const EXPECTED_FURNITURE_BY_KIND = {
   discussion: ['table'],
   workshop: ['intMachine', 'intLabBench'],
   service: ['intDesk'],
-  // FB-0030/0031 (premium pass stage 5): the ICVL/Physics Lab key rooms get their own dedicated
+  // FB-0030/0031 (premium pass stage 5): the ICL/Physics Lab key rooms get their own dedicated
   // furniture, distinct from the shared 'lab'/'labHeavy' kinds above.
-  labIcvl: ['intIcvlBench', 'intServerRack'],
+  labIcl: ['intIclBench', 'intServerRack'],
   labPhysics: ['intLabBenchWood'],
 };
 

@@ -87,10 +87,10 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect((await state(page)).quest.keys.room195).toBe(false);
   });
 
-  test('the icvl key station launches the flyer; the physicsLab station launches the platformer', async ({ page }) => {
+  test('the icl key station launches the flyer; the physicsLab station launches the platformer', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'icvl', 'minigame-flappy');
+    await talkToStation(page, 'icl', 'minigame-flappy');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(true);
     await page.keyboard.press('Escape');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(false);
@@ -130,7 +130,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
-    await talkToStation(page, 'icvl', 'minigame-flappy');
+    await talkToStation(page, 'icl', 'minigame-flappy');
     await waitCardReady(page, 'minigame-flappy');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
@@ -296,7 +296,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
   test('FB-0042: the flyer hovers with a "press space to flap" prompt, and gravity/scrolling wait for the first flap', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'icvl', 'minigame-flappy');
+    await talkToStation(page, 'icl', 'minigame-flappy');
     await waitCardReady(page, 'minigame-flappy');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');

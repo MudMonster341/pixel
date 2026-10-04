@@ -6,7 +6,8 @@ To change a line, edit `src/campus-facts.js` (then update this table; `npm test`
 
 ## How it works in the game
 
-- Every ambient student has a **role** (the name tag in the dialog box is the role label, never a person's name).
+- Every ambient student has a **role** (the name tag in the dialog box is the role label). One ambient entry can be a **named character** (FB-0050): see "Named characters" below.
+- Club members wear their club's colours (FB-0057, ADR 0021): MTC black and white, ACM dark pink, LUG (and the volunteers) orange and black like the Linux logo, the other clubs sky blue.
 - Pressing E near a student: they stop, turn to her, and say a role-flavoured **opener**, then a **fact** from the role's pool.
   The next time she talks to the same student they go straight to the next fact. Every fact in a role's pool is said before any repeats.
 - Real CS professors are named only as listed in campus-facts.md. For the two people whose titles conflict there
@@ -22,7 +23,7 @@ To change a line, edit `src/campus-facts.js` (then update this table; `npm test`
 | library-regular | Library regular | Shh... just kidding, hi! I practically live in the library. / Hello! Quiet campus day, the way I like it. |
 | tech-club-member | Tech club member | Hi! Sorry, I was thinking about a circuit. / Hey! I'm on my way to the lab. |
 | sports-player | Sports player | Hey! Just warming up, don't mind me. / Hi! Great day for a game. |
-| hostel-resident | Hostel resident | Hi! Just heading back to the hostel. / Hey! Is it dinner time yet? |
+| hostel-resident | Hostel mate | Hi! Just heading back to the hostel. / Hey! Is it dinner time yet? |
 | cs-student | CS student | Hey! Give me a second, my code is compiling. / Hi! Do you know any good debugging tricks? |
 | ai-student | CS student | Hello! I've been reading about machine learning all day. / Hi! Ask me anything about AI. Well, almost anything. |
 | quiz-club-member | Quiz club member | Hi! Quick question: how good is your trivia? / Hey! I'm in a quizzing mood today. |
@@ -31,6 +32,25 @@ To change a line, edit `src/campus-facts.js` (then update this table; `npm test`
 | volunteer | Volunteer | Hi there! Always happy to help. / Hey! Got a minute to chat? |
 | campus-regular | Student | Hi! I know my way around, so ask away. / Hello! Looking for something? |
 | acm-member | ACM member | Hi! Got a minute? I could talk about computing all day. / Hey! I'm heading to a chapter meeting. |
+| mtc-member | MTC member | Hi! Black and white, always. It saves time in the morning. / Hey! I'm off to a club meeting. |
+
+## Placeholder lines (no sourced facts yet)
+
+The research has nothing on the MTC club, so the MTC member says these light, non-factual lines instead of facts (**PLACEHOLDERS: owner, please replace with real MTC lines**). The role rotates through them.
+
+| role | placeholder line |
+|------|------------------|
+| mtc-member | Our club room is the best place to lose track of time. |
+| mtc-member | We like to keep things simple: black, white and good ideas. |
+| mtc-member | Come by one day, we are always up for new faces. |
+
+## Named characters
+
+One ambient student can have a `name` (the name tag) and fixed `lines` (said the first time she talks to them, instead of the opener and a fact; later talks carry on with the role's facts). The data is in `src/ambient.js`. These are **PLACEHOLDERS for the owner to edit**: light, friendly, no invented personal facts.
+
+| name | where | lines |
+|------|-------|-------|
+| Deanne | campus, avenue bench (tile 243,162), role hostel-resident | Hi, I'm Deanne! I live in the hostel. / Hostel dinner is the best part of my day, honestly. That and my chai. / I know every quiet corner on this campus. Ask me anything. |
 
 ## Facts (43)
 

@@ -11,7 +11,7 @@
 // floor, are replaced with small, furnished Pokemon-style floors. The GROUND floor is the reception foyer
 // plus two long wings, rebuilt to match the official 3D virtual tour (ADR 0020, see mainBlockG below);
 // then one corridor per upper floor carrying the 3 key rooms and a couple of transit stops
-// (docs/STORY.md's own room list -- see docs/INTERIORS_PLAN.md "Story rooms" for why ICVL/Room 195/Physics
+// (docs/STORY.md's own room list -- see docs/INTERIORS_PLAN.md "Story rooms" for why ICL/Room 195/Physics
 // Lab live where they do). All four floors share one canvas size. The three UPPER floors also share one fixed
 // stairwell rectangle (MAIN_STAIRWELL), so their stairs line up (tested); the ground floor's staircase is the
 // visible split stair on the left of the foyer (the tour), so it no longer lines up with that rectangle.
@@ -161,16 +161,16 @@ const mainBlock1 = {
   height: MAIN_H,
   spawn: { x: 16, y: 18, facing: 'up' },
   build(floor) {
-    // docs/STORY.md key rooms (M3): ICVL (a computing lab, `labIcvl`) and Room 195 (a classroom),
+    // docs/STORY.md key rooms (M3): ICL (a computing lab, `labIcl`) and Room 195 (a classroom),
     // both off one corridor -- see docs/INTERIORS_PLAN.md "Story rooms" for why they're here (no
     // sourced real floor plan for either).
-    floor.addRect('icvl', { name: 'ICVL', type: 'labIcvl', wallKit: 'roomBuilder', x0: 3, y0: 3, x1: 16, y1: 14 });
+    floor.addRect('icl', { name: 'ICL', type: 'labIcl', wallKit: 'roomBuilder', x0: 3, y0: 3, x1: 16, y1: 14 });
     floor.addRect('room195', { name: 'Room 195', type: 'classroom', wallKit: 'roomBuilder', x0: 18, y0: 3, x1: 29, y1: 14 });
 
     const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
-    floor.connect('icvl', 'corridor');
+    floor.connect('icl', 'corridor');
     floor.connect('room195', 'corridor');
-    doorNameplate(floor, 'icvl', 'corridor');
+    doorNameplate(floor, 'icl', 'corridor');
     doorNameplate(floor, 'room195', 'corridor');
     // A couple of locked classroom doors further down the corridor -- visible, not walkable
     // (docs/STORY.md: only the route to the 3 key rooms stays open).

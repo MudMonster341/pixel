@@ -22,13 +22,13 @@ test('resolveAnchor: finds a named map object (point or rect) and returns its ce
 
 test('objectiveId: the current objective, in docs/STORY.md room order', () => {
   const { objectiveId } = loadGameData();
-  const keys = () => ({ physicsLab: false, icvl: false, room195: false });
+  const keys = () => ({ physicsLab: false, icl: false, room195: false });
   assert.equal(objectiveId({ stage: 'arrival', keys: keys() }), 'find-stall');
   assert.equal(objectiveId({ stage: 'hunting', keys: keys() }), 'key-physicsLab');
-  assert.equal(objectiveId({ stage: 'hunting', keys: { ...keys(), physicsLab: true } }), 'key-icvl');
-  assert.equal(objectiveId({ stage: 'hunting', keys: { ...keys(), physicsLab: true, icvl: true } }), 'key-room195');
-  assert.equal(objectiveId({ stage: 'hunting', keys: { physicsLab: true, icvl: true, room195: true } }), 'return-stall');
-  assert.equal(objectiveId({ stage: 'rewarded', keys: { physicsLab: true, icvl: true, room195: true } }), null);
+  assert.equal(objectiveId({ stage: 'hunting', keys: { ...keys(), physicsLab: true } }), 'key-icl');
+  assert.equal(objectiveId({ stage: 'hunting', keys: { ...keys(), physicsLab: true, icl: true } }), 'key-room195');
+  assert.equal(objectiveId({ stage: 'hunting', keys: { physicsLab: true, icl: true, room195: true } }), 'return-stall');
+  assert.equal(objectiveId({ stage: 'rewarded', keys: { physicsLab: true, icl: true, room195: true } }), null);
   // Collected out of order (FB-0039's own concern, now shared by the tracker text and the arrow/marker
   // routing alike): the *specific* missing key, not a count.
   assert.equal(objectiveId({ stage: 'hunting', keys: { ...keys(), room195: true } }), 'key-physicsLab');
@@ -36,13 +36,13 @@ test('objectiveId: the current objective, in docs/STORY.md room order', () => {
 
 test('objectiveTarget: the current objective route\'s stop on a given map, or null off-route', () => {
   const { objectiveTarget, OBJECTIVE_ROUTES } = loadGameData();
-  const quest = { stage: 'hunting', keys: { physicsLab: false, icvl: false, room195: false } };
+  const quest = { stage: 'hunting', keys: { physicsLab: false, icl: false, room195: false } };
   assert.deepEqual(plain(objectiveTarget('campus', quest)), { map: 'campus', anchor: 'Main Block entrance' });
   assert.deepEqual(plain(objectiveTarget('main-block-3', quest)), { map: 'main-block-3', keyStation: 'physicsLab' });
   // The library block isn't part of this route at all -- off-route, no on-screen destination there.
   assert.equal(objectiveTarget('library-block-g', quest), null);
   // No active objective (rewarded) -> null everywhere, regardless of map.
-  const rewarded = { stage: 'rewarded', keys: { physicsLab: true, icvl: true, room195: true } };
+  const rewarded = { stage: 'rewarded', keys: { physicsLab: true, icl: true, room195: true } };
   assert.equal(objectiveTarget('campus', rewarded), null);
 
   // Every route only ever points at a map this game's own MAPS registry actually has (a typo'd map
@@ -80,7 +80,7 @@ test('SCRIPTS: every script is a non-empty list of well-formed, single-key steps
 
 test('every trigger-played script (gate2/opening/entrance/the 3 key rooms) locks input and letterboxes in first, then out and unlocks last', () => {
   const { SCRIPTS } = loadGameData();
-  for (const key of ['gate2', 'opening', 'entrance', 'keyRoomPhysicsLab', 'keyRoomIcvl', 'keyRoomRoom195']) {
+  for (const key of ['gate2', 'opening', 'entrance', 'keyRoomPhysicsLab', 'keyRoomIcl', 'keyRoomRoom195']) {
     const steps = plain(SCRIPTS[key]);
     assert.deepEqual(steps[0], { lockInput: true }, `${key}[0]`);
     assert.deepEqual(steps[1], { letterbox: 'in' }, `${key}[1]`);
@@ -91,7 +91,7 @@ test('every trigger-played script (gate2/opening/entrance/the 3 key rooms) locks
 
 test('the 3 key-room scripts each target a real key station id and end control back on the player', () => {
   const { SCRIPTS } = loadGameData();
-  const byId = { keyRoomPhysicsLab: 'physicsLab', keyRoomIcvl: 'icvl', keyRoomRoom195: 'room195' };
+  const byId = { keyRoomPhysicsLab: 'physicsLab', keyRoomIcl: 'icl', keyRoomRoom195: 'room195' };
   for (const [scriptKey, keyStationId] of Object.entries(byId)) {
     const steps = SCRIPTS[scriptKey];
     const pan = steps.find((s) => s.cameraPan);

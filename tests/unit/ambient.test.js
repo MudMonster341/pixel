@@ -162,7 +162,9 @@ test('AMBIENT: every entry has a role with a fact pool (every ambient student ca
     for (const entry of AMBIENT[key]) {
       assert.ok(entry.role, `${entry.id}: needs a "role" (src/campus-facts.js CAMPUS_ROLES)`);
       assert.ok(CAMPUS_ROLES[entry.role], `${entry.id}: unknown role "${entry.role}"`);
-      assert.ok(campusFactsFor(entry.role).length >= 2, `${entry.id}: role "${entry.role}" has no fact pool`);
+      // A role with no sourced facts yet (FB-0057 'mtc-member') talks from its placeholder `smallTalk` pool instead.
+      const pool = campusFactsFor(entry.role).length || (CAMPUS_ROLES[entry.role].smallTalk || []).length;
+      assert.ok(pool >= 2, `${entry.id}: role "${entry.role}" has no fact pool`);
       assert.equal(entry.dialog, undefined, `${entry.id}: the old per-entry "dialog" is gone, talk comes from the role (ADR 0018)`);
     }
   }
@@ -285,4 +287,25 @@ test('AMBIENT performance: no camera-sized window on any map holds more than 14 
       }
     }
   }
+});
+
+// FB-0050: `name` / `lines` are optional on an entry (the named-character mechanism, documented in the src/ambient.js header).
+test('FB-0050: an ambient entry\'s optional name / lines are well-formed', () => {
+  for (const key of MAP_KEYS) {
+    for (const entry of AMBIENT[key]) {
+      if (entry.name !== undefined) assert.ok(typeof entry.name === 'string' && entry.name.length > 0 && entry.name.length <= 24, `${entry.id}: name is a short string`);
+      if (entry.lines !== undefined) {
+        assert.ok(Array.isArray(entry.lines) && entry.lines.length >= 1 && entry.lines.length <= 4, `${entry.id}: lines is a short array`);
+        for (const line of entry.lines) assert.ok(typeof line === 'string' && line.length > 0 && line.length <= 160, `${entry.id}: a line is 1-160 chars`);
+        assert.ok(entry.name, `${entry.id}: fixed lines belong to a named character`);
+      }
+    }
+  }
+});
+
+// FB-0057: the new MTC members are ordinary entries, so the clearance / walkability / reachability tests above and
+// below already cover where they stand (re-roled from tech-club-member entries, same tiles).
+test('FB-0057: the three MTC members are the former tech-club entries at the Mechanical front, the Main Block hall and the 1st-floor classroom row', () => {
+  const ids = Object.values(AMBIENT).flat().filter((e) => e.role === 'mtc-member').map((e) => e.id).sort();
+  assert.deepEqual(ids, ['campus-amb-mech-1', 'mb1-amb-icl-1', 'mbg-amb-wing-3']);
 });

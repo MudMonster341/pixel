@@ -1,5 +1,5 @@
-// The ICVL key's mini-game (docs/STORY.md): a flappy-bird-style flyer through gaps in a row of
-// "server racks" (the ICVL's own computing-lab flavor). Physics/collision are the pure functions in
+// The ICL key's mini-game (docs/STORY.md): a flappy-bird-style flyer through gaps in a row of
+// "server racks" (the ICL's own computing-lab flavor). Physics/collision are the pure functions in
 // src/minigames/flappy-logic.js; this file only draws the room and forwards the flap key.
 //
 // Quality loop pass (Mini-games category, rated 4/10 -- "the hero is a speck"): she now draws at

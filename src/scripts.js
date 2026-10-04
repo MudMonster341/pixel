@@ -175,6 +175,6 @@ const SCRIPTS = {
   ],
   entrance: ENTRANCE_STEPS,
   keyRoomPhysicsLab: keyRoomSteps('physicsLab', 'The Physics Lab.'),
-  keyRoomIcvl: keyRoomSteps('icvl', 'The ICVL — the computing lab.'),
+  keyRoomIcl: keyRoomSteps('icl', 'The ICL — the computing lab.'),
   keyRoomRoom195: keyRoomSteps('room195', 'Room 195.'),
 };

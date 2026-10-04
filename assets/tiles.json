@@ -1425,7 +1425,7 @@
       "color": "#856244"
     },
     {
-      "name": "intIcvlBench",
+      "name": "intIclBench",
       "solid": true,
       "overhead": false,
       "color": "#566481"
@@ -1587,7 +1587,7 @@
       "color": "#666669"
     },
     {
-      "name": "intIcvlCabinet",
+      "name": "intIclCabinet",
       "solid": true,
       "overhead": false,
       "color": "#304976"

@@ -1,5 +1,5 @@
 // ADR 0016 (in-world cutscene scripts) + FB-0033 (onboarding): the 3 key-room beats
-// (src/scripts.js SCRIPTS.keyRoomPhysicsLab/Icvl/Room195, triggered by src/scenes/world.js
+// (src/scripts.js SCRIPTS.keyRoomPhysicsLab/Icl/Room195, triggered by src/scenes/world.js
 // checkKeyRoomBeats()) and the always-on destination arrow / minimap-full-map marker
 // (src/scenes/ui.js Onboarding, world.js currentObjectiveAnchor()). The opening itself and the Gate 2/
 // Main Block entrance beats are covered in tests/e2e/intro.spec.js and tests/e2e/cutscene.spec.js.
@@ -27,7 +27,7 @@ async function keyStationTile(page, id) {
 
 for (const [scriptKey, mapKey, keyStationId, roomLine] of [
   ['keyRoomPhysicsLab', 'main-block-3', 'physicsLab', 'Physics Lab'],
-  ['keyRoomIcvl', 'main-block-1', 'icvl', 'ICVL'],
+  ['keyRoomIcl', 'main-block-1', 'icl', 'ICL'],
   ['keyRoomRoom195', 'main-block-1', 'room195', 'Room 195'],
 ]) {
   test(`ADR 0016: the ${keyStationId} key-room beat plays once, the first time she comes near the desk`, async ({ page }) => {
@@ -103,12 +103,12 @@ test('FB-0033: once hunting, the destination follows the first missing key acros
   expect(target.x).toBeCloseTo(stairsUp.x + stairsUp.width / 2, 1);
 
   // Once physicsLab is the only one she's missing... no wait, still missing physicsLab here, so
-  // instead confirm the icvl-specific route once physicsLab is already held.
+  // instead confirm the icl-specific route once physicsLab is already held.
   await page.evaluate(() => { GameState.quest.keys.physicsLab = true; });
   target = await page.evaluate(() => game.scene.getScene('world').currentObjectiveAnchor());
-  const icvl = await page.evaluate(() => game.scene.getScene('world').keyStations.find((k) => k.def.id === 'icvl'));
-  expect(target.x).toBeCloseTo(icvl.x / 16, 1);
-  expect(target.y).toBeCloseTo(icvl.y / 16, 1);
+  const icl = await page.evaluate(() => game.scene.getScene('world').keyStations.find((k) => k.def.id === 'icl'));
+  expect(target.x).toBeCloseTo(icl.x / 16, 1);
+  expect(target.y).toBeCloseTo(icl.y / 16, 1);
 });
 
 test('FB-0033: the destination arrow shows only while the target is actually on screen', async ({ page }) => {

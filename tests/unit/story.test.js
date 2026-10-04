@@ -10,7 +10,7 @@ const path = require('path');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
 const STAGES = ['arrival', 'hunting', 'rewarded'];
-const KEY_IDS = ['physicsLab', 'icvl', 'room195'];
+const KEY_IDS = ['physicsLab', 'icl', 'room195'];
 const countItem = (slots, item) => slots.filter((slot) => slot && slot.item === item).reduce((n, slot) => n + slot.count, 0);
 
 // A fresh, valid GameState-shaped quest for a given stage/key combination -- everything matchesWhen
@@ -20,7 +20,7 @@ function questFixture(stage, keysHeld = {}) {
   return {
     quest: {
       stage,
-      keys: { physicsLab: false, icvl: false, room195: false, ...keysHeld },
+      keys: { physicsLab: false, icl: false, room195: false, ...keysHeld },
     },
     flags: {},
     inventory: { slots: [] },
@@ -39,7 +39,7 @@ test('story: the volunteer has a matching dialog entry for every stage/keys-held
   for (const stage of STAGES) {
     if (stage === 'hunting') {
       for (let n = 0; n <= 3; n++) {
-        const keys = { physicsLab: n >= 1, icvl: n >= 2, room195: n >= 3 };
+        const keys = { physicsLab: n >= 1, icl: n >= 2, room195: n >= 3 };
         const state = questFixture(stage, keys);
         const picked = pickDialogEntry(npc, state);
         assert.ok(picked, `no dialog entry matches stage=hunting, ${n} keys held`);
@@ -59,7 +59,7 @@ test('story: the volunteer has a matching dialog entry for every stage/keys-held
   assert.deepEqual([...seenIds].sort(), [...allIds].sort());
 });
 
-test('story: the volunteer\'s hint matches the number of keys held (docs/STORY.md order: Physics Lab -> ICVL -> Room 195)', () => {
+test('story: the volunteer\'s hint matches the number of keys held (docs/STORY.md order: Physics Lab -> ICL -> Room 195)', () => {
   const { STORY, pickDialogEntry } = loadGameData();
   const npc = { id: 'lug-volunteer', dialog: STORY.volunteer };
 
@@ -68,18 +68,18 @@ test('story: the volunteer\'s hint matches the number of keys held (docs/STORY.m
   assert.match(hint0.lines.join(' '), /3rd floor/);
 
   const hint1 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true })).entry;
-  assert.match(hint1.lines.join(' '), /ICVL/);
+  assert.match(hint1.lines.join(' '), /ICL/);
   assert.match(hint1.lines.join(' '), /1st floor/);
 
-  const hint2 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icvl: true })).entry;
+  const hint2 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icl: true })).entry;
   assert.match(hint2.lines.join(' '), /Room 195/);
 
-  const reward = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icvl: true, room195: true })).entry;
+  const reward = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icl: true, room195: true })).entry;
   assert.equal(reward.id, 'reward');
 });
 
 // FB-0039: the fixtures right above happen to collect keys in docs/STORY.md's own canonical order
-// (Physics Lab, then ICVL, then Room 195), which can't tell a count-based rule apart from a
+// (Physics Lab, then ICL, then Room 195), which can't tell a count-based rule apart from a
 // missing-key-based one -- this test collects them out of order instead, the case that was actually
 // broken (a *count*-based hint pointed her back at a room she'd already emptied whenever she found
 // the keys in a different order than the one the volunteer's lines assume).
@@ -88,29 +88,29 @@ test('FB-0039: the volunteer names the first missing key in docs/STORY.md order,
   const npc = { id: 'lug-volunteer', dialog: STORY.volunteer };
 
   // Room 195 found first: the hint must still point at the Physics Lab (the first key actually still
-  // missing), not at whatever a *count* of 1 used to mean ("hint-1", the ICVL).
+  // missing), not at whatever a *count* of 1 used to mean ("hint-1", the ICL).
   const afterRoom195 = pickDialogEntry(npc, questFixture('hunting', { room195: true })).entry;
   assert.equal(afterRoom195.id, 'hint-0');
   assert.match(afterRoom195.lines.join(' '), /Physics Lab/);
 
-  // ICVL found first: still the Physics Lab.
-  const afterIcvl = pickDialogEntry(npc, questFixture('hunting', { icvl: true })).entry;
-  assert.equal(afterIcvl.id, 'hint-0');
-  assert.match(afterIcvl.lines.join(' '), /Physics Lab/);
+  // ICL found first: still the Physics Lab.
+  const afterIcl = pickDialogEntry(npc, questFixture('hunting', { icl: true })).entry;
+  assert.equal(afterIcl.id, 'hint-0');
+  assert.match(afterIcl.lines.join(' '), /Physics Lab/);
 
-  // Physics Lab + Room 195 held (only ICVL missing): points at the ICVL, not back at Room 195 (which
+  // Physics Lab + Room 195 held (only ICL missing): points at the ICL, not back at Room 195 (which
   // a count of 2 used to mean under the old "hint-2" rule).
-  const missingIcvl = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, room195: true })).entry;
-  assert.equal(missingIcvl.id, 'hint-1');
-  assert.match(missingIcvl.lines.join(' '), /ICVL/);
+  const missingIcl = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, room195: true })).entry;
+  assert.equal(missingIcl.id, 'hint-1');
+  assert.match(missingIcl.lines.join(' '), /ICL/);
 
-  // Physics Lab + ICVL held (only Room 195 missing): points at Room 195.
-  const missingRoom195 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icvl: true })).entry;
+  // Physics Lab + ICL held (only Room 195 missing): points at Room 195.
+  const missingRoom195 = pickDialogEntry(npc, questFixture('hunting', { physicsLab: true, icl: true })).entry;
   assert.equal(missingRoom195.id, 'hint-2');
   assert.match(missingRoom195.lines.join(' '), /Room 195/);
 
   // All 3, collected out of order: still reaches the reward.
-  const allThree = pickDialogEntry(npc, questFixture('hunting', { room195: true, physicsLab: true, icvl: true })).entry;
+  const allThree = pickDialogEntry(npc, questFixture('hunting', { room195: true, physicsLab: true, icl: true })).entry;
   assert.equal(allThree.id, 'reward');
 });
 
@@ -151,14 +151,14 @@ test('story: the reward entry takes all 3 key items back before giving the box',
   // separate vm realm), so .filter()/.map()/.sort() on it return sandboxed-realm arrays -- comparing
   // one of those directly against a literal array here (this file's own realm) fails deepStrictEqual
   // on cross-realm identity even when every element matches value-for-value.
-  assert.deepEqual([...reward.actions.filter((a) => 'take' in a).map((a) => a.take)].sort(), ['keyIcvl', 'keyPhysicsLab', 'keyRoom195']);
+  assert.deepEqual([...reward.actions.filter((a) => 'take' in a).map((a) => a.take)].sort(), ['keyIcl', 'keyPhysicsLab', 'keyRoom195']);
   for (const i of takeIndexes) assert.ok(i < giveIndex, 'every take must run before the give');
 });
 
 test('story: the volunteer awards the box and reaches "rewarded" only once all 3 keys are held', () => {
   const { STORY, applyDialogActions } = loadGameData();
   const reward = STORY.volunteer.find((entry) => entry.id === 'reward');
-  const state = questFixture('hunting', { physicsLab: true, icvl: true, room195: true });
+  const state = questFixture('hunting', { physicsLab: true, icl: true, room195: true });
   // A real GameState.inventory would be an Inventory instance (src/state.js) with real add()/remove().
   state.inventory.add = () => true;
   state.inventory.remove = () => 1;
@@ -245,7 +245,7 @@ test('story: a full playthrough (talk, find all 3 keys in any order, return) alw
   // Collect the 3 keys in a deliberately different order than the hint text lists them (FB-0039: the
   // volunteer's hint is keyed to the first key still *missing*, so this must never dead-end or point
   // her back at a room she's already done, regardless of collection order).
-  for (const keyId of ['room195', 'physicsLab', 'icvl']) {
+  for (const keyId of ['room195', 'physicsLab', 'icl']) {
     const stationDef = { id: keyId, dialog: keyStationDialog(keyId) };
     const stationPicked = pickDialogEntry(stationDef, state);
     assert.equal(stationPicked.entry.id, 'take', `${keyId} should still be offered before it's taken`);
@@ -279,7 +279,7 @@ test('FB-0041b: the reward\'s give never fails even when the bag is otherwise fu
   inventory.add('sword'); // maxStack 1: guaranteed its own slot
   inventory.add('keycard'); // maxStack 1: guaranteed its own slot -- 2 junk slots, 3 free
   const state = {
-    quest: { stage: 'arrival', keys: { physicsLab: false, icvl: false, room195: false } },
+    quest: { stage: 'arrival', keys: { physicsLab: false, icl: false, room195: false } },
     flags: {},
     inventory,
     seenDialog: new Set(),
@@ -291,7 +291,7 @@ test('FB-0041b: the reward\'s give never fails even when the bag is otherwise fu
   gameEvents.on('toast', (message) => { toast = message; });
 
   applyDialogActions(pickDialogEntry(volunteer, state).entry.actions, state); // welcome -> hunting
-  for (const keyId of ['physicsLab', 'icvl', 'room195']) {
+  for (const keyId of ['physicsLab', 'icl', 'room195']) {
     const stationDef = { id: keyId, dialog: keyStationDialog(keyId) };
     applyDialogActions(pickDialogEntry(stationDef, state).entry.actions, state);
   }
@@ -310,7 +310,7 @@ test('FB-0041b: the reward\'s give never fails even when the bag is otherwise fu
   assert.equal(countItem(inventory.slots, 'lugBox'), 1);
   // The 3 key items are gone -- taken back by the volunteer (docs/STORY.md), freeing their slots.
   assert.equal(countItem(inventory.slots, 'keyPhysicsLab'), 0);
-  assert.equal(countItem(inventory.slots, 'keyIcvl'), 0);
+  assert.equal(countItem(inventory.slots, 'keyIcl'), 0);
   assert.equal(countItem(inventory.slots, 'keyRoom195'), 0);
 });
 
@@ -339,7 +339,7 @@ function areaContaining(json, x, y) {
 }
 
 const KEY_STATION_ROOMS = {
-  'main-block-1': ['icvl', 'room195'],
+  'main-block-1': ['icl', 'room195'],
   'main-block-3': ['physicsLab'],
 };
 
@@ -403,21 +403,21 @@ test('story: isDoorLocked/doorLockRule (src/maplogic.js)', () => {
 
 test('story: questObjectiveText matches every stage/keys-held combination', () => {
   const { questObjectiveText } = loadGameData();
-  const at = (stage, keys) => questObjectiveText({ stage, keys: { physicsLab: false, icvl: false, room195: false, ...keys } });
+  const at = (stage, keys) => questObjectiveText({ stage, keys: { physicsLab: false, icl: false, room195: false, ...keys } });
   assert.match(at('arrival', {}), /LUG stall/);
   assert.match(at('hunting', {}), /Physics Lab/);
-  assert.match(at('hunting', { physicsLab: true }), /ICVL/);
-  assert.match(at('hunting', { physicsLab: true, icvl: true }), /Room 195/);
-  assert.match(at('hunting', { physicsLab: true, icvl: true, room195: true }), /Bring all 3 keys/);
-  assert.match(at('rewarded', { physicsLab: true, icvl: true, room195: true }), /complete/i);
+  assert.match(at('hunting', { physicsLab: true }), /ICL/);
+  assert.match(at('hunting', { physicsLab: true, icl: true }), /Room 195/);
+  assert.match(at('hunting', { physicsLab: true, icl: true, room195: true }), /Bring all 3 keys/);
+  assert.match(at('rewarded', { physicsLab: true, icl: true, room195: true }), /complete/i);
 });
 
 test('story: questObjectiveText points at whichever key is actually still missing, even collected out of order', () => {
   const { questObjectiveText } = loadGameData();
-  const at = (keys) => questObjectiveText({ stage: 'hunting', keys: { physicsLab: false, icvl: false, room195: false, ...keys } });
+  const at = (keys) => questObjectiveText({ stage: 'hunting', keys: { physicsLab: false, icl: false, room195: false, ...keys } });
   // Room 195 first: the objective still asks for the Physics Lab (docs/STORY.md's own order), not
   // "the next key" by count -- unlike the volunteer's own spoken hint, which *is* keyed to count.
   assert.match(at({ room195: true }), /Physics Lab/);
-  assert.match(at({ icvl: true }), /Physics Lab/);
-  assert.match(at({ physicsLab: true, room195: true }), /ICVL/);
+  assert.match(at({ icl: true }), /Physics Lab/);
+  assert.match(at({ physicsLab: true, room195: true }), /ICL/);
 });

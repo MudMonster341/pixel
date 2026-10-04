@@ -717,7 +717,7 @@ main.js`) rather than authored at full canvas resolution. `assets/minigames/plat
 0) and `platformer-bg-mid.png` (534x180, shelving units and a specimen tank spread across the whole
 level, scrollFactor ~0.4 for real parallax depth) replace the old single `platformer-bg.png`; the
 platformer's own floor is now code-drawn (tied 1:1 to real world position) rather than baked into the
-image. `flappy-bg.png` (320x180, the ICVL server room: two depth-graded rack rows, a cable tray, cold
+image. `flappy-bg.png` (320x180, the ICL server room: two depth-graded rack rows, a cable tray, cold
 blue light, a raised floor) stays one static image, stretched the same way (the flyer's own camera
 never scrolls, so a second parallax layer wouldn't read as motion there). `tetris-bg.png` (960x540,
 unchanged -- Room 195 at night: a whiteboard, desks, a window onto a lit skyline) was rated fine and

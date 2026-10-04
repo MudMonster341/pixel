@@ -112,6 +112,7 @@ function loadGameData() {
     campusFactsFor: get('campusFactsFor'),
     newCampusTalkState: get('newCampusTalkState'),
     campusTalkLines: get('campusTalkLines'),
+    ambientSheetKey: get('ambientSheetKey'),
     // ADR 0018 (animals): content, sheet layouts and the pure behaviour functions (src/animals.js)
     ANIMALS: get('ANIMALS'),
     ANIMAL_SPECIES: get('ANIMAL_SPECIES'),

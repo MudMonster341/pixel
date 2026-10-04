@@ -129,7 +129,7 @@ const PALETTE = {
   // Interiors rebuild (FB-0030/0031, premium pass stage 5, docs/research/campus-visual-reference.md
   // "2. Main reception foyer"): the owner's own foyer photo -- glossy cream marble (base/highlight/
   // shadow + a darker inlay "runner" band down the centre), black wrought-iron railing (not the
-  // fence's grey '<'), cool-white columns, warm chandelier brass/glow, and the ICVL's royal-blue
+  // fence's grey '<'), cool-white columns, warm chandelier brass/glow, and the ICL's royal-blue
   // cabinetry, all sampled from the reference photo/spec, not reused from an unrelated hue.
   // Quality loop (docs/quality/scorecard.md, Interior art run 1, 2026-09-28: "the marble reads as
   // sand") -- cooled and desaturated from the first pass's warmer, more golden tones, which read as
@@ -146,7 +146,7 @@ const PALETTE = {
   ironRail: '#2a2a32',
   columnBody: '#efe9da', columnShade: '#d8d0bd',
   chandelierGold: '#e8c46a', chandelierGlow: '#fff6df',
-  icvlBlue: '#2f4a7a', icvlBlueHi: '#3a5a8f',
+  iclBlue: '#2f4a7a', iclBlueHi: '#3a5a8f',
   // ADR 0020 (the ground floor follows the 3D tour): the shaded side strip of the peach lower wall.
   peachShadow: '#c98f74',
 };
@@ -712,7 +712,7 @@ const remapMarbleRunner = remapShaded(['marbleRunnerDark', 'marbleRunner', 'marb
 // RB.floorTiled's own range (182-235) is wider than the stone crop's, so a wider loLum/hiLum window,
 // still landing on only two close output tones.
 const remapCorridorTile = remapShaded(['floorGreyFleck', 'floorGreyLight'].map((k) => PALETTE[k]), { loLum: 182, hiLum: 235, outlineBelow: 0, lineAbove: 500 });
-// The ICVL/Physics Lab's own light floor -- same idea, kept close to its native pale grey (126-149)
+// The ICL/Physics Lab's own light floor -- same idea, kept close to its native pale grey (126-149)
 // rather than the noticeably bluer/darker stone/corridor tones, so the 3 room types still read as
 // distinct floor materials at a glance.
 const remapLabFloor = remapShaded(['#d7d9d3', '#e3e4de'], { loLum: 126, hiLum: 149, outlineBelow: 0, lineAbove: 500 });
@@ -1465,7 +1465,7 @@ const TILES = [
   { name: 'busStopSign', solid: true, draw: busStopSign },
 
   // Interiors rebuild (FB-0030/0031, premium pass stage 5, docs/INTERIORS_PLAN.md): the Main Block
-  // foyer per the owner's photo, plus the ICVL/Physics Lab/Room 195 key-room dressing. Appended at
+  // foyer per the owner's photo, plus the ICL/Physics Lab/Room 195 key-room dressing. Appended at
   // the very end so every existing tile's name/index stays stable.
   { name: 'intFloorMarble', draw: intFloorMarble },
   { name: 'intFloorMarbleRunner', draw: intFloorMarbleRunner },
@@ -1481,7 +1481,7 @@ const TILES = [
   { name: 'intChandelier', overhead: true, draw: intChandelierTL },
   { name: 'intGlassDoorOpen', draw: intGlassDoorOpen },
   { name: 'intDoorClosed', solid: true, draw: intDoorClosed },
-  { name: 'intIcvlBench', solid: true, draw: intIcvlBench },
+  { name: 'intIclBench', solid: true, draw: intIclBench },
   { name: 'intServerRack', solid: true, draw: intServerRack },
   { name: 'intLabBenchWood', solid: true, draw: intLabBenchWood },
   { name: 'intProjectorScreen', solid: true, draw: intProjectorScreen },
@@ -1512,14 +1512,14 @@ const TILES = [
   { name: 'intFloorLabLight', draw: intFloorLabLight },
 
   // Quality loop, Interior art run 2 (2026-09-28): the staircase's plain (no-rail) tread, the
-  // chandelier's other 3 quadrants, a chair/stool, a plain ICVL cabinet, and 3 varied-equipment lab
+  // chandelier's other 3 quadrants, a chair/stool, a plain ICL cabinet, and 3 varied-equipment lab
   // bench tops. Appended at the very end so every existing tile's name/index stays stable.
   { name: 'intFoyerTreadPlain', solid: true, draw: intFoyerTread },
   { name: 'intChandelierTR', overhead: true, draw: intChandelierTR },
   { name: 'intChandelierBL', overhead: true, draw: intChandelierBL },
   { name: 'intChandelierBR', overhead: true, draw: intChandelierBR },
   { name: 'intChair', solid: true, draw: intChair },
-  { name: 'intIcvlCabinet', solid: true, draw: intIcvlCabinet },
+  { name: 'intIclCabinet', solid: true, draw: intIclCabinet },
   { name: 'intFumeHood', solid: true, draw: intFumeHood },
   { name: 'intLabBenchScope', solid: true, draw: intLabBenchScope },
   { name: 'intLabBenchFlask', solid: true, draw: intLabBenchFlask },
@@ -2583,7 +2583,7 @@ function intFloorCourt(img, x, y) {
 function intFloorTiled(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(RB.floorTiled.atlas), RB.floorTiled.sx, RB.floorTiled.sy, 16, 16, { remap: remapCorridorTile });
 }
-// A light, low-noise lab floor for the ICVL/Physics Lab specifically (docs/research/campus-visual-
+// A light, low-noise lab floor for the ICL/Physics Lab specifically (docs/research/campus-visual-
 // reference.md: "floor is plain pale vinyl/terrazzo") -- a distinct tile name from the shared
 // `intFloorLabVinyl` Mechanical Block's own labs still use, so that art stays untouched.
 function intFloorLabLight(img, x, y) {
@@ -2947,19 +2947,19 @@ function intDoorClosed(img, x, y) {
   img.fill(x + 3, y + 2, TILE - 6, TILE - 4, 'N');
   img.set(x + TILE - 5, y + TILE / 2, 'Y');
 }
-// ICVL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
+// ICL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
 // cabinetry with a monitor sitting directly on the worktop, distinct from the generic grey
 // `intComputerBench` shared with Mechanical Block's own labs.
-function intIcvlBench(img, x, y) {
-  img.fill(x + 1, y + 5, TILE - 2, 10, 'icvlBlue');
-  img.fill(x + 1, y + 5, TILE - 2, 1, 'icvlBlueHi');
-  img.fill(x + 2, y + 9, 1, 5, 'icvlBlueHi');
-  img.fill(x + 12, y + 9, 1, 5, 'icvlBlueHi');
+function intIclBench(img, x, y) {
+  img.fill(x + 1, y + 5, TILE - 2, 10, 'iclBlue');
+  img.fill(x + 1, y + 5, TILE - 2, 1, 'iclBlueHi');
+  img.fill(x + 2, y + 9, 1, 5, 'iclBlueHi');
+  img.fill(x + 12, y + 9, 1, 5, 'iclBlueHi');
   blitRect(img, x, y, COOL_SCHOOL.computer, { maxW: 13, maxH: 11, bottomPad: 4, remap: remapSchoolScreen });
 }
-// A server rack -- the ICVL's own equipment, in the same blue cabinetry tone as its benches.
+// A server rack -- the ICL's own equipment, in the same blue cabinetry tone as its benches.
 function intServerRack(img, x, y) {
-  img.box(x + 2, y, TILE - 4, TILE - 1, 'icvlBlue');
+  img.box(x + 2, y, TILE - 4, TILE - 1, 'iclBlue');
   for (let ry = 2; ry < TILE - 2; ry += 3) img.fill(x + 3, y + ry, TILE - 6, 1, 'K');
   img.set(x + 4, y + 3, 'chandelierGlow'); // a small lit status LED
 }
@@ -2982,8 +2982,8 @@ function intProjectorScreen(img, x, y) {
 }
 
 // ---------- Quality loop, Interior art run 2 (docs/quality/scorecard.md, 2026-09-28) ----------
-// "Over-corrected [ICVL] into a solid wall-to-wall grid... no aisles"; "[Physics Lab] uniform rows
-// of identical benches, like a warehouse" -- both key rooms get real aisles now (FURNISHERS.labIcvl/
+// "Over-corrected [ICL] into a solid wall-to-wall grid... no aisles"; "[Physics Lab] uniform rows
+// of identical benches, like a warehouse" -- both key rooms get real aisles now (FURNISHERS.labIcl/
 // labPhysics, build-interiors.js) and enough distinct pieces (a chair, a plain cabinet, a fume hood,
 // 3 differently-topped lab benches) that the rooms don't read as one tile repeated.
 // A simple stool/chair -- "each desk row has monitors and chairs".
@@ -2993,11 +2993,11 @@ function intChair(img, x, y) {
   img.fill(x + 5, y + 11, 1, 3, 'K');
   img.fill(x + 10, y + 11, 1, 3, 'K');
 }
-// A plain blue cabinet (no monitor) -- "blue cabinets along a wall", distinct from `intIcvlBench`
+// A plain blue cabinet (no monitor) -- "blue cabinets along a wall", distinct from `intIclBench`
 // (a bench *with* a monitor on top).
-function intIcvlCabinet(img, x, y) {
-  img.fill(x + 1, y + 2, TILE - 2, 13, 'icvlBlue');
-  img.fill(x + 1, y + 2, TILE - 2, 1, 'icvlBlueHi');
+function intIclCabinet(img, x, y) {
+  img.fill(x + 1, y + 2, TILE - 2, 13, 'iclBlue');
+  img.fill(x + 1, y + 2, TILE - 2, 1, 'iclBlueHi');
   img.fill(x + 4, y + 6, 1, 8, 'K');
   img.fill(x + 11, y + 6, 1, 8, 'K');
   img.set(x + 5, y + 9, 'chandelierGlow');
@@ -3097,8 +3097,8 @@ function intReceptionDeskR(img, x, y) { intReceptionDeskEnd(img, x, y, 'R'); }
 function intWallPoster(img, x, y) {
   bitsWallPlain(img, x, y);
   img.fill(x + 2, y + 2, TILE - 4, 11, 'W');
-  for (let gx = 4; gx < TILE - 2; gx += 3) img.fill(x + gx, y + 3, 1, 9, 'icvlBlue');
-  for (let gy = 4; gy < 12; gy += 3) img.fill(x + 3, y + gy, TILE - 6, 1, 'icvlBlue');
+  for (let gx = 4; gx < TILE - 2; gx += 3) img.fill(x + gx, y + 3, 1, 9, 'iclBlue');
+  for (let gy = 4; gy < 12; gy += 3) img.fill(x + 3, y + gy, TILE - 6, 1, 'iclBlue');
 }
 // A small door nameplate (quality loop run 3: "doors with small name plates beside them") -- a tiny
 // plaque mounted on the wall next to a door, placed via Floor.placeStructure at a specific spot
@@ -3266,7 +3266,7 @@ function intTotem(img, x, y, band) {
   img.fill(x + 3, y, 10, TILE, 'columnBody');
   img.fill(x + 3, y, 3, TILE, 'wallHi');
   img.fill(x + 10, y, 3, TILE, 'columnShade');
-  img.fill(x + 7, y, 2, TILE, 'icvlBlue');
+  img.fill(x + 7, y, 2, TILE, 'iclBlue');
   img.fill(x + 2, y, 1, TILE, 'K');
   img.fill(x + 13, y, 1, TILE, 'K');
   if (band === 'top') {
@@ -3386,8 +3386,15 @@ function charSheet(name, suffix) {
 
 // Crops the bottom CHAR_H rows of a 16x32 source frame at (sx, 0) into `img` at (dx, dy), recoloring
 // as it's copied (see the *_RECOLOR tables below).
-function blitCharFrame(img, dx, dy, atlas, sx, remap) {
-  blitAtlas(img, dx, dy, atlas, sx, 32 - CHAR_H, CHAR_W, CHAR_H, { remap });
+// `legRemap` (club outfits, FB-0057): when given, the bottom CHAR_LEG_ROWS rows (trousers and shoes) are
+// recolored with it instead, because Adam's trousers share a colour with his hair and the shoes with the
+// shirt of two of the three bodies, so only a position-aware split can give a club its own trousers.
+const CHAR_LEG_ROWS = 4;
+function blitCharFrame(img, dx, dy, atlas, sx, remap, legRemap = null) {
+  if (!legRemap) { blitAtlas(img, dx, dy, atlas, sx, 32 - CHAR_H, CHAR_W, CHAR_H, { remap }); return; }
+  const top = CHAR_H - CHAR_LEG_ROWS;
+  blitAtlas(img, dx, dy, atlas, sx, 32 - CHAR_H, CHAR_W, top, { remap });
+  blitAtlas(img, dx, dy + top, atlas, sx, 32 - CHAR_H + top, CHAR_W, CHAR_LEG_ROWS, { remap: legRemap });
 }
 
 // One character's full sheet: 4 rows (down/up/left/right, FB-0043 -- no mirroring anywhere, every
@@ -3397,21 +3404,22 @@ function blitCharFrame(img, dx, dy, atlas, sx, remap) {
 // docs/research/asset-packs.md's character addendum already proved out. Anything not in the map
 // passes through unchanged, so a character can keep its own hair/skin and only have its clothes
 // recolored (see the NPCs below).
-function buildCharacter(name, recolorMap) {
+function buildCharacter(name, recolorMap, legMap = null) {
   const idle = charSheet(name, 'idle');
   const run = charSheet(name, 'run');
   const idleAnim = charSheet(name, 'idle_anim');
   const remap = remapExact(recolorMap);
+  const legRemap = legMap ? remapExact({ ...recolorMap, ...legMap }) : null;
   const img = new Img(CHAR_COLS * CHAR_W, CHAR_ROWS.length * CHAR_H);
   CHAR_ROWS.forEach((dir, row) => {
     const y = row * CHAR_H;
     const dirIndex = CHAR_DIR_INDEX[dir];
-    blitCharFrame(img, 0, y, idle, dirIndex * CHAR_W, remap);
+    blitCharFrame(img, 0, y, idle, dirIndex * CHAR_W, remap, legRemap);
     const block = dirIndex * CHAR_WALK_FRAMES;
     for (let f = 0; f < CHAR_WALK_FRAMES; f++) {
-      blitCharFrame(img, (1 + f) * CHAR_W, y, run, (block + f) * CHAR_W, remap);
+      blitCharFrame(img, (1 + f) * CHAR_W, y, run, (block + f) * CHAR_W, remap, legRemap);
     }
-    blitCharFrame(img, (1 + CHAR_WALK_FRAMES) * CHAR_W, y, idleAnim, (block + CHAR_IDLE_ANIM_FRAME) * CHAR_W, remap);
+    blitCharFrame(img, (1 + CHAR_WALK_FRAMES) * CHAR_W, y, idleAnim, (block + CHAR_IDLE_ANIM_FRAME) * CHAR_W, remap, legRemap);
   });
   return img;
 }
@@ -3463,9 +3471,9 @@ const AMELIA_RECOLOR = {
 
 // LUG volunteer (Adam, otherwise unrecolored -- his own olive hair and skin already look nothing
 // like the lead): a teal polo, a small nod to the club without inventing a mascot.
-const LUG_TEAL = '#2f9e8f';
-const LUG_TEAL_HI = '#4fc2ae';
-const ADAM_RECOLOR = { '#805e8e': LUG_TEAL, '#9f74a8': LUG_TEAL_HI };
+// FB-0057: the LUG's club colours are orange and black (the owner: "like the Linux logo"), so the volunteer
+// at the LUG stall wears the `lug` club outfit (CLUB_OUTFITS below) instead of the earlier teal polo.
+const ADAM_RECOLOR = {};
 
 // Background student A (Alex): the red plaid shirt becomes plain blue (reusing PALETTE.B, the
 // existing pants blue) so he doesn't read as a smaller copy of the volunteer or the lead. His own
@@ -3520,6 +3528,50 @@ const AMBIENT_E_RECOLOR = { // Bob body, forest-green blazer (Bob's own blazer k
 const AMBIENT_F_RECOLOR = { // Bob body, crimson blazer
   '#5d585f': '#6e1f24', '#555157': '#6e1f24', '#716b6e': '#a83b41', '#6c6e85': '#d96a6f',
 };
+
+// ---------- club outfits (FB-0057, decisions/0021) ----------
+// "People from clubs wear sky blue; MTC black and white; ACM dark pink; LUG orange and black like the Linux
+// logo." Every ambient body gets one extra sheet per club colour, `npc-<character>-<outfit>.png`
+// (src/campus-facts.js CAMPUS_ROLES[role].outfit picks which; ambientSheetKey() builds the name). The outfit
+// recolors the clothes only: each body keeps its own hair, skin and outline, so two students of one club still
+// look like two people. Exact source colors of the three bodies (decoded and mapped by row, see the
+// buildCharacter() notes): Adam's shirt is #805e8e/#9f74a8, Alex's shirt is #5a444a/#6f494d/#a2394b/#ae4a52
+// (the grey vest stays), Bob's jacket is #6c6e85 over a lilac #c2b8d5/#d8d0e0 shirt. Trousers and shoes are
+// recolored in the bottom rows only (CHAR_LEG_ROWS).
+//   shirt/hi/shade: the top (Adam, Alex); jacket + inner/innerHi: Bob's jacket and shirt; pants/shoes: legs.
+const CLUB_OUTFITS = {
+  sky: { shirt: '#3fa0e6', hi: '#9bd6ff', shade: '#2877b8', jacket: '#3fa0e6', inner: '#cfeaff', innerHi: '#ffffff', pants: '#2f4f7a', shoes: '#27324a' },
+  acm: { shirt: '#b0245f', hi: '#d9578f', shade: '#7e1a47', jacket: '#b0245f', inner: '#f2b6cf', innerHi: '#ffd9e8', pants: '#2e2433', shoes: '#1f1822' },
+  lug: { shirt: '#f28c1e', hi: '#ffbb55', shade: '#c26a0c', jacket: '#f28c1e', inner: '#26262e', innerHi: '#44444e', pants: '#1e1e24', shoes: '#121216' },
+  mtc: { shirt: '#f4f4f6', hi: '#ffffff', shade: '#c9c9d0', jacket: '#26262e', inner: '#f4f4f6', innerHi: '#ffffff', pants: '#1e1e24', shoes: '#121216' },
+};
+// Per body: the plain sheet's own recolor (hair etc. stays), the keys that make up the clothes, and the
+// trouser/shoe keys that only apply in the leg rows.
+function clubOutfitTables(body, plainRecolor, o) {
+  if (body === 'Adam') {
+    return { top: { ...plainRecolor, '#805e8e': o.shirt, '#9f74a8': o.hi }, legs: { '#687253': o.pants, '#805e8e': o.shoes, '#9f74a8': o.shoes } };
+  }
+  if (body === 'Alex') {
+    return {
+      top: { ...plainRecolor, '#5a444a': o.shade, '#6f494d': o.shade, '#a2394b': o.shirt, '#ae4a52': o.hi },
+      legs: { '#787d93': o.pants, '#8091a5': o.pants, '#5a444a': o.shoes, '#6f494d': o.shoes },
+    };
+  }
+  return { // Bob
+    top: { ...plainRecolor, '#6c6e85': o.jacket, '#c2b8d5': o.inner, '#d8d0e0': o.innerHi },
+    legs: { '#565972': o.pants, '#6c6e85': o.shoes },
+  };
+}
+// Which bodies/recolors the ambient characters use (the same tables the plain sheets are written from below).
+const AMBIENT_BODIES = {
+  'ambient-a': ['Adam', AMBIENT_A_RECOLOR], 'ambient-b': ['Adam', AMBIENT_B_RECOLOR],
+  'ambient-c': ['Alex', AMBIENT_C_RECOLOR], 'ambient-d': ['Alex', AMBIENT_D_RECOLOR], 'student-a': ['Alex', STUDENT_A_RECOLOR],
+  'ambient-e': ['Bob', AMBIENT_E_RECOLOR], 'ambient-f': ['Bob', AMBIENT_F_RECOLOR], 'student-b': ['Bob', STUDENT_B_RECOLOR],
+};
+function buildClubCharacter(body, plainRecolor, outfitId) {
+  const tables = clubOutfitTables(body, plainRecolor, CLUB_OUTFITS[outfitId]);
+  return buildCharacter(body, tables.top, tables.legs);
+}
 
 // ---------- character customisation (M3a, docs/STORY.md "Opening" step 3) ----------
 //
@@ -4131,7 +4183,7 @@ for (const [id, swatch] of Object.entries(CLOTHES_SWATCHES)) {
 // idle+walk+idle-anim layout as the player, so they're ready for the campus to be populated with
 // them later (docs/research/asset-packs.md). Placed today only as fixtures on the meadow test map
 // (src/maps.js) to prove the pipeline end to end; real campus placement is a follow-up task.
-write('npc-volunteer.png', buildCharacter('Adam', ADAM_RECOLOR)); // the LUG volunteer
+write('npc-volunteer.png', buildClubCharacter('Adam', ADAM_RECOLOR, 'lug')); // the LUG volunteer: orange and black (FB-0057)
 write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
 write('npc-mustafa.png', buildCharacter('Adam', MUSTAFA_RECOLOR)); // ADR 0016: the opening's own script actor
@@ -4143,6 +4195,10 @@ write('npc-ambient-c.png', buildCharacter('Alex', AMBIENT_C_RECOLOR));
 write('npc-ambient-d.png', buildCharacter('Alex', AMBIENT_D_RECOLOR));
 write('npc-ambient-e.png', buildCharacter('Bob', AMBIENT_E_RECOLOR));
 write('npc-ambient-f.png', buildCharacter('Bob', AMBIENT_F_RECOLOR));
+// FB-0057: one club-outfit variant of every ambient body (npc-<character>-<sky|acm|lug|mtc>.png).
+for (const [character, [body, recolor]] of Object.entries(AMBIENT_BODIES)) {
+  for (const outfitId of Object.keys(CLUB_OUTFITS)) write(`npc-${character}-${outfitId}.png`, buildClubCharacter(body, recolor, outfitId));
+}
 
 // Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
 // 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.
@@ -4159,7 +4215,7 @@ write('npc.png', npc);
 const KYRISE_ICON_DIR = "kyrise-16x16-rpg-icons/Kyrise's 16x16 RPG Icon Pack - V1.2/icons/16x16";
 const VENDOR_ITEM_ICONS = [
   { item: 'keyPhysicsLab', file: 'key_01a.png' },
-  { item: 'keyIcvl', file: 'key_02a.png' },
+  { item: 'keyIcl', file: 'key_02a.png' },
   { item: 'keyRoom195', file: 'key_01c.png' },
   { item: 'lugBox', file: 'gift_01a.png' },
 ];

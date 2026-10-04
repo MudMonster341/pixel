@@ -405,7 +405,7 @@ class MinigameCard {
       // leaves room for (added after show() below, once the panel's real box (x/y/w) is known): the icon's position
       // and the message row come from winCardLayout() (src/minigames/framework-data.js), whose test checks the icon
       // never overlaps the message line under it (defect D09).
-      // `def.name` already reads as a challenge ("Physics Lab Trial", "ICVL Server Dash", "Room 195
+      // `def.name` already reads as a challenge ("Physics Lab Trial", "ICL Server Dash", "Room 195
       // Stack-Off") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
       // ("You beat the Physics Lab Trial trial!").
       paragraphs: [...Array(MG_WIN_BLANK_LINES).fill(''), skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],

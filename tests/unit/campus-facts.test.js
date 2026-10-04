@@ -9,8 +9,13 @@ const path = require('path');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
 const {
-  AMBIENT, CAMPUS_ROLES, CAMPUS_FACTS, campusFactsFor, newCampusTalkState, campusTalkLines, pickInteractable, INTERACT_PRIORITY,
+  AMBIENT, CAMPUS_ROLES, CAMPUS_FACTS, campusFactsFor, newCampusTalkState, campusTalkLines, ambientSheetKey, pickInteractable, INTERACT_PRIORITY,
 } = loadGameData();
+
+// FB-0057: the one role with no sourced facts (the research has nothing on MTC). It talks from `smallTalk`, placeholder
+// lines the owner replaces (docs/research/campus-lines-review.md), so the fact-pool rules below skip it on purpose.
+const NO_FACTS_YET = ['mtc-member'];
+const talkPool = (role) => (NO_FACTS_YET.includes(role) ? CAMPUS_ROLES[role].smallTalk.map((_, i) => `${role}#${i}`) : campusFactsFor(role).map((f) => f.id));
 
 // ---------- the research file, parsed ----------
 const DOC = fs.readFileSync(path.join(ROOT, 'docs', 'research', 'campus-facts.md'), 'utf8');
@@ -60,6 +65,11 @@ test('roles: the name tag is a role label, never a person (no title, no first na
 
 test('roles: every role has at least 2 facts (a pool to rotate through), and every fact belongs to a known role', () => {
   for (const id of Object.keys(CAMPUS_ROLES)) {
+    if (NO_FACTS_YET.includes(id)) { // explicit exception (FB-0057): no facts, but 2-3 light placeholder lines
+      assert.equal(campusFactsFor(id).length, 0, `${id}: has sourced facts now, so remove it from NO_FACTS_YET`);
+      assert.ok(CAMPUS_ROLES[id].smallTalk.length >= 2 && CAMPUS_ROLES[id].smallTalk.length <= 3, `${id}: 2-3 smallTalk lines`);
+      continue;
+    }
     const pool = campusFactsFor(id);
     assert.ok(pool.length >= 2, `role "${id}" has only ${pool.length} fact(s)`);
     assert.ok(pool.length <= 4, `role "${id}" has ${pool.length} facts: keep pools small (2-4)`);
@@ -170,7 +180,7 @@ test('talk: the first visit is opener + fact, later visits are just the next fac
 
 test('talk: the rotation says every fact in the pool before any repeats (one student, and a whole role)', () => {
   for (const role of Object.keys(CAMPUS_ROLES)) {
-    const pool = campusFactsFor(role).map((f) => f.id);
+    const pool = talkPool(role);
     const one = newCampusTalkState();
     const heard = [];
     for (let i = 0; i < pool.length; i++) heard.push(campusTalkLines(role, 'student-1', one).factId);
@@ -214,9 +224,9 @@ test('coverage: every role is used by at least one ambient student', () => {
 });
 
 test('talk lines are campus atmosphere, never story information (no keys, volunteer, box, room names)', () => {
-  const lines = [...CAMPUS_FACTS.map((f) => f.text), ...Object.values(CAMPUS_ROLES).flatMap((r) => r.openers)];
+  const lines = [...CAMPUS_FACTS.map((f) => f.text), ...Object.values(CAMPUS_ROLES).flatMap((r) => [...r.openers, ...(r.smallTalk || [])])];
   for (const line of lines) {
-    assert.doesNotMatch(line.toLowerCase(), /\bkeys?\b|volunteer|treasure|physics lab|icvl|room 195|\bbox\b/, `story vocabulary in "${line}"`);
+    assert.doesNotMatch(line.toLowerCase(), /\bkeys?\b|volunteer|treasure|physics lab|\bicl\b|room 195|\bbox\b/, `story vocabulary in "${line}"`);
   }
 });
 
@@ -227,4 +237,117 @@ test('docs/research/campus-lines-review.md lists every fact and opener (the owne
     assert.ok(review.includes(fact.source), `the review doc is missing source ${fact.source}`);
   }
   for (const role of Object.values(CAMPUS_ROLES)) for (const opener of role.openers) assert.ok(review.includes(opener), `the review doc is missing the opener "${opener}"`);
+  // FB-0057 / FB-0050: placeholder small talk and named characters' lines are in the review doc too, marked as placeholders.
+  for (const role of Object.values(CAMPUS_ROLES)) for (const line of role.smallTalk || []) assert.ok(review.includes(line), `the review doc is missing the placeholder line "${line}"`);
+  for (const entry of Object.values(AMBIENT).flat().filter((e) => e.name)) {
+    assert.ok(review.includes(entry.name), `the review doc is missing the named character ${entry.name}`);
+    for (const line of entry.lines || []) assert.ok(review.includes(line), `the review doc is missing ${entry.name}'s line "${line}"`);
+  }
+});
+
+// ---------- FB-0050: a named ambient character (the mechanism P2b's friends and professors reuse) ----------
+
+test('FB-0050: a named entry shows its own name as the tag, not the role label', () => {
+  const talk = campusTalkLines('hostel-resident', 'named-1', newCampusTalkState(), { name: 'Deanne', lines: ['Hi!'] });
+  assert.equal(talk.name, 'Deanne');
+  // Unnamed students are unchanged: the role label ("Hostel mate" now), and `named` may be omitted or an entry with neither field.
+  assert.equal(campusTalkLines('hostel-resident', 'plain-1', newCampusTalkState()).name, 'Hostel mate');
+  assert.equal(campusTalkLines('hostel-resident', 'plain-1', newCampusTalkState(), { id: 'x', role: 'hostel-resident' }).name, 'Hostel mate');
+});
+
+test('FB-0050: a named entry says its fixed lines first, in full and in order, instead of the opener and a fact', () => {
+  const lines = ['Hi, I am Deanne.', 'Hostel dinner is the best.', 'Quiet corners are my thing.'];
+  const state = newCampusTalkState();
+  const first = campusTalkLines('hostel-resident', 'named-2', state, { name: 'Deanne', lines });
+  assert.deepEqual(JSON.parse(JSON.stringify(first.lines)), lines);
+  assert.equal(first.factId, null, 'the fixed lines use up no fact');
+  assert.equal(JSON.stringify(state.heard), '{}', 'a fixed-line talk leaves the role\'s fact rotation untouched');
+  // The caller's array is never handed out (a dialog box must not be able to change the content).
+  first.lines.push('mutated');
+  assert.equal(lines.length, 3);
+});
+
+test('FB-0050: after the fixed lines a named student carries on with the role\'s facts, never repeating the opener', () => {
+  const state = newCampusTalkState();
+  const named = { name: 'Deanne', lines: ['Hi, I am Deanne.'] };
+  campusTalkLines('hostel-resident', 'named-3', state, named);
+  const second = campusTalkLines('hostel-resident', 'named-3', state, named);
+  assert.equal(second.name, 'Deanne');
+  assert.equal(second.lines.length, 1);
+  assert.equal(second.lines[0], CAMPUS_FACTS.find((f) => f.id === second.factId).text);
+  assert.ok(!CAMPUS_ROLES['hostel-resident'].openers.includes(second.lines[0]));
+});
+
+test('FB-0050: a named entry whose role has no facts (or an unknown role) just says its fixed lines again', () => {
+  const state = newCampusTalkState();
+  const named = { name: 'Friend', lines: ['Hello!', 'Good to see you.'] };
+  for (let i = 0; i < 3; i++) assert.deepEqual(JSON.parse(JSON.stringify(campusTalkLines('no-such-role', 'named-4', state, named).lines)), named.lines);
+  assert.equal(campusTalkLines('no-such-role', 'named-4', newCampusTalkState(), { name: 'Friend' }).name, 'Friend');
+  assert.deepEqual(JSON.parse(JSON.stringify(campusTalkLines('no-such-role', 'x', newCampusTalkState(), { name: 'Friend' }).lines)), ['Hi there!']);
+});
+
+test('FB-0050: campus-amb-sit-2 (the avenue bench) is "Deanne", with a few light placeholder lines and no invented facts', () => {
+  const entry = AMBIENT.campus.find((e) => e.id === 'campus-amb-sit-2');
+  assert.equal(entry.name, 'Deanne');
+  assert.ok(entry.lines.length >= 2 && entry.lines.length <= 3);
+  for (const line of entry.lines) assert.ok(line.length > 0 && line.length <= 160, `Deanne's line is too long: "${line}"`);
+  assert.match(entry.lines.join(' '), /hostel/i);
+  assert.match(entry.lines.join(' '), /chai/i);
+  assert.equal(campusTalkLines(entry.role, entry.id, newCampusTalkState(), entry).name, 'Deanne');
+  // Every other hostel resident keeps the role label, which is "Hostel mate" now; "Hostel resident" is gone.
+  assert.equal(CAMPUS_ROLES['hostel-resident'].label, 'Hostel mate');
+  const named = Object.values(AMBIENT).flat().filter((e) => e.name);
+  assert.deepEqual(named.map((e) => e.id), ['campus-amb-sit-2'], 'only Deanne is a named ambient character so far');
+  assert.ok(!fs.readFileSync(path.join(ROOT, 'src', 'campus-facts.js'), 'utf8').includes('Hostel resident'));
+});
+
+test('FB-0050: world.js uses the entry\'s name for the tag and passes the entry to campusTalkLines', () => {
+  const world = fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'world.js'), 'utf8');
+  assert.match(world, /name: def\.name \|\| \(CAMPUS_ROLES\[def\.role\] \|\| \{\}\)\.label/);
+  assert.match(world, /campusTalkLines\(ambientTalker\.def\.role, ambientTalker\.def\.id, GameState\.campusTalk, ambientTalker\.def\)/);
+});
+
+test('FB-0050: the named-character fields are documented in the src/ambient.js header', () => {
+  const header = fs.readFileSync(path.join(ROOT, 'src', 'ambient.js'), 'utf8').split('const AMBIENT')[0];
+  assert.match(header, /name\?, lines\?/);
+  assert.match(header, /NAMED character/);
+});
+
+// ---------- FB-0057: club colours ----------
+
+test('FB-0057: club roles carry a club colour; everyone else keeps their own clothes', () => {
+  const outfits = Object.fromEntries(Object.entries(CAMPUS_ROLES).map(([id, r]) => [id, r.outfit || null]));
+  assert.equal(outfits['acm-member'], 'acm'); // dark pink
+  assert.equal(outfits['lug-member'], 'lug'); // orange and black
+  assert.equal(outfits['volunteer'], 'lug');
+  assert.equal(outfits['mtc-member'], 'mtc'); // black and white
+  for (const id of ['quiz-club-member', 'cultural-club-member', 'tech-club-member']) assert.equal(outfits[id], 'sky', id);
+  for (const id of ['first-year', 'library-regular', 'sports-player', 'hostel-resident', 'cs-student', 'ai-student', 'senior', 'campus-regular']) {
+    assert.equal(outfits[id], null, `${id} is not a club: it keeps its plain clothes`);
+  }
+  assert.equal(CAMPUS_ROLES['mtc-member'].label, 'MTC member');
+});
+
+test('FB-0057: ambientSheetKey() picks the club variant by role and falls back to the plain sheet', () => {
+  assert.equal(ambientSheetKey({ character: 'ambient-a', role: 'acm-member' }), 'npc-ambient-a-acm');
+  assert.equal(ambientSheetKey({ character: 'student-b', role: 'mtc-member' }), 'npc-student-b-mtc');
+  assert.equal(ambientSheetKey({ character: 'ambient-c', role: 'lug-member' }), 'npc-ambient-c-lug');
+  assert.equal(ambientSheetKey({ character: 'ambient-d', role: 'quiz-club-member' }), 'npc-ambient-d-sky');
+  assert.equal(ambientSheetKey({ character: 'ambient-e', role: 'senior' }), 'npc-ambient-e');
+  assert.equal(ambientSheetKey({ character: 'ambient-e', role: 'no-such-role' }), 'npc-ambient-e');
+});
+
+test('FB-0057: the MTC role has friendly openers and 2-3 placeholder lines, and 3 MTC students stand on the campus / Main Block', () => {
+  const role = CAMPUS_ROLES['mtc-member'];
+  assert.ok(role.openers.length >= 1 && role.openers.length <= 2);
+  assert.ok(role.smallTalk.length >= 2 && role.smallTalk.length <= 3);
+  for (const line of role.smallTalk) assert.doesNotMatch(line, /\d/, `MTC has no sourced facts, so a placeholder line states none: "${line}"`);
+  const talk = campusTalkLines('mtc-member', 'any-mtc', newCampusTalkState());
+  assert.equal(talk.name, 'MTC member');
+  assert.equal(talk.lines.length, 2);
+  assert.ok(role.smallTalk.includes(talk.lines[1]));
+  const mtc = Object.entries(AMBIENT).flatMap(([map, list]) => list.filter((e) => e.role === 'mtc-member').map((e) => map));
+  assert.equal(mtc.length, 3);
+  assert.ok(mtc.every((map) => map === 'campus' || map.startsWith('main-block')));
+  assert.ok(mtc.some((map) => map.startsWith('main-block')), 'at least one MTC member is inside the Main Block');
 });

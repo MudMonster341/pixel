@@ -35,7 +35,7 @@ test('resetGameState() puts a played-in state back to fresh-boot defaults', () =
   GameState.flags.tomasGaveSword = true;
   GameState.flags.tomasChats = 2;
   GameState.quest.stage = 'hunting';
-  GameState.quest.keys.icvl = true;
+  GameState.quest.keys.icl = true;
   GameState.collected.add('meadow-apple-1');
   GameState.seenCutscenes.add('gate2');
   GameState.seenDialog.add('tomas:give-sword');
@@ -53,7 +53,7 @@ test('resetGameState() puts a played-in state back to fresh-boot defaults', () =
   assert.equal(GameState.flags.tomasGaveSword, false);
   assert.equal(GameState.flags.tomasChats, 0);
   assert.equal(GameState.quest.stage, 'arrival');
-  assert.equal(GameState.quest.keys.icvl, false);
+  assert.equal(GameState.quest.keys.icl, false);
   assert.equal(GameState.collected.size, 0);
   assert.equal(GameState.seenCutscenes.size, 0);
   assert.equal(GameState.seenDialog.size, 0);

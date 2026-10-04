@@ -22,7 +22,7 @@ const { decodePNG } = require('../../tools/lib/png-decode');
 
 const {
   MAPS, AMBIENT, ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS, SCRIPTS, STRUCTURES, START_MAP, tileInfo,
-  characterSheets, animalSheets, buildTileGrid, gridFromTiled, tiledObjects, isWalkableTile,
+  characterSheets, ambientSheetKey, animalSheets, buildTileGrid, gridFromTiled, tiledObjects, isWalkableTile,
   parseOpenTiles, DIRECTION_OFFSET,
 } = loadGameData();
 
@@ -95,7 +95,7 @@ for (const key of MAP_KEYS) {
 function referencedCharacterKeys() {
   const keys = new Map(); // key -> where it came from
   for (const [mapKey, def] of Object.entries(MAPS)) for (const npc of def.npcs || []) keys.set(npc.character ? `npc-${npc.character}` : 'npc', `${mapKey} npc "${npc.id}"`);
-  for (const [mapKey, list] of Object.entries(AMBIENT)) for (const e of list) keys.set(`npc-${e.character}`, `${mapKey} ambient "${e.id}"`);
+  for (const [mapKey, list] of Object.entries(AMBIENT)) for (const e of list) keys.set(ambientSheetKey(e), `${mapKey} ambient "${e.id}"`);
   const visit = (node, where) => {
     if (Array.isArray(node)) { node.forEach((n) => visit(n, where)); return; }
     if (!node || typeof node !== 'object') return;
@@ -338,7 +338,7 @@ test('UNREACHABLE_INTERIORS: each exempt map is an interior map with a reason, a
 const reachableInteriorMaps = interiorMaps.filter((m) => !UNREACHABLE_INTERIORS[m.key]);
 
 // (Rules below apply to REACHABLE interiors only; see UNREACHABLE_INTERIORS above.)
-// Calibrated on the rooms the owner has accepted so far (Main Block ground floor ADR 0020, ICVL, Room 195, Physics
+// Calibrated on the rooms the owner has accepted so far (Main Block ground floor ADR 0020, ICL, Room 195, Physics
 // Lab, the Library reading rooms and canteen), then set just under the weakest of them:
 //   density: weakest accepted = "Sports Complex Lobby" (4 props on 56 cells = 0.0714)  -> floor of 0.07
 //   bare-floor block: weakest accepted = "Library 1st Floor" (a 3 x 29 aisle = 87 tiles) -> ceiling of 90 tiles
@@ -388,4 +388,23 @@ test('every walkable interior map has at least one piece of life (NPC, key stati
   }
   const lonely = reachableInteriorMaps.filter((m) => !LIFE_ALLOWLIST[m.key] && lifeOn(m.key) === 0).map((m) => `${m.key} (${m.def.name})`);
   assert.deepEqual(lonely, [], `${lonely.length} interior map(s) have nobody and nothing to interact with:\n  ${lonely.join('\n  ')}`);
+});
+
+// FB-0057: an ambient student now draws with her role's club-outfit sheet. An earlier bug (FB-0044) drew ambient
+// students as Phaser's black-and-green missing-texture box because their sheets were not preloaded; the resolved key
+// of EVERY ambient student must be in the preload list and exist on disk (and so must the plain fallback world.js uses).
+test('FB-0057: every ambient student\'s resolved texture is in the preload list and on disk, and so is the plain fallback', () => {
+  const preload = new Map(characterSheets(MAPS, AMBIENT, SCRIPTS).map((s) => [s.key, s.file]));
+  for (const [mapKey, list] of Object.entries(AMBIENT)) {
+    for (const e of list) {
+      const key = ambientSheetKey(e);
+      assert.ok(preload.has(key), `${mapKey} ambient "${e.id}" draws "${key}", which is not in the preload list`);
+      assert.ok(fs.existsSync(path.join(ROOT, preload.get(key))), `${preload.get(key)} is missing on disk (run \`npm run assets\`)`);
+      assert.ok(fs.existsSync(path.join(ROOT, 'assets', `npc-${e.character}.png`)), `the plain fallback for "${e.id}" is missing on disk`);
+    }
+  }
+  // world.js asks ambientSheetKey() and falls back to the plain sheet only when a variant never loaded.
+  const world = fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'world.js'), 'utf8');
+  assert.match(world, /let textureKey = ambientSheetKey\(def\);/);
+  assert.match(world, /if \(!this\.textures\.exists\(textureKey\)\) textureKey = `npc-\$\{def\.character\}`;/);
 });

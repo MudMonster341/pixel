@@ -369,7 +369,7 @@ icons. Directly relevant to `docs/STORY.md`'s "find 3 keys hidden around campus.
 box":
 
 - `key_01a-e` and `key_02a-e`: ten key designs in different metals/colours -- enough to give the
-  three story keys (Physics Lab, ICVL, Room 195) visually distinct icons instead of three identical
+  three story keys (Physics Lab, ICL, Room 195) visually distinct icons instead of three identical
   sprites.
 - `gift_01a-c`: closed, ribbon-wrapped present-style boxes (red/green/purple) -- candidates for the
   reward, though their candy-cane ribbon styling reads more "Christmas" than "birthday gift" and

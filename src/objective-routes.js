@@ -29,11 +29,11 @@ const OBJECTIVE_ROUTES = {
     { map: 'main-block-2', anchor: 'Main Block Stairs 2 (up)' },
     { map: 'main-block-3', keyStation: 'physicsLab' },
   ],
-  // docs/STORY.md beat 7: the ICVL, 1st floor -- one flight up from the foyer, then straight to it.
-  'key-icvl': [
+  // docs/STORY.md beat 7: the ICL, 1st floor -- one flight up from the foyer, then straight to it.
+  'key-icl': [
     { map: 'campus', anchor: 'Main Block entrance' },
     { map: 'main-block-g', anchor: 'Main Block Stairs G (up)' },
-    { map: 'main-block-1', keyStation: 'icvl' },
+    { map: 'main-block-1', keyStation: 'icl' },
   ],
   // docs/STORY.md beat 8: Room 195, also the 1st floor.
   'key-room195': [

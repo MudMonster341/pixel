@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Dialog & NPCs",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:15:04.561Z",
-  "updatedAt": "2026-10-04T17:15:04.561Z",
+  "updatedAt": "2026-10-04T18:40:03.797Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -49,13 +49,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0050.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The NPC on the avenue bench is now named Deanne (new named-NPC mechanism); other hostel residents are 'Hostel mate'.",
+      "at": "2026-10-04T18:40:03.797Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/campus-facts.test.js › FB-0050",
+    "commit": null,
+    "at": "2026-10-04T18:40:03.797Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:15:04.561Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:40:03.797Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

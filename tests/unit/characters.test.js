@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
-const { MAPS, AMBIENT, SCRIPTS, characterSheets } = loadGameData();
+const { MAPS, AMBIENT, SCRIPTS, characterSheets, ambientSheetKey } = loadGameData();
 const plainList = (list) => JSON.parse(JSON.stringify(list)); // sandbox arrays have another realm's prototype
 
 // Texture keys the content references, collected independently of characterSheets() (a plain walk of
@@ -19,7 +19,8 @@ function referencedKeys() {
   for (const def of Object.values(MAPS)) {
     for (const npc of def.npcs || []) keys.add(npc.character ? `npc-${npc.character}` : 'npc');
   }
-  for (const list of Object.values(AMBIENT)) for (const entry of list) keys.add(`npc-${entry.character}`);
+  // FB-0057: an ambient student draws with her club's outfit sheet (src/campus-facts.js ambientSheetKey()).
+  for (const list of Object.values(AMBIENT)) for (const entry of list) keys.add(ambientSheetKey(entry));
   const walk = (node) => {
     if (Array.isArray(node)) return node.forEach(walk);
     if (!node || typeof node !== 'object') return;
@@ -35,7 +36,12 @@ function referencedKeys() {
 // already exercised end to end by tests/unit/assets.test.js), so this holds in any checkout.
 function generatedAssetNames() {
   const source = fs.readFileSync(path.join(ROOT, 'tools', 'make-assets.js'), 'utf8');
-  return new Set([...source.matchAll(/write\('([^']+\.png)'/g)].map((m) => m[1]));
+  const names = new Set([...source.matchAll(/write\('([^']+\.png)'/g)].map((m) => m[1]));
+  // FB-0057: the club-outfit variants are written by one loop over AMBIENT_BODIES x CLUB_OUTFITS (npc-<character>-<outfit>.png).
+  const outfits = [...source.matchAll(/^  (sky|acm|lug|mtc): \{ shirt:/gm)].map((m) => m[1]);
+  const bodies = [...source.matchAll(/'((?:ambient|student)-[a-f])': \['(?:Adam|Alex|Bob)'/g)].map((m) => m[1]);
+  for (const body of bodies) for (const outfit of outfits) names.add(`npc-${body}-${outfit}.png`);
+  return names;
 }
 
 test('FB-0044: the sheet registry covers every NPC, ambient student and script actor, and nothing else', () => {

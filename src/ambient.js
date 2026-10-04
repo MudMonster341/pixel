@@ -16,6 +16,16 @@
 //   role: a key of CAMPUS_ROLES (src/campus-facts.js) -- every ambient student is talkable (ADR 0018):
 //         E makes the student stop and turn to her, and says an opener plus a real campus fact from the
 //         role's pool (campusTalkLines()), then the student walks on. Nothing story-related lives here.
+//   name?, lines?: OPTIONAL, make this ONE entry a NAMED character (FB-0050, ADR 0021: the owner's friends and
+//         professors; P2b adds more). `name` is the name tag shown instead of the role label ("Deanne", not
+//         "Hostel mate"); `lines` (an array of short strings, each <= 160 chars) is what she says the first time she
+//         talks to that student, instead of the role's opener and fact. Later talks carry on with the role's
+//         facts, so a named character still shares campus facts in her own voice (a role with no facts repeats
+//         her lines). Both are plain data read by campusTalkLines() (src/campus-facts.js) and world.js
+//         buildAmbientNpc(); an entry with neither behaves exactly as before. Lines are the owner's to approve
+//         (docs/research/campus-lines-review.md, "Named characters"); never invent personal facts about a real person.
+//   The student's clothes come from her ROLE, not from the entry: a club role (CAMPUS_ROLES[role].outfit) draws with
+//         the club's colours, `npc-<character>-<outfit>` (FB-0057, src/campus-facts.js ambientSheetKey()).
 //   kind: 'patrol'  -- { waypoints: [{x,y}, ...], loop?, speed, pauseMs, facing? }
 //                       `loop: true` cycles through the waypoints in order, wrapping to the first
 //                       (the jogger's own closed lap around the track); otherwise ping-pongs back and
@@ -56,7 +66,11 @@ const AMBIENT = {
     // the door at all (tests/e2e/campus.spec.js "walk from the Gate 2 spawn up to the Main Block
     // entrance"). Shifted clear of that column, still along the same forecourt.
     { id: 'campus-amb-sit-1', character: 'ambient-d', role: 'library-regular', kind: 'idle', x: 229, y: 135, facing: 'down' },
-    { id: 'campus-amb-sit-2', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 243, y: 162, facing: 'left' },
+    // FB-0050: the first NAMED ambient character (the owner asked for "Deanne" instead of "Hostel resident").
+    // Placeholder lines, light and friendly, no personal facts: the owner edits them (campus-lines-review.md).
+    { id: 'campus-amb-sit-2', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 243, y: 162, facing: 'left',
+      name: 'Deanne',
+      lines: ["Hi, I'm Deanne! I live in the hostel.", 'Hostel dinner is the best part of my day, honestly. That and my chai.', 'I know every quiet corner on this campus. Ask me anything.'] },
     { id: 'campus-amb-sit-3', character: 'student-b', role: 'ai-student', kind: 'idle', x: 221, y: 137, facing: 'right' },
     // A pair chatting, facing each other.
     { id: 'campus-amb-chat-1', character: 'ambient-f', role: 'quiz-club-member', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat' },
@@ -77,7 +91,7 @@ const AMBIENT = {
     { id: 'campus-amb-lib-chat-2', character: 'ambient-f', role: 'first-year', kind: 'chat', x: 228, y: 105, facing: 'left', pairId: 'campus-lib-chat' },
 
     // ---- Mechanical front: the lawn corridor below the Mechanical Block entrance ----
-    { id: 'campus-amb-mech-1', character: 'ambient-b', role: 'tech-club-member', kind: 'idle', x: 242, y: 78, facing: 'up' },
+    { id: 'campus-amb-mech-1', character: 'ambient-b', role: 'mtc-member', kind: 'idle', x: 242, y: 78, facing: 'up' },
     { id: 'campus-amb-mech-2', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 1000,
       waypoints: [{ x: 241, y: 80 }, { x: 246, y: 92 }] },
     { id: 'campus-amb-mech-3', character: 'ambient-c', role: 'lug-member', kind: 'idle', x: 246, y: 84, facing: 'left' },
@@ -143,19 +157,19 @@ const AMBIENT = {
       waypoints: [{ x: 6, y: 12 }, { x: 6, y: 9 }] },
     { id: 'mbg-amb-wing-2', character: 'ambient-f', role: 'senior', kind: 'patrol', speed: 45, pauseMs: 900,
       waypoints: [{ x: 33, y: 12 }, { x: 33, y: 9 }] },
-    { id: 'mbg-amb-wing-3', character: 'ambient-a', role: 'tech-club-member', kind: 'idle', x: 34, y: 27, facing: 'up' },
+    { id: 'mbg-amb-wing-3', character: 'ambient-a', role: 'mtc-member', kind: 'idle', x: 34, y: 27, facing: 'up' },
   ],
 
   'main-block-1': [
-    // Working at the ICVL's neighbouring classroom row (docs/STORY.md beat 7), NOT at the ICVL room's
-    // own door. First full browser run (2026-10-03, tests/unit/story-clearance.test.js): the ICVL is a
+    // Working at the ICL's neighbouring classroom row (docs/STORY.md beat 7), NOT at the ICL room's
+    // own door. First full browser run (2026-10-03, tests/unit/story-clearance.test.js): the ICL is a
     // closet reached only through the one-tile corridor tile (4,7), and a student standing there (an
     // immovable collider) sealed the key station off; earlier fixes had only nudged this student around
     // the station to settle an E-tie. The rule now is geometric: idle/chat students keep at least two
     // interact ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile
     // corridor or a room's only doorway.
-    { id: 'mb1-amb-icvl-1', character: 'ambient-d', role: 'tech-club-member', kind: 'idle', x: 6, y: 11, facing: 'left' },
-    { id: 'mb1-amb-icvl-2', character: 'ambient-e', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right' },
+    { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 6, y: 11, facing: 'left' },
+    { id: 'mb1-amb-icl-2', character: 'ambient-e', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right' },
     // 2 in the corridor.
     { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 13, y: 17 }, { x: 25, y: 17 }] },

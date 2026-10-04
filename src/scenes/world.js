@@ -23,7 +23,7 @@ const PICKUP_RANGE = 10;
 // bigger than INTERACT_RANGE, since the point is catching her entering the room, not standing on the
 // desk (docs/STORY.md beat 8). Maps each key station id to its own SCRIPTS key (src/scripts.js).
 const ROOM_BEAT_RANGE = 90;
-const KEY_ROOM_SCRIPT = { physicsLab: 'keyRoomPhysicsLab', icvl: 'keyRoomIcvl', room195: 'keyRoomRoom195' };
+const KEY_ROOM_SCRIPT = { physicsLab: 'keyRoomPhysicsLab', icl: 'keyRoomIcl', room195: 'keyRoomRoom195' };
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
 // Quality loop, Characters and depth run 1 (2026-09-29): ambient campus/Main Block life
 // (src/ambient.js, createAmbient()/updateAmbient() below). A patrol NPC pauses (holds still, doesn't
@@ -473,7 +473,10 @@ class WorldScene extends Phaser.Scene {
   }
 
   buildAmbientNpc(def, index) {
-    const textureKey = `npc-${def.character}`;
+    // FB-0057: a club member draws with her club's outfit sheet (ambientSheetKey(), src/campus-facts.js); the
+    // plain sheet is the fallback if a variant was never loaded, so a missing file can't draw as a black box.
+    let textureKey = ambientSheetKey(def);
+    if (!this.textures.exists(textureKey)) textureKey = `npc-${def.character}`;
     this.ensureAmbientAnims(textureKey);
     const start = def.kind === 'patrol' ? def.waypoints[0] : def;
     const facing = def.facing || 'down';
@@ -488,10 +491,11 @@ class WorldScene extends Phaser.Scene {
     // nearestInteractable()/the prompt bubble need no ambient-specific branch. ADR 0018: every ambient
     // student is talkable, but what it says is not dialog data on the sprite -- interact() asks
     // campusTalkLines() (src/campus-facts.js) for the student's role, so `dialog` stays empty (a plain
-    // "E" bubble, never "!"). The name tag is the role label ("LUG member"), never a person's name.
+    // "E" bubble, never "!"). The name tag is the role label ("LUG member") unless the entry is a named
+    // character (FB-0050: `def.name`, see the src/ambient.js header).
     sprite.def = {
       id: def.id,
-      name: (CAMPUS_ROLES[def.role] || {}).label || 'Student',
+      name: def.name || (CAMPUS_ROLES[def.role] || {}).label || 'Student',
       character: def.character,
       role: def.role,
       dialog: [],
@@ -1075,7 +1079,8 @@ class WorldScene extends Phaser.Scene {
     let talk = null; // { name, lines } for the two kinds above
     if (ambientTalker) {
       GameState.campusTalk = GameState.campusTalk || newCampusTalkState();
-      talk = campusTalkLines(ambientTalker.def.role, ambientTalker.def.id, GameState.campusTalk);
+      // The entry itself is passed as `named`: its optional `name`/`lines` make a named character (FB-0050).
+      talk = campusTalkLines(ambientTalker.def.role, ambientTalker.def.id, GameState.campusTalk, ambientTalker.def);
       this.beginAmbientTalk(ambientTalker);
     } else if (animalTalker) {
       talk = { name: 'Cat', lines: ANIMAL_TALK_LINES };

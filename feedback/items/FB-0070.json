@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:33:13.994Z",
-  "updatedAt": "2026-10-04T17:33:13.994Z",
+  "updatedAt": "2026-10-04T18:40:03.973Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -65,13 +65,28 @@
     }
   },
   "screenshot": "screenshots/FB-0070.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "ICVL is now ICL everywhere (old saves migrate).",
+      "at": "2026-10-04T18:40:03.973Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/save.test.js › FB-0070",
+    "commit": null,
+    "at": "2026-10-04T18:40:03.973Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:33:13.994Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:40:03.973Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

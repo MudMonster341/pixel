@@ -1657,7 +1657,7 @@ class Tutorial {
 // ---------- quest tracker (top-right): a compact pill, expanding briefly on change ----------
 // HUD declutter pass: used to always show as a multi-line panel ("LUG TREASURE HUNT" title + the full
 // objective sentence + "Keys: n / 3", one of the biggest boxes permanently on screen). Now a single-
-// line pill ("Keys 1/3 · Find the ICVL, 1st floor") the rest of the time, and only expands to the full
+// line pill ("Keys 1/3 · Find the ICL, 1st floor") the rest of the time, and only expands to the full
 // objective for TRACKER_EXPAND_MS whenever the objective text itself actually changes (a key found, a
 // stage advanced) -- still always on (never a modal, never blocks input), just quieter when nothing
 // changed since the last time she looked. Same top-right corner the tutorial checklist uses

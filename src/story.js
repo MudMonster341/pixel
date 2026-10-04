@@ -11,7 +11,7 @@
 const STORY = {
   // The LUG volunteer (docs/STORY.md beats 5-9): stands at the stall behind the Main Block foyer's
   // staircase (src/maps.js `main-block-g`). The first talk sets the hunt going; while hunting, he
-  // names the first key she's still missing, in docs/STORY.md's own room order (Physics Lab -> ICVL
+  // names the first key she's still missing, in docs/STORY.md's own room order (Physics Lab -> ICL
   // -> Room 195) -- the same rule src/maplogic.js questObjectiveText() already uses for the always-on
   // tracker panel (FB-0039: a *count*-based hint used to point her at a room she'd already done
   // whenever she found the keys out of order, e.g. physicsLab then room195 left her on "keysCount: 1"
@@ -48,7 +48,7 @@ const STORY = {
         // who hid them and hands out the reward) -- `take` before `give` also guarantees the reward
         // box is never even attempted while the 3 key items still occupy bag slots.
         { take: 'keyPhysicsLab' },
-        { take: 'keyIcvl' },
+        { take: 'keyIcl' },
         { take: 'keyRoom195' },
         { give: 'lugBox' },
         { stage: 'rewarded' },
@@ -69,8 +69,8 @@ const STORY = {
     },
     {
       id: 'hint-1',
-      when: { stage: 'hunting', notHasKey: 'icvl' },
-      lines: ['One down, two to go! Try the ICVL — the computing lab on the 1st floor.'],
+      when: { stage: 'hunting', notHasKey: 'icl' },
+      lines: ['One down, two to go! Try the ICL — the computing lab on the 1st floor.'],
     },
     {
       id: 'hint-2',
@@ -99,12 +99,12 @@ const STORY = {
       journal: 'Found a key on a bench in the Physics Lab.',
       doneLine: 'The bench is empty now — you already took this key.',
     },
-    icvl: {
-      name: 'ICVL',
+    icl: {
+      name: 'ICL',
       minigame: 'flappy',
-      item: 'keyIcvl',
+      item: 'keyIcl',
       takenLine: 'A key is taped under one of the computer benches, next to a sticky note: "LUG hunt".',
-      journal: 'Found a key taped under a bench in the ICVL.',
+      journal: 'Found a key taped under a bench in the ICL.',
       doneLine: 'Just the empty sticky note is left here now.',
     },
     room195: {
@@ -122,7 +122,7 @@ const STORY = {
 // shape src/dialog.js already knows how to run -- a key station is interacted with through the exact
 // same pickDialogEntry()/applyDialogActions() code path an NPC uses (docs/ARCHITECTURE.md "content
 // is data"), not a second, parallel mechanism. `keyId` is one of GameState.quest.keys' own property
-// names ('physicsLab'/'icvl'/'room195', src/state.js), reused directly as both the `hasKey`/
+// names ('physicsLab'/'icl'/'room195', src/state.js), reused directly as both the `hasKey`/
 // `notHasKey` condition and (in src/maps.js) the key station entity's own `id`.
 function keyStationDialog(keyId) {
   const def = STORY.keyStations[keyId];

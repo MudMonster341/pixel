@@ -113,7 +113,7 @@ test.describe('Talkable campus students (ADR 0018)', () => {
     await openGame(page, { map: 'main-block-1' });
     await waitForMap(page, 'main-block-1');
     await startGame(page);
-    // The ICVL desk is approached from (6,7); the student works at (4,7). E there is the desk's, not hers.
+    // The ICL desk is approached from (6,7); the student works at (4,7). E there is the desk's, not hers.
     await teleport(page, 6, 7);
     await page.keyboard.press('e');
     await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);

@@ -103,7 +103,7 @@ test('conditions: keys found', () => {
   const { GameState, matchesWhen } = loadGameData();
   GameState.quest.keys.physicsLab = true;
   assert.equal(matchesWhen({ hasKey: 'physicsLab' }, GameState, false), true);
-  assert.equal(matchesWhen({ hasKey: 'icvl' }, GameState, false), false);
+  assert.equal(matchesWhen({ hasKey: 'icl' }, GameState, false), false);
 });
 
 test('conditions: seen before', () => {
@@ -344,17 +344,17 @@ test('save/load round trip keeps flags, stage, keys and seenDialog set by dialog
   const picked = pickDialogEntry(npc, GameState);
   GameState.seenDialog.add(picked.key);
   applyDialogActions(picked.entry.actions, GameState);
-  applyDialogActions([{ stage: 'hunting' }, { key: 'icvl' }], GameState);
+  applyDialogActions([{ stage: 'hunting' }, { key: 'icl' }], GameState);
 
   assert.equal(saveGame('default', GameState), true);
   GameState.flags.tomasGaveSword = false;
   GameState.quest.stage = 'arrival';
-  GameState.quest.keys.icvl = false;
+  GameState.quest.keys.icl = false;
   GameState.seenDialog.clear();
 
   assert.equal(loadGame('default', GameState), true);
   assert.equal(GameState.flags.tomasGaveSword, true);
   assert.equal(GameState.quest.stage, 'hunting');
-  assert.equal(GameState.quest.keys.icvl, true);
+  assert.equal(GameState.quest.keys.icl, true);
   assert.ok(GameState.seenDialog.has(picked.key));
 });

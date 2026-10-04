@@ -49,7 +49,7 @@ Owner feedback (the in-game O overlay) always jumps the queue.
 | # | Category | Areas rated separately | What an 8 looks like |
 |---|---|---|---|
 | 1 | **Outdoor art** | Gate 2, avenue, Main Block front + forecourt, Library/Mechanical fronts, parking, sports fields, hostels, DIAC park, roads | Ground clearly reads as ground; one coherent palette; buildings have roofs, height and shadows; the entrance matches the owner's photo; palms, flags and props placed with intent |
-| 2 | **Interior art** | Foyer, stairs, each floor's corridor, Physics Lab, ICVL, Room 195, LUG stall | Rooms look like their photos; furnished, not empty; walls with 3/4 depth; the foyer matches the owner's photo |
+| 2 | **Interior art** | Foyer, stairs, each floor's corridor, Physics Lab, ICL, Room 195, LUG stall | Rooms look like their photos; furnished, not empty; walls with 3/4 depth; the foyer matches the owner's photo |
 | 3 | **Characters and depth** | Player walk/idle/turn, NPCs, sorting behind/in front, door entry/exit, running | Faces the way she moves; no mirroring; never draws over walls; doors open and she walks in |
 | 4 | **UI and menus** | Title, HUD (minimap, tracker, hotbar, banners), dialog box, pause, journal, full map, credits, confirm panels, at 960x540 and 2 other sizes | Consistent panel style, nothing overflows or overlaps, readable at a glance, HUD doesn't cover the play area |
 | 5 | **Story flow and clarity** | Opening, bus arrival, Mustafa, gate, entrance, finding the stall, each key room, returning, the reward | Always obvious what to do next; no dead time; follows STORY.md |

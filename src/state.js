@@ -73,7 +73,7 @@ const DEFAULT_FLAGS = { tomasGaveSword: false, tomasChats: 0 };
 // dialog actions (src/maps.js `main-block-g` npcs, `{ stage: ... }`, src/dialog.js).
 const defaultQuest = () => ({
   stage: 'arrival',
-  keys: { physicsLab: false, icvl: false, room195: false },
+  keys: { physicsLab: false, icl: false, room195: false },
 });
 
 // M3a opening (docs/STORY.md "Opening", src/scenes/intro-*.js): the lead's chosen name and look,

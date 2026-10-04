@@ -101,7 +101,7 @@ test.describe('Ambient campus/Main Block life', () => {
     await page.keyboard.press('e');
     await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);
     const line = await page.evaluate(() => game.scene.getScene('ui').dialog.body.text);
-    expect(line.toLowerCase()).not.toMatch(/key|volunteer|treasure|physics lab|icvl|room 195|\bbox\b/);
+    expect(line.toLowerCase()).not.toMatch(/key|volunteer|treasure|physics lab|\bicl\b|room 195|\bbox\b/);
   });
 
   test('ambient NPCs hide for the whole opening script and reappear once it ends', async ({ page }) => {

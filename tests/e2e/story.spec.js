@@ -99,7 +99,7 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   let s = await state(page);
   expect(s.map).toBe('campus');
   expect(await page.evaluate(() => GameState.playerName)).toBe('ZARA');
-  expect(s.quest).toEqual({ stage: 'arrival', keys: { physicsLab: false, icvl: false, room195: false } });
+  expect(s.quest).toEqual({ stage: 'arrival', keys: { physicsLab: false, icl: false, room195: false } });
 
   // ---------- walk in ----------
   const door = await findDoor(page, 'Main Block');
@@ -128,18 +128,18 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   expect(tracker.objective).toContain('Physics Lab');
   expect(tracker.keys).toBe('Keys: 0 / 3');
 
-  // ---------- up to the 1st floor (now unlocked) for the ICVL and Room 195 keys ----------
+  // ---------- up to the 1st floor (now unlocked) for the ICL and Room 195 keys ----------
   const upG = await findStairsNamed(page, 'Main Block Stairs G (up)');
   await stepOnto(page, upG);
   await waitForMap(page, 'main-block-1');
 
-  const icvlTile = await keyStationTile(page, 'icvl');
-  await teleport(page, icvlTile.x, icvlTile.y + 1);
+  const iclTile = await keyStationTile(page, 'icl');
+  await teleport(page, iclTile.x, iclTile.y + 1);
   await talk(page);
   s = await state(page);
-  expect(s.quest.keys).toEqual({ physicsLab: false, icvl: true, room195: false });
-  expect(countItem(s.slots, 'keyIcvl')).toBe(1);
-  expect(s.journal).toContain('Found a key taped under a bench in the ICVL.');
+  expect(s.quest.keys).toEqual({ physicsLab: false, icl: true, room195: false });
+  expect(countItem(s.slots, 'keyIcl')).toBe(1);
+  expect(s.journal).toContain('Found a key taped under a bench in the ICL.');
   tracker = await questTrackerText(page);
   expect(tracker.objective).toContain('Physics Lab'); // still the first missing key, not "next by count"
   expect(tracker.keys).toBe('Keys: 1 / 3');
@@ -148,7 +148,7 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   await teleport(page, room195Tile.x, room195Tile.y + 1);
   await talk(page);
   s = await state(page);
-  expect(s.quest.keys).toEqual({ physicsLab: false, icvl: true, room195: true });
+  expect(s.quest.keys).toEqual({ physicsLab: false, icl: true, room195: true });
   expect(countItem(s.slots, 'keyRoom195')).toBe(1);
   tracker = await questTrackerText(page);
   expect(tracker.objective).toContain('Physics Lab');
@@ -172,7 +172,7 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   await teleport(page, physicsLabTile.x, physicsLabTile.y + 1);
   await talk(page);
   s = await state(page);
-  expect(s.quest.keys).toEqual({ physicsLab: true, icvl: true, room195: true });
+  expect(s.quest.keys).toEqual({ physicsLab: true, icl: true, room195: true });
   expect(countItem(s.slots, 'keyPhysicsLab')).toBe(1);
   tracker = await questTrackerText(page);
   expect(tracker.objective).toContain('Bring all 3 keys');

@@ -403,3 +403,8 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Cause:** `DialogBox` only types text and bobs its arrow from `DialogBox.update(time, delta)`. `src/scenes/cutscene.js` calls it from its own `update()`; `src/scenes/card.js` built a DialogBox but had no `update()` at all, so the box stayed blank until a key forced the whole line (advance() skips typing). e2e only asserted `dialogOpen`, so nothing caught it.
 **Fix:** `card.js` gets `update(time, delta)` calling `this.dialog.update`; unit test in tests/unit/card.test.js: every scene that builds a DialogBox (except ui.js) must call `this.dialog.update(time, delta)` from `update()` (fails without the fix). Verified in the offline bundle: the body reads "Happy Birthday, Taru!".
 **Lesson:** a screenshot sweep finds "empty" states that the logic tests treat as healthy; look at the ones marked "unsure".
+
+## ERR-0015 — intro.spec.js:215 failed once in the pre-push full run (2026-10-04, not reproduced)
+**Symptom:** the second push of the day was rejected: 184/185 passed, `ADR 0016: the full opening (bus + Mustafa) blocks input, then Esc skips it cleanly` failed. The failure text was lost (the push output was piped through `tail`). It passed 3/3 alone, in the two earlier full runs and in the retried full run (185/185, then pushed).
+**Likely cause:** timing under load (the test reads the player's x/y right after the in-world opening script starts, and holds `d` for 250 ms). Not investigated further because it never reproduced.
+**If it comes back:** run pushes with the output saved to a file (`git push > log 2>&1`) so the Playwright error context survives, then fix the test's wait (poll for the player to be still) rather than retrying.

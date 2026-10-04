@@ -21,9 +21,10 @@ const PREVIEW_OUT = outDir ? outDir : path.join(ROOT, 'docs', 'research', 'inter
 
 const tileInfo = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.json'), 'utf8'));
 const TILE = Object.fromEntries(tileInfo.tiles.map((tile, i) => [tile.name, i]));
+const TILE_NAMES = tileInfo.tiles.map((tile) => tile.name);
 
 const REQUIRED_TILES = [
-  'edge', 'intDoorway', 'intStairsUp', 'intStairsDown', 'intLift', 'intAtriumVoid', 'intAtriumVoidEdge', 'intAtriumRailing',
+  'intDoorway', 'intStairsUp', 'intStairsDown', 'intLift', 'intAtriumVoid', 'intAtriumVoidEdge', 'intAtriumRailing',
   'intFloorFoyer', 'intFloorClassroom', 'intFloorCarpet', 'intFloorLabVinyl', 'intFloorLibrary',
   'intFloorStage', 'intFloorCourt', 'asphalt',
   'bitsWallPlain', 'bitsWall', 'bitsWallEndL', 'bitsWallEndR',
@@ -59,6 +60,10 @@ const REQUIRED_TILES = [
   'intTerrariumTL', 'intTerrariumTR', 'intTerrariumML', 'intTerrariumMR', 'intTerrariumBL', 'intTerrariumBR',
   'intTotemTop', 'intTotemBase', 'intBigPlantTop', 'intBigPlantBase', 'intGlassPanel', 'intGlassPanelB',
   'intGlassDoor', 'intDoorOffice', 'intDoorFlush', 'intDoorDarkL', 'intDoorDarkR', 'intStairsUp',
+  // P4a (FB-0058/0059/0060/0062/0065): the black void, and the side-on doorway/doors/window for vertical walls.
+  'intVoid', 'intDoorwaySide', 'intDoorClosedSideL', 'intDoorClosedSideR', 'intGlassDoorSideL', 'intGlassDoorSideR',
+  'intDoorOfficeSideL', 'intDoorOfficeSideR', 'intDoorFlushSideL', 'intDoorFlushSideR', 'intDoorDarkSideL', 'intDoorDarkSideR',
+  'intWallWindowSideL', 'intWallWindowSideR', 'libSignSeg0', 'libSignSeg1', 'libSignSeg2',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -73,6 +78,29 @@ const WALL_KITS = {
   skirt: { plain: 'intWallFaceSkirt', endL: 'intWallFaceSkirtEndL', endR: 'intWallFaceSkirtEndR' },
   peach: { plain: 'intWallPeach', endL: 'intWallPeachEndL', endR: 'intWallPeachEndR' },
 };
+
+// P4a (FB-0058/0060/0065): the front-on door/window tiles each have a side-on twin for a wall that runs up and down the
+// screen (tools/make-assets.js sideDoorTile). `L`: the wall is on the tile's left (the room is to its right), `R` the
+// mirror; `both` is symmetric (a doorway between two rooms). useSideVariants() applies the swap after a floor is built.
+const SIDE_VARIANTS = {
+  intDoorway: { both: 'intDoorwaySide' }, // the only one that lives on the ground layer
+  intDoorClosed: { L: 'intDoorClosedSideL', R: 'intDoorClosedSideR' },
+  intGlassDoor: { L: 'intGlassDoorSideL', R: 'intGlassDoorSideR' },
+  intDoorOffice: { L: 'intDoorOfficeSideL', R: 'intDoorOfficeSideR' },
+  intDoorFlush: { L: 'intDoorFlushSideL', R: 'intDoorFlushSideR' },
+  intDoorDarkL: { L: 'intDoorDarkSideL', R: 'intDoorDarkSideR' },
+  intDoorDarkR: { L: 'intDoorDarkSideL', R: 'intDoorDarkSideR' },
+  intWallWindow: { L: 'intWallWindowSideL', R: 'intWallWindowSideR' },
+};
+// Structures-layer tiles that are part of a wall's line (so a door's neighbours along the wall are one of these):
+// every wall kit, the wall dressing, and every door/window tile in either orientation.
+const WALL_LINE_TILES = new Set([
+  ...[WALL_DEFAULT, ...Object.values(WALL_KITS)].flatMap((k) => [k.plain, k.endL, k.endR]), 'bitsWall',
+  'intNameplate', 'intWallPoster', 'intWhiteboardWall', 'intProjectorScreen', 'intNoticeboard', 'intLift', 'intWallWindow',
+  'intWallFaceSkirt', 'intGlassPanel', 'intGlassPanelB',
+  ...Object.keys(SIDE_VARIANTS), ...Object.values(SIDE_VARIANTS).flatMap((v) => Object.values(v)),
+  ...Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`), 'libSignSeg0', 'libSignSeg1', 'libSignSeg2',
+]);
 
 // Ground floor tile per room type. Everything not listed gets 'intFloorCarpet'.
 const TYPE_FLOOR = {
@@ -103,7 +131,8 @@ class Floor {
     this.plan = plan;
     this.W = plan.width;
     this.H = plan.height;
-    this.ground = new Int32Array(this.W * this.H).fill(TILE.edge);
+    // P4a (FB-0059): every cell no room claims is the solid black `intVoid`, not the dirt-brown `edge` tile.
+    this.ground = new Int32Array(this.W * this.H).fill(TILE.intVoid);
     this.structures = new Int32Array(this.W * this.H).fill(-1);
     // Quality loop (Interior art run 1): a chandelier "(overhead layer) over the landing" -- the
     // exact same idea as the outdoor tree-canopy overhead layer (ADR 0008), a 3rd tile layer that
@@ -157,7 +186,7 @@ class Floor {
   }
 
   // Bleeds a wall-cap tile one row *above* a room's own top wall (quality loop: "a top edge... 2+
-  // rows tall") -- only where that row is still the untouched default void (`edge`, always solid),
+  // rows tall") -- only where that row is still the untouched default void (`intVoid`, always solid),
   // the same "art may extend above a building's own footprint" trick outdoor buildings already use
   // (ADR 0015) rather than reserving an extra row of canvas for every room. A room packed directly
   // against another room's own wall above it (no clearance) just doesn't get a cap there -- still a
@@ -166,7 +195,7 @@ class Floor {
     const y = rect.y0 - 1;
     if (y < 0) return;
     for (let x = rect.x0; x <= rect.x1; x++) {
-      if (this.ground[this.idx(x, y)] === TILE.edge && this.structures[this.idx(x, y)] === -1) {
+      if (this.ground[this.idx(x, y)] === TILE.intVoid && this.structures[this.idx(x, y)] === -1) {
         this.structures[this.idx(x, y)] = TILE.intWallCap;
       }
     }
@@ -388,6 +417,42 @@ class Floor {
     fn(put, ix0, iy0, ix1, iy1, { floor: this, id });
   }
 
+  // P4a (FB-0058/0060/0065): swaps every front-on door/window tile that stands in a VERTICAL wall (a wall running up
+  // and down the screen) for its side-on twin (SIDE_VARIANTS), choosing the left or right form by which side the room
+  // is on. Called once after a floor is fully built and furnished, so plans and furnishers just place `intDoorOffice`
+  // etc. and never think about orientation. Orientation comes from the neighbours: a door is in a vertical wall when
+  // the cells above and below it are wall line, and in a horizontal wall when the cells left and right of it are.
+  // A door it cannot place either way is a plan mistake and throws (docs/ARCHITECTURE.md rule 1).
+  useSideVariants() {
+    const nameOf = (layer, x, y) => {
+      if (!this.inBounds(x, y)) return null;
+      const t = layer[y * this.W + x];
+      return t < 0 ? null : TILE_NAMES[t];
+    };
+    const wallLine = (x, y) => WALL_LINE_TILES.has(nameOf(this.structures, x, y)) || WALL_LINE_TILES.has(nameOf(this.ground, x, y));
+    const isOpen = (x, y) => this.inBounds(x, y) && this.ground[y * this.W + x] !== TILE.intVoid && !wallLine(x, y) && this.structures[y * this.W + x] !== TILE.intWallCap;
+    for (let y = 0; y < this.H; y++) {
+      for (let x = 0; x < this.W; x++) {
+        for (const layerName of ['structures', 'ground']) {
+          const layer = this[layerName];
+          const name = nameOf(layer, x, y);
+          const variants = name && SIDE_VARIANTS[name];
+          if (!variants) continue;
+          if ((layerName === 'ground') !== Boolean(variants.both)) continue; // doorways live on the ground, the rest on structures
+          const horizontal = wallLine(x - 1, y) && wallLine(x + 1, y);
+          const vertical = wallLine(x, y - 1) && wallLine(x, y + 1);
+          if (!horizontal && !vertical) throw new Error(`${this.key}: "${name}" at (${x},${y}) is not in a wall line (cannot tell which way the wall runs)`);
+          if (horizontal && !vertical) continue; // a wall across the screen: the front-on tile is right
+          if (variants.both) { layer[y * this.W + x] = TILE[variants.both]; continue; }
+          const roomRight = isOpen(x + 1, y);
+          const roomLeft = isOpen(x - 1, y);
+          if (!roomRight && !roomLeft) throw new Error(`${this.key}: "${name}" at (${x},${y}) is in a vertical wall with no floor on either side`);
+          layer[y * this.W + x] = TILE[roomRight ? variants.L : variants.R];
+        }
+      }
+    }
+  }
+
   toTiledJSON() {
     const columns = tileInfo.columns;
     const tilesetRows = Math.ceil(tileInfo.tiles.length / columns);
@@ -531,7 +596,8 @@ const FURNISHERS = {
   //     foot. The LUG stall is the nook BEHIND the staircase.
   //   - A spiral chandelier on the overhead layer over the middle of the hall (not over the stairs).
   //   - Low red and blue sofas with small tables on the left and right back walls.
-  //   - Library and Career Services: closed doors in the left wall beside the staircase.
+  //   - Career Services: a closed door in the left wall beside the staircase. The Library is straight ahead: a double
+  //     door in the back wall (x 19..20) opens into a small bright lobby, and the Library door is on ITS back wall.
   // Approximations (nothing in the free packs matches): the spiral gold-ring chandelier is two tiers of the
   // existing chandelier; the terrarium is the pack's glass pane + ficus on a masked wood plinth; the totems
   // are plain rectangles; the "round" sofas are the pack's low pouf recoloured.
@@ -544,8 +610,11 @@ const FURNISHERS = {
     const wallTop = r.y0; // the back wall's row
 
     // ---- the back wall: the lit wordmark, and the mezzanine railing in front of the right-hand half ----
+    // FB-0062: the library lobby's double door now sits in the middle of this wall (x 19..20), so the wordmark is
+    // split round it: "BITS PILANI," (segments 0..3) left of the door, "DUBAI CAMPUS" (segments 4..8) right of it.
     const segs = Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`);
-    floor.placeStructureRow(15, wallTop, segs);
+    floor.placeStructureRow(15, wallTop, segs.slice(0, 4));
+    floor.placeStructureRow(21, wallTop, segs.slice(4));
     for (let x = 22; x <= 27; x++) S(x, wallTop + 1, 'intAtriumRailing');
     floor.depthGroupRect(22, wallTop + 1, 27, wallTop + 1);
     floor.bigPlant(21, wallTop + 1); // a plant at each end of the railing
@@ -634,9 +703,8 @@ const FURNISHERS = {
     floor.bigPlant(17, 35);
     floor.bigPlant(mirror(17), 35);
 
-    // ---- Library and Career Services: closed doors in the left wall, beside the staircase ----
-    floor.closedDoor(r.x0, 17, 'intDoorFlush', 'Library door');
-    S(r.x0, 18, 'intNameplate');
+    // ---- Career Services: a closed door in the left wall, beside the staircase. The Library is no longer here: its
+    // lobby is straight ahead through the double door in the back wall (FB-0062, plans.js mainBlockG 'libraryLobby').
     floor.closedDoor(r.x0, 25, 'intDoorFlush', 'Career Services door');
     S(r.x0, 26, 'intNameplate');
   },
@@ -914,6 +982,9 @@ for (const [key, plan] of Object.entries(PLANS)) {
 
   // Furnish every real room (corridors and stairwells excluded) per its type.
   for (const r of floor.areaRooms) floor.furnish(r.id);
+
+  // Doors/windows in a wall that runs up and down the screen get their side-on art (FB-0058/0060/0065).
+  floor.useSideVariants();
 
   // Named `area` objects (for the location banner) for every real room, corridors excluded.
   for (const r of floor.areaRooms) {

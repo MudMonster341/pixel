@@ -105,12 +105,21 @@ const mainBlockG = {
     floor.addRect('wingRH', { ...wing, name: 'Right wing', x0: 29, y0: 28, x1: 37, y1: 32 });
     floor.addRect('wingRV', { ...wing, name: 'Right wing', x0: 33, y0: 14, x1: 37, y1: 28 });
 
+    // FB-0062: the Library lobby, straight ahead of the entrance (tour-06: the Library is past the foyer, not off its
+    // left wall). 8 wide x 4 deep, same oak floor and wall kit as the foyer, centred on the hall's axis (x 19..20);
+    // it shares the foyer's back wall (y 14), where the open double door goes. Added before the foyer so the foyer's
+    // own wall ring wins along that shared wall.
+    floor.addRect('libraryLobby', { name: 'Library Lobby', type: 'wingLobby', wallKit: 'roomBuilder', floorTile: 'intFloorOak', x0: 15, y0: 9, x1: 24, y1: 14 });
+
     // The foyer last, so its own wall ring wins where it shares a wall with a wing.
     floor.addRect('foyer', { name: 'Foyer', type: 'foyer', wallKit: 'roomBuilder', x0: 10, y0: 14, x1: 29, y1: 37 });
     floor.exteriorDoor('foyer', 'bottom', {
       name: 'Main Block Ground Floor entrance', to: 'campus', toId: 'Main Block entrance', facing: 'up',
       openTiles: 'intGlassDoorOpen,intGlassDoorOpen', at: 19,
     });
+
+    // The open double door from the foyer's back wall into the Library lobby (a 2-wide doorway at x 19..20, y 14).
+    floor.connect('libraryLobby', 'foyer', { width: 2 });
 
     // Wide, door-less mouths: foyer <-> wings <-> lobbies.
     floor.connect('wingLH', 'foyer', { width: 3, openTile: 'intFloorOak' });
@@ -148,6 +157,17 @@ const mainBlockG = {
     closed(33, 5, 'intDoorDarkL', 'Auditorium door', [32, 5]);
     closed(34, 5, 'intDoorDarkR', 'Auditorium door', [35, 5]);
     closed(29, 9, 'intDoorDarkR', 'Parents-Visitor Lounge door', [29, 8]);
+
+    // ---- the Library lobby (FB-0062): a "LIBRARY" sign and the Library's own double door on its back wall (y 9, x 19..20,
+    // closed like every other destination, `Library door` in src/maps.js doorLocks), a nameplate, two big plants and a bench.
+    floor.placeStructureRow(16, 9, ['libSignSeg0', 'libSignSeg1', 'libSignSeg2']);
+    floor.closedDoor(19, 9, 'intDoorDarkL', 'Library door');
+    floor.closedDoor(20, 9, 'intDoorDarkR', 'Library door');
+    floor.placeStructure(21, 9, 'intNameplate');
+    floor.bigPlant(16, 10);
+    floor.bigPlant(23, 10);
+    floor.placeStructure(17, 10, 'bench');
+    floor.placeStructure(22, 10, 'bench');
 
     // ---- dressing: big black-pot plants at the corners, a water dispenser by the auditorium doors ----
     for (const [x, y] of [[3, 30], [36, 30], [3, 6], [9, 6], [30, 6], [36, 12]]) floor.bigPlant(x, y);

@@ -258,6 +258,10 @@ test('ADR 0020: the mezzanine railing and the lit "BITS Pilani, Dubai Campus" wo
   assert.equal(row.length, 1, 'the wordmark is split across rows');
   const sortedSegs = [...segs].sort((a, b) => a.x - b.x);
   sortedSegs.forEach((s, i) => assert.equal(s.name, `bitsSignSeg${i}`, 'wordmark segments are out of order'));
+  // FB-0062: the Library lobby's double door is in the middle of this wall, so the wordmark is split round it
+  const doorway = cells(ground, 'intDoorway', FOYER_WALLS).filter((c) => c.y === FOYER_WALLS.y0);
+  assert.equal(doorway.length, 2, 'expected the 2-wide Library lobby doorway in the back wall');
+  assert.ok(sortedSegs[3].x < doorway[0].x && sortedSegs[4].x > doorway[1].x, 'the wordmark is not split round the Library lobby door');
 });
 
 // ---------- the two long wings and every closed door ----------
@@ -386,10 +390,14 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 // 2026-10-04 (FB-0070): main-block-1 was re-pinned again, a deliberate one-word change: the room nameplate now reads "ICL" (Intelligent
 //   Computing Lab) instead of the earlier wrong name (tools/interiors/plans.js). Nothing else in the file moved (previous hash: 332bfaa6...).
 // Nothing else on the upper floors moved: the old hashes are in git history (16c79daa..., 9f2e13a8..., 5df58a8e...).
+// 2026-10-05 (P4a, FB-0058/0059/0060/0065), a deliberate tile-art change only: all three were re-pinned because (1) the void round every
+//   room is now the black `intVoid` tile instead of `edge` (FB-0059), and (2) the stairwell's doorway, in a vertical wall, is now the
+//   side-on `intDoorwaySide` (FB-0065, build-interiors.js useSideVariants()). Same rooms, objects, properties, ids and layout; only
+//   those tile ids moved (previous hashes: bbc171e5..., b5db0bf7..., 2a9cadb7...).
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': 'bbc171e5e227a48b9f4961d0cb4080c0a366cff3df3f57d368d8c5c9672d3571',
-  'main-block-2': 'b5db0bf7980438d0c8f5a01c1c454dc52c56adb0f4fa61bf61138d4a57be0b8c',
-  'main-block-3': '2a9cadb7b2fedffd72b62650cc03f70b3da129b80a60b8117e390096f842719d',
+  'main-block-1': '4d5aacd2791582bc5230dae0d5877b40b66be9d46b49d523fa740e3f70bf336e',
+  'main-block-2': 'd6ca049b71d404b534bbd4a40d0ffc9df96961c2bc059f932e12602cb485822b',
+  'main-block-3': 'c65216ddd66c5334b857ac789da4620a6cc6e3af439bac170907ba31100505c5',
 };
 for (const [key, hash] of Object.entries(UPPER_FLOOR_CONTENT_HASHES)) {
   test(`ADR 0020: ${key} has exactly its pre-rebuild layers, objects and properties (only the tileset size header may change)`, () => {

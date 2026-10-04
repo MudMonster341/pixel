@@ -171,7 +171,7 @@ for (const key of KEYS) {
     const offenders = [];
     for (let i = 0; i < ground.length; i++) {
       const groundGid = ground[i];
-      if (!groundGid || tileInfo.tiles[groundGid - 1].name !== 'intDoorway') continue;
+      if (!groundGid || !['intDoorway', 'intDoorwaySide'].includes(tileInfo.tiles[groundGid - 1].name)) continue;
       const structGid = struct[i];
       if (structGid) offenders.push(`(${i % json.width},${Math.floor(i / json.width)}): ${tileInfo.tiles[structGid - 1].name}`);
     }

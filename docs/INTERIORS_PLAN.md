@@ -215,7 +215,7 @@ correct"). A central **foyer** plus **two long wings**, all on the shared 40x40 
   keeps its name and links; it sits on a stair mat at the foot, between the columns (15,25). **Low red and blue
   sofas** (`intSofaRed`/`intSofaBlue`) with small tables on the right back wall and along the left wall, never by
   the entrance. A **spiral chandelier** (two tiers of `intChandelier*`) on the overhead layer over the middle of
-  the hall, not over the stairs. Library and Career Services are closed doors in the left wall beside the stair.
+  the hall, not over the stairs. Career Services is a closed door in the left wall beside the stair; the Library is straight ahead through a doorway in the back wall (P4a, below).
 - **LUG Stall** (docs/STORY.md: "an event stall behind the stairs"): the nook BEHIND the left staircase
   (x 11..19, y 15..17: a counter, the LUG banner), its own named `area` (`kind: "stall"`); the volunteer NPC
   (`src/maps.js`, `lug-volunteer`) stands at (14,16).
@@ -372,6 +372,20 @@ are pack crops recoloured onto the game's ramps or copies of existing tiles with
 Because every generated map restates the size of the shared tile list, the tileset header (`tilecount`,
 `imageheight`) changed in every map; the upper floors' layers and objects did not (pinned by
 `tests/unit/foyer-tour.test.js`).
+
+**P4a (2026-10-05, FB-0058/0059/0060/0062/0065): void, side-on doors, the Library straight ahead.** Appended tiles after
+`streetPlanter`: `intVoid` (solid pure black; the default fill of every interior map, replacing the dirt-brown `edge`, which the
+meadow/house test map still uses; indoors `WorldScene` also sets the camera background to `#000000`); `intDoorwaySide`; the side-on twins
+`intDoorClosed|GlassDoor|DoorOffice|DoorFlush|DoorDark|WallWindow` + `SideL`/`SideR` (art derived in `tools/make-assets.js`
+`sideDoorTile`/`sideWindowTile` from the same wood/glass tones, no new pack, so CREDITS.md is unchanged); `libSignSeg0..2` ("LIBRARY").
+`intDoorway` itself was redrawn (wood frame, lit threshold, an open leaf) because the old dark fill read as a black hole.
+`Floor.useSideVariants()` (build-interiors.js) runs once after a floor is built and swaps every front-on door/window that stands in a
+VERTICAL wall for its side twin (L when the room is to its right, R when to its left; `intDoorwaySide` is symmetric), so plans never name
+the side tiles; a door it cannot place throws. ADR 0020 follow-up: the Library is no longer a door in the foyer's left wall. A 2-wide open
+doorway at x 19..20 in the foyer's BACK wall leads into the **Library Lobby** (`libraryLobby` in plans.js, interior x 16..23, y 10..13: oak
+floor, two big plants, two benches, a "LIBRARY" sign, a nameplate) and the **Library door** (a closed double door, same `doorLocks` line,
+no `to`: library-block-g stays unreachable as before) is on the lobby's back wall. The BITS wordmark on the foyer's back wall is split
+round the doorway ("BITS PILANI," left, "DUBAI CAMPUS" right). Tests: `tests/unit/p4a-interior-walls.test.js`.
 
 ## Rough spots and simplifications (read before the owner asks "why...")
 

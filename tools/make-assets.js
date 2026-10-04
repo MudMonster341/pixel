@@ -154,6 +154,12 @@ const PALETTE = {
   // bus livery red and its shade, the same two hexes tools/make-cutscenes.js paints the bus with) for the shelter
   // fascia and the stop sign; the logo itself is never drawn.
   rtaRed: '#d3232a', rtaRedDark: '#8e2021',
+  // P4a (FB-0058/0059/0060/0062/0065): the solid black void round every interior (not the dirt-brown `edge`), the open
+  // doorway's lit threshold, the dark-wood leaf tones and the side-on glass (docs/INTERIORS_PLAN.md "P4a").
+  voidBlack: '#000000',
+  doorLight: '#dccaa4', doorLightDeep: '#b8a583',
+  darkWoodA: '#5a3a24', darkWoodB: '#6f4a2e', darkWoodHi: '#8a6038',
+  sideGlass: '#a9cfe3', sideGlassHi: '#e3f3fa', sideGlassDeep: '#6f9bb8',
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -1654,6 +1660,26 @@ const TILES = [
   { name: 'busStopPoleTop', overhead: true, draw: busStopPoleTop },
   { name: 'streetBin', solid: true, draw: streetBin },
   { name: 'streetPlanter', solid: true, draw: streetPlanter },
+
+  // ---- P4a (FB-0058/0059/0060/0062/0065), appended at the end so no earlier index moves ----
+  // The solid black void round and between every interior (replaces the dirt-brown `edge` there), and the side-on
+  // doorway / doors / window for walls that run up and down the screen (see sideDoorTile's comment).
+  { name: 'intVoid', solid: true, draw: (img, x, y) => img.fill(x, y, TILE, TILE, 'voidBlack') },
+  { name: 'intDoorwaySide', draw: intDoorwaySide },
+  { name: 'intDoorClosedSideL', solid: true, draw: (img, x, y) => sideDoorTile(img, x, y, 'L', 'sand') },
+  { name: 'intDoorClosedSideR', solid: true, draw: (img, x, y) => sideDoorTile(img, x, y, 'R', 'sand') },
+  { name: 'intGlassDoorSideL', draw: (img, x, y) => sideDoorTile(img, x, y, 'L', 'glass') },
+  { name: 'intGlassDoorSideR', draw: (img, x, y) => sideDoorTile(img, x, y, 'R', 'glass') },
+  { name: 'intDoorOfficeSideL', draw: (img, x, y) => sideDoorTile(img, x, y, 'L', 'office') },
+  { name: 'intDoorOfficeSideR', draw: (img, x, y) => sideDoorTile(img, x, y, 'R', 'office') },
+  { name: 'intDoorFlushSideL', draw: (img, x, y) => sideDoorTile(img, x, y, 'L', 'wood') },
+  { name: 'intDoorFlushSideR', draw: (img, x, y) => sideDoorTile(img, x, y, 'R', 'wood') },
+  { name: 'intDoorDarkSideL', draw: (img, x, y) => sideDoorTile(img, x, y, 'L', 'dark') },
+  { name: 'intDoorDarkSideR', draw: (img, x, y) => sideDoorTile(img, x, y, 'R', 'dark') },
+  { name: 'intWallWindowSideL', solid: true, draw: (img, x, y) => sideWindowTile(img, x, y, 'L') },
+  { name: 'intWallWindowSideR', solid: true, draw: (img, x, y) => sideWindowTile(img, x, y, 'R') },
+  // FB-0062: the "LIBRARY" sign over the library lobby's door (the same fascia strip as the BITS wordmark, 3 letters a tile).
+  ...['LIB', 'RAR', 'Y  '].map((text3, i) => ({ name: `libSignSeg${i}`, solid: true, draw: (img, x, y) => bitsSignSegment(img, x, y, text3) })),
 ];
 
 // ---------- campus tiles ----------
@@ -2385,6 +2411,9 @@ const SIGN_FONT_4X6 = {
   // that the fascia wordmark ("BITS PILANI, DUBAI CAMPUS") never did.
   O: ['.##.', '#..#', '#..#', '#..#', '#..#', '.##.'],
   W: ['#..#', '#..#', '#..#', '#.##', '##.#', '#..#'],
+  // P4a (FB-0062): the two letters the "LIBRARY" sign over the library lobby's door needs.
+  R: ['###.', '#..#', '###.', '#.#.', '#..#', '#..#'],
+  Y: ['#..#', '#..#', '.##.', '..#.', '..#.', '..#.'],
 };
 // A compact sign band: navy letters on a light fascia, three per tile -- replaces bitsSignGlyph's
 // one-letter-per-tile band above (kept, unused) for the Main Block's own cap row.
@@ -2653,12 +2682,46 @@ function intFloorLabLight(img, x, y) {
   blitAtlas(img, x, y, loadAtlas(RB.floorLight.atlas), RB.floorLight.sx, RB.floorLight.sy, 16, 16, { remap: remapLabFloor });
 }
 
-// A cleared wall opening: a dark threshold framed in the BITS trim colour, always walkable.
+// A cleared wall opening, always walkable. P4a (FB-0065: the old dark-brown fill read as a black hole): a wood door
+// frame (outline, wood, a shadow line under the lintel and beside each jamb) round a LIT threshold, with the door
+// leaf swung open against the right-hand jamb (its edge, a highlight and a brass handle). Two of these side by side
+// are a double door standing open. Doorways in a VERTICAL wall use `intDoorwaySide` instead (build-interiors.js
+// useSideVariants()).
 function intDoorway(img, x, y) {
-  img.fill(x, y, TILE, TILE, 'q');
-  img.fill(x, y, 2, TILE, '&');
-  img.fill(x + TILE - 2, y, 2, TILE, '&');
-  img.fill(x + 2, y, TILE - 4, 1, '&');
+  img.fill(x, y, TILE, TILE, 'doorLight');
+  img.fill(x, y, TILE, 1, 'K'); // lintel: outline, wood, a soft shadow under it
+  img.fill(x, y + 1, TILE, 2, 'N');
+  img.fill(x, y + 3, TILE, 2, 'doorLightDeep');
+  for (const jx of [0, TILE - 2]) { // jambs
+    img.fill(x + jx, y, 2, TILE, 'N');
+    img.fill(x + (jx === 0 ? 0 : TILE - 1), y, 1, TILE, 'K');
+  }
+  img.fill(x + 2, y + 5, 1, TILE - 5, 'doorLightDeep');
+  // the open leaf, seen edge-on against the right jamb
+  img.fill(x + 10, y + 5, 4, TILE - 5, 'N');
+  img.fill(x + 10, y + 5, 1, TILE - 5, 'i');
+  img.fill(x + 13, y + 5, 1, TILE - 5, 'n');
+  img.fill(x + 10, y + 5, 4, 1, 'K');
+  img.set(x + 11, y + 10, 'Y');
+  img.fill(x + 3, y + TILE - 1, 7, 1, 'doorLightDeep'); // the sill
+}
+// The same opening in a VERTICAL wall (a wall running up and down the screen, seen edge-on): no lintel face, the
+// two wall ends show their wood jambs, a worn threshold bar runs across the lit floor between them. Symmetric, so
+// it serves a door between two rooms from either side.
+function intDoorwaySide(img, x, y) {
+  img.fill(x, y, TILE, TILE, 'doorLight');
+  for (const jy of [0, TILE - 2]) {
+    img.fill(x, y + jy, TILE, 2, 'N');
+    img.fill(x, y + (jy === 0 ? 0 : TILE - 1), TILE, 1, 'K');
+  }
+  img.fill(x, y + 2, TILE, 1, 'doorLightDeep');
+  img.fill(x, y + TILE - 3, TILE, 1, 'doorLightDeep');
+  img.fill(x + 7, y + 2, 2, TILE - 4, 'doorLightDeep'); // the threshold bar, a worn line across the opening
+  // an open leaf edge-on at the top jamb: a slim wood slab with a brass handle, so it reads as a door, not a box
+  img.fill(x + 3, y + 2, 6, 3, 'N');
+  img.fill(x + 3, y + 2, 6, 1, 'i');
+  img.fill(x + 3, y + 4, 6, 1, 'n');
+  img.set(x + 8, y + 3, 'Y');
 }
 
 function intStairsFlight(img, x, y, up) {
@@ -3401,6 +3464,86 @@ const remapDarkWood = (r, g, b, a) => {
 };
 function intDoorDarkL(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 176, 387, 16, 28, { dw: 16, dh: 16, remap: remapDarkWood }); }
 function intDoorDarkR(img, x, y) { blitAtlas(img, x, y, loadAtlas(LIMEZU_FURNITURE), 192, 387, 16, 28, { dw: 16, dh: 16, remap: remapDarkWood }); }
+
+// ---------- P4a (FB-0058 / FB-0060 / FB-0065): doors and windows seen SIDE-ON, for VERTICAL walls ----------
+// Every door/window tile above is drawn front-on, which only reads in a wall that runs across the screen. In a wall
+// that runs up and down (the room's left or right wall) the same art looked like a door facing the player, a black
+// opening, or a window glued to the wall. These are the side-on versions: the wall's own end-face tile as the base
+// (so the wall keeps its shadowed outer edge), a darker gap along the wall plane (the opening), and the leaf (or
+// pane) drawn in perspective on the room side: a slim slab whose top and bottom edges slope in toward the room, so it
+// reads as a door facing INTO the room. `L` = the wall is on the tile's left (a room's left wall: the room is to
+// the right), `R` is its mirror image. The leaf art is derived from the front-on tiles (same wood and glass tones,
+// the pack's own door/glass colours); build-interiors.js useSideVariants() swaps them in wherever a front-on one
+// stands in a vertical wall, so plans never name the side variants.
+const SIDE_LEAF = { x0: 5, x1: 11 };
+const sideLeafTop = (lx) => 1 + Math.round((lx - SIDE_LEAF.x0) * 0.4);
+const sideLeafBottom = (lx) => 15 - Math.round((lx - SIDE_LEAF.x0) * 0.3);
+
+// `kind`: 'wood' (flush door), 'office' (wood + frosted glass), 'glass' (a glass door), 'dark' (dark double-door leaf),
+// 'sand' (the sand-wall closed door the upper floors use).
+function sideDoorTile(img, x, y, side, kind) {
+  const left = side === 'L';
+  const px = (lx, ly, key) => img.set(x + (left ? lx : TILE - 1 - lx), y + ly, key);
+  const fillCol = (lx, ly0, ly1, key) => { for (let ly = ly0; ly <= ly1; ly++) px(lx, ly, key); };
+  if (kind === 'sand') copyTile(img, x, y, left ? 'bitsWallEndL' : 'bitsWallEndR');
+  else copyTile(img, x, y, left ? 'intWallFaceEndL' : 'intWallFaceEndR');
+  const dark = kind === 'dark';
+  const body = dark ? 'darkWoodB' : 'N';
+  const panel = dark ? 'darkWoodA' : 'n';
+  const hi = dark ? 'darkWoodHi' : 'i';
+  // the opening: a dark gap along the wall plane, then the leaf
+  fillCol(3, 1, 15, 'q');
+  fillCol(4, 1, 15, 'q');
+  for (let lx = SIDE_LEAF.x0; lx <= SIDE_LEAF.x1; lx++) {
+    const top = sideLeafTop(lx);
+    const bottom = sideLeafBottom(lx);
+    for (let ly = top; ly <= bottom; ly++) {
+      let key = body;
+      if (ly === top || ly === bottom || lx === SIDE_LEAF.x1) key = 'K';
+      else if (lx === SIDE_LEAF.x0) key = hi; // the hinge edge catches the light
+      else if (lx >= 7 && lx <= 9 && ly >= top + 4 && ly <= bottom - 4) key = panel; // a recessed panel
+      px(lx, ly, key);
+    }
+    // glass: a frosted pane in the upper half of an office door, nearly the whole leaf of a glass door
+    const glassTop = top + 2;
+    if ((kind === 'office' || kind === 'glass' || dark) && lx >= 6 && lx <= 10) {
+      const glassBottom = kind === 'glass' ? bottom - 2 : dark ? top + 5 : top + 7;
+      for (let ly = glassTop; ly <= glassBottom; ly++) {
+        const streak = (lx + ly) % 4 === 0;
+        px(lx, ly, dark ? '*' : streak ? 'sideGlassHi' : lx === 6 || ly === glassTop ? 'sideGlassDeep' : 'sideGlass');
+      }
+    }
+  }
+  // handle: brass on a wood door, a silver bar on glass
+  if (kind === 'glass') { fillCol(10, 7, 10, 'Q'); } else px(10, 9, 'Y');
+  // the floor line: the gap's foot is lit, so the door does not float
+  px(3, 15, 'doorLightDeep');
+  px(4, 15, 'doorLightDeep');
+}
+
+// A window in a vertical wall, side-on: a white frame round a narrow glass pane in perspective, a lighter reflection
+// streak, a white sill under it, and a shadowed reveal (the depth of the wall) along the wall plane.
+function sideWindowTile(img, x, y, side) {
+  const left = side === 'L';
+  const px = (lx, ly, key) => img.set(x + (left ? lx : TILE - 1 - lx), y + ly, key);
+  copyTile(img, x, y, left ? 'intWallFaceEndL' : 'intWallFaceEndR');
+  for (let ly = 2; ly <= 13; ly++) px(3, ly, 'marbleShadow'); // the reveal
+  for (let lx = 4; lx <= 11; lx++) {
+    const t = lx - 4;
+    const top = 2 + Math.round(t * 0.4);
+    const bottom = 12 - Math.round(t * 0.3);
+    for (let ly = top; ly <= bottom; ly++) {
+      let key = 'sideGlass';
+      if (ly === top || ly === bottom || lx === 4 || lx === 11) key = 'W'; // the frame
+      else if ((lx * 2 + ly) % 5 === 0) key = 'sideGlassHi'; // a reflection streak
+      else if (lx === 5) key = 'sideGlassDeep';
+      px(lx, ly, key);
+    }
+    px(lx, top - 1, 'K');
+    px(lx, bottom + 1, 'K');
+    px(lx, bottom + 2, 'W'); // the sill
+  }
+}
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------
 // The player and the new campus NPCs are recolors of LimeZu's free "Characters_free" pack

@@ -1079,3 +1079,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** The agent was stopped once by the owner's usage limit (tree clean, nothing lost) and resumed. RTA bus stop in `gate2.busStop` (lay-by, code-composed shelter, sign pole, bin, planters, palms), bus script glides into/out of the bay (`BUS_STOP_Y`, `BUS_LANE_Y` in src/scripts.js), full-width lowered boom (non-solid, as before), new tree families in `tools/lib/tree-art.js` (2 date palms code-composed, 3 leafy trees from Sprout Lands crops recoloured) replacing every old tree. Crop looked at: good. Note an incident: the agent's bad edit script deleted most of tools/make-assets.js; rebuilt from HEAD plus its edits and the full diff checked.
 **Check in the game:** the bus glide in/out and landing beside the shelter, Mustafa's walk-up (5 tiles north, on the lane), depth sorting under the canopy, tree sizes. e2e not run (rta-bus, opening).
 **Next:** P4 (Main Block interiors).
+
+## 2026-10-05 (Day 3 cont.) — P4a done (black void, side-wall doors/windows, library lobby): 823 unit tests green
+
+**Did:** `intVoid` pure-black tile fills every unclaimed interior cell; indoor camera background #000; side-on L/R tiles for doors/windows (`Floor.useSideVariants()` swaps automatically in vertical walls, `plans.js` never names them); redrawn `intDoorway`; Library moved to a back-centre double doorway (foyer y 14, x 19..20) -> "Library Lobby" (x 16..23, y 10..13) with the closed Library door on its back wall (still closed, library-block-g stays unreachable by design: completeness guard); wordmark split around the doorway; 3 upper-floor hashes re-pinned. Crops looked at: good.
+**Check in game:** lobby bright/not cramped, split wordmark, side-door art at zoom 3 (the window frame is a little busy at 1x), pure black at map edges.
+**Next:** P4b stairs that look like stairs + a working lift; P4c door open/close animation everywhere.

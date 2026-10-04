@@ -714,7 +714,7 @@
       "name": "intDoorway",
       "solid": false,
       "overhead": false,
-      "color": "#5b3d2e"
+      "color": "#90765a"
     },
     {
       "name": "intStairsUp",
@@ -2125,6 +2125,108 @@
       "solid": true,
       "overhead": false,
       "color": "#a4785d"
+    },
+    {
+      "name": "intVoid",
+      "solid": true,
+      "overhead": false,
+      "color": "#000000"
+    },
+    {
+      "name": "intDoorwaySide",
+      "solid": false,
+      "overhead": false,
+      "color": "#ac9778"
+    },
+    {
+      "name": "intDoorClosedSideL",
+      "solid": true,
+      "overhead": false,
+      "color": "#92775d"
+    },
+    {
+      "name": "intDoorClosedSideR",
+      "solid": true,
+      "overhead": false,
+      "color": "#92775d"
+    },
+    {
+      "name": "intGlassDoorSideL",
+      "solid": false,
+      "overhead": false,
+      "color": "#a09b91"
+    },
+    {
+      "name": "intGlassDoorSideR",
+      "solid": false,
+      "overhead": false,
+      "color": "#949087"
+    },
+    {
+      "name": "intDoorOfficeSideL",
+      "solid": false,
+      "overhead": false,
+      "color": "#9e9586"
+    },
+    {
+      "name": "intDoorOfficeSideR",
+      "solid": false,
+      "overhead": false,
+      "color": "#92897d"
+    },
+    {
+      "name": "intDoorFlushSideL",
+      "solid": false,
+      "overhead": false,
+      "color": "#978571"
+    },
+    {
+      "name": "intDoorFlushSideR",
+      "solid": false,
+      "overhead": false,
+      "color": "#8b7967"
+    },
+    {
+      "name": "intDoorDarkSideL",
+      "solid": false,
+      "overhead": false,
+      "color": "#8d8273"
+    },
+    {
+      "name": "intDoorDarkSideR",
+      "solid": false,
+      "overhead": false,
+      "color": "#817669"
+    },
+    {
+      "name": "intWallWindowSideL",
+      "solid": true,
+      "overhead": false,
+      "color": "#bfbfb7"
+    },
+    {
+      "name": "intWallWindowSideR",
+      "solid": true,
+      "overhead": false,
+      "color": "#b3b4ad"
+    },
+    {
+      "name": "libSignSeg0",
+      "solid": true,
+      "overhead": false,
+      "color": "#c0ac97"
+    },
+    {
+      "name": "libSignSeg1",
+      "solid": true,
+      "overhead": false,
+      "color": "#baa895"
+    },
+    {
+      "name": "libSignSeg2",
+      "solid": true,
+      "overhead": false,
+      "color": "#d6bd9f"
     }
   ]
 }

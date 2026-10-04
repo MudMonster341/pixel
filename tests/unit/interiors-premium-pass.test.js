@@ -231,10 +231,17 @@ test('Quality loop (Interior art run 1): the Foyer\'s entire top wall has a full
   const foyer = objs.find((o) => o.type === 'area' && o.name === 'Foyer');
   const x0 = Math.round(foyer.x / 16), x1 = x0 + Math.round(foyer.width / 16) - 1;
   const capRow = Math.round(foyer.y / 16) - 2; // one row above the outer wall ring itself
+  // FB-0062 (P4a): the Library lobby stands against the middle of this wall with its own walls, so the cap row is
+  // full width everywhere EXCEPT the lobby's columns (its own wall ring is there instead).
+  const lobby = objs.find((o) => o.type === 'area' && o.name === 'Library Lobby');
+  const lobbyX0 = Math.round(lobby.x / 16) - 1, lobbyX1 = lobbyX0 + Math.round(lobby.width / 16) + 1;
   let capTiles = 0;
+  let expected = 0;
   for (let x = x0; x <= x1; x++) {
+    if (x >= lobbyX0 && x <= lobbyX1) continue;
+    expected++;
     const gid = struct[capRow * json.width + x];
     if (gid && tileNames[gid - 1] === 'intWallCap') capTiles++;
   }
-  assert.equal(capTiles, x1 - x0 + 1, `expected every one of the Foyer's ${x1 - x0 + 1} top-wall columns to have an intWallCap, found ${capTiles}`);
+  assert.equal(capTiles, expected, `expected every one of the Foyer's ${expected} open top-wall columns to have an intWallCap, found ${capTiles}`);
 });

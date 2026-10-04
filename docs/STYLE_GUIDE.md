@@ -686,8 +686,8 @@ overview of every generated floor is in `docs/research/interiors/*.png`.
   the real library's green-grey columns), `intFloorStage` (a wood-tone strip at the front of the
   auditorium), `intFloorCourt` (the **same teal court surface as the outdoor tennis/basketball
   courts**, not a lawn green, so an indoor court doesn't read as a patch of grass).
-- **Openings:** `intDoorway` (a dark threshold framed in the BITS trim colour, always walkable) for
-  every door; `intStairsUp` / `intStairsDown` (a short flight with a directional arrow, walkable --
+- **Openings:** `intDoorway` (a wood frame round a lit threshold with an open leaf, always walkable; `intDoorwaySide` in a wall that
+  runs up and down the screen) for every door; `intStairsUp` / `intStairsDown` (a short flight with a directional arrow, walkable --
   stepping onto one triggers the warp to the next floor); `intLift` (decorative only, no warp).
 - **The atrium void** (the 1st-floor mezzanine looking down into the ground-floor foyer):
   `intAtriumVoid` (solid, a flat cool grey so it reads as a drop, not just another floor texture) and

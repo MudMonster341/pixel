@@ -197,6 +197,8 @@ class WorldScene extends Phaser.Scene {
     // default scroll and would visibly glide/pan onto the player over the first several frames of
     // the fade-in, reading as its own little cut; centering once, immediately, means the lerp only
     // ever has to catch up to *real* movement from here on, never a warp's own teleport.
+    // FB-0059: indoors, everything off the map (and the void inside it) is black, never the page's dark blue-grey.
+    if (this.def.indoors) this.cameras.main.setBackgroundColor('#000000');
     this.cameras.main.setZoom(ZOOM).setBounds(0, 0, width, height)
       .startFollow(this.player, true, 0.18, 0.18)
       .centerOn(this.player.x, this.player.y)

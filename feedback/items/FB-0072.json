@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:39:14.933Z",
-  "updatedAt": "2026-10-04T17:39:14.933Z",
+  "updatedAt": "2026-10-04T18:29:15.238Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -68,13 +68,28 @@
     }
   },
   "screenshot": "screenshots/FB-0072.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The player now stops dead (idle frame, no run animation) whenever a script, door walk, mini-game or overlay takes over.",
+      "at": "2026-10-04T18:29:15.238Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/player-halt.test.js › FB-0072",
+    "commit": null,
+    "at": "2026-10-04T18:29:15.238Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:39:14.933Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:29:15.238Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

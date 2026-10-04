@@ -75,7 +75,14 @@ function loadGameData() {
   // action events the same way the real game's event bus would carry them, without a browser.
   const gameEvents = new TinyEmitter();
   const context = vm.createContext({
-    Phaser: { Events: { EventEmitter: TinyEmitter } },
+    // `Scene` is only here so a scene file (src/scenes/*.js) can be evaluated by a test that wants to call one of its
+    // methods on a stand-in `this` (runScript() below) -- its class bodies only need a base class to extend.
+    Phaser: {
+      Events: { EventEmitter: TinyEmitter },
+      Scene: class Scene {},
+      // The two Phaser.Math helpers the scene methods under test call (world.js doorAssist()).
+      Math: { Clamp: (v, min, max) => Math.min(Math.max(v, min), max), Distance: { Between: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1) } },
+    },
     console,
     URLSearchParams,
     localStorage,
@@ -85,7 +92,16 @@ function loadGameData() {
     vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
   }
   const get = (name) => vm.runInContext(name, context);
+  // Evaluates one more game script (say a src/scenes/*.js file) into this same sandbox, after the data files above, so a
+  // test can read its classes and call their methods on a hand-made `this` (the scenes need a browser to RUN, but their
+  // key handling, door logic and hand-over rules are plain methods). Returns `get`, so `evaluate('WorldScene')` reads a name.
+  const runScript = (file) => {
+    vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
+    return get;
+  };
   return {
+    runScript,
+    evaluate: get,
     gameEvents,
     ITEMS: get('ITEMS'),
     MAPS: get('MAPS'),
@@ -145,6 +161,12 @@ function loadGameData() {
     hudLayout: get('hudLayout'),
     wrapWords: get('wrapWords'),
     hotbarShouldShow: get('hotbarShouldShow'),
+    // FB-0075 (title menu layout) and FB-0046 (doorway size)
+    TITLE_MENU: get('TITLE_MENU'),
+    titleMenuLayout: get('titleMenuLayout'),
+    parseDoorCells: get('parseDoorCells'),
+    doorCoversTile: get('doorCoversTile'),
+    doorCenterPx: get('doorCenterPx'),
     fullMapLabelCandidates: get('fullMapLabelCandidates'),
     placeMapLabels: get('placeMapLabels'),
     mapLabelPriority: get('mapLabelPriority'),
@@ -167,6 +189,12 @@ function loadGameData() {
     MG_CARD_LINE_H: get('MG_CARD_LINE_H'),
     MG_CARD_HEADER_H: get('MG_CARD_HEADER_H'),
     MG_WIN_BLANK_LINES: get('MG_WIN_BLANK_LINES'),
+    // FB-0073: the intro card's own size rules (src/minigames/framework-data.js)
+    MG_INSTRUCTION_LINES: get('MG_INSTRUCTION_LINES'),
+    MG_INSTRUCTION_MAX_CHARS: get('MG_INSTRUCTION_MAX_CHARS'),
+    MG_CARD_MAX_W: get('MG_CARD_MAX_W'),
+    MG_CARD_MIN_W: get('MG_CARD_MIN_W'),
+    MG_CARD_SIDE_PAD: get('MG_CARD_SIDE_PAD'),
     recordAttempt: get('recordAttempt'),
     minigameProgress: get('minigameProgress'),
     resetMinigameProgress: get('resetMinigameProgress'),

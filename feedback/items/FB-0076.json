@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "General",
   "priority": "normal",
-  "status": "needs-info",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:47:46.353Z",
-  "updatedAt": "2026-10-04T17:58:50.638Z",
+  "updatedAt": "2026-10-04T18:29:15.488Z",
   "details": "",
   "context": {
     "map": "main-block-g",
@@ -57,9 +57,18 @@
       "author": "agent",
       "text": "Today the ending already goes box -> card -> credits -> title. I could not tell which part you hit. Which was it? (A) after THE END the credits waited for a key press, (B) after the credits you pressed Continue and landed back in the foyer with the game 'still going', (C) the card or box did not lead to the credits, (D) something else. I am making the credits return to the title by themselves a few seconds after THE END either way; tell me if you also want Continue to be hidden once the game is finished.",
       "at": "2026-10-04T17:58:50.638Z"
+    },
+    {
+      "author": "agent",
+      "text": "Ending chain hardened: credits return to the title by themselves, no gameplay scene is left under the title, timeouts on card/box video. Please check it at the end of a playthrough.",
+      "at": "2026-10-04T18:29:15.488Z"
     }
   ],
-  "resolution": null,
+  "resolution": {
+    "test": "tests/unit/ending-chain.test.js › FB-0076",
+    "commit": null,
+    "at": "2026-10-04T18:29:15.488Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:47:46.353Z",
@@ -70,6 +79,11 @@
       "at": "2026-10-04T17:58:50.638Z",
       "by": "agent",
       "status": "needs-info"
+    },
+    {
+      "at": "2026-10-04T18:29:15.488Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

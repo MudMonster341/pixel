@@ -239,6 +239,48 @@ function parseOpenTiles(value) {
   return names.length ? names : null;
 }
 
+// ---------- title menu layout (FB-0075) ----------
+// The title screen's buttons are bottom-anchored to `bottom` (never centred: a taller menu must not creep down into the
+// parallax foreground strip) and never reach above `topMin` (the "LUG Treasure Hunt" subtitle). Adding "Quit" made the
+// worst case six buttons (Play, Continue, Watch the Card Again, Controls, Credits, Quit), which at the usual 52 px + 12 px
+// would run off the 540 px screen -- so from five buttons up the gap tightens and the buttons shrink just enough to fit.
+const TITLE_MENU = { buttonH: 52, gap: 12, tightGap: 8, bottom: 470, topMin: 180 };
+function titleMenuLayout(count) {
+  const n = Math.max(1, count);
+  const available = TITLE_MENU.bottom - TITLE_MENU.topMin;
+  const gap = n <= 4 ? TITLE_MENU.gap : TITLE_MENU.tightGap;
+  const buttonH = Math.min(TITLE_MENU.buttonH, Math.floor((available - (n - 1) * gap) / n));
+  const h = n * buttonH + (n - 1) * gap;
+  return { buttonH, gap, h, y: Math.max(TITLE_MENU.topMin, TITLE_MENU.bottom - h) };
+}
+
+// ---------- doorway size (FB-0046) ----------
+// A real doorway is two tiles wide (the Main Block's glass double door, every interior exterior-door), but its
+// Tiled `door` object is a single point on the first tile, so only that one tile ever walked her through: she could stand
+// on the other leaf without entering -- "walk over the door". The map generators now write a `cells` property
+// ("2x1" = two wide and one deep, "1x2" for a door in a vertical wall) and EVERY cell of it triggers the door
+// (world.js checkWarps()). Missing or garbled -> one tile, exactly as before (text-map warps, closed doors, stairs).
+function parseDoorCells(value) {
+  const match = /^\s*(\d+)\s*x\s*(\d+)\s*$/.exec(String(value == null ? '' : value));
+  const w = match ? Number(match[1]) : 1;
+  const h = match ? Number(match[2]) : 1;
+  return { w: w >= 1 ? w : 1, h: h >= 1 ? h : 1 };
+}
+
+// True if tile (tx, ty) is one of the cells of `warp` (`{ x, y, cellsW?, cellsH? }`, x/y = its first tile).
+function doorCoversTile(warp, tx, ty) {
+  const w = warp.cellsW || 1;
+  const h = warp.cellsH || 1;
+  return tx >= warp.x && tx < warp.x + w && ty >= warp.y && ty < warp.y + h;
+}
+
+// The pixel centre of a doorway (x across its cells, y of its first row): what door assist steers a player towards,
+// so she walks in through the middle of a two-tile door instead of along one leaf of it.
+function doorCenterPx(warp) {
+  const w = warp.cellsW || 1;
+  return { x: (warp.x + w / 2) * TILE, y: warp.y * TILE + TILE / 2 };
+}
+
 // How opaque a map's `overhead` tile layer is drawn (src/scenes/world.js). Outdoors it is the tree canopies (ADR 0008) and
 // stays solid. Indoors it is the foyer's gold chandelier, which hid the player's head as she crossed the hall (defect D10,
 // 2026-10-04), so it is drawn see-through: she stays visible and the ceiling piece still reads. Pure, so it is unit-tested.

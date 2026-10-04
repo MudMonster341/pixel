@@ -1270,7 +1270,7 @@
     },
     {
       "name": "bitsPorticoGlassBase",
-      "solid": false,
+      "solid": true,
       "overhead": false,
       "color": "#bdb6b5"
     },

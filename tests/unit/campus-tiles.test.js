@@ -367,15 +367,14 @@ test("point E: every building's facade has a distinct parapet/coping roof band, 
   assert.equal(shadowTile.solid, false, 'bitsFacadeShadow should stay walkable (a ground tint, not an obstacle)');
 });
 
-test('point D: the composed portico prefab tiles exist, are solid except the walkable glass base and steps, and the steps are ground-layer (never solid)', () => {
-  for (const name of ['bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid']) {
+test('point D: the composed portico prefab tiles exist, are all solid (wall/glass surfaces), and the steps are ground-layer (never solid)', () => {
+  // FB-0046: bitsPorticoGlassBase used to be walkable ("the door-connecting spur reaches it"), which let the player stand ON
+  // the facade line beside the glass door. No walkway reaches it in the built map; it is a wall tile like the rest.
+  for (const name of ['bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase']) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);
     assert.equal(tile.solid, true, `${name} should be solid (a wall/glass surface)`);
   }
-  const glassBase = tileInfoFor('bitsPorticoGlassBase');
-  assert.ok(glassBase, 'missing bitsPorticoGlassBase');
-  assert.equal(glassBase.solid, false, 'bitsPorticoGlassBase should stay walkable (the door-connecting spur legitimately reaches it, see its own comment in tools/make-assets.js)');
   for (const name of ['bitsStep1', 'bitsStep2', 'bitsStep3']) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);

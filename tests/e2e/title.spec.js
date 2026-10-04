@@ -11,7 +11,7 @@ const {
 test('FB-0024: the title screen appears first, and Play starts a new game through a real loading screen', async ({ page }) => {
   const { errors } = await openTitle(page, { map: null });
   const before = await titleState(page);
-  expect(before.menuItems).toEqual(['play', 'controls', 'credits']); // no save yet: no Continue
+  expect(before.menuItems).toEqual(['play', 'controls', 'credits', 'quit']); // no save yet: no Continue; Quit is always last (FB-0075)
 
   await chooseTitleMenu(page, 'play');
   // The branded loading screen (src/main.js BootScene) actually runs -- this isn't just "boot"

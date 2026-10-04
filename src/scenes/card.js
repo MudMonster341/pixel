@@ -57,6 +57,10 @@ const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
+// FB-0076: how long the optional closing video may take to answer / to load before the card gives up on it
+// and moves on to the credits (a missing file answers at once; these only matter when something hangs).
+const CARD_VIDEO_PROBE_TIMEOUT_MS = 4000;
+const CARD_VIDEO_LOAD_TIMEOUT_MS = 8000;
 
 class CardScene extends Phaser.Scene {
   constructor() {
@@ -429,16 +433,21 @@ class CardScene extends Phaser.Scene {
   // identical comment), so a fetch that resolves `ok: false` (or rejects) is the only check this
   // scene trusts. That's also the default, expected case until the owner drops a clip in
   // (assets/card/ is gitignored and empty by default, docs/STORY.md) -- this must never hang or throw.
+  // FB-0076: neither step can stall the ending. The probe is raced against a timeout (a request that never
+  // answers counts as "no video"), and the video load itself has a deadline: a clip that has not started
+  // loading into the game by then is given up on, and the card goes on to the credits.
   playEndingVideoOrFinish() {
     if (this.ended) return; // a skip (skipToEnd()) may have already ended things while this was pending
-    fetch(CARD_VIDEO_URL)
+    const noAnswer = new Promise((resolve) => { setTimeout(() => resolve(null), CARD_VIDEO_PROBE_TIMEOUT_MS); });
+    Promise.race([fetch(CARD_VIDEO_URL), noAnswer])
       .then((response) => {
         if (this.ended) return;
-        if (!response.ok) { this.showEnding(); return; }
+        if (!response || !response.ok) { this.showEnding(); return; }
         this.load.video('card-video', CARD_VIDEO_URL);
         this.load.once('complete', () => this.playEndingVideo());
         this.load.once('loaderror', () => this.showEnding());
         this.load.start();
+        this.time.delayedCall(CARD_VIDEO_LOAD_TIMEOUT_MS, () => { if (!this.endingVideo && !this.ended) this.showEnding(); });
       })
       .catch(() => { if (!this.ended) this.showEnding(); });
   }
@@ -470,8 +479,17 @@ class CardScene extends Phaser.Scene {
     this.killTimers();
     if (this.endingVideo) { try { this.endingVideo.stop(); } catch (error) { /* already stopped */ } }
     const raw = this.cache.json.get('card-config') || null;
+    // FB-0076: the hand-off to the credits never waits on a fade event alone -- a failsafe timer (the same
+    // one the credits' own return to the title has) guarantees it, so the ending cannot stall on the card.
+    let gone = false;
+    const go = () => {
+      if (gone) return;
+      gone = true;
+      this.scene.start('credits', { raw });
+    };
     this.cameras.main.fadeOut(400, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('credits', { raw }));
+    this.cameras.main.once('camerafadeoutcomplete', go);
+    this.time.delayedCall(1200, go);
   }
 
   // Esc: skip the rest of the card, straight on to the credits -- from the cover, mid-message, or during the

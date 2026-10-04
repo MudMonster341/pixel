@@ -1046,3 +1046,13 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Decisions:** library door goes to the back-centre of the foyer (FB-0062); working lift (FB-0069); ICL fingerprint door opened by the existing flyer game, then the lab with Alice (FB-0071); only the NPC the owner pointed at becomes "Deanne" (FB-0050); "Welakkiya" = Dr. Elakkiya R (already in the sourced facts). Protected characters (Hello Kitty/Batman) stay generic stand-ins even for the cover; it takes the mood of the owner's picture only.
 
 **Next:** review + commit P1, then P2a (ICL rename, Deanne, club colours), P2b (friends, professors, funnier lines), P3 a/b, P4, P5; moments after P5 (one per agent).
+
+## 2026-10-04 (Day 3) — P1 (controls/UI) done: 753 unit tests green
+
+**Did:** One Sonnet agent fixed FB-0045/0046/0068/0072/0073/0075/0076. Root causes: the UI frame crop threw away the right and bottom border of the Kenney 48 px frame (ERR-0017, all panels); `transitioning` scripts/door walks skipped movePlayer so the player kept sliding in the run animation under dialogs (ERR-0016: now an accessor that calls haltPlayer()); E/Space/Enter share one handler (`uiConsumed` mark); Quit (title + pause "Quit Game") with a goodbye scene; ending chain hardened; Main Block door glass solid, two-tile doorways (`cells`), door walk = walk animation. +62 tests (691 -> 753). Reviewed the diff, ran test:unit myself.
+
+**Not run:** e2e (changed tests/e2e/title.spec.js; the daily full test must cover title, audio, dialog, minigames, ending, credits, depth-groups, robustness). Not seen in the running game: dialog/panel edges, title menu with 6 buttons, goodbye flow, Enter on pause Resume next to an NPC, the Main Block door.
+
+**Grilling (moments doc):** round 1 settled (tower climb is the Room 195 key, match-3 dropped, moments play once, etc.); round 2 questions Q8-Q12 are with the owner.
+
+**Next:** P2a (ICL rename, Deanne, club colours), P2b (friends, professors, funnier lines), P3, P4, P5.

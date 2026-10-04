@@ -154,8 +154,9 @@ test('D13: every car sits in a bay (on a parking cell) and a front-view car fill
 
 const ENTRANCE_L = new Set(['bitsEntranceL', 'bitsEntranceGrandL']);
 const ENTRANCE_R = new Set(['bitsEntranceR', 'bitsEntranceGrandR']);
-// bitsPorticoGlassBase is the (walkable, as for the Main Block) glass panel flanking a portico door; it is part
-// of the facade line, so it counts as wall here. Everything else must be a solid facade/portico/column tile.
+// bitsPorticoGlassBase is the glass panel flanking a portico door; it is part of the facade line, so it counts as wall
+// here (and since FB-0046 it is solid too, see tests/unit/entrance-wall.test.js). Everything else must be a solid
+// facade/portico/column tile.
 const WALLISH = (x, y) => {
   const g = structures[y * W + x];
   if (g <= 0) return false;
@@ -220,5 +221,25 @@ test('D11: the door objects keep their names, targets and landing ids', () => {
     assert.ok(o, `missing ${name}`);
     assert.equal(prop(o, 'to'), to);
     assert.equal(prop(o, 'toId'), toId);
+  }
+});
+
+// ---------- FB-0046 (owner: "make sure I can't walk over the door and the wall") ----------
+
+test('FB-0046: the wall beside every real campus door is SOLID, not just drawn: only the door\'s own two tiles can be walked on in that row', () => {
+  const walkable = (x, y) => {
+    const s = structures[y * W + x];
+    return s > 0 ? !infoOf(s).solid : !infoOf(ground[y * W + x]).solid;
+  };
+  const doors = objects.filter((o) => o.type === 'door' && o.properties.some((p) => p.name === 'to'));
+  assert.equal(doors.length, 3);
+  for (const d of doors) {
+    const x = Math.floor(d.x / T);
+    const y = Math.floor(d.y / T);
+    assert.ok(walkable(x, y) && walkable(x + 1, y), `${d.name}: both leaves of the doorway are walkable`);
+    for (const cx of [x - 1, x + 2]) {
+      assert.ok(WALLISH(cx, y), `${d.name}: ${struct(cx, y)} at ${cx},${y} is not wall`);
+      assert.ok(!walkable(cx, y), `${d.name}: ${struct(cx, y)} at ${cx},${y} is walkable: she could stand on the wall line beside the door`);
+    }
   }
 });

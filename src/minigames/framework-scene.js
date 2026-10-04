@@ -264,10 +264,9 @@ class MinigameCard {
   show({ title, paragraphs = [], items }) {
     this.hide();
     const scene = this.scene;
-    const w = 640;
     const lineH = MG_CARD_LINE_H;
     const headerH = MG_CARD_HEADER_H;
-    const wrapWidth = w - 100;
+    const footerLabel = 'ENTER TO CHOOSE -- ESC TO QUIT';
 
     // Wrap each paragraph to the panel's own width *before* measuring the panel's height (the same
     // "measure once, redraw on state change" order docs/GAME_FEEL.md rule 1 requires: "a panel's box
@@ -276,13 +275,23 @@ class MinigameCard {
     // the panel's own edges instead of wrapping (a real bug this fix replaces, not a hypothetical
     // one). A throwaway text object gives the exact same wrap Phaser will use for the real one, the
     // same trick src/scenes/ui.js's DialogBox already uses for its own wrapped typewriter text.
-    const measurer = uiText(scene, 0, 0, '', 12).setWordWrapWidth(wrapWidth).setVisible(false);
+    // FB-0073: the card is only as wide as its content needs (MG_CARD_MIN_W up to MG_CARD_MAX_W): the
+    // short title / controls / goal intro is a compact box, not a 640 px slab with a few words in it.
+    const measurer = uiText(scene, 0, 0, '', 12).setWordWrapWidth(MG_CARD_MAX_W - MG_CARD_SIDE_PAD).setVisible(false);
+    const widthOf = (str, size) => measurer.setFontSize(size).setText(str).width;
     const lines = [];
     for (const para of paragraphs) {
       if (para === '') { lines.push(''); continue; }
       lines.push(...measurer.getWrappedText(para));
     }
+    const contentW = Math.max(
+      widthOf(title, 16),
+      widthOf(footerLabel, 8),
+      ...lines.map((line) => widthOf(line, 12)),
+      ...items.map((item) => widthOf(item.label, 12) + 36), // + the cursor sprite beside a row
+    );
     measurer.destroy();
+    const w = Math.min(MG_CARD_MAX_W, Math.max(MG_CARD_MIN_W, Math.ceil(contentW) + MG_CARD_SIDE_PAD));
 
     const paraH = lines.length * lineH + (lines.length ? 14 : 0);
     const itemH = items.length * 30;
@@ -315,7 +324,7 @@ class MinigameCard {
         .on('pointerdown', () => { this.index = i; this.confirm(); });
       return text;
     });
-    const footer = uiText(scene, x + w / 2, y + h - footerH / 2, 'ENTER TO CHOOSE -- ESC TO QUIT', 8, COLORS.dim)
+    const footer = uiText(scene, x + w / 2, y + h - footerH / 2, footerLabel, 8, COLORS.dim)
       .setOrigin(0.5).setDepth(202);
 
     this.parts = pinToScreen([dim, panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer]);
@@ -332,7 +341,8 @@ class MinigameCard {
 
     for (const key of ['UP', 'W']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(-1); });
     for (const key of ['DOWN', 'S']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(1); });
-    for (const key of ['ENTER', 'SPACE']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.confirm(); });
+    // FB-0045: E picks too (it is the key that advances every other message in the game).
+    for (const key of ['ENTER', 'SPACE', 'E']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.confirm(); });
 
     // FB-0042: confirm keys are ignored for a short beat after the card appears (see
     // CARD_INPUT_DELAY_MS above) -- mashing Space (also the jump/flap key) or Enter (also how you
@@ -364,10 +374,12 @@ class MinigameCard {
     if (item && item.onSelect) item.onSelect();
   }
 
+  // FB-0073: title, a controls line, a goal line -- and the START button. No paragraphs and no separate
+  // "TARGET" line any more (the goal line names the number; the HUD counts to it once playing).
   showIntro(def, onStart) {
     this.show({
       title: def.name.toUpperCase(),
-      paragraphs: [...def.instructions, '', `TARGET: ${def.scoreTarget} ${def.scoreLabel || ''}`.trim()],
+      paragraphs: [...def.instructions],
       items: [{ label: 'START (ENTER)', onSelect: onStart }],
     });
   }

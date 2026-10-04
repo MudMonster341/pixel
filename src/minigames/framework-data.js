@@ -16,6 +16,14 @@
 // mini-game's own game-over card offers "skip and take the key anyway".
 const MAX_ATTEMPTS_BEFORE_SKIP = 3;
 
+// FB-0073: an intro card is a title, a controls line and a goal line -- nothing else (the owner: "instructions look
+// messy, too much text"). At the card's 12 px monospace font this many characters fit the card without wrapping.
+const MG_INSTRUCTION_LINES = 2;
+const MG_INSTRUCTION_MAX_CHARS = 42;
+
+// `instructions` (FB-0073): exactly the intro card's two body lines under its title -- a controls line and a goal
+// line, short enough to read at a glance, never a paragraph (MG_INSTRUCTION_MAX_CHARS, tests/unit/minigame-
+// framework.test.js). The score target the HUD counts to is `scoreTarget`; the goal line may name it.
 // `item` names the real key item this mini-game's win hands over (src/items.js), the same id
 // src/story.js's own keyStations table gives that key station -- duplicated here (rather than one
 // file importing the other) because a mini-game is meant to be playable/testable on its own, without
@@ -31,9 +39,8 @@ const MINIGAMES = {
     sceneKey: 'minigame-platformer',
     item: 'keyPhysicsLab',
     instructions: [
-      'ARROWS / A-D to run, SPACE / UP / W to jump.',
-      'Collect all the charge cells, then reach the door.',
-      'Hold the jump key a little longer for a higher jump.',
+      'ARROWS / WASD: MOVE   SPACE: JUMP',
+      'GRAB ALL 6 CELLS, THEN REACH THE DOOR',
     ],
     scoreTarget: 6,
     scoreLabel: 'CELLS',
@@ -44,8 +51,8 @@ const MINIGAMES = {
     sceneKey: 'minigame-flappy',
     item: 'keyIcvl',
     instructions: [
-      'SPACE / UP / W: flap. Fly through the gaps in the server racks.',
-      'One tap at a time -- timing beats mashing.',
+      'SPACE / UP / W: FLAP',
+      'FLY THROUGH 8 GAPS IN THE SERVER RACKS',
     ],
     scoreTarget: 8,
     scoreLabel: 'GAPS',
@@ -56,9 +63,8 @@ const MINIGAMES = {
     sceneKey: 'minigame-tetris',
     item: 'keyRoom195',
     instructions: [
-      'ARROWS / A-D to move, UP / W to rotate, DOWN / S to drop faster.',
-      'Clear lines before the stack reaches the top.',
-      'It speeds up the longer you last.',
+      'ARROWS: MOVE   UP: TURN   DOWN: DROP',
+      'CLEAR 10 LINES BEFORE THE STACK TOPS OUT',
     ],
     scoreTarget: 10,
     scoreLabel: 'LINES',
@@ -116,6 +122,11 @@ function resetMinigameProgress(state, id) {
 // ("IC.L" for the ICVL key). Three blank rows leave a clear gap, for all three mini-games.
 const MG_CARD_LINE_H = 22;
 const MG_CARD_HEADER_H = 56;
+// FB-0073: the card is as wide as its longest line plus MG_CARD_SIDE_PAD (50 px of margin either side), never narrower than
+// MG_CARD_MIN_W nor wider than MG_CARD_MAX_W (a longer paragraph wraps at MAX - PAD instead).
+const MG_CARD_MAX_W = 640;
+const MG_CARD_MIN_W = 420;
+const MG_CARD_SIDE_PAD = 100;
 const MG_WIN_BLANK_LINES = 3;
 const MG_WIN_ICON_SIZE = 48;
 const MG_CARD_TEXT_HALF_HEIGHT = 8; // a 12 px line of text reaches about this far above/below its row centre

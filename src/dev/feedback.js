@@ -104,6 +104,10 @@
     const world = window.game?.scene.getScene('world');
     if (state.open || !world?.player) return;
     state.open = true;
+    // FB-0072: the player stops (idle, facing her way) before the game is paused under the panel, so the
+    // captured screenshot and the frozen frame behind the form never show her mid-run. Not while a script or
+    // door walk is moving her itself (`transitioning`): that sequence owns her animation.
+    if (!world.transitioning && typeof world.haltPlayer === 'function') world.haltPlayer();
     for (const scene of gameScenes()) {
       scene.input.keyboard.resetKeys(); // otherwise a held arrow key stays "down" until we come back
       scene.scene.pause();

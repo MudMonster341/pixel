@@ -18,6 +18,9 @@
 // even appears.
 
 const BOX_SKIP_FADE_MS = 300;
+// FB-0076: how long the optional box-opening clip may take to answer / to load before the drawn version plays instead.
+const BOX_VIDEO_PROBE_TIMEOUT_MS = 4000;
+const BOX_VIDEO_LOAD_TIMEOUT_MS = 8000;
 
 // Where the lid sits on the box (defect D04, 2026-10-04: it hung ~55px above the body). Both PNGs come from
 // tools/make-card-art.js; these are facts about their pixels, pinned by tests/unit/box-lid.test.js:
@@ -67,16 +70,23 @@ class BoxOpeningScene extends Phaser.Scene {
   // load" check. A fetch that resolves `ok: false` (or rejects/throws, e.g. no network at all) always
   // means "no real video" -- exactly the default, expected case until the owner drops a clip in
   // (that folder is gitignored and empty by default, docs/STORY.md), so this must never hang or throw.
+  // FB-0076: like the card's own closing video, it can never stall the ending -- the probe is raced against a
+  // timeout (no answer counts as "no video"), and `started` makes sure only one of the paths below ever plays.
   checkVideoThenPlay() {
-    fetch(BOX_VIDEO_URL)
+    let started = false;
+    const playDrawn = () => { if (started) return; started = true; this.playDrawnSequence(); };
+    const playVideo = () => { if (started) return; started = true; this.playVideoSequence(); };
+    const noAnswer = new Promise((resolve) => { setTimeout(() => resolve(null), BOX_VIDEO_PROBE_TIMEOUT_MS); });
+    Promise.race([fetch(BOX_VIDEO_URL), noAnswer])
       .then((response) => {
-        if (!response.ok) { this.playDrawnSequence(); return; }
+        if (!response || !response.ok) { playDrawn(); return; }
         this.load.video('box-video', BOX_VIDEO_URL);
-        this.load.once('complete', () => this.playVideoSequence());
-        this.load.once('loaderror', () => this.playDrawnSequence());
+        this.load.once('complete', playVideo);
+        this.load.once('loaderror', playDrawn);
         this.load.start();
+        this.time.delayedCall(BOX_VIDEO_LOAD_TIMEOUT_MS, playDrawn);
       })
-      .catch(() => this.playDrawnSequence());
+      .catch(() => playDrawn());
   }
 
   // ---------- video version ----------

@@ -1,6 +1,6 @@
 // The title screen (FB-0023/0024, M3a, docs/GAME_FEEL.md): the game's name over a slowly panning,
 // parallaxed campus illustration, and a menu of big drawn buttons (Play / Continue / Controls /
-// Credits) -- the same shape as a Gen 3-5 Pokemon title screen without copying any of its art or
+// Credits / Quit) -- the same shape as a Gen 3-5 Pokemon title screen without copying any of its art or
 // text. `?title=0` skips straight past this scene (and the loading screen after it) to the old
 // instant-boot behaviour -- tests/e2e/helpers.js openGame() sets that by default so the other ~65
 // specs don't need to know this scene exists at all.
@@ -19,16 +19,15 @@ const TITLE_MENU_BASE = [
   { id: 'play', label: 'Play' },
   { id: 'controls', label: 'Controls' },
   { id: 'credits', label: 'Credits' },
+  { id: 'quit', label: 'Quit' }, // FB-0075: always last, so "Play" stays the first (and default) choice
 ];
 const BUTTON_W = 320;
-const BUTTON_H = 52;
-const BUTTON_GAP = 12;
-// The menu's buttons are bottom-anchored to this y (not centered on a fixed point): with "Continue"
-// present that's 4 buttons, and centering on a fixed spot the way the old text-row menu did would
-// have crept down into the parallax foreground strip (buildBackground() below) as items were added --
-// found by looking at the first screenshot of this redesign, not by calculation up front.
-const MENU_BOTTOM = 470;
-const MENU_TOP_MIN = 180; // never crowds the "LUG Treasure Hunt" subtitle above it
+// The menu's buttons are bottom-anchored (not centered on a fixed point): with "Continue" present
+// that's 5 buttons, and centering on a fixed spot the way the old text-row menu did would have crept
+// down into the parallax foreground strip (buildBackground() below) as items were added -- found by
+// looking at the first screenshot of this redesign, not by calculation up front. The numbers (button
+// height, gap, anchor, the shrink that keeps even six buttons on screen) are src/maplogic.js
+// titleMenuLayout(), unit-tested.
 
 // FB-0037: the in-game Credits used to say "All art and code original, made for this game" -- false,
 // and several of the third-party packs actually in use require exactly this kind of on-screen credit
@@ -110,6 +109,10 @@ class TitleScene extends Phaser.Scene {
   }
 
   create() {
+    // FB-0076: whatever way she got here (the credits at the end of the game, "Quit to Title", the goodbye
+    // screen), no gameplay scene may be left alive under the title -- the ending used to leave the world
+    // paused beneath it, player and foyer position included.
+    stopGameplayScenes(this);
     this.cameras.main.setBackgroundColor('#12131a');
     this.stage = 'intro'; // 'intro' -> 'menu'
 
@@ -186,7 +189,7 @@ class TitleScene extends Phaser.Scene {
     const fgTex = this.textures.get('title-fg').getSourceImage();
     const fgScale = 1;
     const fgW = fgTex.width * fgScale;
-    // Bottom-aligned, clear of MENU_BOTTOM (above) with a small gap regardless of how many menu
+    // Bottom-aligned, clear of the menu's bottom anchor (maplogic.js TITLE_MENU.bottom) with a small gap regardless of how many menu
     // buttons are showing -- this is the "near" layer, so it stays put at the very edge of frame.
     const fgY = GAME_HEIGHT - fgTex.height * fgScale;
     this.fgA = this.add.image(0, fgY, 'title-fg').setOrigin(0, 0).setScale(fgScale);
@@ -224,14 +227,14 @@ class TitleScene extends Phaser.Scene {
   }
 
   buildMenu() {
-    const h = this.menuItems.length * BUTTON_H + (this.menuItems.length - 1) * BUTTON_GAP;
+    const layout = titleMenuLayout(this.menuItems.length); // bottom-anchored, shrunk to fit -- see maplogic.js
     const x = (GAME_WIDTH - BUTTON_W) / 2;
-    const y = Math.max(MENU_TOP_MIN, MENU_BOTTOM - h); // bottom-anchored -- see the constant's comment
+    const { y, h, buttonH, gap } = layout;
     this.menuBox = { x, y, w: BUTTON_W, h };
 
     this.menuButtons = this.menuItems.map((item, i) => {
-      const by = y + i * (BUTTON_H + BUTTON_GAP);
-      const button = new Button(this, x, by, BUTTON_W, BUTTON_H, item.label, () => {
+      const by = y + i * (buttonH + gap);
+      const button = new Button(this, x, by, BUTTON_W, buttonH, item.label, () => {
         this.menuIndex = i;
         this.refreshMenu();
         this.confirmMenu();
@@ -400,6 +403,16 @@ class TitleScene extends Phaser.Scene {
     else if (item.id === 'watch-card') this.watchCardAgain();
     else if (item.id === 'controls') this.controls.open();
     else if (item.id === 'credits') this.openCredits();
+    else if (item.id === 'quit') this.quitGame();
+  }
+
+  // FB-0075: "Quit" -- tries to close the window (works in the desktop build and a script-opened window), and
+  // otherwise lands on the goodbye screen (src/scenes/goodbye.js), which says the tab can be closed now and
+  // offers a way back here. Closing is tried straight away, inside the key press / click that chose it.
+  quitGame() {
+    closeGameWindow();
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => leaveGameTo(this, 'goodbye'));
   }
 
   // ---------- FB-0040: "start a new game? your save will be replaced" ----------

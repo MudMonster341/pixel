@@ -2210,6 +2210,10 @@ for (const b of buildingList.filter((b) => b.doorCell)) {
     { name: 'toId', type: 'string', value: `${b.name} Ground Floor entrance` },
     { name: 'facing', type: 'string', value: 'down' }, // arriving here (exiting the building) faces away from it, into the avenue/plaza
     { name: 'openTiles', type: 'string', value: openTiles },
+    // FB-0046: the doorway is TWO tiles wide (doorX0 and doorX1, the entrance L/R pair) while this object is a point
+    // on the first one -- `cells` tells the engine every cell of it is the door (src/maplogic.js parseDoorCells()),
+    // so she can't stand on the second leaf without entering.
+    { name: 'cells', type: 'string', value: '2x1' },
   ]);
 }
 

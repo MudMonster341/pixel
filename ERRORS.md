@@ -408,3 +408,16 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Symptom:** the second push of the day was rejected: 184/185 passed, `ADR 0016: the full opening (bus + Mustafa) blocks input, then Esc skips it cleanly` failed. The failure text was lost (the push output was piped through `tail`). It passed 3/3 alone, in the two earlier full runs and in the retried full run (185/185, then pushed).
 **Likely cause:** timing under load (the test reads the player's x/y right after the in-world opening script starts, and holds `d` for 250 ms). Not investigated further because it never reproduced.
 **If it comes back:** run pushes with the output saved to a file (`git push > log 2>&1`) so the Playwright error context survives, then fix the test's wait (poll for the player to be still) rather than retrying.
+
+## ERR-0016 - The player kept running under a message box, and ran up the Main Block steps over the door (2026-10-04)
+**Symptom:** the owner's screenshots FB-0072 / FB-0046 / FB-0045: a script's message box ("Room 195.", "The Main Block: steps, pillars...", "Right this way") open over a player still drawn mid-run, standing ON the facade beside the glass door. "The character is running all the time."
+**Cause:** every scripted moment (opening, Gate 2 welcome, Main Block entrance, key-room beats) and every door walk sets `WorldScene.transitioning`, and `update()` returns at its very top while it is set - so `movePlayer()` never ran again to zero her velocity or swap the animation. A script that began while she ran left her sliding on at run speed (up the steps, over the door tile) with the run animation (rate 1.75) under the dialog; a door walk that began while she ran played its walk at the run rate.
+**Fix:** `transitioning` is an accessor (src/scenes/world.js) that calls `haltPlayer()` the moment it turns on (velocity 0, animation stopped, run rate reset, idle frame of her facing); mini-games/cutscenes/box opening and the feedback overlay call it too. The door walk resets `anims.timeScale` and walks at WALK_SPEED.
+**Tests:** tests/unit/player-halt.test.js (FB-0072), tests/unit/entrance-wall.test.js (FB-0046).
+**Recognise it next time:** a state that "pauses input" by returning early from `update()` must also stop whatever was already in motion; check velocity and animation at the moment the flag turns on, not just that the flag blocks keys.
+
+## ERR-0017 - Every bordered panel had no right edge (2026-10-04)
+**Symptom:** FB-0073 / FB-0068 / FB-0045 screenshots: dialog boxes, mini-game cards and the hotbar cut off on the right, the bottom edge a thin line.
+**Cause:** tools/make-assets.js cropped the Kenney 9-slice frame to its top-left 45x45 pixels, but the pack frame is 48 wide (46 tall plus 2 shadow rows): the crop dropped the whole right border (source columns 45-47) and the outer bottom bevel line. The 9-slice's right and bottom 4 px were interior fill, so no panel had a right edge at any size. Nothing looked at the pixels: the unit tests checked the panel code, not the generated frame.
+**Fix:** the frame is rebuilt from the full 48x48 source (96x96 per frame), ring read from all four sides (`buildUiFrame()`); src/scenes/ui.js UI_FRAME_SIZE 96.
+**Tests:** tests/unit/ui-frame.test.js reads assets/ui-panel.png and simulates the 9-slice at the sizes the game uses.

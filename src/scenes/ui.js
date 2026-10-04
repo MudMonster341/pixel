@@ -47,15 +47,17 @@ function fitTextInWidth(text, str, maxWidth, minSize = 5, startSize = 8) {
 }
 
 // ---------- the one UI kit (docs/GAME_FEEL.md "one UI kit"): a real 9-slice frame ----------
-// tools/make-assets.js generates assets/ui-panel.png: 4 90x90 frames stacked vertically (the shared
+// tools/make-assets.js generates assets/ui-panel.png: 4 96x96 frames stacked vertically (the shared
 // panel look, then the button's own normal/hover/pressed states), recolored from the Kenney Pixel UI
 // Pack's own 9-slice frame onto this game's navy/cream/gold palette -- see that file's own "UI kit"
-// section for exactly which pack pixels map to which color, and why (the pack frame already follows
-// STYLE_GUIDE's "one light source, top-left" rule on its own). UI_FRAME_BORDER has to match the same
-// constant there: it's the fixed corner/edge inset every NineSlice below is built with, so the border
-// reads as a crisp, constant width no matter how big a particular panel/button is.
+// section for exactly which pack pixels map to which color, and why. UI_FRAME_SIZE and UI_FRAME_BORDER
+// have to match the same constants there: the frame size is the whole 48-pixel pack frame at 2x (FB-0073:
+// it used to be a 45-pixel crop that dropped the right border and the bottom edge of every panel), and the
+// border is the fixed corner/edge inset every NineSlice below is built with, so the border reads as a
+// crisp, constant width on ALL FOUR sides no matter how big a particular panel/button is
+// (tests/unit/ui-frame.test.js pins both numbers against the generated PNG).
 const UI_FRAME_TEXTURE = 'ui-panel';
-const UI_FRAME_SIZE = 90;
+const UI_FRAME_SIZE = 96;
 const UI_FRAME_BORDER = 4;
 const UI_FRAME = { panel: 0, buttonNormal: 1, buttonHover: 2, buttonPressed: 3 };
 const UI_ICON_TEXTURE = 'ui-icons';
@@ -881,6 +883,10 @@ const CHARS_PER_SECOND = 45;
 // A dialog entry can offer choices (roadmap M1, docs/ARCHITECTURE.md): after its `lines` finish
 // typing, instead of closing, the box shows a selectable list (up/down or W/S move the highlight,
 // Enter/E/Space picks). Keyboard only, same box, no new art.
+// FB-0045: E, Space and Enter all advance a box (or pick a choice) the same way. The box itself owns no
+// confirm key: whichever scene shows it routes the three keys to advance() from ONE handler (world.js
+// onInteractKey() for the game's own dialogs, the card/cutscene/greeting scenes for theirs), so one key
+// press can never advance a box AND start something else, whatever order the scenes hear it in.
 class DialogBox {
   // `box`, if given, overrides the default bottom-of-screen position/size -- src/scenes/card.js uses
   // this to fit a smaller message box inside its own card panel, under the photo frame, instead of
@@ -920,9 +926,6 @@ class DialogBox {
     // (e.g. the cutscene player, which never passes `choices` to open()).
     for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (event) => !event.repeat && this.moveChoice(-1));
     for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (event) => !event.repeat && this.moveChoice(1));
-    scene.input.keyboard.on('keydown-ENTER', (event) => {
-      if (!event.repeat && this.choices) this.confirmChoice();
-    });
   }
 
   // Called by Letterbox (playIn/playOut/snap, src/scripts-runtime.js `letterbox` step) -- quality-loop
@@ -992,7 +995,7 @@ class DialogBox {
     this.body.setText('');
   }
 
-  // Called when the player presses E/Space: pick the highlighted choice, finish the line being
+  // Called when the player presses E/Space/Enter: pick the highlighted choice, finish the line being
   // typed, or go to the next one (or the choice list, if this was the last line).
   advance() {
     if (this.choices) {
@@ -1171,7 +1174,7 @@ class Toast {
 const CONTROLS = [
   ['WASD / ARROWS', 'Move'],
   ['SHIFT', 'Run'],
-  ['E / SPACE', 'Talk, next line'],
+  ['E / ENTER / SPACE', 'Talk, next line'], // FB-0045: all three work
   ['1-5 / WHEEL', 'Choose item slot'],
   ['M', 'Show/hide minimap'],
   ['N / CLICK MAP', 'Full-screen map'],
@@ -1274,13 +1277,38 @@ class ControlsPanel {
   }
 }
 
-// ---------- pause menu (Esc): Resume / Controls / Save / Quit to title ----------
+// ---------- leaving the game: back to the title, or out of it (FB-0075, FB-0076) ----------
+// Every scene a play session can have alive underneath the one on screen: the world and its HUD, a
+// cutscene or mini-game that paused the world, the ending's own chain (box opening, card, credits).
+// Starting the title (or the goodbye screen) from ANY of them must leave none of these behind -- the
+// ending used to hand over to the title with the world still sitting paused under it (the player,
+// her foyer position and all), which is what the feedback overlay and a later "Continue" then saw.
+const GAMEPLAY_SCENES = ['world', 'ui', 'cutscene', 'box-opening', 'card', 'credits', 'minigame-platformer', 'minigame-flappy', 'minigame-tetris'];
+
+// Stops every gameplay scene except `scene` itself (a scene's own start() below stops it), so what is
+// left running is exactly the one scene about to be started. Safe to call when nothing is alive.
+function stopGameplayScenes(scene) {
+  const manager = scene.scene;
+  for (const key of GAMEPLAY_SCENES) {
+    if (key === scene.sys.settings.key) continue;
+    if (manager.isActive(key) || manager.isPaused(key) || manager.isSleeping(key)) manager.stop(key);
+  }
+}
+
+// Hands over to `nextKey` ('title' or 'goodbye') with no gameplay scene left alive behind it.
+function leaveGameTo(scene, nextKey) {
+  stopGameplayScenes(scene);
+  scene.scene.start(nextKey);
+}
+
+// ---------- pause menu (Esc): Resume / Controls / Save / Quit to title / Quit game ----------
 
 const PAUSE_ITEMS = [
   { id: 'resume', label: 'Resume' },
   { id: 'controls', label: 'Controls' },
   { id: 'save', label: 'Save' },
   { id: 'quit', label: 'Quit to Title' },
+  { id: 'quitGame', label: 'Quit Game' }, // FB-0075: out of the game altogether (the goodbye screen)
 ];
 
 class PauseMenu {
@@ -1337,7 +1365,13 @@ class PauseMenu {
       scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible && this.view === 'controls') this.controls.adjustSetting(1); });
     }
     for (const key of ['ENTER', 'SPACE']) {
-      scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.confirm(); });
+      scene.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (e.repeat || !this.visible) return;
+        // FB-0045: world.js onInteractKey() hears this same key (Enter/Space start a conversation); this press
+        // belongs to the menu, so mark it used -- "Resume" closing the menu must not also talk to whoever stands nearby.
+        e.uiConsumed = true;
+        this.confirm();
+      });
     }
   }
 
@@ -1381,6 +1415,7 @@ class PauseMenu {
     else if (item.id === 'controls') this.showControls();
     else if (item.id === 'save') this.doSave();
     else if (item.id === 'quit') this.quitToTitle();
+    else if (item.id === 'quitGame') this.quitGame();
   }
 
   showControls() {
@@ -1406,11 +1441,15 @@ class PauseMenu {
 
   quitToTitle() {
     this.close();
-    const sceneManager = this.scene.scene;
-    sceneManager.stop('world');
-    sceneManager.stop('ui');
-    if (sceneManager.isActive('cutscene')) sceneManager.stop('cutscene');
-    sceneManager.start('title');
+    leaveGameTo(this.scene, 'title');
+  }
+
+  // FB-0075: out of the game. A browser only lets a script close a window a script opened, so the close
+  // is a best effort (it does work in the desktop build); the goodbye screen is what the player sees when
+  // it doesn't (src/scenes/goodbye.js).
+  quitGame() {
+    this.close();
+    quitGameToGoodbye(this.scene);
   }
 
   // Delegated from UIScene's own Esc handler (fullMap already took priority there).
@@ -1431,6 +1470,7 @@ const HINTS = {
   talk: 'PRESS E TO TALK',
   run: 'HOLD SHIFT TO RUN',
   map: 'PRESS M FOR THE MAP',
+  menu: 'ESC FOR THE MENU', // FB-0075: the pause menu is where Save / Quit to Title / Quit Game live
 };
 const HINT_FADE_MS = 300;
 const HINT_HOLD_MS = 2600;

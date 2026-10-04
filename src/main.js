@@ -169,6 +169,8 @@ function startGame() {
       // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see
       // src/scenes/world.js playBoxOpening()).
       BoxOpeningScene, CardScene, CreditsScene,
+      // FB-0075: where "Quit" (title) and "Quit Game" (pause menu) end up.
+      GoodbyeScene,
     ], // later scenes draw on top
   });
   // M5 sound: wires the master-mute/volume settings and the browser-autoplay gesture handling

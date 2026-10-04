@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:32:27.528Z",
-  "updatedAt": "2026-10-04T17:32:27.528Z",
+  "updatedAt": "2026-10-04T18:29:15.159Z",
   "details": "",
   "context": {
     "map": "main-block-3",
@@ -65,13 +65,28 @@
     }
   },
   "screenshot": "screenshots/FB-0068.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Hotbar frame had no right edge (frame crop bug); now complete and symmetric.",
+      "at": "2026-10-04T18:29:15.159Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/ui-frame.test.js › FB-0068",
+    "commit": null,
+    "at": "2026-10-04T18:29:15.159Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:32:27.528Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:29:15.159Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

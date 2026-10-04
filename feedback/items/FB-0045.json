@@ -4,9 +4,9 @@
   "type": "change",
   "area": "General",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:07:12.469Z",
-  "updatedAt": "2026-10-04T17:07:12.469Z",
+  "updatedAt": "2026-10-04T18:29:14.998Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -49,13 +49,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0045.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "E, Space and Enter all advance messages through one handler (no double-fire).",
+      "at": "2026-10-04T18:29:14.998Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/controls-keys.test.js › FB-0045",
+    "commit": null,
+    "at": "2026-10-04T18:29:14.998Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:07:12.469Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:29:14.998Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

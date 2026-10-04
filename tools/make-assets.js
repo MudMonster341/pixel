@@ -1443,13 +1443,14 @@ const TILES = [
   { name: 'bitsPorticoFrame', solid: true, draw: bitsPorticoFrame },
   { name: 'bitsPorticoGlassTop', solid: true, draw: bitsPorticoGlassTop },
   { name: 'bitsPorticoGlassMid', solid: true, draw: bitsPorticoGlassMid },
-  // Coordinator review round 2 (2026-09-27): non-solid, unlike the window/body glass above it -- the
-  // pedestrian walkway network's own door-connecting spur is 3 tiles wide and centred on the door
-  // (an existing, deliberate exception, `crossWalls: true` in tools/campus/build-campus.js), so it
-  // legitimately reaches the 2 columns immediately either side of the door at ground level. Making
-  // this one row walkable (a player "stands in front of the glass", not through it) avoids stranding
-  // that spur's own tiles instead of fighting the router to avoid a path it's explicitly allowed to take.
-  { name: 'bitsPorticoGlassBase', draw: bitsPorticoGlassBase },
+  // Coordinator review round 2 (2026-09-27): this was non-solid, unlike the window/body glass above it, on
+  // the theory that the pedestrian walkway network's own door-connecting spur (3 tiles wide and centred on
+  // the door, `crossWalls: true` in tools/campus/build-campus.js) reaches the 2 columns either side of the
+  // door at ground level. FB-0046 (owner: "make sure I can't walk over the door and the wall"): in the built
+  // map the ground under these tiles is lawn, no walkway reaches them, and being walkable let the player
+  // stand ON the facade line right beside the glass door. They are solid now like every other facade tile:
+  // the only way through the door row is through the door itself (tests/unit/entrance-wall.test.js).
+  { name: 'bitsPorticoGlassBase', solid: true, draw: bitsPorticoGlassBase },
   { name: 'bitsStep1', draw: bitsStep1 },
   { name: 'bitsStep2', draw: bitsStep2 },
   { name: 'bitsStep3', draw: bitsStep3 },
@@ -3925,74 +3926,96 @@ const PROMPT_BANG = sprite('prompt-bang', [
 // One 9-slice frame for every panel/button in the game (dialog, menus, tracker, banners, mini-game
 // cards, ...), recolored from the Kenney Pixel UI Pack's own "9-Slice/Ancient/tan" frame (CC0,
 // assets/vendor/kenney-pixel-ui-pack/, credited in CREDITS.md) instead of drawn pixel-by-pixel.
-// Decoded directly (not guessed from a thumbnail): the pack's 48x48 source is really just a flat
-// 45x45 bordered square (a fill, a border line, a light top/left bevel line and a dark bottom/right
-// one -- 4 solid colors total, already following this game's own "one light source, top-left" rule,
-// which is exactly why this frame was picked over any other) plus its own baked-in drop-shadow sliver
-// along the last few rows/columns, cropped off below since this game already draws its own soft
-// shadow behind every panel (see makePanel(), src/scenes/ui.js) and stacking two shadows would just
-// double-darken the same corner. `tan_pressed.png` is the pack's own "flush, no shadow" variant, used
-// for the button's own pressed state below.
+// Decoded directly (not guessed from a thumbnail): the pack's 48x48 source is a flat bordered frame
+// (a fill, a border line and a light outer bevel line, 3 solid colors, the same 2px ring on ALL FOUR
+// sides) with a baked-in drop-shadow sliver under it -- the raised "tan.png" is 48 wide x 46 tall plus
+// 2 shadow rows, "tan_pressed.png" is a full 48x48 with no shadow. The shadow is left out below since
+// this game already draws its own soft shadow behind every panel (see makePanel(), src/scenes/ui.js)
+// and stacking two shadows would just double-darken the same corner. `tan_pressed.png` is the pack's
+// own "flush, no shadow" variant, used for the button's own pressed state below.
+//
+// FB-0073/FB-0068 ("the text box is cut off on the right", "close the item bar on the right as well"):
+// this section used to crop the pack to its top-left 45x45 pixels, which threw away the whole RIGHT border
+// (source columns 45-47) and the outer line of the bottom one, so every panel in the game (dialog, mini-game
+// cards, pause menu, journal, hotbar, toast) was drawn with no right edge at all. The frame is now rebuilt
+// from the full 48x48 source, both edges of every side included (buildUiFrame() below).
 const KENNEY_UI_PANEL = 'kenney-pixel-ui-pack/9-Slice/Ancient/tan.png';
 const KENNEY_UI_PANEL_PRESSED = 'kenney-pixel-ui-pack/9-Slice/Ancient/tan_pressed.png';
-const UI_FRAME_CROP = 45; // the pack's own bordered square, minus its baked-in shadow sliver past it
+const UI_FRAME_PX = 48; // the pack frame's own width and height, in source pixels
 const UI_FRAME_SCALE = 2; // upscaled so the border reads as a chunky ~4px line (STYLE_GUIDE's own spec)
-const UI_FRAME_SIZE = UI_FRAME_CROP * UI_FRAME_SCALE; // one frame's width/height in ui-panel.png (90)
+const UI_FRAME_SIZE = UI_FRAME_PX * UI_FRAME_SCALE; // one frame's width/height in ui-panel.png (96)
 // src/scenes/ui.js's makePanel()/makeButtonFrame() use this same inset for every NineSlice they build
 // -- keeping the number here (not re-derived there) is the single source of truth for both files.
 const UI_FRAME_BORDER = 2 * UI_FRAME_SCALE; // 4
 
-// The pack frame's own 4 flat colors (sampled by decoding the PNG directly, not eyeballed), mapped
-// onto this game's palette: fill, border line, the light top/left bevel and the dark bottom/right one
-// (a corner "rivet" fleck in the pack's own art, and this game's own soft shadow color here). Each
-// entry is `[hex, alpha]` -- alpha lets the fill stay close to STYLE_GUIDE's "92% opacity" panel spec
-// baked directly into the texture, rather than something every caller has to remember to set again.
-function uiFrameMap(fill, border, hiBevel, loBevel) {
-  const map = { '#d3bf8f': fill, '#b1a077': border, '#d9cdaf': hiBevel };
-  if (loBevel) map['#a3997f'] = loBevel; // tan_pressed.png has no pixels of this color at all
-  return map;
+// The pack frame's own flat colors (sampled by decoding the PNG directly, not eyeballed), mapped onto
+// this game's palette: fill, border line and the light outer bevel line. Each entry is `[hex, alpha]` --
+// alpha lets the fill stay close to STYLE_GUIDE's "92% opacity" panel spec baked directly into the
+// texture, rather than something every caller has to remember to set again. The pack's own shadow colour
+// ('#a3997f') is deliberately not mapped: those pixels are skipped, so the four corners stay a clean
+// notch on every side.
+function uiFrameMap(fill, border, hiBevel) {
+  return { '#d3bf8f': fill, '#b1a077': border, '#d9cdaf': hiBevel };
 }
-const UI_PANEL_MAP = uiFrameMap(['#1a1c2c', 235], ['#eadbb8', 255], ['#fff1a8', 255], ['#000000', 90]);
-const UI_BUTTON_NORMAL_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#fff1a8', 255], ['#000000', 100]);
+const UI_PANEL_MAP = uiFrameMap(['#1a1c2c', 235], ['#eadbb8', 255], ['#fff1a8', 255]);
+const UI_BUTTON_NORMAL_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#fff1a8', 255]);
 // Hover/focused (docs/GAME_FEEL.md rule 7, "big buttons... drawn properly"): a brighter fill and a
 // gold border, matching this game's existing highlight color everywhere else a selection is shown.
-const UI_BUTTON_HOVER_MAP = uiFrameMap(['#24273c', 255], ['#ffd23f', 255], ['#fff1a8', 255], ['#000000', 110]);
-// Pressed: built from tan_pressed.png (no border-line pixels past the frame at all, see above), and
-// the top/left bevel line is recolored dark instead of light -- reading as a sunken, pushed-in frame
-// rather than the normal state's own raised one (docs/GAME_FEEL.md "inverted bevel" rule).
-const UI_BUTTON_PRESSED_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#000000', 70], null);
+const UI_BUTTON_HOVER_MAP = uiFrameMap(['#24273c', 255], ['#ffd23f', 255], ['#fff1a8', 255]);
+// Pressed: built from tan_pressed.png (no shadow rows at all, see above), and the outer bevel line is
+// recolored dark instead of light -- reading as a sunken, pushed-in frame rather than the normal state's
+// own raised one (docs/GAME_FEEL.md "inverted bevel" rule).
+const UI_BUTTON_PRESSED_MAP = uiFrameMap(['#1a1c2c', 255], ['#eadbb8', 255], ['#000000', 70]);
 
-// Crops the pack frame's own 45x45 bordered square out of `atlasPath`, recolors it pixel-by-pixel via
-// `colorMap` (`{'#srcHex': ['#dstHex', alpha]}`, above) and upscales it 2x (nearest-neighbor, the same
-// technique every other blit in this file uses) into a fresh Img.
+// Builds one UI_FRAME_PX x UI_FRAME_PX frame out of the pack frame in `atlasPath`, recolors it
+// pixel-by-pixel via `colorMap` (`{'#srcHex': ['#dstHex', alpha]}`, above) and upscales it 2x
+// (nearest-neighbor, the same technique every other blit in this file uses) into a fresh Img.
 //
 // Quality loop fix (Mini-games category, "odd tick decorations on the left edge"): decoding the pack
 // frame directly (not eyeballed) found its "Ancient" style scatters a handful of small border-colored
 // rivet flecks through the interior fill -- Kenney's own aging/weathering detail, not a flat texture.
 // A couple of them land close enough to the border (column 2, several rows) that Phaser's own NineSlice
 // stretches that whole neighborhood into the panel's center quad, and on any panel much taller than
-// this 90px source -- exactly the mini-game cards, sized from their own content, often 250-400px tall
+// this 96px source -- exactly the mini-game cards, sized from their own content, often 250-400px tall
 // (docs/GAME_FEEL.md rule 1) -- the stretch smears that fleck into a visible streak running down near
 // the left edge. This game's own panel spec is a flat fill anyway (STYLE_GUIDE.md "Panels: navy at 92%
 // opacity, 4px cream border"), so the real fix is to never carry that interior noise into the recolor
-// at all: only the outer 2px ring (the hi-bevel line + the border line, `FRAME_RING` below) keeps the
+// at all: only the outer 2px ring (the bevel line + the border line, `FRAME_RING` below) keeps the
 // source's own pixel; everything strictly inside it becomes the flat fill color, regardless of what
 // the source pixel underneath happens to be.
-const FRAME_RING = 2; // hi-bevel row/col (0) + border-line row/col (1), each side
+//
+// FB-0073: the ring is read from all four sides of the source. The raised frame is 2 rows shorter than
+// the pressed one (its last two rows are shadow), so the bottom ring is found by scanning for the frame's
+// own last bevel row (`frameBottomRow()`), not assumed to sit at the bottom of the file.
+const FRAME_RING = 2; // bevel row/col + border-line row/col, each side
+const FRAME_FILL_KEY = '#d3bf8f'; // the pack's own flat-fill key -- always present in every colorMap above
+const FRAME_BEVEL_KEY = '#d9cdaf';
+const FRAME_MID_ROW = 24; // a row with nothing but the plain two-line ring on its left/right edges
+function atlasHex(atlas, x, y) {
+  const si = (y * atlas.width + x) * 4;
+  if (atlas.data[si + 3] === 0) return null;
+  return '#' + [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+// The row of the pack frame that holds its bottom bevel line (the last row of the frame itself, ahead
+// of any shadow rows): found down the middle column, where nothing but the frame's own lines can be.
+function frameBottomRow(atlas) {
+  for (let y = atlas.height - 1; y >= 0; y--) if (atlasHex(atlas, FRAME_MID_ROW, y) === FRAME_BEVEL_KEY) return y;
+  throw new Error('make-assets: no bevel row found in the UI pack frame');
+}
 function buildUiFrame(atlasPath, colorMap) {
   const atlas = loadAtlas(atlasPath);
+  const bottomRow = frameBottomRow(atlas);
   const out = new Img(UI_FRAME_SIZE, UI_FRAME_SIZE);
-  for (let y = 0; y < UI_FRAME_CROP; y++) {
-    for (let x = 0; x < UI_FRAME_CROP; x++) {
-      const si = (y * atlas.width + x) * 4;
-      const a = atlas.data[si + 3];
-      if (a === 0) continue;
-      const onRing = x < FRAME_RING || y < FRAME_RING || x >= UI_FRAME_CROP - FRAME_RING || y >= UI_FRAME_CROP - FRAME_RING;
-      const key = onRing
-        ? '#' + [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')
-        : '#d3bf8f'; // the pack's own flat-fill key -- always present in every colorMap above
+  for (let y = 0; y < UI_FRAME_PX; y++) {
+    // Top rows come from the top of the source, bottom rows from the pack's own last two frame rows, and
+    // every row in between reads the same plain middle row (only its left/right ring columns are used).
+    const srcY = y < FRAME_RING ? y : y >= UI_FRAME_PX - FRAME_RING ? bottomRow - (UI_FRAME_PX - 1 - y) : FRAME_MID_ROW;
+    for (let x = 0; x < UI_FRAME_PX; x++) {
+      const onRing = x < FRAME_RING || y < FRAME_RING || x >= UI_FRAME_PX - FRAME_RING || y >= UI_FRAME_PX - FRAME_RING;
+      const key = onRing ? atlasHex(atlas, x, srcY) : FRAME_FILL_KEY;
+      if (key === null) continue; // a transparent corner of the pack frame
       const target = colorMap[key];
-      if (!target) continue; // this frame only ever has the colors mapped above
+      if (!target) continue; // the pack's shadow colour: left out on purpose, see uiFrameMap()
       const [hex, alpha] = target;
       const [r, g, b] = hexToRgb(hex);
       for (let dy = 0; dy < UI_FRAME_SCALE; dy++) {

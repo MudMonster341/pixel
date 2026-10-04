@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:42:01.294Z",
-  "updatedAt": "2026-10-04T17:42:01.294Z",
+  "updatedAt": "2026-10-04T18:29:15.408Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -55,13 +55,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0075.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Quit on the title, Quit Game in the pause menu, a goodbye screen, and a one-time ESC FOR THE MENU hint.",
+      "at": "2026-10-04T18:29:15.408Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/quit-game.test.js › FB-0075",
+    "commit": null,
+    "at": "2026-10-04T18:29:15.408Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:42:01.294Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:29:15.408Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

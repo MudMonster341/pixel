@@ -332,7 +332,10 @@ class Floor {
     const [x, y] = side === 'top' ? [mid, r.y0] : side === 'bottom' ? [mid, r.y1] : side === 'left' ? [r.x0, mid] : [r.x1, mid];
     this.setDoor(x, y);
     this.setDoor(x + (horizontal ? 1 : 0), y + (horizontal ? 0 : 1));
-    const props = { to, toId, facing };
+    // FB-0046: the doorway is two tiles wide (the two setDoor() cells above) while the object is a point on the
+    // first one -- `cells` ("2x1", or "1x2" for a door in a vertical wall) makes every cell of it the door
+    // (src/maplogic.js parseDoorCells()), so she can't stand in the second half of a doorway without entering.
+    const props = { to, toId, facing, cells: horizontal ? '2x1' : '1x2' };
     if (openTiles) props.openTiles = openTiles;
     this.pointObject('door', name, x, y, props);
   }

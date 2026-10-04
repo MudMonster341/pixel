@@ -74,7 +74,9 @@ class CreditsScene extends Phaser.Scene {
     // is reached directly). No new sting: the audio registry has no fitting one.
     AudioManager.playMusic('cardMusic');
 
-    for (const key of ['ESC', 'SPACE', 'ENTER']) {
+    // E too (FB-0045: E and Enter do the same everywhere a message advances) -- but no key is ever REQUIRED:
+    // the timeline below returns to the title on its own a few seconds after THE END (FB-0076).
+    for (const key of ['ESC', 'SPACE', 'ENTER', 'E']) {
       this.input.keyboard.on(`keydown-${key}`, (event) => this.onSkipKey(event));
     }
 
@@ -393,6 +395,9 @@ class CreditsScene extends Phaser.Scene {
 
   // Back to the title, exactly like the card did: fade out, then start 'title' (the save is untouched).
   // A failsafe timer guarantees the hand-off even if the camera fade event never arrives.
+  // FB-0076: it is the END of the game, so nothing of the game is left behind the title: the world that was
+  // paused when the box opened (and its HUD) are stopped first (src/scenes/ui.js stopGameplayScenes();
+  // the title itself does the same in its own create(), belt and braces).
   returnToTitle() {
     if (this.phase === 'leaving') return;
     this.phase = 'leaving';
@@ -400,6 +405,7 @@ class CreditsScene extends Phaser.Scene {
     const go = () => {
       if (gone) return;
       gone = true;
+      stopGameplayScenes(this);
       this.scene.start('title');
     };
     this.cameras.main.fadeOut(500, 0, 0, 0);

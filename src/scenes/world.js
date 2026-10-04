@@ -69,7 +69,11 @@ const PLAYER_FEET_OFFSET = 8;
 // clear. The door itself (if it has `openTiles`) opens just before she starts walking, at roughly
 // half the walk's own duration -- and the fade that follows a departure is the existing 250ms
 // (unchanged, docs/STYLE_GUIDE.md).
-const DOOR_WALK_MS = 250;
+// FB-0046: the door walk is at WALKING speed (WALK_SPEED, never the run speed she may have arrived
+// at the door with) and always plays the walk animation at its normal rate -- one tile takes
+// DOOR_WALK_MS, a longer arrival walk takes proportionally longer (walkThroughDoor()).
+const DOOR_WALK_MS = Math.round((16 / WALK_SPEED) * 1000); // one 16px tile at walking speed
+const DOOR_WALK_MIN_MS = 120;
 const STAIRS_WALK_MS = 150;
 const DOOR_RATTLE_MS = 200;
 // Footstep dust (ADR 0015): a puff roughly every couple of steps while running outdoors, not every
@@ -130,6 +134,42 @@ class WorldScene extends Phaser.Scene {
     this.dustAccum = 0; // footstep dust puff timer (outdoors, while running)
   }
 
+  // FB-0072 (the one choke point): `transitioning` is the flag every "the player does not have the
+  // wheel" moment already sets -- an in-world script (ScriptRunner.run()/lockInput, the Gate 2 welcome, the
+  // Main Block entrance, the key-room beats, the opening), a door's walk-in/out, a warp's fade. update()
+  // returns at its very top while it is set, so movePlayer() never runs again to zero her velocity or
+  // swap her animation: a script or door that began while she was RUNNING left her sliding on at run speed
+  // with the run animation playing under the dialog box ("the character is running all the time", FB-0072;
+  // the same thing carried her up the Main Block's steps over the door during its entrance beat, FB-0046).
+  // Making it an accessor means every one of those writers, present and future, stops her the instant it
+  // sets the flag, without each having to remember to. (Overlays that merely block input -- dialog, journal,
+  // map, pause menu -- are covered by movePlayer(blocked) on the next frame; mini-games, cutscenes and
+  // the box opening call haltPlayer() directly as they pause this scene.)
+  get transitioning() {
+    return this._transitioning === true;
+  }
+
+  set transitioning(value) {
+    const next = Boolean(value);
+    const was = this._transitioning === true;
+    this._transitioning = next;
+    if (next && !was) this.haltPlayer();
+  }
+
+  // Stops the player dead: zero velocity, the walk/run animation stopped and its faster run rate
+  // reset, the idle frame of the direction she is facing showing. Held movement keys do nothing
+  // while a screen owns the game (movePlayer's `blocked`/update()'s `transitioning`) and movement
+  // resumes normally from whatever keys are still down once it ends.
+  haltPlayer() {
+    const p = this.player;
+    if (!p || !p.active || !p.body) return;
+    p.setVelocity(0, 0);
+    p.anims.timeScale = 1;
+    p.anims.stop();
+    p.setFrame(PLAYER_IDLE[this.facing] ?? PLAYER_IDLE.down);
+    this.dustAccum = 0;
+  }
+
   preload() {
     // Held-item sprites (FB-0002): loaded here (not in the boot scene) so this file alone owns
     // them. Already-cached textures are skipped, which matters since the scene restarts per map.
@@ -165,7 +205,9 @@ class WorldScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT');
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
     this.input.keyboard.addCapture('SPACE');
-    for (const key of ['E', 'SPACE']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
+    // FB-0045: Enter does exactly what E and Space do (talk, next line, pick a choice) -- ONE handler for
+    // all three, so a single key press can never both advance a box and start a new conversation.
+    for (const key of ['E', 'SPACE', 'ENTER']) this.input.keyboard.on(`keydown-${key}`, (event) => this.onInteractKey(event));
 
     // ADR 0016: the in-world cutscene script runner (src/scripts-runtime.js). Esc fast-forwards
     // whatever's currently playing straight to its end state -- registered here (not left to
@@ -776,11 +818,16 @@ class WorldScene extends Phaser.Scene {
     GameState.position = { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) };
   }
 
-  // E / Space: next line of dialog, or talk to whoever is nearby.
+  // E / Space / Enter: next line of dialog, or talk to whoever is nearby.
   onInteractKey(event) {
     // this.sys.isActive() is false while a cutscene has this scene paused (Phaser still delivers
     // keyboard events to paused scenes, since they're not tied to the update loop).
     if (event.repeat || !this.sys.isActive()) return;
+    // FB-0045: the UI scene listens to the very same native key event (the pause menu confirms on
+    // Enter/Space). If it already used this press -- say "Resume" just closed the menu -- it marks the
+    // event, and this scene must not turn the same press into a conversation a frame later. (Whichever
+    // scene hears the event first, one press is only ever used once.)
+    if (event.uiConsumed) return;
     const ui = this.scene.get('ui');
     if (!ui.tutorial) return;
     // ADR 0016: a script's own `say` step (src/scripts-runtime.js) reuses this exact dialog box, so
@@ -872,6 +919,7 @@ class WorldScene extends Phaser.Scene {
     const textWarps = (this.def.warps || []).map((w) => ({
       ...w, kind: w.kind || 'door', locked: false, lockedReason: null, _rule: null,
       openTiles: parseOpenTiles(w.openTiles),
+      cellsW: 1, cellsH: 1,
     }));
     const objectWarps = (this.mapObjects || [])
       // ADR 0020: a Tiled `door` marked `closed` has no `to` -- a door in a wing wall that never opens. It is
@@ -880,8 +928,10 @@ class WorldScene extends Phaser.Scene {
       .filter((o) => (o.type === 'door' || o.type === 'stairs') && (o.props.to || o.props.closed))
       .map((o) => {
         const rule = doorLockRule(this.def.doorLocks, o.name);
+        // FB-0046: a two-tile doorway carries `cells` ("2x1"): every cell of it is the door (see maplogic.js parseDoorCells()).
+        const cells = o.type === 'door' ? parseDoorCells(o.props.cells) : { w: 1, h: 1 };
         return {
-          x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, to: o.props.to, spawnAt: o.props.toId,
+          x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, cellsW: cells.w, cellsH: cells.h, to: o.props.to, spawnAt: o.props.toId,
           closed: Boolean(o.props.closed),
           name: o.name, kind: o.type, openTiles: parseOpenTiles(o.props.openTiles),
           locked: Boolean(o.props.closed) || isDoorLocked(rule, GameState.quest.stage), _rule: rule,
@@ -911,14 +961,17 @@ class WorldScene extends Phaser.Scene {
 
   // Doors are one or two tiles wide, so walking at one slightly off-center would snag on the wall.
   // If a warp tile is just ahead, return a sideways speed that slides the player into line.
+  // FB-0046: a two-tile door (every real doorway in the game) is steered towards the MIDDLE of the
+  // whole doorway (maplogic.js doorCenterPx()), not the centre of its first tile, and its reach grows by
+  // half the extra width -- a one-tile door (cellsW 1) behaves exactly as before.
   doorAssist(dy, speed) {
     const body = this.player.body;
     const aheadY = Math.floor((dy < 0 ? body.top - 2 : body.bottom + 2) / TILE);
     const warp = this.getWarpPoints().find(
-      (w) => !w.closed && w.y === aheadY && Math.abs(toPixel(w.x) - body.center.x) < DOOR_ASSIST_RANGE, // ADR 0020: never steer into a closed wall door
+      (w) => !w.closed && w.y === aheadY && Math.abs(doorCenterPx(w).x - body.center.x) < DOOR_ASSIST_RANGE + ((w.cellsW || 1) - 1) * (TILE / 2), // ADR 0020: never steer into a closed wall door
     );
     if (!warp) return null;
-    return Phaser.Math.Clamp((toPixel(warp.x) - body.center.x) * 10, -speed, speed);
+    return Phaser.Math.Clamp((doorCenterPx(warp).x - body.center.x) * 10, -speed, speed);
   }
 
   // Resolves a door/stairs object's name into a spawn point: one tile past it, in the direction
@@ -1098,8 +1151,7 @@ class WorldScene extends Phaser.Scene {
   // actually cares about that outcome.
   launchMinigame(id, onResult) {
     const def = MINIGAMES[id];
-    this.player.setVelocity(0, 0);
-    this.player.anims.stop();
+    this.haltPlayer(); // FB-0072: stopped, idle frame in her facing, before the world is paused under the game
     this.prompt.setVisible(false);
     this.scene.pause();
     this.scene.launch(def.sceneKey, { id, onComplete: onResult, returnTo: 'world' });
@@ -1166,7 +1218,8 @@ class WorldScene extends Phaser.Scene {
     const body = this.player.body;
     const tileX = Math.floor(body.center.x / TILE);
     const tileY = Math.floor((body.bottom - 1) / TILE);
-    const warp = this.getWarpPoints().find((w) => w.x === tileX && w.y === tileY);
+    // FB-0046: any cell of the doorway counts (maplogic.js doorCoversTile()), not just its first tile.
+    const warp = this.getWarpPoints().find((w) => doorCoversTile(w, tileX, tileY));
     if (!warp) {
       this.lockedWarned = null;
       return;
@@ -1205,8 +1258,7 @@ class WorldScene extends Phaser.Scene {
     // mashing Esc/any other key from ever double-warping or soft-locking -- update() (and every
     // one-shot keydown handler, onInteractKey()) bails out immediately while this is true, for the
     // whole walk-in + fade, exactly as it already did for the plain fade before this ADR.
-    this.transitioning = true;
-    this.player.setVelocity(0, 0);
+    this.transitioning = true; // (this also stops her dead -- haltPlayer(), see the accessor above)
     this.prompt.setVisible(false);
     this.playDoorDeparture(warp);
   }
@@ -1221,6 +1273,13 @@ class WorldScene extends Phaser.Scene {
     // src/audio.js) -- not at the old fadeOut point, since that's now a full walk-in later.
     AudioManager.play(warp.kind === 'stairs' ? 'warpStairs' : 'doorOpen');
     const overlay = warp.kind === 'door' ? this.showDoorOverlay(warp) : null;
+    // FB-0046: she walks straight into the MIDDLE of a two-tile doorway (not along one leaf of it, not
+    // over the frame beside it): across the door's width she is lined up on its centre line while she
+    // takes the one step in, along the way she was already heading.
+    const [dirX, dirY] = DIRECTION_OFFSET[facing] || [0, 0];
+    const centre = doorCenterPx(warp);
+    const lineUp = (warp.cellsW || 1) > 1 && dirX === 0 && dirY !== 0;
+    const to = lineUp ? { x: centre.x, y: this.player.y + dirY * TILE } : undefined;
     this.walkThroughDoor(facing, warp.kind, () => {
       this.player.anims.stop();
       this.cameras.main.fadeOut(250, 0, 0, 0);
@@ -1228,7 +1287,7 @@ class WorldScene extends Phaser.Scene {
         if (overlay) overlay.destroy();
         this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt, viaWarpKind: warp.kind });
       });
-    });
+    }, to);
   }
 
   // ADR 0015 door entry, arrival half (the reverse of playDoorDeparture): she appears hidden in the
@@ -1272,7 +1331,11 @@ class WorldScene extends Phaser.Scene {
     const [dx, dy] = DIRECTION_OFFSET[facing] || [0, 0];
     const targetX = to ? to.x : p.x + dx * TILE;
     const targetY = to ? to.y : p.y + dy * TILE;
-    const duration = kind === 'stairs' ? STAIRS_WALK_MS : DOOR_WALK_MS;
+    // FB-0046: WALKING speed and the plain walk animation, never the run she may have arrived at the door
+    // with: a door step is one tile at WALK_SPEED (DOOR_WALK_MS), a longer arrival walk proportionally longer.
+    const distance = Math.hypot(targetX - p.x, targetY - p.y);
+    const duration = kind === 'stairs' ? STAIRS_WALK_MS : Math.max(DOOR_WALK_MIN_MS, Math.round((distance / TILE) * DOOR_WALK_MS));
+    p.anims.timeScale = 1; // the run animation's faster rate must not carry over (movePlayer sets it per frame, but it is not running now)
     p.anims.play(`walk-${facing}`, true);
     this.tweens.add({
       targets: p,
@@ -1340,7 +1403,7 @@ class WorldScene extends Phaser.Scene {
   // whatever tile is *actually* there right now (read straight off the live layer, not `openTiles`),
   // so this works even for a door with no `openTiles` authored at all, unlike showDoorOverlay() above.
   rattleDoor(warp) {
-    const doorWidth = Math.max(1, Math.round(warp.width || 1));
+    const doorWidth = Math.max(1, warp.cellsW || 1, Math.round(warp.width || 1)); // FB-0046: both leaves of a two-tile door shake
     const depth = this.doorOverlayDepth(warp);
     // Reversed: prefer a non-ground layer (e.g. 'structures', where a door's own art actually lives)
     // over 'ground' happening to also have a tile painted at the same spot underneath it.
@@ -1380,6 +1443,7 @@ class WorldScene extends Phaser.Scene {
     if (name) {
       this.game.events.emit('area-entered', name);
       this.game.events.emit('hint', 'map'); // "M for the map", the first time she leaves her start area
+      this.game.events.emit('hint', 'menu'); // FB-0075: "Esc for the menu" (queued right behind the map hint, shown once)
     }
   }
 
@@ -1471,8 +1535,7 @@ class WorldScene extends Phaser.Scene {
   playCutscene(key) {
     GameState.seenCutscenes.add(key);
     this.game.events.emit('cutscene-seen', key); // src/save.js autosaves soon after
-    this.player.setVelocity(0, 0);
-    this.player.anims.stop();
+    this.haltPlayer(); // FB-0072
     this.prompt.setVisible(false);
     this.scene.pause();
     this.scene.launch('cutscene', { key });
@@ -1488,8 +1551,7 @@ class WorldScene extends Phaser.Scene {
   // right underneath them. Triggered by the volunteer's 'reward' dialog entry's last action
   // (src/story.js, `{ boxOpening: true }`).
   playBoxOpening() {
-    this.player.setVelocity(0, 0);
-    this.player.anims.stop();
+    this.haltPlayer(); // FB-0072
     this.prompt.setVisible(false);
     this.scene.stop('ui');
     this.scene.pause();

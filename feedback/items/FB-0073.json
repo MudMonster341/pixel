@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:39:49.704Z",
-  "updatedAt": "2026-10-04T17:39:49.704Z",
+  "updatedAt": "2026-10-04T18:29:15.338Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -68,13 +68,28 @@
     }
   },
   "screenshot": "screenshots/FB-0073.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Right/bottom border restored on every panel; mini-game intro cards are now 3 short lines.",
+      "at": "2026-10-04T18:29:15.338Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/ui-frame.test.js › FB-0073",
+    "commit": null,
+    "at": "2026-10-04T18:29:15.338Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:39:49.704Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T18:29:15.338Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

@@ -4,14 +4,15 @@ Status: **designed, not built.** The owner: "not right now, but slowly and prope
 ("moments") that happen at spaced intervals while Taru walks around, each tied to a person or a joke she will recognise. They are the
 core of the "wow" the owner asked for (see [the Day 3 plan, section B](2026-10-04-day3-feedback-and-wow.md)) and widen **W1**.
 Related decision: [ADR 0021](../../decisions/0021-friends-in-the-game-and-personal-touches.md) (named friends and professors as NPCs).
-Build rules: [agent-rules.md](agent-rules.md). Build order: after P1-P5 (the feedback packages) and before the juice pass, one moment per agent run, cut from the bottom up.
+Build rules: [agent-rules.md](agent-rules.md). Build order: after P1-P4 and the other feedback packages; the sumo game (M7) is built in P5 together with the other mini-games; the rest one moment per agent run, cut from the bottom up.
 
 ## The owner's list (as sent)
 
 1. **Unicorn at the entrance.** Outside, as she enters the campus: a unicorn is eating. She reacts ("WOAH, what? Why is there a unicorn here?").
    A prince with a crown comes in from the right, says he is always watching, climbs on the unicorn and flies off. She: "Huh, is this the actual BITS?"
-2. **A tower-climb mini-game** (Donkey Kong style) instead of Tetris: climb the tower to save the prince. A reverse Rapunzel: the princess saves the prince, who has short hair
-   ("...and chameleon": unclear, see questions).
+2. **A sumo game against Narda** (updated by the owner later on 2026-10-04; it replaces the first idea, a Donkey-Kong tower climb that saves the prince).
+   A simple 2D two-player-style sumo, like the mobile "2 player games": a click/tap (or key) game where two sumo wrestlers push each other and you win by pushing the other one out of the ring.
+   The opponent is **Narda**, a friend of the owner (she/her), who replaces Tetris.
 3. **Mevin** (a friend, with drums) comes up to her when she enters the campus: "WOAHHH, <name>, you da goat! Come watch me perform at Jashn some day."
 4. **The Hello Kitty / Batman game gets a themed cover** (the owner pasted a pixel image: a white cat with a pink bow hugging a masked caped hero against a pink-orange sunset and a city
    skyline, and a Pinterest link).
@@ -39,6 +40,7 @@ Moments are **in-world scripts** like the RTA bus and the Mustafa greeting (`src
 | M3 | **Prof. Raja's chariot** | A corridor of the Main Block (random-ish, once, after the first key) | A teaching-corridor chat, a rumble, a chariot (generic, pack-based) rolls in, Raja climbs on, it leaves. | script | M |
 | M4 | **Sana, Shraddha, Palak** | After the second key, on the way back (canteen path or the foyer) | Three friends walk up together: "Hi <name>, come to the canteen with us". She says she will, later. | script, 3 NPC sprites | S |
 | M5 | **Hero vs villain cover** | The Physics Lab game's title screen (FB-0066) | See "The cover" below. | art generator | S-M |
+| M7 | **Sumo vs Narda** | The Room 195 key station (replaces Tetris) | Narda waits beside the key desk: "You want the key? Beat me at sumo." The sumo game: see "The sumo game" below. | new mini-game (pure logic + scene + art generator) | M |
 | M6 | **The ball pit** | A side room off the auditorium lobby (bonus, optional, not on the key route) | She walks to the pit's edge, presses E to jump in: a splash of coloured balls, she paddles through (slower, balls bob and part around her), tosses balls (a small button action), laughs emote, climbs out. | new small interactive area: a "pit" tile region with its own movement rule and a particle emitter | L |
 
 M1 and M2 are the two the owner described as "when you enter campus": M1 plays first (the gate avenue), M2 a little later (the forecourt), so they never overlap.
@@ -51,25 +53,36 @@ silhouettes, the existing character recolour sheets), not drawn by hand and not 
 **Option for the owner:** if they prefer the exact characters for their own private copy, they can drop their own image into a gitignored slot (like the card photos); the build would pick
 it up if present. That is the owner's file and the owner's call; it is not built unless asked.
 
-## Mini-game line-up (needs one answer)
-FB-0074 says "replace Tetris with a candy-crush-style match-3"; item 2 above says "instead of Tetris, a Donkey-Kong tower climb". Both cannot own the Room 195 key. My recommendation:
+## The sumo game (Room 195): design
+Side view, two big sumo stand-ins facing each other on a round straw ring (dohyo); Narda on the right, Taru on the left. **Controls: mash SPACE / click / tap to push**
+(the same one-button "2 player game" feel; Enter/E also work). Rules, all in a pure, unit-tested logic file (`src/minigames/sumo-logic.js`, like `tetris-logic.js`/`flappy-logic.js`):
+- A position `p` in [-1, 1] (0 = the ring centre). Every press adds a short push impulse for the player; Narda's AI "presses" at a rate that depends on the round (about 4-6 per second, with jitter and short stumbles) so a quick mash wins, a lazy one loses.
+- A small stamina meter: mashing without rhythm tires you (a light penalty), a steady rhythm does not. It keeps it from being pure spam and is why the bigger the rhythm the better the push.
+- Friction pulls both toward the centre; whoever's `p` crosses the rim is pushed out. **Best of 3 rounds**; a round lasts at most about 15 s (then a draw is decided by who is nearer the centre).
+- Soft-lock guard like every mini-game: **skip after 3 losses**, Esc to quit; no round can fail to end.
+- Presentation: the pre-fight bow/"HAKKEYOI!" banner, a screen shake on each big push, dust puffs at the feet, the loser flying out of the ring in an arc, Narda's reaction lines ("Best of three!", "Okay, okay, you win this one.").
+- Art: pack tiles and code; wrestler sprites from a free pack if one has them, otherwise a recoloured, scaled pack character with a code-built mawashi and belly (the mini-game art generator already composes sprites this way). No hand-drawn PNGs.
+Narda is a **named friend** (ADR 0021 addendum): she also stands near the Room 195 key station on the map with one fixed line; the owner approves her lines.
 
-| Key | Game | Why |
+## Mini-game line-up (one confirmation needed)
+The owner's two messages both replace Tetris (FB-0074: a candy-crush-style match-3; item 2: first a tower climb, now the sumo game). The last word wins for the Room 195 key. My proposal:
+
+| Key | Game | Note |
 |---|---|---|
-| Physics Lab | **Hero vs villain** (the platformer, made harder: FB-0066) | as asked |
+| Physics Lab | **Hero vs villain** (the platformer, made harder: FB-0066) | as asked; generic stand-ins; themed cover (M5) |
 | ICL (fingerprint door, FB-0071) | the existing flyer "Server Dash" re-skinned as the fingerprint hack, then the lab with Alice | already built and tested; fits a computing lab |
-| Room 195 | **Match-3** (FB-0074) | pure, unit-testable logic; lowest risk before the birthday |
-| Bonus (arcade corner beside the ball pit) | **Tower climb: save the prince** (optional, no key) | gives the idea a home without risking the key route; first to cut |
+| Room 195 | **Sumo vs Narda** (M7) | the owner's latest request |
+| Bonus (arcade corner beside the ball pit) | **Match-3** (FB-0074) | optional, no key; first to cut. The tower climb is dropped. |
 
-If the owner would rather the tower climb own the Room 195 key, swap rows 3 and 4 (the match-3 becomes the bonus).
+If the owner would rather keep match-3 as the Room 195 key game, the sumo becomes the bonus (swap rows 3 and 4).
 
 ## Open questions for the owner
-1. Match-3 or tower climb for the Room 195 key (table above)?
-2. Tower climb: what does "short hair and chameleon" mean here (the prince is a chameleon? the princess has a chameleon pet? a disguise)?
-3. "TPP": which area is that (a building/room name)? The ball pit goes by the auditorium unless told otherwise.
-4. Mevin: any real detail to include (instrument is drums, event is "Jashn"; anything else, or a different name spelling)? Is "Jashn" the cultural fest?
-5. The unicorn line "I'm not drunk yet": I drafted a milder "I haven't even had coffee yet"; keep the original or the mild one?
-6. Cut order if time runs short (my proposal): M6 ball pit, then the tower-climb bonus, then M3 Raja's chariot, then M4. Keep M1, M2, M5.
+1. Sumo for the Room 195 key and match-3 as an optional bonus game (table above): OK, or should match-3 keep the key?
+2. "TPP": which area is that (a building/room name)? The ball pit goes by the auditorium unless told otherwise.
+3. Mevin: any real detail to include (instrument is drums, event is "Jashn"; anything else, or a different name spelling)? Is "Jashn" the cultural fest?
+4. The unicorn line "I'm not drunk yet": I drafted a milder "I haven't even had coffee yet"; keep the original or the mild one?
+5. Narda: anything to know about her (look, hair, a catchphrase), and is the sumo set in the Room 195 classroom?
+6. Cut order if time runs short (my proposal): M6 ball pit, then the match-3 bonus, then M3 Raja's chariot, then M4. Keep M1, M2, M5, M7.
 
 ## Draft lines (placeholders; the owner edits)
 - **M1** Taru: "WOAH. What?!" ... "I haven't even had coffee yet. Why is there a unicorn?" Prince: "Don't mind me. I'm always watching." (mounts, flies off) Taru: "Huh... is this the actual BITS?"

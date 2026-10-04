@@ -31,6 +31,7 @@ game still lacks a "wow".
 The owner's full list is wider than the first reading. All of these are allowed as small pixel NPCs, with affectionate, light, fixed lines that the owner approves:
 - **Friends (male):** Sid, Akshit, Varun, Mitul, Karthik, **Mustafa** (the owner, black and orange hoodie, near every mini-game, one fixed line each), plus
   Siva, Shamsuddin, Najam, Satvik (a little darker skin tone, carries a camera).
+- **Narda** (a friend, she/her): the sumo opponent at the Room 195 key station; **Mevin** (a friend with drums): runs up at the forecourt.
 - **Friends of Taru (female):** Sana, Shraddha, Palak: a short scene where all three walk up, say hi to Taru and invite her to the canteen / to spend time with them.
 - **Professors (the same three already in the sourced facts, ADR 0018):** Prof. **Elakkiya** (her quizzes are hard: a "goated" prof), Prof. **Angel** (J. Angel Arul Jothi: pun, she
   has small wings), Prof. **Raja** (Raja Muthalagu: a "raja": a chariot suddenly arrives and takes him away). Teasing stays kind and about the joke the owner gave, never about private life.

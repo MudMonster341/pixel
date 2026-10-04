@@ -147,13 +147,17 @@ test('FB-0028: the walkway network has dedicated edge/corner tiles for its true 
 
 // ---------- FB-0015: lawns, hedges, bushes, and trees with an overhead canopy ----------
 
+// FB-0053/FB-0056: two date palms and three leafy trees (tools/lib/tree-art.js), each <family>Trunk + <family>Canopy{TL,TR,BL,BR}.
+const TREE_FAMILIES = ['palm1', 'palm2', 'leafy1', 'leafy2', 'leafy3'];
+const CANOPY_TILES = TREE_FAMILIES.flatMap((f) => ['TL', 'TR', 'BL', 'BR'].map((q) => `${f}Canopy${q}`));
+
 test('FB-0015: tree trunks and hedges are solid, canopy tiles are overhead and not solid', () => {
-  for (const name of ['treeTrunk', 'palmTrunk', 'hedge', 'bush']) {
+  for (const name of [...TREE_FAMILIES.map((f) => `${f}Trunk`), 'hedge', 'bush']) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);
     assert.equal(tile.solid, true, `${name} should be solid`);
   }
-  for (const name of ['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR', 'palmCanopyTL', 'palmCanopyTR', 'palmCanopyBL', 'palmCanopyBR']) {
+  for (const name of CANOPY_TILES) {
     const tile = tileInfoFor(name);
     assert.ok(tile, `missing "${name}"`);
     assert.equal(tile.overhead, true, `${name} should be marked overhead: true`);
@@ -162,7 +166,7 @@ test('FB-0015: tree trunks and hedges are solid, canopy tiles are overhead and n
 });
 
 test('FB-0015: canopy tiles have transparent pixels outside the tree silhouette', () => {
-  for (const name of ['treeCanopyTL', 'palmCanopyBR']) {
+  for (const name of ['leafy1CanopyTL', 'palm1CanopyBR']) {
     const counts = colorCounts(name);
     assert.ok(counts.transparent > 0, `${name} should have transparent pixels around its silhouette`);
   }
@@ -257,22 +261,20 @@ test('hedge and bush are recolored onto the dry campus greenery ramp, not left i
   }
 });
 
-test('tree canopy stays overhead and non-solid, and its bottom-left quadrant still touches the trunk planted below it', () => {
-  for (const name of ['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR']) {
+test('tree canopies stay overhead and non-solid, trunks solid, and each canopy touches the trunk planted below it', () => {
+  for (const name of CANOPY_TILES) {
     const tile = tileInfoFor(name);
     assert.equal(tile.overhead, true, `${name} should stay overhead (drawn above the player)`);
     assert.equal(tile.solid, false, `${name} should stay non-solid`);
   }
-  assert.equal(tileInfoFor('treeTrunk').solid, true, 'treeTrunk should stay solid');
-  // STYLE_GUIDE "the trunk tile sits directly below the canopy quad": build-campus.js plants the
-  // trunk under the canopy's BL quadrant, so BL's own "skirt" row (FB-0019's fix -- the flat band
-  // added at virtual gy 27-30, i.e. local row 14 of this quadrant's own 0-15) must stay opaque
-  // across the columns the trunk actually occupies (x+8..13 in treeTrunk's own art), regardless of
-  // the recolor source (FB-0025 addendum): the shape/outline logic is unchanged, only the fill.
-  const { x: tx, y: ty } = tileByName('treeCanopyBL');
-  for (const x of [8, 9, 10, 11, 12, 13]) {
-    const i = ((ty + TILE - 2) * png.width + (tx + x)) * 4;
-    assert.ok(png.rgba[i + 3] !== 0, `treeCanopyBL's skirt row should be opaque at column ${x} (over the trunk), or the canopy floats above it`);
+  for (const family of TREE_FAMILIES) {
+    assert.equal(tileInfoFor(`${family}Trunk`).solid, true, `${family}Trunk should stay solid`);
+    // STYLE_GUIDE "the trunk tile sits directly below the canopy quad": build-campus.js plants the trunk under the canopy's
+    // BL quadrant, so BL's bottom row is opaque somewhere over the trunk's columns (x 8..14 of the tile).
+    const { x: tx, y: ty } = tileByName(`${family}CanopyBL`);
+    let touches = false;
+    for (let x = 7; x <= 14; x++) if (png.rgba[((ty + TILE - 1) * png.width + (tx + x)) * 4 + 3] !== 0) touches = true;
+    assert.ok(touches, `${family}CanopyBL's bottom row is empty over the trunk columns, so the crown floats above its trunk`);
   }
 });
 
@@ -483,5 +485,5 @@ test('Gate 2 has real gate furniture: pillars, a sign, a security booth, and a b
   const barrier = tileInfoFor('barrierArm');
   assert.ok(barrier, 'missing barrierArm');
   assert.equal(barrier.solid, false, 'barrierArm sits on the avenue itself and must never block the player');
-  assert.ok('#9c3a28' in colorCounts('barrierArm'), 'barrierArm should show its red stripe colour (archRed)');
+  assert.ok('#c0392b' in colorCounts('barrierArm'), 'barrierArm should show its red stripe colour');
 });

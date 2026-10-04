@@ -28,6 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const { decodePNG } = require('./lib/png-decode');
+const TreeArt = require('./lib/tree-art');
 
 const TILE = 16;
 const TILESET_COLUMNS = 8;
@@ -149,6 +150,10 @@ const PALETTE = {
   iclBlue: '#2f4a7a', iclBlueHi: '#3a5a8f',
   // ADR 0020 (the ground floor follows the 3D tour): the shaded side strip of the peach lower wall.
   peachShadow: '#c98f74',
+  // FB-0044/FB-0052: the RTA bus stop and the gate barrier. Dubai RTA's red (docs/research/rta-bus-reference.md: the
+  // bus livery red and its shade, the same two hexes tools/make-cutscenes.js paints the bus with) for the shelter
+  // fascia and the stop sign; the logo itself is never drawn.
+  rtaRed: '#d3232a', rtaRedDark: '#8e2021',
 };
 
 // ---------- tiny image + PNG writer ----------
@@ -414,10 +419,6 @@ const PACK = {
 // grid the way Kenney's is).
 const SPROUT_GRASS_BIOM = 'sprout-lands-basic/Sprout Lands - Sprites - Basic pack/Objects/Basic_Grass_Biom_things.png';
 const SPROUT = {
-  // A complete, plain round tree (no fruit/blotches) -- canopy only, cropped just above where its
-  // trunk begins (row 24 of this crop) so no brown trunk pixel ever enters the green-only canopy
-  // remap below. Sampled into the game's existing 32x32 virtual canopy space (canopyQuadrantFromAtlas).
-  treeCanopy: { atlas: SPROUT_GRASS_BIOM, sx: 20, sy: 1, sw: 24, sh: 23 },
   // The plain (no-berry) right half of a symmetric round double-bush -- used for the standalone
   // `bush` tile.
   bush: { atlas: SPROUT_GRASS_BIOM, sx: 16, sy: 48, sw: 16, sh: 16 },
@@ -459,31 +460,10 @@ const URBAN = {
   carFrontRed: urbanTile(17, 17),
   carFrontGreen: urbanTile(21, 15),
 };
-// premium pass Part 2: Ninja Adventure asset pack (Pixel-boy and AAA, CC0, assets/vendor/
-// ninja-adventure/) -- palms (no free pack has date palms in the right pixel style, per the asset
-// survey addendum, but this pack's own desert-town "potted palm" prop reads as a good canopy fill once
-// recolored) and round shade trees (its Nature tileset's own single round tree, canopy only, same
-// "recolor the fill, keep our own hand-drawn trunk/shape" technique FB-0025 already used for Sprout
-// Lands -- see canopyQuadrantFromAtlas below). Rects are crops (fronds/canopy only, no pot/trunk
-// pixels) found by decoding the sheets and measuring, same method as SPROUT above.
-const NINJA_DESERT = 'ninja-adventure/Backgrounds/Tilesets/TilesetDesert.png';
-const NINJA_NATURE = 'ninja-adventure/Backgrounds/Tilesets/TilesetNature.png';
+// premium pass Part 2: Ninja Adventure asset pack (Pixel-boy and AAA, CC0, assets/vendor/ninja-adventure/): the
+// pennant flags on the forecourt flag poles. (Its round tree and potted palm were the campus trees until FB-0053 /
+// FB-0056: the trees now come from tools/lib/tree-art.js, see TREE_TILES.)
 const NINJA = {
-  // A dense, almost entirely opaque crop from the middle of the frond fan (not the whole plant's own
-  // silhouette -- this asset's potted-palm shape doesn't isolate cleanly the way the round tree above
-  // does, so this is a texture sample for canopyQuadrantFromAtlas's per-pixel fill, not a shape match;
-  // palmCanopyShape (unchanged, ours) still draws the actual frond silhouette).
-  palmCanopy: { atlas: NINJA_DESERT, sx: 163, sy: 70, sw: 24, sh: 12 },
-  // D05 (2026-10-04): the old crop {sx 204, sy 254, sw 32, sh 18} was wrong twice over. The pack's round
-  // canopy is only 22 px wide (x 205-226, outline at x 204/227) and its outline starts at row 257, so a
-  // 32x18 window also swept in 8 columns of empty atlas to the right (canopyQuadrantFromAtlas leaves
-  // a=0 pixels transparent, which left the silhouette's right side as a bare outline "second ring") and
-  // 3 rows of the tree log sprites stacked above it (the orange "crate" over the canopy). This crop is
-  // the canopy's fully opaque, outline-free interior (x 207-224, y 258-269) and nothing else.
-  treeCanopy: { atlas: NINJA_NATURE, sx: 207, sy: 258, sw: 18, sh: 12 },
-  // The pack tree's own trunk, a plain column (outline x 211 and x 220, 8 px of orange between) that
-  // is 16 rows tall and constant over y 272-287 (below the canopy, above the root flare).
-  treeTrunk: { atlas: NINJA_NATURE, sx: 211, sy: 272, sw: 10, sh: 16 },
   flag: (color) => ({ atlas: `ninja-adventure/Backgrounds/Animated/Flag/Flag${color}16x16.png`, sx: 0, sy: 0, sw: 16, sh: 16 }),
 };
 
@@ -530,7 +510,6 @@ const BLDG = {
 // sign) -- see flagPoleBase/flagPoleTop below, replacing the single squat Ninja "flag on a stick"
 // tile the coordinator described as reading like a hand axe at this scale.
 const FLAG_POLE_SRC = urbanTile(4, 7);
-const BUS_STOP_SIGN_SRC = urbanTile(6, 6); // a plaque-on-a-pole street sign, native blue
 
 // Buckets a wall pixel by HUE first, not just luminance: this sheet's brick body and its tan coping
 // share overlapping luminance bands (sampled directly -- MEMORY.md), so a plain remapShaded ramp
@@ -1084,14 +1063,79 @@ function securityBooth(img, x, y) {
   img.set(x + 6, y + 7, 'W'); // glint
   img.fill(x, y + 14, TILE, 2, 'baseCool'); // plinth, meets the ground
 }
+// FB-0052: the Gate 2 boom barrier, LOWERED across the whole road (build-campus.js lays arm tiles from the booth
+// side to the far kerb). Three pieces: `barrierPivot` (the housing beside the booth, the arm's hub and a warning
+// lamp), `barrierArm` (one tile of lowered boom: red and white stripes, a soft shadow on the tarmac) and
+// `barrierRest` (the support post on the far side that the boom rests on). All are transparent outside their
+// silhouette so they sit on the road / pavement / lawn they stand on, and none is solid: the boom stops cars, she
+// still walks past it (the gate stays passable exactly as before).
 function barrierArm(img, x, y) {
-  // A raised red/white boom barrier across the road, on a low post at one end -- reads clearly
-  // enough as "the gate arm" as a flat horizontal bar at this scale (a true diagonal/raised barrier
-  // would need a rotated sprite, more than this pass needs).
-  img.box(x, y + 6, 3, 5, 'K'); // post
-  img.fill(x + 3, y + 7, TILE - 3, 3, '#'); // pale bar body
-  for (let xx = 3; xx < TILE; xx += 4) img.fill(x + xx, y + 7, 2, 3, 'archRed');
+  img.fill(x, y + 5, TILE, 1, 'K'); // top outline
+  img.fill(x, y + 9, TILE, 1, 'K'); // bottom outline
+  for (let xx = 0; xx < TILE; xx++) {
+    const red = Math.floor((xx + 2) / 4) % 2 === 0;
+    img.set(x + xx, y + 6, red ? 'R' : 'W');
+    img.set(x + xx, y + 7, red ? 'R' : 'W');
+    img.set(x + xx, y + 8, red ? 'r' : '#');
+  }
+  for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + 10, 26, 28, 44, 70); // shadow on the road
+  for (let xx = 1; xx < TILE; xx++) img.setRGBA(x + xx, y + 11, 26, 28, 44, 36);
 }
+function barrierPivot(img, x, y) {
+  img.box(x + 7, y + 2, 8, 13, 'O'); // the housing
+  img.fill(x + 8, y + 3, 6, 1, 'Q');
+  img.fill(x + 8, y + 4, 6, 3, 'R'); // red cap
+  img.set(x + 11, y + 5, 'Y'); // warning lamp
+  img.fill(x + 8, y + 12, 6, 2, 'o'); // plinth shade
+  img.fill(x, y + 5, 8, 1, 'K'); // the boom's end entering the housing
+  img.fill(x, y + 9, 8, 1, 'K');
+  img.fill(x, y + 6, 7, 2, 'R');
+  img.fill(x, y + 8, 7, 1, 'r');
+  img.fill(x + 3, y + 6, 2, 2, 'W');
+}
+function barrierRest(img, x, y) {
+  img.box(x + 2, y + 3, 5, 12, 'O'); // the support post
+  img.fill(x + 3, y + 4, 3, 1, 'Q');
+  img.fill(x + 3, y + 12, 3, 2, 'o');
+  img.fill(x, y + 5, 4, 1, 'K'); // the boom's tip resting on the post
+  img.fill(x, y + 9, 4, 1, 'K');
+  img.fill(x, y + 6, 4, 2, 'W');
+  img.fill(x, y + 8, 4, 1, '#');
+  img.fill(x + 2, y + 3, 5, 2, 'R'); // red cap over the boom tip
+  img.fill(x + 2, y + 3, 5, 1, 'K');
+}
+
+// Tall trees are split into a solid trunk (ground level, drawn like any other object) and a 2x2 canopy above it,
+// drawn on an overhead layer so walking behind it reads as depth (STYLE_GUIDE). FB-0053/FB-0056: every tree is one
+// 32 x 48 picture (tools/lib/tree-art.js: two date palms drawn there, three leafy trees cropped from Sprout Lands and
+// recoloured onto the project's leaf ramp with brown trunks) sliced into those five tiles; the trunk always sits in
+// the LEFT column, under the canopy's left tile, which is where build-campus.js plants the solid trunk tile.
+const TREE_PICTURES = {};
+for (const name of TreeArt.PALM_NAMES) TREE_PICTURES[name] = TreeArt.buildPalm(name);
+for (const name of TreeArt.LEAFY_NAMES) TREE_PICTURES[name] = TreeArt.buildLeafy(name, loadAtlas(TreeArt.SPROUT_FILE));
+// Copies one 16x16 slice (tile column tx, row ty of the 2x3 picture) onto the tile sheet. 'S' is the soft ground
+// shadow: a translucent version of the outline colour.
+function drawTreeSlice(img, x, y, rows, tx, ty) {
+  for (let yy = 0; yy < TILE; yy++) {
+    for (let xx = 0; xx < TILE; xx++) {
+      const key = rows[ty * TILE + yy][tx * TILE + xx];
+      if (key === '.') continue;
+      if (key === 'S') { // straight (not premultiplied) translucent outline colour, written straight into the sheet
+        const o = ((y + yy) * img.w + (x + xx)) * 4;
+        if (img.data[o + 3] === 0) { img.data[o] = 26; img.data[o + 1] = 28; img.data[o + 2] = 44; img.data[o + 3] = 56; }
+      }
+      else img.set(x + xx, y + yy, key);
+    }
+  }
+}
+// The five tiles of one tree. Tile INDICES never move (the interiors' maps and their pinned hashes use them): leafy1 and palm1
+// take the ten slots the old round tree and palm had, every other new tile is appended at the end of TILES.
+const treeTiles = (name) => [
+  { name: `${name}Trunk`, solid: true, draw: (img, x, y) => drawTreeSlice(img, x, y, TREE_PICTURES[name], 0, 2) },
+  ...[['TL', 0, 0], ['TR', 1, 0], ['BL', 0, 1], ['BR', 1, 1]].map(([suffix, tx, ty]) => ({
+    name: `${name}Canopy${suffix}`, overhead: true, draw: (img, x, y) => drawTreeSlice(img, x, y, TREE_PICTURES[name], tx, ty),
+  })),
+];
 
 // Order here = tile index. The game looks tiles up by name via assets/tiles.json,
 // so reordering is safe; `solid` tiles block the player.
@@ -1237,23 +1281,10 @@ const TILES = [
   { name: 'hedge', solid: true, draw: hedge },
   { name: 'bush', solid: true, draw: bush },
   { name: 'flowerbed', solid: true, draw: flowerbed },
-  { name: 'treeTrunk', solid: true, draw: treeTrunk },
-  // premium pass (2026-09-26, Part 2): the fill is now Ninja Adventure's own round tree (its Nature
-  // tileset), replacing Sprout Lands -- same "our shape, its fill" technique FB-0025 used, and the
-  // same remapDryLeaves ramp so it still sits with the rest of the dry-campus-green palette.
-  { name: 'treeCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, roundCanopyShape, NINJA.treeCanopy) },
-  { name: 'treeCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, roundCanopyShape, NINJA.treeCanopy) },
-  { name: 'treeCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, roundCanopyShape, NINJA.treeCanopy) },
-  { name: 'treeCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, roundCanopyShape, NINJA.treeCanopy) },
-  { name: 'palmTrunk', solid: true, draw: palmTrunk },
-  // premium pass (Part 2): the frond fill is now Ninja Adventure's desert-tileset potted palm
-  // (cropped to fronds only, no pot -- our own trunk/neck shape stays exactly as FB-0019 built it,
-  // same "our shape, its fill" technique as the round tree above, still on the palm's own dry-green
-  // palette keys since remapDryLeaves already matches them).
-  { name: 'palmCanopyTL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 0, palmCanopyShape, NINJA.palmCanopy) },
-  { name: 'palmCanopyTR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 0, palmCanopyShape, NINJA.palmCanopy) },
-  { name: 'palmCanopyBL', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 0, 1, palmCanopyShape, NINJA.palmCanopy) },
-  { name: 'palmCanopyBR', overhead: true, draw: (img, x, y) => canopyQuadrantFromAtlas(img, x, y, 1, 1, palmCanopyShape, NINJA.palmCanopy) },
+  // FB-0053/FB-0056: the campus trees (tools/lib/tree-art.js): two date palms (palm1, palm2) and three leafy trees
+  // (leafy1..leafy3), each <name>CanopyTL/TR/BL/BR (overhead) + <name>Trunk (solid), see TREE_TILES below.
+  ...treeTiles('leafy1'),
+  ...treeTiles('palm1'),
 
   // FB-0016: a tennis court kit. See the arrangement comment above courtSurface() below for how
   // these combine into a standard 18x9-tile court (36x18 m including run-off).
@@ -1462,7 +1493,7 @@ const TILES = [
   { name: 'flagTopYellow', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Yellow') },
   { name: 'flagTopBlue', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Blue') },
   { name: 'flagTopRed', overhead: true, draw: (img, x, y) => flagPoleTop(img, x, y, 'Red') },
-  { name: 'busStopSign', solid: true, draw: busStopSign },
+  { name: 'busStopPole', solid: true, draw: busStopPole }, // FB-0044: the RTA stop sign's post (was the Kenney blue sign)
 
   // Interiors rebuild (FB-0030/0031, premium pass stage 5, docs/INTERIORS_PLAN.md): the Main Block
   // foyer per the owner's photo, plus the ICL/Physics Lab/Room 195 key-room dressing. Appended at
@@ -1552,7 +1583,7 @@ const TILES = [
   // hostels, benches under trees, a few parked cars in the right perspective, shade sails or a bus
   // shelter at the bus stop". Appended at the very end so every existing tile's name/index stays
   // stable.
-  { name: 'busShelter', solid: true, draw: busShelter },
+  { name: 'busShelterM', solid: true, draw: (img, x, y) => shelterBase(img, x, y, 'M') }, // FB-0044: the RTA shelter's advert panel (was the lean-to)
   { name: 'bikeRack', solid: true, draw: bikeRack },
   { name: 'carFrontYellow', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontYellow.atlas), URBAN.carFrontYellow.sx, URBAN.carFrontYellow.sy, 16, 16) },
   { name: 'carFrontRed', solid: true, draw: (img, x, y) => blitAtlas(img, x, y, loadAtlas(URBAN.carFrontRed.atlas), URBAN.carFrontRed.sx, URBAN.carFrontRed.sy, 16, 16) },
@@ -1607,6 +1638,22 @@ const TILES = [
   { name: 'kerbStripH', draw: (img, x, y) => kerbPiece(img, x, y, 12, 5) },
   { name: 'kerbIsland', draw: (img, x, y) => kerbPiece(img, x, y, 14, 5) },
   { name: 'kerbFill', draw: walkway }, // plain pavement inside a kerbed area (same slab as `walkway`)
+
+  // ---- FB-0044 / FB-0049 / FB-0052 / FB-0053 / FB-0056 (P3b), appended at the end so no earlier index moves ----
+  // The other trees (the first date palm and round tree took the old trees' slots above): date palm 2 and leafy trees 2, 3.
+  ...treeTiles('palm2'),
+  ...treeTiles('leafy2'),
+  ...treeTiles('leafy3'),
+  // The lowered gate barrier's hub and support post (the boom itself is `barrierArm`).
+  { name: 'barrierPivot', draw: barrierPivot },
+  { name: 'barrierRest', draw: barrierRest },
+  // The RTA bus stop (see shelterRoof's comment): canopy L/G/M/R overhead, base L/G/R solid (`busShelterM` sits in the
+  // old bus shelter's slot above), the stop sign's overhead plate, a bin and a flower box that stand on pavement.
+  ...['L', 'G', 'M', 'R'].map((which) => ({ name: `busShelterRoof${which}`, overhead: true, draw: (img, x, y) => shelterRoof(img, x, y, which) })),
+  ...['L', 'G', 'R'].map((which) => ({ name: `busShelter${which}`, solid: true, draw: (img, x, y) => shelterBase(img, x, y, which) })),
+  { name: 'busStopPoleTop', overhead: true, draw: busStopPoleTop },
+  { name: 'streetBin', solid: true, draw: streetBin },
+  { name: 'streetPlanter', solid: true, draw: streetPlanter },
 ];
 
 // ---------- campus tiles ----------
@@ -2020,119 +2067,6 @@ function flowerbed(img, x, y) {
   spot(7, 2);
   spot(4, 8);
 }
-
-// Tall trees are split into a solid trunk (drawn under the player, like any other object) and a
-// 2x2 canopy above it, drawn on an overhead layer so walking behind it reads as depth (STYLE_GUIDE).
-// Small art fix: the canopy's true centre is the seam between its TL/TR (or BL/BR) tiles, one
-// tile to the right of where the trunk is placed (build-campus.js puts the trunk directly below
-// the canopy's LEFT column, per STYLE_GUIDE "the trunk tile sits directly below the canopy quad").
-// Drawing the trunk near the tile's right edge, instead of dead centre, puts it visibly under that
-// seam instead of apart from it.
-function treeTrunk(img, x, y) {
-  grass(img, x, y, 79);
-  // D05: the pack tree's own trunk (outline, 6 px of bark, outline = 8 px wide), right-aligned in the
-  // tile (tile columns 8-15) so it sits under the canopy's centre (roundCanopyShape is centred on
-  // column 12 of the canopy's 32 px space, i.e. the trunk's middle) and runs the full tile height so
-  // it is joined to the canopy's skirt above it instead of floating below a gap.
-  const t = NINJA.treeTrunk;
-  const atlas = loadAtlas(t.atlas);
-  const srcCols = [0, 1, 2, 3, 4, 5, 6, 9]; // outline, 6 bark columns (skip 3 of the 8), outline
-  for (let dy = 0; dy < TILE; dy++) {
-    srcCols.forEach((sc, i) => {
-      const si = ((t.sy + dy) * atlas.width + (t.sx + sc)) * 4;
-      img.setRGBA(x + 8 + i, y + dy, atlas.data[si], atlas.data[si + 1], atlas.data[si + 2], 255);
-    });
-  }
-}
-
-function palmTrunk(img, x, y) {
-  grass(img, x, y, 81);
-  img.box(x + 9, y, 4, 16, 'n');
-  for (let ring = 2; ring < 16; ring += 3) img.fill(x + 9, y + ring, 4, 1, 'N');
-}
-
-// Draws one 16x16 quadrant (qx, qy in {0,1}) of a 32x32 canopy described by a shape test and a
-// tone function, both working in the canopy's own 32x32 virtual space. Pixels outside the shape
-// stay transparent, so the ground/trunk show through around the canopy's silhouette.
-function canopyQuadrant(img, x, y, qx, qy, shapeFn, toneFn) {
-  forEachPixel((xx, yy) => {
-    const gx = qx * TILE + xx;
-    const gy = qy * TILE + yy;
-    if (!shapeFn(gx, gy)) return;
-    const edge = !shapeFn(gx - 1, gy) || !shapeFn(gx + 1, gy) || !shapeFn(gx, gy - 1) || !shapeFn(gx, gy + 1);
-    img.set(x + xx, y + yy, edge ? 'K' : toneFn(gx, gy));
-  });
-}
-
-// FB-0019: the round canopy's silhouette (an ellipse) narrows away from its own centre, so at the
-// column where build-campus.js plants the trunk (the canopy's left-quadrant tile, off to one side
-// of the ellipse's centre) the silhouette fell well short of the tile's bottom edge, leaving a
-// visible gap above the trunk. A flat "skirt" band near the bottom, wide enough to cover the
-// trunk's columns regardless of the ellipse's curve, guarantees the two always touch.
-// D05: re-centred on column 12.5 (was 16) so the ellipse's middle is the trunk's middle -- the trunk
-// is one tile wide and sits under the canopy's LEFT column, so a canopy centred on the seam between
-// its two columns looked like it was perched off to the right of its own trunk. It now spans columns
-// 0-25 of the 32 px space (about 1.6 tiles wide, 2 tiles tall) and reaches row 31 (the tile bottom),
-// so the outline meets the trunk's first row with no gap.
-const roundCanopyShape = (gx, gy) => {
-  if (((gx - 12.5) / 12.7) ** 2 + ((gy - 16) / 15.6) ** 2 <= 1) return true;
-  return gy >= 29 && gy <= 31 && gx >= 7 && gx <= 17;
-};
-// FB-0025 addendum (2026-09-21): like canopyQuadrant above, but instead of a hand-picked palette
-// tone, samples the recolored pack tree's own pixels -- shapeFn (still ours, unchanged) decides the
-// silhouette and the 1px outline exactly as before, so the "walk behind the canopy" depth cue and
-// the FB-0019 seam fix are untouched; only the *fill* now comes from Sprout Lands' art instead of a
-// flat 3-tone hand-picked ramp. `rect` is a SPROUT source rect (a crop containing ONLY the tree's
-// canopy, no trunk pixels -- see SPROUT.treeCanopy's comment) nearest-neighbor-mapped from the
-// canopy's 32x32 virtual space onto the crop's own (possibly different) size.
-// Coordinator review round 3 (2026-09-27): `remap` defaults to identity (native pack colors) --
-// round 2's palms/round trees used `remapDryLeaves` to match a muted "Dubai-dry" ramp, but the
-// coordinator's review found the palm "murky and dark" and asked for both back in their pack's own
-// bright native colors, so the tree/palm TILES entries below now call this with no remap at all.
-function canopyQuadrantFromAtlas(img, x, y, qx, qy, shapeFn, rect, remap = (r, g, b, a) => [r, g, b, a]) {
-  const atlas = loadAtlas(rect.atlas);
-  forEachPixel((xx, yy) => {
-    const gx = qx * TILE + xx;
-    const gy = qy * TILE + yy;
-    if (!shapeFn(gx, gy)) return;
-    const edge = !shapeFn(gx - 1, gy) || !shapeFn(gx + 1, gy) || !shapeFn(gx, gy - 1) || !shapeFn(gx, gy + 1);
-    if (edge) {
-      img.set(x + xx, y + yy, 'K');
-      return;
-    }
-    const sx = rect.sx + Math.min(rect.sw - 1, Math.floor((gx * rect.sw) / 32));
-    const sy = rect.sy + Math.min(rect.sh - 1, Math.floor((gy * rect.sh) / 32));
-    const si = (sy * atlas.width + sx) * 4;
-    let [r, g, b, a] = [atlas.data[si], atlas.data[si + 1], atlas.data[si + 2], atlas.data[si + 3]];
-    if (a === 0) return; // shouldn't happen inside a canopy-only crop, but stay transparent if it does
-    [r, g, b, a] = remap(r, g, b, a);
-    img.setRGBA(x + xx, y + yy, r, g, b, 255);
-  });
-}
-
-function palmCanopyShape(gx, gy) {
-  // FB-0019: a short solid "neck" from the crown straight down to the tile edge, over the columns
-  // where the trunk is planted directly below (build-campus.js puts it under the canopy's left
-  // column), so the frond cluster and the trunk join instead of floating apart with a gap.
-  if (gy >= 14 && gy <= 31 && gx >= 6 && gx <= 15) return true;
-  const dx = gx - 16;
-  const dy = gy - 16;
-  const dist = Math.hypot(dx, dy);
-  if (dist > 15) return false;
-  if (dist <= 3) return true; // crown
-  const angle = Math.atan2(dy, dx);
-  const fronds = 8;
-  for (let i = 0; i < fronds; i++) {
-    const a = (i / fronds) * Math.PI * 2;
-    const diff = Math.atan2(Math.sin(angle - a), Math.cos(angle - a));
-    if (Math.abs(diff) < 0.28) return true;
-  }
-  return false;
-}
-const palmCanopyTone = (gx, gy) => {
-  const d = (gx - 16) + (gy - 16); // diagonal position: light from the top-left
-  return d < -8 ? ':' : d > 6 ? ';' : 'T';
-};
 
 // -- FB-0016: a tennis court kit --
 //
@@ -2558,24 +2492,97 @@ function flagPoleTop(img, x, y, color) {
   // shape, not a small icon glued to the shaft -- native Ninja Adventure colors, no recolor.
   blitAtlas(img, x, y, loadAtlas(rect.atlas), rect.sx, rect.sy, 16, 16, { dw: 20, dh: 20, offsetX: -2, offsetY: -6 });
 }
-// A plaque-on-a-pole street sign (Kenney RPG Urban Pack, native blue) near Gate 2 -- "Kenney...bus
-// stop sign near the gate", coordinator review round 3.
-function busStopSign(img, x, y) {
-  grass(img, x, y, 158);
-  blitAtlas(img, x, y, loadAtlas(BUS_STOP_SIGN_SRC.atlas), BUS_STOP_SIGN_SRC.sx, BUS_STOP_SIGN_SRC.sy, 16, 16);
+// FB-0044/FB-0049: the Dubai RTA bus stop outside Gate 2 (docs/research/rta-bus-reference.md, RTA brand red). No pack
+// has a bus shelter, so it is code-composed from the project palette like the bus itself: a flat aluminium
+// canopy on slim posts with a red-and-white fascia (4 overhead tiles, `busShelterRoof*`), over a glass back wall
+// with a bench-back rail along the bottom, an advertising lightbox in the middle and a route-information screen on
+// the right (4 solid tiles, `busShelter*`: L, a second glass panel G, M, R). We look at the back of it from the south: its open side (and the
+// bench) face the bus. Plus the tall stop sign (`busStopPole` + overhead `busStopPoleTop`: a red-headed plate with a
+// bus pictogram, NOT the RTA logo) and a litter bin / flower box that stand on pavement (no lawn underlay).
+function shelterRoof(img, x, y, which) {
+  const x0 = which === 'L' ? 1 : 0;
+  const x1 = which === 'R' ? 14 : 15;
+  for (let xx = x0; xx <= x1; xx++) {
+    img.set(x + xx, y + 3, 'K');
+    img.set(x + xx, y + 4, '#'); // sunlit back edge
+    for (let yy = 5; yy <= 9; yy++) img.set(x + xx, y + yy, 'Q'); // the roof's flat top
+    img.set(x + xx, y + 10, 'O'); // its thickness
+    img.set(x + xx, y + 11, 'W'); // white band, then the red fascia
+    img.set(x + xx, y + 12, 'rtaRed');
+    img.set(x + xx, y + 13, 'rtaRed');
+    img.set(x + xx, y + 14, 'rtaRedDark');
+    img.set(x + xx, y + 15, 'K');
+  }
+  if (which === 'M') img.fill(x + 4, y + 6, 8, 3, 'A'); // a skylight panel
+  if (which === 'L') for (let yy = 3; yy <= 15; yy++) img.set(x + 1, y + yy, 'K');
+  if (which === 'R') for (let yy = 3; yy <= 15; yy++) img.set(x + 14, y + yy, 'K');
+  // panel seam across the roof at each inner tile edge
+  if (which !== 'L') for (let yy = 5; yy <= 9; yy++) img.set(x, y + yy, 'A');
 }
-
-// Quality loop, category 1 run 3 (2026-09-29): "shade sails or a bus shelter at the bus stop" -- a
-// small hand-drawn lean-to canopy (this pack has no ready-made shelter sprite), two dark support poles
-// under a sloped fabric roof, in the same terracotta/cream the rest of the BITS kit uses so it reads
-// as campus furniture rather than a city-street prop transplanted in.
-function busShelter(img, x, y) {
-  grass(img, x, y, 159);
-  img.fill(x + 1, y + 2, TILE - 2, 3, '&'); // sloped canvas roof, terracotta
-  img.fill(x + 1, y + 4, TILE - 2, 1, 'wallHi'); // a highlight seam along the roof's low edge
-  img.fill(x + 2, y + 5, 2, 9, 'K'); // left post
-  img.fill(x + TILE - 4, y + 5, 2, 9, 'K'); // right post
-  img.fill(x + 3, y + 12, TILE - 6, 2, 'baseCool'); // low bench/plinth under the canopy
+function shelterBase(img, x, y, which) {
+  const x0 = which === 'L' ? 1 : 0;
+  const x1 = which === 'R' ? 14 : 15;
+  img.fill(x + x0, y, x1 - x0 + 1, 2, 'o'); // shadow right under the canopy
+  img.fill(x + x0, y + 2, x1 - x0 + 1, 9, '¦'); // glass back wall
+  if (which === 'L' || which === 'G') {
+    for (let k = 0; k < 6; k++) { img.set(x + 3 + k, y + 8 - k, 'w'); img.set(x + 4 + k, y + 8 - k, 'w'); } // a reflection streak
+    img.set(x + 11, y + 4, 'w');
+    img.set(x + 12, y + 3, 'w');
+  }
+  if (which === 'M') { // the advertising lightbox: a sky, a sun and a skyline (generic, no brand)
+    img.fill(x + 1, y + 2, 14, 9, 'A');
+    img.fill(x + 2, y + 3, 12, 7, 'w');
+    img.fill(x + 2, y + 7, 12, 3, 'U');
+    img.fill(x + 10, y + 4, 2, 2, 'Y');
+    [[3, 5, 3], [6, 4, 4], [9, 6, 2], [11, 5, 3]].forEach(([bx, top, bw]) => img.fill(x + bx, y + top + 2, bw, 8 - top - 1, 'u'));
+    img.fill(x + 2, y + 9, 12, 1, 'rtaRed');
+  }
+  if (which === 'R') { // the route-information screen
+    img.fill(x + 2, y + 2, 11, 9, 'K');
+    img.fill(x + 3, y + 3, 9, 7, 'iclBlue');
+    img.fill(x + 3, y + 3, 9, 1, 'rtaRed');
+    img.fill(x + 4, y + 5, 5, 1, 'Y');
+    img.fill(x + 4, y + 7, 7, 1, 'W');
+    img.fill(x + 4, y + 9, 4, 1, 'Y');
+    img.set(x + 10, y + 5, 'Y');
+  }
+  // the bench's back rail, wooden slats in front of the glass, on its two short legs
+  img.fill(x + x0, y + 11, x1 - x0 + 1, 2, 'F');
+  img.fill(x + x0, y + 13, x1 - x0 + 1, 1, 'f');
+  for (let xx = x0 + 3; xx <= x1; xx += 4) img.set(x + xx, y + 11, 'n');
+  img.fill(x + (which === 'L' ? 3 : 2), y + 14, 2, 2, 'o');
+  img.fill(x + (which === 'R' ? 11 : 12), y + 14, 2, 2, 'o');
+  // slim posts: the outer edges, and a thin seam between the glass panels
+  if (which === 'L') for (let yy = 0; yy < 16; yy++) { img.set(x + 1, y + yy, 'A'); img.set(x + 2, y + yy, 'O'); }
+  if (which === 'R') for (let yy = 0; yy < 16; yy++) { img.set(x + 14, y + yy, 'A'); img.set(x + 13, y + yy, 'O'); }
+  if (which !== 'R') for (let yy = 0; yy < 14; yy++) img.set(x + 15, y + yy, 'O');
+  // a soft shadow on the pavement just behind the shelter
+  for (let xx = x0; xx <= x1; xx++) img.setRGBA(x + xx, y + 15, 26, 28, 44, 40);
+}
+function busStopPole(img, x, y) {
+  for (let yy = 0; yy < 14; yy++) { img.set(x + 7, y + yy, 'A'); img.set(x + 8, y + yy, 'O'); }
+  img.fill(x + 5, y + 13, 6, 2, 'o'); // foot plate
+  img.fill(x + 5, y + 13, 6, 1, 'O');
+  for (let xx = 4; xx < 12; xx++) img.setRGBA(x + xx, y + 15, 26, 28, 44, 56);
+}
+function busStopPoleTop(img, x, y) {
+  for (let yy = 9; yy < 16; yy++) { img.set(x + 7, y + yy, 'A'); img.set(x + 8, y + yy, 'O'); }
+  img.fill(x + 1, y + 1, 14, 9, 'K'); // the sign plate: dark edge, red head, white body
+  img.fill(x + 2, y + 2, 12, 3, 'rtaRed');
+  img.fill(x + 2, y + 5, 12, 4, '#');
+  img.fill(x + 4, y + 6, 8, 2, 'K'); // a bus pictogram: body, two windows, two wheels
+  img.fill(x + 5, y + 6, 2, 1, 'w');
+  img.fill(x + 9, y + 6, 2, 1, 'w');
+  img.set(x + 5, y + 8, 'K');
+  img.set(x + 10, y + 8, 'K');
+  img.fill(x + 4, y + 11, 8, 3, 'K'); // a small blue timetable plate under it
+  img.fill(x + 5, y + 12, 6, 1, 'iclBlue');
+}
+function streetBin(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(URBAN.bin.atlas), URBAN.bin.sx, URBAN.bin.sy, 16, 16);
+}
+function streetPlanter(img, x, y) {
+  blitAtlas(img, x, y, loadAtlas(URBAN.planter.atlas), URBAN.planter.sx, URBAN.planter.sy, 16, 16);
 }
 
 // Quality loop, category 1 run 3 (2026-09-29): "bike racks near hostels" -- this pack's own bicycle

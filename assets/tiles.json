@@ -387,64 +387,64 @@
       "color": "#786656"
     },
     {
-      "name": "treeTrunk",
+      "name": "leafy1Trunk",
       "solid": true,
       "overhead": false,
-      "color": "#868c46"
+      "color": "#535932"
     },
     {
-      "name": "treeCanopyTL",
+      "name": "leafy1CanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#9caa38"
+      "color": "#387c39"
     },
     {
-      "name": "treeCanopyTR",
+      "name": "leafy1CanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#96a338"
+      "color": "#2f6d33"
     },
     {
-      "name": "treeCanopyBL",
+      "name": "leafy1CanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#809c38"
+      "color": "#53a44c"
     },
     {
-      "name": "treeCanopyBR",
+      "name": "leafy1CanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#839b36"
+      "color": "#4a9947"
     },
     {
-      "name": "palmTrunk",
+      "name": "palm1Trunk",
       "solid": true,
       "overhead": false,
-      "color": "#559346"
+      "color": "#7d5732"
     },
     {
-      "name": "palmCanopyTL",
+      "name": "palm1CanopyTL",
       "solid": false,
       "overhead": true,
-      "color": "#415b34"
+      "color": "#397f3b"
     },
     {
-      "name": "palmCanopyTR",
+      "name": "palm1CanopyTR",
       "solid": false,
       "overhead": true,
-      "color": "#3e5937"
+      "color": "#367c3a"
     },
     {
-      "name": "palmCanopyBL",
+      "name": "palm1CanopyBL",
       "solid": false,
       "overhead": true,
-      "color": "#556c34"
+      "color": "#666334"
     },
     {
-      "name": "palmCanopyBR",
+      "name": "palm1CanopyBR",
       "solid": false,
       "overhead": true,
-      "color": "#3e4733"
+      "color": "#377035"
     },
     {
       "name": "courtLineH",
@@ -1365,10 +1365,10 @@
       "color": "#854e49"
     },
     {
-      "name": "busStopSign",
+      "name": "busStopPole",
       "solid": true,
       "overhead": false,
-      "color": "#609d70"
+      "color": "#828488"
     },
     {
       "name": "intFloorMarble",
@@ -1512,7 +1512,7 @@
       "name": "barrierArm",
       "solid": false,
       "overhead": false,
-      "color": "#916c69"
+      "color": "#644a4d"
     },
     {
       "name": "intWallCap",
@@ -1707,10 +1707,10 @@
       "color": "#7b9873"
     },
     {
-      "name": "busShelter",
+      "name": "busShelterM",
       "solid": true,
       "overhead": false,
-      "color": "#699a59"
+      "color": "#8d8991"
     },
     {
       "name": "bikeRack",
@@ -1963,6 +1963,168 @@
       "solid": false,
       "overhead": false,
       "color": "#a8adb8"
+    },
+    {
+      "name": "palm2Trunk",
+      "solid": true,
+      "overhead": false,
+      "color": "#7f5832"
+    },
+    {
+      "name": "palm2CanopyTL",
+      "solid": false,
+      "overhead": true,
+      "color": "#3a813c"
+    },
+    {
+      "name": "palm2CanopyTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#327738"
+    },
+    {
+      "name": "palm2CanopyBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#5b6233"
+    },
+    {
+      "name": "palm2CanopyBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#2f6e35"
+    },
+    {
+      "name": "leafy2Trunk",
+      "solid": true,
+      "overhead": false,
+      "color": "#524c2c"
+    },
+    {
+      "name": "leafy2CanopyTL",
+      "solid": false,
+      "overhead": true,
+      "color": "#3a813c"
+    },
+    {
+      "name": "leafy2CanopyTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#327436"
+    },
+    {
+      "name": "leafy2CanopyBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#38823c"
+    },
+    {
+      "name": "leafy2CanopyBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#367e3b"
+    },
+    {
+      "name": "leafy3Trunk",
+      "solid": true,
+      "overhead": false,
+      "color": "#6f4b32"
+    },
+    {
+      "name": "leafy3CanopyTL",
+      "solid": false,
+      "overhead": true,
+      "color": "#5aa74f"
+    },
+    {
+      "name": "leafy3CanopyTR",
+      "solid": false,
+      "overhead": true,
+      "color": "#317034"
+    },
+    {
+      "name": "leafy3CanopyBL",
+      "solid": false,
+      "overhead": true,
+      "color": "#468c41"
+    },
+    {
+      "name": "leafy3CanopyBR",
+      "solid": false,
+      "overhead": true,
+      "color": "#2d6c33"
+    },
+    {
+      "name": "barrierPivot",
+      "solid": false,
+      "overhead": false,
+      "color": "#725455"
+    },
+    {
+      "name": "barrierRest",
+      "solid": false,
+      "overhead": false,
+      "color": "#70676d"
+    },
+    {
+      "name": "busShelterRoofL",
+      "solid": false,
+      "overhead": true,
+      "color": "#a48387"
+    },
+    {
+      "name": "busShelterRoofG",
+      "solid": false,
+      "overhead": true,
+      "color": "#ad8a8e"
+    },
+    {
+      "name": "busShelterRoofM",
+      "solid": false,
+      "overhead": true,
+      "color": "#ab898e"
+    },
+    {
+      "name": "busShelterRoofR",
+      "solid": false,
+      "overhead": true,
+      "color": "#a38387"
+    },
+    {
+      "name": "busShelterL",
+      "solid": true,
+      "overhead": false,
+      "color": "#a7a9a5"
+    },
+    {
+      "name": "busShelterG",
+      "solid": true,
+      "overhead": false,
+      "color": "#a8aaa3"
+    },
+    {
+      "name": "busShelterR",
+      "solid": true,
+      "overhead": false,
+      "color": "#796e6b"
+    },
+    {
+      "name": "busStopPoleTop",
+      "solid": false,
+      "overhead": true,
+      "color": "#76515d"
+    },
+    {
+      "name": "streetBin",
+      "solid": true,
+      "overhead": false,
+      "color": "#947f8e"
+    },
+    {
+      "name": "streetPlanter",
+      "solid": true,
+      "overhead": false,
+      "color": "#a4785d"
     }
   ]
 }

@@ -58,8 +58,8 @@ const tileInfo = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'tiles.jso
 const TILE = Object.fromEntries(tileInfo.tiles.map((tile, i) => [tile.name, i]));
 const REQUIRED_TILES = [
   'sand', 'lawn', 'lawn2', 'hedge', 'bush', 'flowerbed', 'signboard',
-  'treeTrunk', 'treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR',
-  'palmTrunk', 'palmCanopyTL', 'palmCanopyTR', 'palmCanopyBL', 'palmCanopyBR',
+  // FB-0053/FB-0056: two date palms and three leafy trees (tools/lib/tree-art.js), each <name>Trunk + <name>CanopyTL/TR/BL/BR.
+  ...['palm1', 'palm2', 'leafy1', 'leafy2', 'leafy3'].flatMap((n) => [`${n}Trunk`, `${n}CanopyTL`, `${n}CanopyTR`, `${n}CanopyBL`, `${n}CanopyBR`]),
   'asphalt', 'paving', 'parking', 'track', 'turf', 'walkway',
   'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
   'court', 'courtLineH', 'courtLineV', 'courtCornerTL', 'courtCornerTR', 'courtCornerBL', 'courtCornerBR', 'courtCenterMark', 'courtNet', 'courtNetPostT', 'courtNetPostB',
@@ -74,10 +74,12 @@ const REQUIRED_TILES = [
   // premium pass round 2 (2026-09-27): the composed entrance prefab and the general 3D-feel shadow.
   'bitsFacadeShadow', 'bitsPorticoFrame', 'bitsPorticoGlassTop', 'bitsPorticoGlassMid', 'bitsPorticoGlassBase', 'bitsStep1', 'bitsStep2', 'bitsStep3',
   // premium pass round 3 (2026-09-27): the flag's overhead top-of-pole tile, and a bus stop sign prop.
-  'flagTopYellow', 'flagTopBlue', 'flagTopRed', 'busStopSign',
+  'flagTopYellow', 'flagTopBlue', 'flagTopRed',
   // quality loop, category 1 run 1 (2026-09-28): 2-tile lamp, roof/lawn variety, and Gate 2's props.
   'lampPostTop', 'bitsRoofB', 'bitsRoofC', 'otherRoofB', 'otherRoofC', 'lawn3', 'lawn4', 'lawn5',
-  'gateSign', 'securityBooth', 'barrierArm',
+  'gateSign', 'securityBooth', 'barrierArm', 'barrierPivot', 'barrierRest',
+  // FB-0044/FB-0049: the RTA bus stop (shelter, sign, bin, flower box).
+  'busShelterRoofL', 'busShelterRoofG', 'busShelterRoofM', 'busShelterRoofR', 'busShelterL', 'busShelterG', 'busShelterM', 'busShelterR', 'busStopPole', 'busStopPoleTop', 'streetBin', 'streetPlanter',
   // road autotile kit (FB-0048/54/55): inner corners, strip/cap/island pieces, plain kerbed pavement.
   ...autotile.KERB_TILE_NAMES,
 ];
@@ -1323,6 +1325,34 @@ if (d54Box && gate2NetworkPoint) {
   padAround(circle);
 }
 
+// ---- FB-0044 / FB-0049: the Dubai RTA bus stop's lay-by ----
+// The bus used to stop on the plain road with sand and a cut-off pavement around it. Now it pulls into a bay: two rows
+// of carriageway added south of the road (the second row one tile shorter at each end, a tapered mouth), with a deeper
+// pavement behind it (layout.gate2.busStop) that the shelter, the stop sign and the bin stand on (section 15b). The
+// kerb tiles round the pavement come from the usual autotile pass (16.6), like every other road. src/scripts.js
+// BUS_STOP_X/BUS_STOP_Y put the bus's wheels on the bay's second row, her landing on the pavement beside the shelter.
+const busStop = (() => {
+  const B = layout.gate2.busStop;
+  const stopX = gx(gate2U) + B.stopOffsetTiles;
+  const roadSouth = gy(outerApproachV1 + layout.gate2.roadWidthMeters / 2); // the south pavement row of the road
+  const padTop = roadSouth + B.bayDepthTiles; // first pavement row behind the bay
+  const padBottom = padTop + B.pavementDepthTiles - 1;
+  const half = (d) => B.bayHalfTiles - d; // row d of the bay reaches stopX - half + 1 .. stopX + half
+  for (let d = 0; d < B.bayDepthTiles; d++) {
+    for (let x = stopX - half(d) + 1; x <= stopX + half(d); x++) setRoadCell(x, roadSouth + d);
+  }
+  // the pavement rows behind the bay, one tile wider than the mouth each side, and the cells either side of the
+  // tapered rows (so the bay's mouth has a kerb, not open sand)
+  for (let y = padTop; y <= padBottom; y++) {
+    for (let x = stopX - B.bayHalfTiles; x <= stopX + B.bayHalfTiles + 1; x++) setPadCell(x, y);
+  }
+  for (let d = 1; d < B.bayDepthTiles; d++) {
+    for (let x = stopX - B.bayHalfTiles + 1; x <= stopX - half(d); x++) setPadCell(x, roadSouth + d);
+    for (let x = stopX + half(d) + 1; x <= stopX + B.bayHalfTiles; x++) setPadCell(x, roadSouth + d);
+  }
+  return { stopX, roadSouth, padTop, padBottom, bayRows: B.bayDepthTiles, half: B.bayHalfTiles };
+})();
+
 // ================= 11b. roundabout, entrance parking, and the loop road =================
 // Owner's layout correction (2026-09-21, docs/research/bits-dubai-campus.md "Layout correction from
 // the owner"): the old straight avenue all the way from Gate 2 to the Main Block door "doesn't map
@@ -1775,21 +1805,28 @@ function hasTreeClearance(cx, topY) {
   }
   return true;
 }
-function plantTree(cx, topY, kind) {
+// FB-0053/FB-0056: a tree is one of five pictures (tools/lib/tree-art.js): `palm` picks date palm 1 or 2 and `tree` a
+// leafy tree 1-3, by the same deterministic per-position hash as the rest of the map, so neighbours differ and a
+// rebuild gives the same campus. `onSand` lets the stop's palms stand in the desert sand outside the fence.
+const PALM_VARIANTS = ['palm1', 'palm2'];
+const LEAFY_VARIANTS = ['leafy1', 'leafy1', 'leafy2', 'leafy2', 'leafy3'];
+function plantTree(cx, topY, kind, onSand = false) {
   const cells = [
     [cx, topY], [cx + 1, topY], [cx, topY + 1], [cx + 1, topY + 1],
     [cx, topY + 2],
   ];
-  if (!cells.every(([x, y]) => isLawn(x, y))) return false;
+  const freeSand = (x, y) => inGrid(x, y) && ground[y * W + x] === TILE.sand && structures[y * W + x] === -1 && roofOwner[y * W + x] === -1;
+  if (!cells.every(([x, y]) => isLawn(x, y) || (onSand && freeSand(x, y)))) return false;
+  // FB-0053/FB-0056: crowns never overlap (another tree's canopy tile already on one of these four cells)
+  if ([[cx, topY], [cx + 1, topY], [cx, topY + 1], [cx + 1, topY + 1]].some(([x, y]) => overhead[y * W + x] !== -1)) return false;
   if (!hasTreeClearance(cx, topY)) return false;
-  const canopy = kind === 'palm'
-    ? ['palmCanopyTL', 'palmCanopyTR', 'palmCanopyBL', 'palmCanopyBR']
-    : ['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR'];
-  overhead[topY * W + cx] = TILE[canopy[0]];
-  overhead[topY * W + cx + 1] = TILE[canopy[1]];
-  overhead[(topY + 1) * W + cx] = TILE[canopy[2]];
-  overhead[(topY + 1) * W + cx + 1] = TILE[canopy[3]];
-  structures[(topY + 2) * W + cx] = TILE[kind === 'palm' ? 'palmTrunk' : 'treeTrunk'];
+  const variants = kind === 'palm' ? PALM_VARIANTS : LEAFY_VARIANTS;
+  const family = variants[(hash(cx, topY) >>> 3) % variants.length];
+  overhead[topY * W + cx] = TILE[`${family}CanopyTL`];
+  overhead[topY * W + cx + 1] = TILE[`${family}CanopyTR`];
+  overhead[(topY + 1) * W + cx] = TILE[`${family}CanopyBL`];
+  overhead[(topY + 1) * W + cx + 1] = TILE[`${family}CanopyBR`];
+  structures[(topY + 2) * W + cx] = TILE[`${family}Trunk`];
   addDepthGroup(kind === 'palm' ? 'palm' : 'tree', cx, topY, 2, 3);
   return true;
 }
@@ -1925,33 +1962,44 @@ for (const h of westHostels.concat(eastHostels)) {
 // below, after the forecourt paving itself exists (this section runs first, and the forecourt
 // rectangle would otherwise overwrite a staircase placed here).
 
-// Bollards flanking Gate 2's own approach, just inside the fence, plus a bus stop sign a little
-// further in on the same side (coordinator review round 3: "Kenney lamps, benches, bins, bus stop
-// sign near the gate").
+// Bollards flanking Gate 2's own approach, just inside the fence.
 {
   const gateRow = gy(fenceFrame.v1) - 2;
   structOnLawn(gx(gate2U - AVENUE_W / 2) - 2, gateRow, TILE.bollard);
   structOnLawn(gx(gate2U + AVENUE_W / 2) + 2, gateRow, TILE.bollard);
-  // Quality loop, category 1 run 3 (2026-09-29): the old fixed `gateRow + 2` landed exactly ON the
-  // fence line itself (gateRow is already only 2 rows in from it), so the bus stop sign was silently
-  // failing to place every single time -- found by actually counting `busStopSign` tiles on the
-  // generated map (zero), not by any test (nothing checked this before). A short candidate list, same
-  // "try a few nearby spots" fallback the palms/bike racks above already use, replaces the single
-  // fixed offset for both the sign and its new shelter.
-  const busStopX = gx(gate2U - AVENUE_W / 2) - 4;
-  const busSpots = [[0, 0], [0, -1], [-1, 0], [0, 1], [-2, 0], [-1, -1]];
-  let busStopPlaced = false;
-  for (const [dx, dy] of busSpots) {
-    if (structOnLawn(busStopX + dx, gateRow + dy, TILE.busStopSign)) { busStopPlaced = true; break; }
-  }
-  // Quality loop, category 1 run 3 (2026-09-29): "shade sails or a bus shelter at the bus stop" --
-  // right beside the sign itself once it's actually placed.
-  if (busStopPlaced) {
-    const shelterSpots = [[-2, 0], [-2, 1], [-3, 0], [2, 0], [-2, -1]];
-    for (const [dx, dy] of shelterSpots) {
-      if (structOnLawn(busStopX + dx, gateRow + dy, TILE.busShelter)) break;
-    }
-  }
+  // (The bus stop sign and shelter that used to stand here, inside the fence, moved to the real RTA stop on the road
+  // outside Gate 2: see the block below, FB-0044/FB-0049.)
+}
+
+// ---- FB-0044 / FB-0049: the Dubai RTA bus stop's furniture, on the lay-by's pavement (the bay itself: section 11) ----
+// West to east along the pavement: a flower box, the shelter (4 wide; canopy row over the waiting area, solid glass
+// back wall with the bench rail and the advert / route-screen panels one row below), a flower box; her landing
+// column (src/scripts.js BUS_STOP_X, left clear on purpose); then the tall stop sign by the bus's front door, and a
+// litter bin. Date palms and a leafy tree stand in the sand behind the pavement (a 1-tile gap: hasTreeClearance).
+// Everything is solid except the shelter's waiting row and the roof, so a clear walkway runs along the pavement.
+{
+  const { stopX, padTop, padBottom } = busStop;
+  const waitRow = padTop + 1; // under the canopy
+  const backRow = padTop + 2; // the glass wall / bench
+  const set = (x, y, tile) => { if (inGrid(x, y) && roofOwner[y * W + x] === -1) structures[y * W + x] = tile; };
+  const shelterX = stopX - 5;
+  ['L', 'G', 'M', 'R'].forEach((which, i) => {
+    overhead[waitRow * W + shelterX + i] = TILE[`busShelterRoof${which}`];
+    set(shelterX + i, backRow, TILE[`busShelter${which}`]);
+  });
+  addDepthGroup('busStopShelter', shelterX, waitRow, 4, 2);
+  set(stopX - 6, backRow, TILE.streetPlanter);
+  set(stopX - 1, backRow, TILE.streetPlanter);
+  const poleX = stopX + 3;
+  set(poleX, waitRow, TILE.busStopPole);
+  overhead[padTop * W + poleX] = TILE.busStopPoleTop;
+  addDepthGroup('busStopPost', poleX, padTop, 1, 2);
+  set(stopX + 5, waitRow, TILE.streetBin);
+  // trees behind the pavement: palm - leafy - palm, never crowding the pavement's own kerb
+  const treeTop = padBottom + 2;
+  plantTree(stopX - 6, treeTop, 'palm', true);
+  plantTree(stopX - 1, treeTop, 'tree', true);
+  plantTree(stopX + 4, treeTop, 'palm', true);
 }
 
 // Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the BITS
@@ -1989,14 +2037,16 @@ for (const h of westHostels.concat(eastHostels)) {
   };
   placeNear(leftPillarX - 1, TILE.planter);
   placeNear(rightPillarX + 2, TILE.planter);
-  // Quality loop, category 1 run 2 (2026-09-28): "the barrier spans the full width like a stripe...
-  // make it a short arm (3-4 tiles) from the booth over the inbound lane only" -- a real boom
-  // barrier is one arm pivoting from its own post beside the booth, not a wall across both lanes.
-  // Anchored right next to the security booth (east side), extending 4 tiles towards the avenue's
-  // own centre -- the inbound (east) lane only, leaving the outbound (west) lane clear.
-  const barrierLen = Math.max(0, Math.min(4, rightPillarX - leftPillarX - 2));
-  for (let i = 0; i < barrierLen; i++) {
-    const x = rightPillarX - 1 - i;
+  // FB-0052 ("make the barrier closed all the way down"): the boom is LOWERED across the whole road. Run 2 had cut it to
+  // a short stub over the inbound lane; now it is one arm from its pivot housing beside the booth (the lawn tile just
+  // inside the east pillar) over the east pavement, the carriageway and the west pavement to a support post on the
+  // west side (just inside the west pillar), a tile per pace. It is not solid, so the gate stays passable on foot
+  // exactly as before (the story walks through here); it is the cars it stops.
+  const pivotX = rightPillarX - 1;
+  const restX = leftPillarX + 1;
+  if (inGrid(pivotX, gateLineRow)) structures[gateLineRow * W + pivotX] = TILE.barrierPivot;
+  if (inGrid(restX, gateLineRow)) structures[gateLineRow * W + restX] = TILE.barrierRest;
+  for (let x = restX + 1; x < pivotX; x++) {
     if (inGrid(x, gateLineRow)) structures[gateLineRow * W + x] = TILE.barrierArm;
   }
 }

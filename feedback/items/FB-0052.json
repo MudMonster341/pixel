@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:20:32.758Z",
-  "updatedAt": "2026-10-04T17:20:32.758Z",
+  "updatedAt": "2026-10-04T22:12:04.856Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -62,13 +62,28 @@
     }
   },
   "screenshot": "screenshots/FB-0052.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The gate barrier is lowered across the whole road width.",
+      "at": "2026-10-04T22:12:04.856Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/p3b-bus-stop-trees.test.js › FB-0052",
+    "commit": null,
+    "at": "2026-10-04T22:12:04.856Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:20:32.758Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T22:12:04.856Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

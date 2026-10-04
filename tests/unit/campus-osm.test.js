@@ -122,12 +122,12 @@ function canopyTouchesTrunk(canopyBL) {
   }
   return false;
 }
-test('FB-0019: the tree canopy silhouette reaches down to touch the trunk tile below it', () => {
-  assert.ok(canopyTouchesTrunk('treeCanopyBL'), 'treeCanopyBL has a gap above the trunk column');
-});
-test('FB-0019: the palm canopy silhouette reaches down to touch the trunk tile below it', () => {
-  assert.ok(canopyTouchesTrunk('palmCanopyBL'), 'palmCanopyBL has a gap above the trunk column');
-});
+// FB-0053/FB-0056: the trees are now palm1/palm2 (date palms) and leafy1-3 (leafy trees), see tools/lib/tree-art.js.
+for (const family of ['palm1', 'palm2', 'leafy1', 'leafy2', 'leafy3']) {
+  test(`FB-0019: the ${family} crown/canopy reaches down to touch the trunk tile below it`, () => {
+    assert.ok(canopyTouchesTrunk(`${family}CanopyBL`), `${family}CanopyBL has a gap above the trunk column`);
+  });
+}
 
 // ---------- FB-0020: the tennis net is a thin line with posts ----------
 
@@ -217,6 +217,10 @@ test('every door and cutscene object is reachable on foot from spawn', () => {
 
 // ---------- No solid tile (tree/hedge/sign) sits on a walkway or road ----------
 
+// FB-0044: the RTA bus stop's shelter, sign, bin and flower boxes stand on their own pavement by design (the pavement beside
+// them stays open: tests/unit/p3b-bus-stop-trees.test.js checks the walkway), like a parked car in its bay.
+const BUS_STOP_FURNITURE = new Set(['busShelterL', 'busShelterG', 'busShelterM', 'busShelterR', 'busStopPole', 'streetBin', 'streetPlanter']);
+
 test('no solid tile (tree trunk, hedge, signboard, ...) sits on a walkway or road tile', () => {
   const BLOCKING_GROUND = new Set(['walkway', 'asphalt', 'paving', ...ROAD_TILE_NAMES]);
   let violations = [];
@@ -230,6 +234,7 @@ test('no solid tile (tree trunk, hedge, signboard, ...) sits on a walkway or roa
       // parking lot), unlike a tree/hedge/sign accidentally placed on a road or walkway -- exempt
       // just that one case, only on 'parking' ground, so a real generator bug elsewhere still fails.
       if (g === 'parking' && s.startsWith('car')) continue;
+      if (BUS_STOP_FURNITURE.has(s)) continue;
       const tile = tileInfo.tiles[structuresLayer[y * W + x] - 1];
       if (tile.solid) violations.push(`${s} on ${g} at ${x},${y}`);
     }
@@ -387,7 +392,7 @@ test('no isolated walkway/road island (every walkway/road tile is reachable on f
       // FB-0025: a parking cell with a parked car on it is never meant to be stood on, so it's not
       // an "island" bug the way an unreachable stretch of open walkway/asphalt would be.
       const s = structNameAt(x, y);
-      if (s && s.startsWith('car')) continue;
+      if (s && (s.startsWith('car') || BUS_STOP_FURNITURE.has(s))) continue;
       hardscapeTileCount++;
       if (!reachable[y * W + x]) unreachable.push([x, y]);
     }
@@ -470,13 +475,13 @@ test('FB-0022: the flat roof tile is clearly distinct from the paving tile in av
 test('FB-0022: every tree/palm trunk has at least 1 tile of clearance from any walkway/road tile or building footprint', () => {
   const footprints = objects.filter((o) => o.type === 'buildingFootprint' && o.props.style === 'bits');
   const insideAnyFootprint = (x, y) => footprints.some((f) => x >= f.x && x < f.x + f.width && y >= f.y && y < f.y + f.height);
-  const trunkNames = new Set(['treeTrunk', 'palmTrunk']);
+  const isTrunk = (name) => /^(palm|leafy)\dTrunk$/.test(name || '');
   let trunkCount = 0;
   const violations = [];
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const s = structNameAt(x, y);
-      if (!trunkNames.has(s)) continue;
+      if (!isTrunk(s)) continue;
       trunkCount++;
       for (let yy = y - 1; yy <= y + 1; yy++) {
         for (let xx = x - 1; xx <= x + 1; xx++) {

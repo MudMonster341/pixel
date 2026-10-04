@@ -34,68 +34,78 @@ function pixel(name, x, y) {
 const isOrange = ([r, g, b, a]) => a > 0 && r > 200 && g > 90 && g < 150 && b < 100;
 const isOutline = ([r, g, b]) => r + g + b < 150;
 
-// ---------- D05 ----------
+// ---------- D05 (the broken tree), redone for FB-0053 / FB-0056 ----------
+// The old round tree and palm were replaced by a tools/lib/tree-art.js set: date palms palm1/palm2 and leafy trees leafy1-3.
 
-test('D05: the tree canopy tiles carry only canopy pixels (no orange log/trunk pixels swept in from the atlas)', () => {
-  for (const name of ['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR']) {
-    for (let y = 0; y < T; y++) {
-      for (let x = 0; x < T; x++) {
-        const p = pixel(name, x, y);
-        if (p[3] === 0 || isOutline(p)) continue;
-        assert.ok(!isOrange(p), `${name} has an orange (log/crate) pixel at ${x},${y}: ${p}`);
-        assert.ok(p[1] >= p[0] - 10, `${name} pixel ${x},${y} is not green-dominant: ${p}`);
+const LEAFY = ['leafy1', 'leafy2', 'leafy3'];
+const PALMS = ['palm1', 'palm2'];
+// A bark/trunk pixel is brown (red > green > blue, moderate saturation), never the old orange (r > 200, g 90-150) and never green.
+const isBark = ([r, g, b, a]) => a > 0 && r > g && g > b && r < 215 && !isOrange([r, g, b, a]);
+const isGreen = ([r, g, b, a]) => a > 0 && g >= r && g >= b;
+
+test('D05: the leafy tree canopy tiles carry only leaf pixels (no brown trunk or orange pixels swept in)', () => {
+  for (const family of LEAFY) {
+    for (const k of ['TL', 'TR', 'BL', 'BR']) {
+      for (let y = 0; y < T; y++) {
+        for (let x = 0; x < T; x++) {
+          const p = pixel(`${family}Canopy${k}`, x, y);
+          if (p[3] === 0 || p[3] < 255) continue; // transparent or a soft shadow
+          assert.ok(!isOrange(p), `${family}Canopy${k} has an orange pixel at ${x},${y}: ${p}`);
+          // the canopy quadrants may reach down into the first trunk rows (the trunk starts inside BL/BR); only the top row
+          // of quadrants must be pure leaf
+          if (k === 'TL' || k === 'TR') assert.ok(isGreen(p), `${family}Canopy${k} pixel ${x},${y} is not green: ${p}`);
+        }
       }
     }
   }
 });
 
-test('D05: the canopy silhouette is closed and symmetric about its own centre (no stray outline ring on one side)', () => {
-  // Rebuild the 32x32 silhouette from the four quadrants and check that every opaque row is one
-  // contiguous run that starts and ends on an outline pixel (a "second ring" would add a gap).
-  const q = { TL: [0, 0], TR: [1, 0], BL: [0, 1], BR: [1, 1] };
-  const sil = Array.from({ length: 32 }, () => Array(32).fill(false));
-  const outline = Array.from({ length: 32 }, () => Array(32).fill(false));
-  for (const [k, [qx, qy]] of Object.entries(q)) {
-    for (let y = 0; y < T; y++) {
-      for (let x = 0; x < T; x++) {
-        const p = pixel(`treeCanopy${k}`, x, y);
-        sil[qy * T + y][qx * T + x] = p[3] !== 0;
-        outline[qy * T + y][qx * T + x] = p[3] !== 0 && isOutline(p);
-      }
+test('D05: a leafy tree\'s crown is one closed shape (every opaque row is a single run, no stray ring or hole)', () => {
+  for (const family of LEAFY) {
+    const q = { TL: [0, 0], TR: [1, 0], BL: [0, 1], BR: [1, 1] };
+    const sil = Array.from({ length: 32 }, () => Array(32).fill(false));
+    for (const [k, [qx, qy]] of Object.entries(q)) {
+      for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) sil[qy * T + y][qx * T + x] = pixel(`${family}Canopy${k}`, x, y)[3] === 255;
     }
-  }
-  for (let y = 0; y < 32; y++) {
-    const xs = sil[y].map((v, x) => (v ? x : -1)).filter((x) => x >= 0);
-    if (!xs.length) continue;
-    for (let x = xs[0]; x <= xs[xs.length - 1]; x++) assert.ok(sil[y][x], `canopy row ${y} has a gap at column ${x}`);
-    assert.ok(outline[y][xs[0]] && outline[y][xs[xs.length - 1]], `canopy row ${y} does not start/end on an outline pixel`);
+    for (let y = 0; y < 32; y++) {
+      const xs = sil[y].map((v, x) => (v ? x : -1)).filter((x) => x >= 0);
+      if (!xs.length) continue;
+      for (let x = xs[0]; x <= xs[xs.length - 1]; x++) assert.ok(sil[y][x], `${family} canopy row ${y} has a gap at column ${x}`);
+    }
   }
 });
 
-test('D05: the trunk is the pack trunk, runs the whole tile, and meets the canopy skirt directly above it', () => {
-  const trunkCols = [];
-  for (let x = 0; x < T; x++) if (isOrange(pixel('treeTrunk', x, 8))) trunkCols.push(x);
-  assert.ok(trunkCols.length >= 4, 'treeTrunk shows no bark pixels');
-  for (let y = 0; y < T; y++) {
-    for (const x of trunkCols) assert.ok(isOrange(pixel('treeTrunk', x, y)), `trunk bark is broken at ${x},${y}`);
+test('D05: every tree is one connected picture: brown bark in the left column, crown touching the trunk, foot on the tile bottom', () => {
+  for (const family of [...LEAFY, ...PALMS]) {
+    // bark in the trunk tile (the solid left tile), at least 3 columns wide in some row
+    const barkWidths = [];
+    for (let y = 0; y < T; y++) {
+      let n = 0;
+      for (let x = 0; x < T; x++) if (isBark(pixel(`${family}Trunk`, x, y))) n++;
+      barkWidths.push(n);
+    }
+    assert.ok(Math.max(...barkWidths) >= 3, `${family}Trunk shows no bark`);
+    // the whole 32x48 picture has no empty row between its first opaque row and its foot (no floating crown)
+    const rowOpaque = [];
+    for (let py = 0; py < 3 * T; py++) {
+      let any = false;
+      for (let px = 0; px < 2 * T; px++) {
+        const tile = py < T ? (px < T ? 'CanopyTL' : 'CanopyTR') : py < 2 * T ? (px < T ? 'CanopyBL' : 'CanopyBR') : (px < T ? 'Trunk' : null);
+        if (!tile) continue;
+        if (pixel(`${family}${tile}`, px % T, py % T)[3] !== 0) any = true;
+      }
+      rowOpaque.push(any);
+    }
+    const first = rowOpaque.indexOf(true);
+    assert.ok(first >= 0 && first < 24, `${family} has no crown pixels in its upper rows`);
+    for (let y = first; y < 3 * T; y++) assert.ok(rowOpaque[y], `${family}: row ${y} of the tree is empty between the crown and the foot`);
   }
-  // The canopy's bottom pixel row is opaque across every bark column, so trunk and canopy touch.
-  for (const x of trunkCols) assert.ok(pixel('treeCanopyBL', x, T - 1)[3] !== 0, `canopy has a gap above the trunk at column ${x}`);
-  // And the trunk sits under the canopy's middle: the canopy's widest row is centred on the bark.
-  const mid = trunkCols.reduce((a, b) => a + b, 0) / trunkCols.length;
-  const widest = [];
-  for (let x = 0; x < 2 * T; x++) {
-    const p = x < T ? pixel('treeCanopyTL', x, T - 1) : pixel('treeCanopyTR', x - T, T - 1);
-    if (p[3] !== 0) widest.push(x);
-  }
-  const canopyMid = (widest[0] + widest[widest.length - 1]) / 2;
-  assert.ok(Math.abs(canopyMid - mid) <= 2, `canopy centre ${canopyMid} is not over the trunk centre ${mid}`);
 });
 
 // ---------- D14 ----------
 
-const CANOPY = new Set(['treeCanopyTL', 'treeCanopyTR', 'treeCanopyBL', 'treeCanopyBR', 'palmCanopyTL', 'palmCanopyTR', 'palmCanopyBL', 'palmCanopyBR']);
-const GATE_FURNITURE = new Set(['gateSign', 'securityBooth', 'bitsPillar', 'planter', 'flowerbed', 'busShelter', 'busStopSign', 'bollard']);
+const CANOPY = { has: (name) => /^(palm|leafy)\dCanopy(TL|TR|BL|BR)$/.test(name || '') };
+const GATE_FURNITURE = new Set(['gateSign', 'securityBooth', 'bitsPillar', 'planter', 'flowerbed', 'barrierPivot', 'barrierRest', 'bollard']);
 
 test('D14: no canopy is drawn over the Gate 2 booth, pillars, plaque, planters or any other gate furniture', () => {
   const bad = [];

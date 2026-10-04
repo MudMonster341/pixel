@@ -281,7 +281,7 @@ test('quality loop: the roundabout island has a real kerb ring around it (not ju
 
 // Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the
 // BITS sign, a security booth, a barrier arm, and planters with plants".
-test('quality loop: Gate 2 has real gate furniture (pillars, a short barrier arm) straddling the avenue', () => {
+test('quality loop: Gate 2 has real gate furniture (pillars, a lowered barrier arm across the whole road) straddling the avenue', () => {
   const gate2 = gates.find((g) => /Gate 2/.test(g.name));
   const y = Math.floor(gate2.y) - 1;
   let sawPillar = false;
@@ -295,10 +295,9 @@ test('quality loop: Gate 2 has real gate furniture (pillars, a short barrier arm
   }
   assert.ok(sawPillar, 'no gate pillar (bitsPillar) found straddling Gate 2\'s own approach');
   assert.ok(sawPlanter, 'no planter found near Gate 2 (should be real plants, not bare ground)');
-  // Quality loop run 2 (2026-09-28): "the barrier spans the full width like a stripe... make it a
-  // short arm (3-4 tiles)" -- not a wall across both lanes.
-  assert.ok(barrierTiles >= 1, 'no barrier arm found across Gate 2\'s own approach');
-  assert.ok(barrierTiles <= 4, `barrierArm spans ${barrierTiles} tiles, expected a short 3-4 tile arm, not the full avenue width`);
+  // FB-0052 (supersedes quality loop run 2's "short 3-4 tile arm"): the boom is lowered across the whole road, see
+  // tests/unit/p3b-bus-stop-trees.test.js for the full-width / pivot / support post / passable checks.
+  assert.ok(barrierTiles >= 7, `barrierArm spans only ${barrierTiles} tiles: the lowered boom must cross the whole road`);
 });
 
 test('FB-0026: parking areas lie on both sides of the entrance road', () => {
@@ -507,7 +506,7 @@ test('FB-0015: the campus interior is mostly lawn, with plenty of trees and palm
     const gid = structuresLayer[i];
     if (!gid) continue;
     const n = tileInfo.tiles[gid - 1].name;
-    if (n === 'treeTrunk' || n === 'palmTrunk') trees++;
+    if (/^(palm|leafy)\dTrunk$/.test(n)) trees++;
   }
   assert.ok(trees >= 50, `only ${trees} trees/palms on the map`);
 });
@@ -717,13 +716,13 @@ test('quality loop: bike racks stand near the hostels', () => {
 });
 
 test('quality loop: a bus stop sign AND a shelter both actually made it onto the map, not just the sign', () => {
-  // Found the hard way this round: the shelter (and, before this round's fix, the sign itself) used a
-  // single fixed offset that happened to land exactly on the fence line / an already-occupied Gate 2
-  // decoration, so structOnLawn() silently placed nothing and nobody had ever counted these tiles to
-  // notice. Both need at least one real placement now.
+  // Found the hard way once: placements that silently fail leave nothing and nobody notices, so count them.
+  // FB-0044: the stop is now the RTA stop on the road outside Gate 2 (busStopPole = the sign, busShelter* = the shelter).
   const counts = countStructureTiles();
-  assert.ok((counts.get('busStopSign') || 0) >= 1, 'no busStopSign tile placed anywhere on the map');
-  assert.ok((counts.get('busShelter') || 0) >= 1, 'no busShelter tile placed anywhere on the map (shade sail / shelter at the bus stop)');
+  assert.ok((counts.get('busStopPole') || 0) >= 1, 'no busStopPole tile placed anywhere on the map');
+  for (const name of ['busShelterL', 'busShelterG', 'busShelterM', 'busShelterR']) {
+    assert.ok((counts.get(name) || 0) >= 1, `no ${name} tile placed anywhere on the map (the RTA shelter)`);
+  }
 });
 
 test('quality loop: a few Kenney RPG Urban Pack cars (top-down 3/4) are parked somewhere on campus', () => {

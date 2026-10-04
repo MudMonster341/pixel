@@ -112,7 +112,13 @@ module.exports = {
   // Gate 2 road (FB-0049): the east-west road the avenue meets runs `roadWestTiles` west of the avenue to a
   // turning circle (`turnRadiusTiles`), and `roadEastTiles` east as a kerbed road before the plain external
   // road carries on; `roadWidthMeters` is kerb to kerb (12 m = 5 lanes of asphalt + a pavement each side).
-  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40, uFraction: 0.82, roadWestTiles: 30, roadEastTiles: 22, turnRadiusTiles: 4.6, roadWidthMeters: 12 },
+  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40, uFraction: 0.82, roadWestTiles: 30, roadEastTiles: 22, turnRadiusTiles: 4.6, roadWidthMeters: 12,
+    // FB-0044/FB-0049: the Dubai RTA bus stop on the road's south side. `stopOffsetTiles`: the bus's centre column, east of
+    // the gate column (src/scripts.js BUS_STOP_X is this plus 0.25); `bayHalfTiles`: how far the lay-by reaches either
+    // side of that column on its first (road-side) row (its second row is one tile shorter at each end, so the bay has
+    // a tapered mouth); `bayDepthTiles`: carriageway rows the bay adds south of the road; `pavementDepthTiles`: rows of
+    // pavement behind the bay (the shelter, sign and bin stand on it).
+    busStop: { stopOffsetTiles: 5, bayHalfTiles: 7, bayDepthTiles: 2, pavementDepthTiles: 4 } },
   // The Gate 2 roundabout (FB-0054), drawn on the tile grid as a stair-stepped circle (build-campus.js
   // section 11b): `diameterTiles` across the outer pavement, ring road out to `roadRadius`, the kerbed
   // island (a kerbed pavement rim round a lawn) out to `islandRadius` (tile units, from the centre);

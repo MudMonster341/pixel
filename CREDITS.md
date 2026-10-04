@@ -23,10 +23,13 @@ require. The raw packs are not in this repository; download them again if you ne
 - **Sprout Lands - Basic pack** by **Cup Nooble** --
   [cupnooble.itch.io/sprout-lands-asset-pack](https://cupnooble.itch.io/sprout-lands-asset-pack).
   Outdoor greenery: trees, bushes, flowers, grass detail. **In use** (wired in 2026-09-21): the
-  `treeCanopyTL/TR/BL/BR` fill (a complete plain round tree, canopy only), `hedge`, `bush`,
+  `hedge`, `bush`,
   `flowerbed`'s three flowers, and `lawn2`'s grass-tuft speckle -- all recolored onto a new, more
   muted "dry campus greenery" ramp (`remapDryLeaves` in `tools/make-assets.js`) instead of the
-  pack's own bright farm-green, per docs/STYLE_GUIDE.md "Green campus". The flat `lawn`/`lawn2`/
+  pack's own bright farm-green, per docs/STYLE_GUIDE.md "Green campus". **FB-0053/FB-0056 (P3b):** the
+  campus's leafy trees `leafy1`/`leafy2`/`leafy3` are cropped from this pack's round and tall trees
+  (`Objects/Basic_Grass_Biom_things.png`) by `tools/lib/tree-art.js`, recoloured onto the project's own
+  leaf ramp with brown trunks and a lengthened trunk (see docs/STYLE_GUIDE.md "Trees (P3b)"). The flat `lawn`/`lawn2`/
   `grass`/`grass2` ground fill itself stays Kenney's (below), matching the roads/kerbs around it.
   Licence: non-commercial, editing allowed, **credit required**, the pack itself must not be
   redistributed. *Assets - From: Sprout Lands - By: Cup Nooble.*
@@ -62,7 +65,8 @@ docs/plans/2026-09-26-premium-pass.md)
   `remapBitsWallBase`, `remapBitsWindow`, `remapBitsDoorFrame`, `remapLightStone`,
   `remapBitsColumn`). **In use**:
   - the campus props `lampPost`, `bench`, `bin`, `planter`, `lowFence`, `bollard`, and (new)
-    `busStopSign` -- see the `URBAN`/`BUS_STOP_SIGN_SRC` tables;
+    the street bin/flower box at the RTA bus stop (`streetBin`, `streetPlanter`, FB-0044: the same `bin` /
+  `planter` sprites without a lawn underlay) -- see the `URBAN` table;
   - `walkway`/`walkwayEdge*`/`walkwayCorner*` and every road-facing `kerb*` tile: the sheet's own
     concrete-plaza 9-slice (fill + edge + corner pieces), used **unrecolored** (the coordinator's own
     "or only slightly warmed") -- see the `SIDEWALK` table. `kerbEdge` now simply calls the same
@@ -83,13 +87,8 @@ docs/plans/2026-09-26-premium-pass.md)
 - **Ninja Adventure -- Asset Pack** by **Pixel-boy and AAA**
   ([pixel-boy.itch.io/ninja-adventure-asset-pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack),
   `assets/vendor/ninja-adventure/`) -- CC0 1.0, attribution appreciated but not required. **In use**:
-  `treeCanopyTL/TR/BL/BR`'s fill (its Nature tileset's own round tree) and `palmCanopyTL/TR/BL/BR`'s
-  fill (its Desert tileset's potted-palm fronds) -- our own hand-drawn trunk/shape/outline is
-  unchanged, only the fill, the same "our shape, its fill" technique FB-0025 used originally.
-  Coordinator review round 3 (2026-09-27): both are now used in the pack's own **native colors** (no
-  recolor at all) -- round 2's `remapDryLeaves` muted ramp made the palm read as "murky and dark"; the
-  owner asked for the pack's own bright colors back for both the palms and the round shade trees.
-  Also **in use**: `flagPoleYellow`/`flagPoleBlue`/`flagPoleRed`'s *top* tile (the new, separate
+  (no longer used for trees: FB-0053/FB-0056 replaced its round tree and potted palm, see Sprout Lands
+  above and `tools/lib/tree-art.js`.) **In use**: `flagPoleYellow`/`flagPoleBlue`/`flagPoleRed`'s *top* tile (the new, separate
   `flagTopYellow`/`flagTopBlue`/`flagTopRed` overhead tiles -- see the Kenney entry above for the pole
   itself), its animated Flag sprites' first frame, enlarged and mounted on a real 2-tile Kenney pole
   instead of the pack's own short stick (coordinator review round 3: the old single-tile version "read

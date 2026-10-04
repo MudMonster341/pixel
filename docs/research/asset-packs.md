@@ -469,3 +469,19 @@ No new pack. The road autotile (`tools/campus/autotile.js`, `tools/make-assets.j
 tiles of the Kenney RPG Urban Pack (CC0) sheet already credited: its plaza set's narrow-path pieces (cols 11-15, rows
 3-5: strip, end caps, one-tile island) as the splitter/island kerbs, and the pack's own kerb band pixels (sampled from
 its edge tile) for the four inner-corner tiles that the 9-slice lacks. The car sprites are unchanged.
+
+## P3b addendum (2026-10-05): bus stop, gate barrier, trees (FB-0044/0049/0052/0053/0056)
+
+No new pack. The trees come from packs we already credit; everything else is code-composed from the project palette.
+
+- **Leafy trees** (`leafy1`, `leafy2`, `leafy3`): Sprout Lands Basic (Cup Nooble; non-commercial, editing allowed, credit in CREDITS.md),
+  `Objects/Basic_Grass_Biom_things.png`, the plain round tree (x 20-45, y 1-31) and the tall narrow tree (x 1-14, y 0-28). Cropped by
+  `tools/lib/tree-art.js`, each exact pack colour mapped onto the project leaf ramp (`l G t T e`) and brown trunk ramp (`F f N n`), the trunk
+  lengthened so the tree fills the 2x3-tile footprint, the pack's soft shadow kept. leafy2 is the round tree mirrored with a darker ramp.
+- **Date palms** (`palm1`, `palm2`): no free pack has a date palm (checked again: Kenney Modern City has only conifer-like trees, Ninja
+  Adventure's desert tileset only a stubby potted plant, Sprout Lands none). Code-composed in `tools/lib/tree-art.js` from the project palette:
+  a curved trunk with ring marks, 8 or 9 drooping fronds, a bunch of dates.
+- **RTA bus stop** (`busShelter*`, `busShelterRoof*`, `busStopPole`, `busStopPoleTop`): code-composed (no pack has a shelter), RTA red `#d3232a`
+  and its shade from docs/research/rta-bus-reference.md; the logo is not drawn. Bin and flower box: Kenney RPG Urban Pack (CC0) `bin`/`planter`
+  sprites without the lawn underlay.
+- **Gate barrier** (`barrierArm`, `barrierPivot`, `barrierRest`): code-composed.

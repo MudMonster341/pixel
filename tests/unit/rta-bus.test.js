@@ -273,8 +273,11 @@ test('the bus stop sits on the real Gate 2 road: asphalt under the wheels, sand 
 
   const steps = plain(SCRIPTS.opening);
   const busSpawn = steps.find((s) => s.spawnActor && s.spawnActor.id === 'bus').spawnActor;
+  // FB-0044/FB-0049: four bus moves now: along the lane, into the bay (the stop), back out into the lane, away.
   const stops = steps.filter((s) => s.move && s.move.actor === 'bus').map((s) => s.move.path.at(-1).offset);
-  const [stop, exit] = stops;
+  assert.equal(stops.length, 4, 'lane, bay, back to the lane, away');
+  const [approach, stop, , exit] = stops;
+  assert.ok(approach[1] < stop[1], 'the bus first drives along the lane, then pulls south into the bay');
   const spawnOffset = busSpawn.at.offset;
   const frameW = SHEET.frameWidth / 16;
   const feetY = gy + stop[1] + busSpawn.feet / 16; // the wheel line, in tiles

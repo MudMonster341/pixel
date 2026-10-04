@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:06:13.353Z",
-  "updatedAt": "2026-10-04T17:06:13.353Z",
+  "updatedAt": "2026-10-04T22:12:04.728Z",
   "details": "bus looks amaziong but the area aorund doesnt seem too good, please change that",
   "context": {
     "map": "campus",
@@ -49,13 +49,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0044.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "A Dubai RTA bus stop where the bus drops: lay-by, shelter, sign pole, bin, planters, palms; the bus glides into the bay.",
+      "at": "2026-10-04T22:12:04.728Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/p3b-bus-stop-trees.test.js › FB-0044",
+    "commit": null,
+    "at": "2026-10-04T22:12:04.728Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:06:13.353Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T22:12:04.728Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

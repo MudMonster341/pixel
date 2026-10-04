@@ -644,6 +644,31 @@ hand-drawn flat fills. See `tools/make-assets.js`'s `SIDEWALK`/`BLDG` tables and
   Ninja flag enlarged and mounted at the top) -- the old single-tile version "read as a little axe".
 - **Props:** added `busStopSign` (a native-blue plaque-on-a-pole sign) near Gate 2.
 
+### Trees (P3b, FB-0053/FB-0056) -- supersedes the tree and palm notes above
+
+The old round tree and palm (a Ninja Adventure fill in our own shape) are gone. Every tree is now ONE 32 x 48 px picture (2 tiles wide, 3 tall)
+made by `tools/lib/tree-art.js` and sliced into five tiles: `<family>CanopyTL/TR/BL/BR` (overhead) and `<family>Trunk` (solid, left column,
+where `plantTree` puts the trunk). Families: `palm1`, `palm2` (Dubai date palms: curved ringed trunk, 8-9 drooping fronds, dates; code-composed,
+no pack has one) and `leafy1`, `leafy2`, `leafy3` (Sprout Lands round and tall trees recoloured onto the leaf ramp `l G t T e`, brown trunk
+`F f N n`, soft ground shadow). Project palette only; the one translucent colour is the ground shadow (the outline colour at 22%). A tree stands on
+the bottom edge of its picture, so its foot is the bottom of the solid trunk tile. Palms are the entrance/plaza accent (avenue, forecourt, bus stop),
+leafy trees the everyday lawn tree; `plantTree` picks the variant by the per-position hash and never lets two crowns overlap.
+
+### The RTA bus stop and the Gate 2 barrier (P3b, FB-0044/0049/0052)
+
+- The stop is a lay-by on the south side of the Gate 2 road (`layout.gate2.busStop`, `busStop` in build-campus.js section 11): two rows of
+  carriageway added south of the road with a tapered mouth, and a 4-row pavement behind it. The bus's wheels sit on the bay's second row
+  (`BUS_STOP_Y` in src/scripts.js); it arrives along the south lane and glides into the bay, and glides out again when the doors close.
+- Furniture (code-composed from the palette, RTA red `#d3232a` and its shade, no RTA logo): a 4-tile shelter (aluminium canopy with a
+  red-and-white fascia over a glass back wall, a bench rail, an advert lightbox, a route-information screen; `busShelter*`, `busShelterRoof*`),
+  a tall sign pole with a red-headed plate and bus pictogram (`busStopPole` + overhead `busStopPoleTop`), a bin and two flower boxes
+  (`streetBin`, `streetPlanter`: Kenney sprites without the lawn underlay), and palms and a leafy tree in the sand behind the pavement. Her landing
+  column is left clear; the shelter's waiting row (under the canopy) and the pavement between bay and shelter stay walkable.
+- The Gate 2 boom barrier is lowered across the whole road: `barrierPivot` (housing by the booth), a run of `barrierArm` tiles, `barrierRest`
+  (the support post on the far side). None is solid, so the gate stays passable on foot.
+- Tile indices never move: the new tiles are appended at the end of the sheet (`leafy1`/`palm1` and `busStopPole`/`busShelterM` took the old
+  trees' and the old bus kit's slots), because the interior maps and their pinned hashes use the existing indices.
+
 ## Interior kit
 
 Added 2026-09-17 for the building interiors (P3, [INTERIORS_PLAN.md](INTERIORS_PLAN.md)). 32 tiles

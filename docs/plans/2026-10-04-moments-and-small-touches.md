@@ -15,6 +15,13 @@ Build rules: [agent-rules.md](agent-rules.md). Build order: after P1-P4; the key
 6. **Ball pit:** a simplified version in the TP room, built last, cut first.
 7. **Room 195 key: the tower climb only. Match-3 is DROPPED** (supersedes the earlier "match-3 now, tower later" and FB-0074's "candy crush"; Tetris is still removed). There is no match-3 fallback, so the tower needs the same soft-lock guards as every mini-game (skip after 3 losses, Esc quits, every run ends). Sumo vs Narda stays a bonus in the TP-room arcade.
 
+## Settled with the owner (grilling round 2, 2026-10-04)
+8. **Tower climb:** a grumpy stone **gargoyle** at the top throws barrels and flower pots; **gentle** difficulty (3 hearts, slow hazards, about 60-90 s to win); skip after 3 losses.
+9. **Hero vs villain:** Taru plays the white-kitten-with-a-pink-bow stand-in; the villain is the dark bat-eared caped stand-in who shoots at her; plus a roaming enemy and students in the lab. Gentle shooter: 3 hearts, the villain takes about 8-10 hits, simple bullet patterns, skip after 3 losses; she wins, takes the key, leaves.
+10. **Sumo vs Narda:** winning gives nothing but bragging rights and Narda's reaction line (no stamp, no passport).
+11. **Narda:** the agent chooses her look and a playful trash-talker personality; the owner corrects from the screenshot.
+12. **The TP room (ball pit + arcade) is open from the start** (owner's choice, not the agent's "after the first key"): the "Locked for now" door becomes a real, always-open door. It sits off the key route, so it cannot block the story; it still needs the completeness/clearance tests.
+
 ## The owner's list (as sent, with their answers)
 
 1. **Unicorn at the entrance.** Outside, as she enters the campus: a unicorn is eating. She reacts. A prince with a crown comes in from the right, says he is always watching, climbs on the unicorn and
@@ -90,10 +97,7 @@ climbs down saying thanks, the chameleon changes colour.
 | Bonus, TP room arcade | **Sumo vs Narda** (M7) | optional, no key |
 
 ## Open questions for the owner
-1. Mevin: nothing else needed unless you want a surname/colour; "Jashn" stays your wording.
-2. Narda: anything to know about her (look, hair, a catchphrase)?
-3. Tower climb: is "gargoyle throws things down" fine, or do you want something specific (e.g. the prince's friends' books)?
-4. Cut order if time runs short (my proposal): M6 ball pit, then M8 tower climb, then M3 Raja's chariot, then M7 sumo, then M4. Keep M1, M2, M5 and match-3.
+None from rounds 1-2. Cut order if time runs short: M6 ball pit, then M3 Raja's chariot, then M7 sumo, then M4. Keep M1, M2, M5 and the tower climb (it is the Room 195 key).
 
 ## Draft lines (placeholders; the owner edits)
 - **M1** Taru: "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?" Prince: "Don't mind me. I'm always watching." (mounts, flies off) Taru: "Huh... is this the actual BITS?"

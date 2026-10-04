@@ -1030,3 +1030,11 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Failures:** my first throwaway static server compared `/` and `\` paths (404 everywhere) and then kept Node alive; for any scripted http check use `path.resolve` and `server.unref()`.
 
 **Next:** owner playtest feedback (O overlay); card assets -> `npm run pack:offline -- --zip` and `npm run pack:site`; final zip + HOW_TO_OPEN.txt.
+
+## 2026-10-04 (late) — The owner's first playtest; handoff for Day 3
+
+**Did:** The owner played once through the O overlay: "fine, but no wow yet", 33 items FB-0044..FB-0076 (controls/UI, names + friends + club colours + the ICVL -> ICL rename, campus outdoors incl. an RTA bus stop and roundabout, Main Block stairs/doors/lift, a match-3 to replace Tetris, an ICL fingerprint lab with a robot "Alice", a harder Physics Lab fight). Wrote the Day 3 plan (docs/plans/2026-10-04-day3-feedback-and-wow.md: 6 packages, 9 wow ideas, schedule to the 10-11 birthday), ADR 0021 (friends as characters) and ADR 0022 (hosted link), rewrote HANDOFF.md and docs/NEXT_SESSION_PROMPT.md, refreshed CONTEXT.md. Dev-server lessons: the app kills preview servers at turn end; PowerShell blocks `npm.ps1` (use `node server.js`).
+
+**Decisions:** owner's friends allowed as NPCs (their lines approved by the owner); generic stand-ins for Hello Kitty/Batman; one Sonnet agent at a time, monitored, committed after each; birthday 2026-10-11, deliver by 10-09.
+
+**Next:** triage the 33 items (view each screenshot), P1 -> P5, then the wow layer; second playtest ~10-08; final zip + link by 10-09.

@@ -1,0 +1,77 @@
+{
+  "id": "FB-0070",
+  "title": "ITS ICL not ICVL",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-04T17:33:13.994Z",
+  "updatedAt": "2026-10-04T17:33:13.994Z",
+  "details": "",
+  "context": {
+    "map": "main-block-1",
+    "mapName": "Main Block · 1st Floor",
+    "tile": {
+      "x": 15,
+      "y": 16
+    },
+    "pixel": {
+      "x": 247,
+      "y": 264
+    },
+    "facing": "left",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 3,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2fad122",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-04T17:32:59.627Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 787,
+      "y": 28
+    },
+    "world": {
+      "x": 349,
+      "y": 183
+    },
+    "tile": {
+      "x": 21,
+      "y": 11
+    }
+  },
+  "screenshot": "screenshots/FB-0070.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-04T17:33:13.994Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

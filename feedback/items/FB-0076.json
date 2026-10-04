@@ -1,0 +1,64 @@
+{
+  "id": "FB-0076",
+  "title": "after the end just take user back to the main screen",
+  "type": "bug",
+  "area": "General",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-04T17:47:46.353Z",
+  "updatedAt": "2026-10-04T17:47:46.353Z",
+  "details": "",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 15,
+      "y": 16
+    },
+    "pixel": {
+      "x": 242,
+      "y": 266
+    },
+    "facing": "left",
+    "inventory": [
+      {
+        "item": "lugBox",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 3,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "437cdf5",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-04T17:47:21.557Z"
+  },
+  "marker": null,
+  "screenshot": null,
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-04T17:47:46.353Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

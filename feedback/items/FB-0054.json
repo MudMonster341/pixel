@@ -1,0 +1,74 @@
+{
+  "id": "FB-0054",
+  "title": "this doesnt look lieka  roudn about, have pavement styles for all cases connecting and not connecting,",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-04T17:21:55.279Z",
+  "updatedAt": "2026-10-04T17:21:55.279Z",
+  "details": "make this look liek an actual roundabout pelase",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 243,
+      "y": 149
+    },
+    "pixel": {
+      "x": 3897,
+      "y": 2393
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2fad122",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-04T17:21:06.619Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 537,
+      "y": 257
+    },
+    "world": {
+      "x": 3916,
+      "y": 2389
+    },
+    "tile": {
+      "x": 244,
+      "y": 149
+    }
+  },
+  "screenshot": "screenshots/FB-0054.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-04T17:21:55.279Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

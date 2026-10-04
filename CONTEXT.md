@@ -2,7 +2,7 @@
 
 **New session? Read [HANDOFF.md](HANDOFF.md) first.**
 
-**Last updated:** 2026-09-27 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-10-04 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -17,19 +17,18 @@ on a stable architecture that can grow. The campus map is the most important pie
 the design and technical choices. The owner plays each version, reports feedback in-game, and will
 explain the story once the base map is done.
 
-## Current state (2026-09-27, paused by the owner)
-- **The whole game is playable start to finish:** title -> opening (Mustafa's greeting, name, clothes,
-  bus) -> campus -> Main Block -> the LUG volunteer -> three key rooms, each won through a mini-game
-  (platformer, flyer, Tetris; skip offered after 3 losses) -> the reward box -> the birthday card.
-- **Merged in the premium pass so far:** the FB-0035..0043 bug batch, music + sound + volume settings,
-  and the depth engine (y-sorted depth groups, Pokémon door entry/exit, feet-based sorting, camera
-  lerp). 337 unit + 132 e2e tests, all green, pushed (`f3006ea`).
-- **In flight, unreviewed, on branches:** the campus art rebuild on Kenney's RPG Urban Pack (stage 4)
-  and in-world cutscenes + the new opening + onboarding markers (stage 6). See HANDOFF.md.
-- **Next:** review/merge those two, rebuild the interiors (the foyer per the owner's photo), then the
-  finishing stage (temporary card, UI kit, performance, QA, README).
-- **Waiting on the owner:** verify the fixed feedback items in-game (press O); the real key-room
-  locations; the card's photos and messages.
+## Current state (2026-10-04, birthday sprint Day 2 done)
+- **The game is a birthday gift for Taru, 22nd birthday on 2026-10-11**, played on a MacBook. Deliverables: the offline zip
+  (`npm run pack:offline -- --zip`, [ADR 0017](decisions/0017-offline-bundle-for-mac.md)) and a backup hosted link
+  (`npm run pack:site`, [ADR 0022](decisions/0022-hosted-link-as-backup-delivery.md), [docs/HOSTING.md](docs/HOSTING.md)). Target: handed over by 2026-10-09.
+- **Playable start to finish:** title -> name (prefilled "Taru") -> RTA bus -> campus -> Main Block (foyer + two wings rebuilt to the official 3D tour,
+  [ADR 0020](decisions/0020-main-block-ground-floor-follows-the-3d-tour.md)) -> the LUG volunteer -> three key rooms (mini-games, skip after 3 losses) ->
+  box -> animated card -> credits ("Happy Birthday, Taru / Happy 22 / wishes") -> title. Talkable students and cats/birds on campus.
+- **Tests:** 691 unit + 185 browser tests green and pushed (`2fad122`). A completeness test and a story-clearance test guard soft-locks and empty rooms.
+- **Owner's first playtest (2026-10-04):** "fine, but no wow yet" + **33 feedback items FB-0044..FB-0076** waiting. The plan (feedback packages P1-P5, the
+  wow ideas, the schedule to the birthday) is [docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md).
+- **Waiting on the owner:** feedback answers, the friends' lines/jokes, the card photos/video/wishes in `assets/card/` (~10-07), the Netlify upload.
+
 ## Where this is going (updated 2026-09-22)
 The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in an animated
 **birthday card** ([STORY.md](docs/STORY.md)), target 2-4 weeks from 2026-09-20.
@@ -44,8 +43,8 @@ The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in 
   gift and must never be sold.** Raw packs are gitignored; generated art ships.
 - **Characters are 16x24** ([ADR 0013](decisions/0013-characters-are-16x24-from-the-pack.md)); the
   clothes-colour choice bakes one sheet per colour ([ADR 0014](decisions/0014-opening-customisation-recolor-sheets.md)).
-- **Delivery:** an Electron portable .exe, with the web build for development
-  ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)).
+- **Delivery:** the offline double-click bundle for her MacBook ([ADR 0017](decisions/0017-offline-bundle-for-mac.md)) plus a hosted link as a backup
+  ([ADR 0022](decisions/0022-hosted-link-as-backup-delivery.md)). The Windows .exe ([ADR 0010](decisions/0010-ship-as-windows-exe-and-web-build.md)) is dropped.
 - **Built so far:** the whole game is playable start to finish — the opening (title, Mustafa's greeting,
   name entry, clothes customisation, bus arrival), campus v3 from satellite, 8 furnished interior
   floors, the LUG hunt (volunteer, three keys, locked doors, quest tracker, journal), three mini-games
@@ -59,11 +58,13 @@ The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in 
 
 ## How to run it
 ```
-npm start                 # http://localhost:8080 (campus; ?map=meadow for the test map; ?dev=0 hides dev tools)
+npm start                 # http://localhost:8080 (on Windows PowerShell use `node server.js` or `npm.cmd start`; ?dev=0 hides dev tools)
 npm test                  # unit + browser tests (also run automatically before git push)
 npm run assets            # regenerate assets/ after editing tools/make-assets.js
 npm run campus            # regenerate assets/maps/campus.json after editing tools/campus/layout.js
 npm run feedback          # feedback items waiting on the agent (docs/FEEDBACK.md)
+npm run pack:offline      # dist/offline (+ -- --zip): the Mac deliverable;  npm run pack:site: the hosted-link folder
+npm run qa:offline        # plays the bundle title -> credits;  npm run qa:shots: screenshots of every area
 ```
 First time on a new machine: `npm install && npx playwright install chromium`. The game itself needs no install and runs offline (Phaser and the font are vendored).
 Debugging: `game.scene.getScene('world')` and `GameState` in the browser console.
@@ -87,7 +88,8 @@ Debugging: `game.scene.getScene('world')` and `GameState` in the browser console
 - The campus map is generated. Change `tools/campus/layout.js`, never hand-edit `campus.json`
   ([ADR 0007](decisions/0007-campus-map-from-osm-into-tiled.md)).
 - OpenStreetMap data is ODbL (credited). The tour, Google Maps and Wikimedia photos are reference only.
-  No real people in the game.
+  Real people appear only where the owner asked: named CS professors in sourced facts (ADR 0018) and the owner's own friends as small pixel NPCs with
+  owner-approved lines ([ADR 0021](decisions/0021-friends-in-the-game-and-personal-touches.md)).
 
 ## Rules and plans
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) · [docs/GAME_PLAN.md](docs/GAME_PLAN.md)

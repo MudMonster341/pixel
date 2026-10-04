@@ -1,0 +1,74 @@
+{
+  "id": "FB-0059",
+  "title": "fox this area, add soem thng else like compelte black screen for not accessbile areas",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-04T17:25:21.363Z",
+  "updatedAt": "2026-10-04T17:25:21.363Z",
+  "details": "remove the dirt",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 12,
+      "y": 25
+    },
+    "pixel": {
+      "x": 196,
+      "y": 401
+    },
+    "facing": "up",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2fad122",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-04T17:24:57.724Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 288,
+      "y": 259
+    },
+    "world": {
+      "x": 131,
+      "y": 396
+    },
+    "tile": {
+      "x": 8,
+      "y": 24
+    }
+  },
+  "screenshot": "screenshots/FB-0059.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-04T17:25:21.363Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

@@ -139,3 +139,7 @@ messages and the generated slideshow, exactly as in dev.
 
 `npm run pack:offline -- --zip`, then send `dist/offline.zip` (it is a plain zip). She unzips it and
 double-clicks `index.html`. Saves live in the browser she used, so "Continue" only works in that browser.
+
+## Hosted link
+
+`npm run pack:site` builds the same bundle as a static-site folder (`dist/offline-site/`, with noindex + `_headers`); see [HOSTING.md](HOSTING.md) and [ADR 0022](../decisions/0022-hosted-link-as-backup-delivery.md).

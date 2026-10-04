@@ -1,0 +1,77 @@
+{
+  "id": "FB-0066",
+  "title": "add students to the lab and make the mini game in the physcis lab a bit more intense, add in maybe a roaming maybe",
+  "type": "change",
+  "area": "Maps & buildings",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-04T17:31:41.152Z",
+  "updatedAt": "2026-10-04T17:31:41.152Z",
+  "details": "she will be batwoman and will ahve to figght the eneies and then she can leave after she ebats the enemies and collects the key, so making the mini agme a slight bit harder and a more inetnse version, can be sort of actuall she is hello kitty fighting batman and she beatrs batman who is shooting at her and then leaves.",
+  "context": {
+    "map": "main-block-3",
+    "mapName": "Main Block · 3rd Floor",
+    "tile": {
+      "x": 15,
+      "y": 13
+    },
+    "pixel": {
+      "x": 245,
+      "y": 211
+    },
+    "facing": "left",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2fad122",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-04T17:29:35.374Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 461,
+      "y": 182
+    },
+    "world": {
+      "x": 239,
+      "y": 182
+    },
+    "tile": {
+      "x": 14,
+      "y": 11
+    }
+  },
+  "screenshot": "screenshots/FB-0066.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-04T17:31:41.152Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

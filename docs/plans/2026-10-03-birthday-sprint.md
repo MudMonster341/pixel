@@ -1,6 +1,6 @@
 # Birthday sprint (4 days, 2026-10-03 .. 2026-10-06)
 
-Status: **active**. Owner decisions from the design interview on 2026-10-03 (grilling session). This
+Status: **Days 1-2 done; continued in [2026-10-04-day3-feedback-and-wow.md](2026-10-04-day3-feedback-and-wow.md)**. Owner decisions from the design interview on 2026-10-03 (grilling session). This
 plan **pauses the quality loop's rating** ([QUALITY_LOOP.md](../QUALITY_LOOP.md)): until the owner has
 played the game and sent feedback, the goal is *complete and working*, not *rated 8+*. The loop resumes
 afterwards, owner feedback first.
@@ -82,6 +82,9 @@ hand-draw art unless no pack exists: the bus is the exception).
 - **Fix round done:** 7 e2e failures fixed incl. 3 real soft-locks (Room 195 key unreachable, ICVL closet, Physics Lab desk); 578 unit tests green; full e2e not yet re-run.
 - **Animals:** the owner's pack cat (4-direction walk) + Zeenaz cat poses + LPC Birds; the owner said cats and birds only.
 - **Not yet seen in a running game:** everything built on Day 1 is unit-tested only. Day 2 is the first browser pass.
+
+- **Day 2 (done, 2026-10-04):** foyer + wings rebuilt to the tour; offline bundle played from file:// in Chromium and WebKit (zero errors); defect sweep (23 faults, story-route ones fixed) and a generated completeness test; card typewriter bug fixed (ERR-0014); full test green (unit 691 + e2e 185) and pushed; hosted-link build (`npm run pack:site`, ADR 0022). Birthday is **2026-10-11** (owner); hand over by 10-09.
+- **Owner's first playtest (2026-10-04):** "the game is fine, but no wow yet"; 33 feedback items FB-0044..0076 and a request for ideas. Continues in [2026-10-04-day3-feedback-and-wow.md](2026-10-04-day3-feedback-and-wow.md) (re-planned schedule 10-05..10-11).
 
 ## Day 2 verification (one test round, then stop everything)
 

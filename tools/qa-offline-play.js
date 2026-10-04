@@ -9,7 +9,7 @@ const ROOT = path.join(__dirname, '..');
 const OUT = require('os').tmpdir();
 const pw = require(path.join(ROOT, 'node_modules', 'playwright-core'));
 const engine = process.argv[2] || 'chromium';
-const INDEX = pathToFileURL(path.join(ROOT, 'dist', 'offline', 'index.html')).href;
+const INDEX = process.env.PLAY_URL || pathToFileURL(path.join(ROOT, 'dist', 'offline', 'index.html')).href; // PLAY_URL: play a hosted copy instead
 
 const log = (...a) => console.log(`[${engine}]`, ...a);
 const errors = [];

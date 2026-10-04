@@ -2,6 +2,7 @@
 //
 //   npm run pack:offline              -> dist/offline/          (double-click index.html)
 //   npm run pack:offline -- --zip     -> also dist/offline.zip  (what you send to her)
+//   npm run pack:site                 -> dist/offline-site/ (same bundle + noindex + robots/_headers: drag onto Netlify Drop)
 //
 // A page opened from file:// can't XHR/fetch local files and can't use file:// images as WebGL
 // textures, so Phaser's loader fails. This script builds a folder where every RUNTIME asset is
@@ -462,9 +463,17 @@ function dirSize(dir) {
   return total;
 }
 
+// `--hosted` (static site, e.g. Netlify Drop): the same plain-script-tag bundle works over http as-is; this only
+// keeps the unlisted gift link out of search engines (robots.txt + X-Robots-Tag + a noindex meta in index.html) and
+// stops browsers serving a stale copy after a re-upload (Netlify/Cloudflare read `_headers`).
+function writeHostedFiles(outDir) {
+  fs.writeFileSync(path.join(outDir, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+  fs.writeFileSync(path.join(outDir, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n  Cache-Control: public, max-age=0, must-revalidate\n');
+}
+
 const mb = (bytes) => `${(bytes / 1048576).toFixed(2)} MB`;
 
-function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, log = console.log } = {}) {
+function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, hosted = false, log = console.log } = {}) {
   if (!path.basename(outDir).startsWith('offline')) throw new Error(`pack-offline: refusing to wipe "${outDir}" (output folder must be named offline*)`);
   const collected = collectRuntimeAssets({ root });
   const notes = collected.notes;
@@ -476,7 +485,8 @@ function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, log = console.l
 
   const sourceHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const dataFiles = writeRegistry(assets, outDir, log);
-  const html = buildIndexHtml(sourceHtml, { dataFiles, fontCss: inlineFontCss(root) });
+  let html = buildIndexHtml(sourceHtml, { dataFiles, fontCss: inlineFontCss(root) });
+  if (hosted) html = html.replace('<head>', '<head>\n  <meta name="robots" content="noindex,nofollow">'); // the unlisted gift link must not be indexed
   fs.writeFileSync(path.join(outDir, 'index.html'), html);
 
   // the scripts the bundle's index.html loads (all plain files, copied under the same relative path)
@@ -490,6 +500,7 @@ function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, log = console.l
   }
   fs.copyFileSync(path.join(root, 'vendor', 'phaser', 'LICENSE'), path.join(outDir, 'vendor', 'phaser', 'LICENSE'));
   fs.writeFileSync(path.join(outDir, 'HOW_TO_OPEN.txt'), howToOpenText());
+  if (hosted) writeHostedFiles(outDir);
 
   // size report
   const byFolder = new Map();
@@ -520,7 +531,8 @@ function build({ root = ROOT, outDir = DEFAULT_OUT, zip = false, log = console.l
 
 if (require.main === module) {
   try {
-    build({ zip: process.argv.includes('--zip') });
+    const hosted = process.argv.includes('--hosted');
+    build({ zip: process.argv.includes('--zip'), hosted, outDir: hosted ? path.join(ROOT, 'dist', 'offline-site') : DEFAULT_OUT });
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
@@ -529,5 +541,5 @@ if (require.main === module) {
 
 module.exports = {
   collectRuntimeAssets, scanSourceAssetRefs, stringLiterals, buildIndexHtml, scriptSrcs, clothesIds, loadContent,
-  writeZip, crc32, mimeFor, mp3PathFor, bundleAssets, convertOggFiles, AUDIO_CACHE_REL, howToOpenText, build, SHIM_REL, DATA_SCRIPTS, TEMPLATE_HANDLERS,
+  writeZip, crc32, writeHostedFiles, mimeFor, mp3PathFor, bundleAssets, convertOggFiles, AUDIO_CACHE_REL, howToOpenText, build, SHIM_REL, DATA_SCRIPTS, TEMPLATE_HANDLERS,
 };

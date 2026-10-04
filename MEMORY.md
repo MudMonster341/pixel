@@ -1022,3 +1022,11 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Decisions:** Library/Mechanical interiors are exempt from furniture/life rules by a named list (locked for the whole game). D12/D18 left. Birthday is 2026-10-11 (owner); a hosted-site option is wanted because there is no Mac to test on.
 
 **Next:** push (the pre-push hook runs the full `npm test`, about 17 min, quiet machine), update ../2D_pixel_game-play, tell the owner it is ready; hosted-site option; owner feedback via the O overlay.
+
+## 2026-10-04 (night) — Pushed; hosted-link build
+
+**Did:** Pushed `main` (`ea1303b`) after the full suite (unit + 185 e2e) passed twice (once directly, once as the pre-push hook). Added `npm run pack:site` (`--hosted`: noindex meta, robots.txt, `_headers`; `dist/offline-site`), played it over http (zero errors), wrote docs/HOSTING.md (Netlify Drop; the owner uploads). `tools/qa-offline-play.js` takes `PLAY_URL`.
+
+**Failures:** my first throwaway static server compared `/` and `\` paths (404 everywhere) and then kept Node alive; for any scripted http check use `path.resolve` and `server.unref()`.
+
+**Next:** owner playtest feedback (O overlay); card assets -> `npm run pack:offline -- --zip` and `npm run pack:site`; final zip + HOW_TO_OPEN.txt.

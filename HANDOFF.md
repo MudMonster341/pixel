@@ -28,6 +28,7 @@ and learn campus facts. **Ratings are paused** until the owner has played; the a
 - **Real bug found by the sweep:** the card's message box never typed (ERR-0014, fixed + tested).
 - `tests/unit/completeness.test.js`: textures, door targets/arrivals, lock reasons, furniture density, life per reachable map.
 - Unit tests: **690 green** (run `npm run test:unit`). Full `npm test` green and pushed (2026-10-04); `../2D_pixel_game-play` is at `ea1303b`.
+- **Hosted-link option (owner: Netlify Drop, unlisted, card photos included):** `npm run pack:site` -> `dist/offline-site/`; steps in docs/HOSTING.md. The owner uploads it (needs their Netlify login); nothing is published yet. Rebuild + re-drag after the card assets arrive.
 - **Owner answers (grilling, 2026-10-04):** wing doors closed + each says a line; no ruler portraits; Taru's birthday is **2026-10-11**; no Mac to test on, so also prepare a hostable-site version (confirm host/privacy with the owner before publishing); the pre-push hook is the single full run.
 
 ## State at the end of this session

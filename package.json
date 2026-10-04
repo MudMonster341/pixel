@@ -27,7 +27,8 @@
     "pack:win": "node tools/pack-win.js",
     "pack:offline": "node tools/pack-offline.js",
     "prepare": "git config core.hooksPath .githooks || true",
-    "qa:offline": "node tools/qa-offline-play.js"
+    "qa:offline": "node tools/qa-offline-play.js",
+    "pack:site": "node tools/pack-offline.js --hosted"
   },
   "devDependencies": {
     "@breezystack/lamejs": "^1.2.7",

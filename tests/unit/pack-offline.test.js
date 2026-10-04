@@ -318,6 +318,25 @@ test('offline: a full build into a scratch folder is self-contained (every scrip
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
 
+test('hosted: --hosted adds noindex + robots.txt + _headers to the same self-contained bundle, and a plain build has none of them', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pack-offline-hosted-'));
+  try {
+    const plain = path.join(tmp, 'offline-plain');
+    const site = path.join(tmp, 'offline-site');
+    pack.build({ outDir: plain, log() {} });
+    pack.build({ outDir: site, hosted: true, log() {} });
+    const siteHtml = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
+    assert.match(siteHtml, /<meta name="robots" content="noindex,nofollow">/);
+    assert.doesNotMatch(siteHtml, /https?:\/\//, 'no remote URL in the hosted copy either');
+    assert.match(fs.readFileSync(path.join(site, 'robots.txt'), 'utf8'), /Disallow: \//);
+    assert.match(fs.readFileSync(path.join(site, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
+    for (const src of pack.scriptSrcs(siteHtml)) assert.ok(fs.existsSync(path.join(site, ...src.split('/'))), `${src} is missing from the hosted copy`);
+    const plainHtml = fs.readFileSync(path.join(plain, 'index.html'), 'utf8');
+    assert.doesNotMatch(plainHtml, /noindex/);
+    assert.ok(!fs.existsSync(path.join(plain, 'robots.txt')) && !fs.existsSync(path.join(plain, '_headers')));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
 test('offline: refuses to wipe a folder that is not named offline*', () => {
   assert.throws(() => pack.build({ outDir: path.join(os.tmpdir(), 'something-else'), log() {} }), /refusing to wipe/);
 });

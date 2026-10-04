@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "General",
   "priority": "normal",
-  "status": "new",
+  "status": "needs-info",
   "createdAt": "2026-10-04T17:47:46.353Z",
-  "updatedAt": "2026-10-04T17:47:46.353Z",
+  "updatedAt": "2026-10-04T17:58:50.638Z",
   "details": "",
   "context": {
     "map": "main-block-g",
@@ -52,13 +52,24 @@
   },
   "marker": null,
   "screenshot": null,
-  "thread": [],
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Today the ending already goes box -> card -> credits -> title. I could not tell which part you hit. Which was it? (A) after THE END the credits waited for a key press, (B) after the credits you pressed Continue and landed back in the foyer with the game 'still going', (C) the card or box did not lead to the credits, (D) something else. I am making the credits return to the title by themselves a few seconds after THE END either way; tell me if you also want Continue to be hidden once the game is finished.",
+      "at": "2026-10-04T17:58:50.638Z"
+    }
+  ],
   "resolution": null,
   "history": [
     {
       "at": "2026-10-04T17:47:46.353Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T17:58:50.638Z",
+      "by": "agent",
+      "status": "needs-info"
     }
   ]
 }

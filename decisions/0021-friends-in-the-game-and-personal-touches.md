@@ -27,6 +27,16 @@ game still lacks a "wow".
   Everything stays built from free packs and code; no hand-drawn art (FB-0025).
 - Protected characters named in feedback (Hello Kitty, Batman, FB-0066) are replaced by generic stand-ins.
 
+## Addendum 2026-10-04 (FB-0051 in full)
+The owner's full list is wider than the first reading. All of these are allowed as small pixel NPCs, with affectionate, light, fixed lines that the owner approves:
+- **Friends (male):** Sid, Akshit, Varun, Mitul, Karthik, **Mustafa** (the owner, black and orange hoodie, near every mini-game, one fixed line each), plus
+  Siva, Shamsuddin, Najam, Satvik (a little darker skin tone, carries a camera).
+- **Friends of Taru (female):** Sana, Shraddha, Palak: a short scene where all three walk up, say hi to Taru and invite her to the canteen / to spend time with them.
+- **Professors (the same three already in the sourced facts, ADR 0018):** Prof. **Elakkiya** (her quizzes are hard: a "goated" prof), Prof. **Angel** (J. Angel Arul Jothi: pun, she
+  has small wings), Prof. **Raja** (Raja Muthalagu: a "raja": a chariot suddenly arrives and takes him away). Teasing stays kind and about the joke the owner gave, never about private life.
+- Surnames, personal facts and photos are never invented; the agent drafts, the owner edits. Placeholders are marked in `docs/research/campus-lines-review.md`.
+- The jokes are for Taru's group: they stay in the private build (nothing is published beyond the unlisted link, ADR 0022).
+
 ## Consequences
 - ADR 0018's "real people" rule is widened for the named friends only; CONTEXT.md is updated.
 - `src/campus-facts.js` / `src/ambient.js` / story dialogue gain named NPCs; tests keep the story-clearance geometry.

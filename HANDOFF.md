@@ -27,15 +27,13 @@ and learn campus facts. **Ratings are paused** until the owner has played; the a
 - **Defect sweep** (docs/quality/defect-sweep-2026-10-04.md): D01-D11, D13-D17, D19 fixed (stairs arrival in a wall, HUD, mini-game panels, box lid, trees, entrances, cars, gate palm...). Not fixed on purpose: D12 (bare grass/sand), D18 (side-gate road), D20-D23 (the Library and Mechanical interiors are locked for the whole game; the completeness test exempts them by name and fails if they become reachable). Unsure items U1-U11 were not chased except U4 (below).
 - **Real bug found by the sweep:** the card's message box never typed (ERR-0014, fixed + tested).
 - `tests/unit/completeness.test.js`: textures, door targets/arrivals, lock reasons, furniture density, life per reachable map.
-- Unit tests: **690 green** (run `npm run test:unit`). Full `npm test` (pre-push hook) and push: see MEMORY.md for whether it has run.
+- Unit tests: **690 green** (run `npm run test:unit`). Full `npm test` green and pushed (2026-10-04); `../2D_pixel_game-play` is at `ea1303b`.
 - **Owner answers (grilling, 2026-10-04):** wing doors closed + each says a line; no ruler portraits; Taru's birthday is **2026-10-11**; no Mac to test on, so also prepare a hostable-site version (confirm host/privacy with the owner before publishing); the pre-push hook is the single full run.
 
 ## State at the end of this session
 
-`main` is at commit `8de5df8` (or later) and is **NOT pushed** (origin/main is at `97b2b00`; about 14 commits ahead).
-Push only after a full `npm test` on a quiet machine (the pre-push hook runs the full suite, about 17 min).
-Nothing is running. Unit tests: **578/578 green**. Browser tests: the last full run was 177/184; the 7 failures were
-then fixed and each re-run green, but **the full e2e suite has not been re-run since**.
+`main` was pushed on 2026-10-04 at `ea1303b` (origin/main is level with it); later commits (docs only) may be ahead. The pre-push hook
+runs the full suite (about 10-17 min). Full `npm test` on 2026-10-04: unit 690 green + 185/185 browser tests green. Nothing is running.
 
 ### Done and merged this sprint (Day 1)
 | Package | What | Notes |

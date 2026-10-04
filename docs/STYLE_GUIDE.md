@@ -737,6 +737,16 @@ foyer (`docs/INTERIORS_PLAN.md`) got the most attention: real seating/plants/not
 *decorative* grand staircase (walkable, no warp trigger of its own -- the same trick `intLift` already
 used) with a cleared nook and a stall counter behind it for the LUG event stall (docs/STORY.md).
 
+### Stairs and the lift (P4b, FB-0061/0063/0064/0069)
+
+Stairs are seen from the 3/4 camera as a flight rising up the screen: a flat cream tread over a darker riser with a dark line under it
+(so the bands alternate light/dark), steps shrinking and darkening towards the far end, gold handrails with newel caps on the open side,
+a plain dark stringer on the wall side, a flat landing/foot slab at each end, and a blue arrow plate (UP / DOWN) on the wall over a flight.
+Never vertical bands, never a flat grey block. The art is LimeZu Modern Interiors Free's stepped flight and elevator doors (see
+docs/research/asset-packs.md "P4b addendum"), generated as `intStairs<kind><row>` and `intLift*` (tools/make-assets.js "P4b"). A lift is
+stainless double doors with an amber indicator lamp band over them and a call-button plate beside them, set in a wall; it is a `lift`
+object, not a decoration.
+
 ## Mini-game backdrops (roadmap M4 art pass, 2026-09-22; rescaled quality-loop pass, 2026-09-29)
 
 Each of the 3 mini-games (`src/minigames/`, docs/GAME_FEEL.md "Mini-games") gets a themed, generated

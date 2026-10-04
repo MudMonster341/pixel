@@ -64,6 +64,11 @@ const REQUIRED_TILES = [
   'intVoid', 'intDoorwaySide', 'intDoorClosedSideL', 'intDoorClosedSideR', 'intGlassDoorSideL', 'intGlassDoorSideR',
   'intDoorOfficeSideL', 'intDoorOfficeSideR', 'intDoorFlushSideL', 'intDoorFlushSideR', 'intDoorDarkSideL', 'intDoorDarkSideR',
   'intWallWindowSideL', 'intWallWindowSideR', 'libSignSeg0', 'libSignSeg1', 'libSignSeg2',
+  // P4b (FB-0061/0063/0064/0069): the Main Block's stairs (LimeZu's stepped flight with gold rails) and the lift.
+  ...['M', 'EL', 'ER', 'WL', 'WR'].flatMap((kind) => [0, 1, 2, 3].map((row) => `intStairs${kind}${row}`)),
+  'intStairsFootM', 'intStairsFootWL', 'intStairsFootWR', 'intStairsLandL', 'intStairsLandM', 'intStairsLandR',
+  ...['L', 'R'].flatMap((side) => [0, 1, 2].map((row) => `intStairsWall${side}${row}`)),
+  'intStairsSignUp', 'intStairsSignDown', 'intLiftDoorL', 'intLiftDoorR', 'intLiftOpenL', 'intLiftOpenR', 'intLiftPanel',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -97,6 +102,7 @@ const SIDE_VARIANTS = {
 const WALL_LINE_TILES = new Set([
   ...[WALL_DEFAULT, ...Object.values(WALL_KITS)].flatMap((k) => [k.plain, k.endL, k.endR]), 'bitsWall',
   'intNameplate', 'intWallPoster', 'intWhiteboardWall', 'intProjectorScreen', 'intNoticeboard', 'intLift', 'intWallWindow',
+  'intLiftDoorL', 'intLiftDoorR', 'intLiftPanel', 'intStairsSignUp', 'intStairsSignDown',
   'intWallFaceSkirt', 'intGlassPanel', 'intGlassPanelB',
   ...Object.keys(SIDE_VARIANTS), ...Object.values(SIDE_VARIANTS).flatMap((v) => Object.values(v)),
   ...Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`), 'libSignSeg0', 'libSignSeg1', 'libSignSeg2',
@@ -379,9 +385,23 @@ class Floor {
     this.pointObject('stairs', name, cx, cy, { to, toId, facing });
   }
 
-  // A lift: purely decorative (per the owner's plan, no working lift yet), placed against a wall.
-  liftFeature(id, x, y) {
-    this.structures[this.idx(x, y)] = TILE.intLift;
+  // P4b (FB-0061/0063): a block of the Main Block's stair tiles, `kinds` one per column (left to right) and `rows` one per tile row
+  // (top to bottom), each row 0 (far end of a flight, darkest) .. 3 (near end). Kinds: M plain treads, EL/ER gold handrail on the
+  // left/right, WL/WR a plain stringer against a wall (tools/make-assets.js stairsTile()).
+  stairBlock(x, y, kinds, rows) {
+    rows.forEach((row, j) => kinds.forEach((kind, i) => this.placeStructure(x + i, y + j, `intStairs${kind}${row}`)));
+  }
+
+  // P4b (FB-0064/0069): a working lift in a horizontal wall -- two stainless door tiles with the floor-indicator lamp over them
+  // (the `lift` object's own cells), the call-button plate on the wall just right of them, and the `lift` object itself. Like a
+  // door it is a point on the first tile with `cells` "2x1", `facing` is the way she faces on arrival (the front tile is one
+  // step that way, resolveSpawnAt()) and `openTiles` names the open-door art the door animation will play (a later package).
+  // Pressing E in front of it opens the floor-choice list (src/maps.js `lift`, src/maplogic.js liftDialog()).
+  liftDoor(x, y, name) {
+    this.placeStructure(x, y, 'intLiftDoorL');
+    this.placeStructure(x + 1, y, 'intLiftDoorR');
+    this.placeStructure(x + 2, y, 'intLiftPanel');
+    this.pointObject('lift', name, x, y, { facing: 'down', cells: '2x1', openTiles: 'intLiftOpenL,intLiftOpenR' });
   }
 
   // The atrium void + railing (mezzanine looking down into the foyer below): a rectangle of
@@ -620,6 +640,10 @@ const FURNISHERS = {
     floor.bigPlant(21, wallTop + 1); // a plant at each end of the railing
     floor.bigPlant(28, wallTop + 1);
 
+    // ---- P4b (FB-0064/0069): the lift, in the back wall's left corner beside the staircase ----
+    // Doors on x 11..12 of the back wall, the call plate on x 13 above the stall counter; she steps out onto (11,15) in front of it.
+    floor.liftDoor(11, wallTop, 'Main Block Lift G');
+
     // ---- the LUG stall, in the nook behind the staircase ----
     const top = r.y0 + 1; // the hall's first interior row (iy0 is one further in)
     for (const x of [13, 14, 15]) S(x, top, 'intCanteenCounter');
@@ -627,25 +651,31 @@ const FURNISHERS = {
     floor.rectObject('area', 'LUG Stall', 11, top, 19, top + 2, { kind: 'stall' });
 
     // ---- the split staircase (x 13..18), against the left side towards the back ----
+    // P4b (FB-0061): rebuilt from LimeZu's stepped flight with gold handrails (tools/make-assets.js stairsTile()). Everything is
+    // mirrored about the staircase's own centre line (x 16.0, an edge coordinate): the wide lower flight (x 13..18, three tile
+    // rows, rail on both outer edges), a landing, and two 2-wide upper flights (rail on the outer edge, a plain stringer against the
+    // dark wood wall between them, which carries the blue UP plate). The foot opening between the two round columns (x 15..16) is
+    // the walkable foot slab, centred under the flight, and the `stairs` object stands on its left tile (cells "2x1": both tiles take her up).
     const sx0 = 13, sx1 = 18;
     const upperY0 = top + 3; // 18
     const landingY = upperY0 + 3; // 21
     const lowerY0 = landingY + 1; // 22
     const lowerY1 = lowerY0 + 2; // 24
-    const treadAt = (x) => (x === sx0 ? 'intFoyerStairsL' : x === sx1 ? 'intFoyerStairsR' : 'intFoyerTreadPlain');
-    for (let y = upperY0; y < landingY; y++) {
-      for (let x = sx0; x <= sx1; x++) {
-        const inUpperFlight = x <= sx0 + 1 || x >= sx1 - 1;
-        S(x, y, inUpperFlight ? treadAt(x) : 'intAtriumVoid'); // the dark plain wall between the two upper flights
-      }
+    floor.stairBlock(sx0, upperY0, ['EL', 'WR'], [0, 1, 2]); // the left upper flight, x 13..14
+    floor.stairBlock(sx1 - 1, upperY0, ['WL', 'ER'], [0, 1, 2]); // the right upper flight, x 17..18
+    for (let j = 0; j < 3; j++) { // the wall between them, x 15..16
+      S(sx0 + 2, upperY0 + j, `intStairsWallL${j}`);
+      S(sx0 + 3, upperY0 + j, `intStairsWallR${j}`);
     }
-    for (let x = sx0; x <= sx1; x++) S(x, landingY, 'intFoyerLanding');
-    for (let y = lowerY0; y <= lowerY1; y++) for (let x = sx0; x <= sx1; x++) S(x, y, treadAt(x));
+    S(sx0, landingY, 'intStairsLandL');
+    for (let x = sx0 + 1; x < sx1; x++) S(x, landingY, 'intStairsLandM');
+    S(sx1, landingY, 'intStairsLandR');
+    floor.stairBlock(sx0, lowerY0, ['EL', 'M', 'M', 'M', 'M', 'ER'], [1, 2, 3]);
     floor.depthGroupRect(sx0, upperY0, sx1, lowerY1);
-    // the `stairs` object itself sits on a walkable stair mat at the foot, between the two round columns
+    // the `stairs` object itself sits on the walkable foot slab at the foot, between the two round columns
     const footY = lowerY1 + 1; // 25
-    floor.paintFloor(15, footY, 16, footY, 'intStairsUp');
-    floor.pointObject('stairs', 'Main Block Stairs G (up)', 15, footY, { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)', facing: 'down' });
+    floor.paintFloor(15, footY, 16, footY, 'intStairsFootM');
+    floor.pointObject('stairs', 'Main Block Stairs G (up)', 15, footY, { to: 'main-block-1', toId: 'Main Block Stairs 1 (down)', facing: 'down', cells: '2x1' });
     // two round columns (a 2-wide x 3-tall cap/shaft/base block each) frame the foot
     for (const cx0 of [sx0, sx1 - 1]) {
       for (let i = 0; i < 3; i++) {

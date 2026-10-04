@@ -142,7 +142,7 @@ test('Main Block foyer specifically has a reception desk, seating, a plant, a no
       if (ggid) groundFound.add(tileInfo.tiles[ggid - 1].name);
       const ogid = overhead[y * W + x];
       if (ogid) overheadFound.add(tileInfo.tiles[ogid - 1].name);
-      if (sgid && ['intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'].includes(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
+      if (sgid && /^intStairs(M|EL|ER|WL|WR)[0-3]$|^intStairsLand[LMR]$/.test(tileInfo.tiles[sgid - 1].name)) stairsTiles++;
     }
   }
   for (const name of ['intReceptionDesk', 'intSofaRed', 'intSofaBlue', 'intBigPlantTop', 'intNoticeboard', 'intColumnShaftL', 'intTerrariumTL', 'intTotemTop']) {

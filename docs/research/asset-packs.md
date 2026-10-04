@@ -485,3 +485,24 @@ No new pack. The trees come from packs we already credit; everything else is cod
   and its shade from docs/research/rta-bus-reference.md; the logo is not drawn. Bin and flower box: Kenney RPG Urban Pack (CC0) `bin`/`planter`
   sprites without the lawn underlay.
 - **Gate barrier** (`barrierArm`, `barrierPivot`, `barrierRest`): code-composed.
+
+## P4b addendum (2026-10-05): stairs and a lift (FB-0061/0063/0064/0069)
+
+The owner asked for "proper external tilesets to show stairs correctly". Searched the vendored packs and the three zips in
+`assets/External Tilesets/` (unzipped to a temp dir, nothing added to the repo):
+
+- **Ninja Adventure** (CC0): `TilesetElement.png` has four sets of stair icons, but they are side-on profile blocks with a dark outline,
+  a different style from this game; its interior sheets (`TilesetInterior*.png`) have walls and floors only. Not used.
+- **Kenney RPG Urban Pack** (CC0): a large grey staircase at the lower left of the sheet, drawn in side profile (a diagonal ramp with
+  vertical bars). Wrong view. **Kenney Roguelike Modern City**: no stairs. **Land of Pixels laboratory** (CC BY 4.0): a red
+  step ramp, side-on and sci-fi. **Cool School**, **Sprout Lands**, **Modern Houses**: none. Not used.
+- **LimeZu Modern Interiors Free** (already credited, non-commercial, editing allowed): the furniture sheet `Interiors_free_16x16.png`
+  has what the others lack: **a top-down stepped flight** (cream tread, beige riser, a dark line under each riser, so the bands alternate
+  light/dark) with **gold handrails and newel posts**, at about x 92-133 y 48-80 (with rails) and x 144-175 y 80-127 (bare). It is drawn
+  as an escalator in the sheet but reads exactly as stairs seen from the 3/4 camera. **Used.** The same sheet has **stainless-steel
+  elevator doors** (x 13-50, y 423-447) and a **call-button plate** (x 66-71, y 448-456): used for the lift.
+
+How it is used (`tools/make-assets.js` "P4b" section): the three band colours are sampled from the flight's pixels, the rail columns
+(with the newel caps) are cropped from the sheet; the step sizes (shrinking into the distance) and the darkening towards the far end
+are the only things we add, as the "this goes UP" cue the tour photo shows. The foyer stair and the stairwell flights share the same tiles
+`intStairs<kind><row>`. The lift doors are cropped as they are with an indicator-lamp band (the one drawn part) over them.

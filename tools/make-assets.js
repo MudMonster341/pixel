@@ -1680,6 +1680,24 @@ const TILES = [
   { name: 'intWallWindowSideR', solid: true, draw: (img, x, y) => sideWindowTile(img, x, y, 'R') },
   // FB-0062: the "LIBRARY" sign over the library lobby's door (the same fascia strip as the BITS wordmark, 3 letters a tile).
   ...['LIB', 'RAR', 'Y  '].map((text3, i) => ({ name: `libSignSeg${i}`, solid: true, draw: (img, x, y) => bitsSignSegment(img, x, y, text3) })),
+
+  // ---- P4b (FB-0061 / FB-0063 / FB-0064 / FB-0069), appended at the end so no earlier index moves ----
+  // The Main Block's stairs, cut from LimeZu's stepped flight (see stairsTile's comment): `intStairs<kind><row>`, kind M / EL / ER
+  // (gold handrail left / right) / WL / WR (stringer against a wall), row 0 (far end of a flight) .. 3 (near end); the walkable
+  // foot slab; the foyer's landing; the foyer's wood wall between its two upper flights (L/R x row 0..2); the wall arrows.
+  ...['M', 'EL', 'ER', 'WL', 'WR'].flatMap((kind) => [0, 1, 2, 3].map((row) => ({ name: `intStairs${kind}${row}`, solid: true, draw: (img, x, y) => stairsTile(img, x, y, kind, row) }))),
+  ...['M', 'WL', 'WR'].map((side) => ({ name: `intStairsFoot${side}`, draw: (img, x, y) => stairsFootTile(img, x, y, side) })),
+  ...['L', 'M', 'R'].map((side) => ({ name: `intStairsLand${side}`, solid: true, draw: (img, x, y) => stairsLandTile(img, x, y, side) })),
+  ...['L', 'R'].flatMap((side) => [0, 1, 2].map((row) => ({ name: `intStairsWall${side}${row}`, solid: true, draw: (img, x, y) => intStairsWall(img, x, y, side, row) }))),
+  { name: 'intStairsSignUp', solid: true, draw: (img, x, y) => intStairsSign(img, x, y, false) },
+  { name: 'intStairsSignDown', solid: true, draw: (img, x, y) => intStairsSign(img, x, y, true) },
+  // The lift: stainless doors with the floor-indicator lamp (L/R halves), the open twins (overlay art for the door animation),
+  // and the call-button plate beside it.
+  { name: 'intLiftDoorL', solid: true, draw: (img, x, y) => liftDoorTile(img, x, y, 'L', false) },
+  { name: 'intLiftDoorR', solid: true, draw: (img, x, y) => liftDoorTile(img, x, y, 'R', false) },
+  { name: 'intLiftOpenL', draw: (img, x, y) => liftDoorTile(img, x, y, 'L', true) },
+  { name: 'intLiftOpenR', draw: (img, x, y) => liftDoorTile(img, x, y, 'R', true) },
+  { name: 'intLiftPanel', solid: true, draw: intLiftPanel },
 ];
 
 // ---------- campus tiles ----------
@@ -3543,6 +3561,175 @@ function sideWindowTile(img, x, y, side) {
     px(lx, bottom + 1, 'K');
     px(lx, bottom + 2, 'W'); // the sill
   }
+}
+
+// ---------- P4b (FB-0061 / FB-0063 / FB-0064 / FB-0069): stairs that read as stairs, and a working lift ----------
+// The owner: "they don't look like stairs ... find proper external tilesets to show stairs correctly". The old stairs were
+// flat grey/cream bands with no sides. No vendored pack has a top-down stair RUN as such (Ninja Adventure, the Kenney RPG Urban
+// Pack and Land of Pixels only have side-on profile steps), but LimeZu Modern Interiors Free (already credited, the same sheet
+// as the furniture) has a real top-down stepped flight with gold handrails and newel posts (it is drawn as an escalator in the
+// sheet, at about x 92..133 y 48..80 and x 144..175 y 80..127 of Interiors_free_16x16.png, with the rail art at x 92..97 and
+// x 126..131). Everything below is cut from that art, not drawn: the three tread/riser/line colours are SAMPLED from the flight's
+// pixels, the gold rails (with their newel caps) are CROPPED from its rail columns. Only the arrangement is ours: step heights
+// shrink and the flight darkens towards its far end (the "this goes UP, away from you" cue, as in the tour photo), and the
+// wall-side edge of a flight is a plain dark stringer. The lift doors are the same sheet's stainless-steel elevator doors
+// (x 13..50 y 423..447) and its call-button plate (x 66..71 y 448..456); the floor indicator lamp is the only drawn part.
+// A flight is 64px (four tile rows) from its far end (row 0) to its near end (row 3); a staircase picks the rows it needs.
+const STAIR_STEP_HEIGHTS = [7, 8, 8, 9, 10, 10, 12]; // far step first; the sum is the 64px of four tile rows
+const STAIR_RAIL = { L: 92, R: 126, capRows: [48, 53], bodyRows: [54, 76], footRows: [77, 79] }; // x of each rail's 6 columns, and the sheet rows of its parts
+let stairPackCache = null;
+function stairPack() {
+  if (stairPackCache) return stairPackCache;
+  const a = loadAtlas(LIMEZU_FURNITURE);
+  const px = (x, y) => { const i = (y * a.width + x) * 4; return [a.data[i], a.data[i + 1], a.data[i + 2], a.data[i + 3]]; };
+  const rows = [];
+  STAIR_STEP_HEIGHTS.forEach((h, i) => {
+    const f = 0.7 + 0.3 * (i / (STAIR_STEP_HEIGHTS.length - 1)); // far steps are darker
+    const riser = Math.round((h - 1) * 0.45);
+    for (let k = 0; k < h - 1 - riser; k++) rows.push({ kind: 'tread', f });
+    for (let k = 0; k < riser; k++) rows.push({ kind: 'riser', f });
+    rows.push({ kind: 'line', f });
+  });
+  stairPackCache = { a, px, rows, tread: px(150, 84), riser: px(150, 89), line: px(150, 92), outline: px(93, 54), shadow: px(92, 54) };
+  return stairPackCache;
+}
+const shadeRgb = (c, f) => [Math.round(c[0] * f), Math.round(c[1] * f), Math.round(c[2] * f), 255];
+// One pixel of a flight's gold rail at flight-row `gy` (0..63), column `col` (0..5) of the rail's own 6 columns.
+function stairRailPx(side, gy, col) {
+  const r = STAIR_RAIL;
+  const sheetY = gy < 6 ? r.capRows[0] + gy : gy > 60 ? r.footRows[0] + (gy - 61) : r.bodyRows[0] + ((gy - 6) % (r.bodyRows[1] - r.bodyRows[0] + 1));
+  return stairPack().px(r[side] + col, sheetY);
+}
+// kind: 'M' (treads only), 'EL'/'ER' (gold handrail on the left/right), 'WL'/'WR' (a plain stringer against a wall on the left/right).
+function stairsTile(img, x, y, kind, row) {
+  const p = stairPack();
+  for (let yy = 0; yy < TILE; yy++) {
+    const gy = row * TILE + yy;
+    const info = p.rows[gy];
+    const c = shadeRgb(p[info.kind], info.f);
+    for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, c[0], c[1], c[2], 255);
+    const rail = (side, x0) => {
+      for (let col = 0; col < 6; col++) {
+        const q = stairRailPx(side, gy, col);
+        const edge = (side === 'L' && col === 5) || (side === 'R' && col === 0); // the column beside the treads: the stringer, not the sheet's own band
+        if (edge) { const e = gy < 6 || gy > 60 ? p.outline : p.line; img.setRGBA(x + x0 + col, y + yy, e[0], e[1], e[2], 255); continue; }
+        if (q[3] > 0) img.setRGBA(x + x0 + col, y + yy, q[0], q[1], q[2], 255);
+      }
+    };
+    if (kind === 'EL') rail('L', 0);
+    if (kind === 'ER') rail('R', TILE - 6);
+    if (kind === 'WL') { img.setRGBA(x, y + yy, ...p.outline); img.setRGBA(x + 1, y + yy, ...p.shadow); }
+    if (kind === 'WR') { img.setRGBA(x + TILE - 2, y + yy, ...p.shadow); img.setRGBA(x + TILE - 1, y + yy, ...p.outline); }
+  }
+}
+// The flat slab at the bottom of a flight (walkable: the apron she stands on to take the stairs) and the landing where a
+// flight turns (solid, with its own front riser). `side`: 'M' plain, 'WL'/'WR' stringer against a wall.
+function stairsFootTile(img, x, y, side) {
+  const p = stairPack();
+  for (let yy = 0; yy < TILE; yy++) for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, ...p.tread);
+  for (let xx = 0; xx < TILE; xx++) { img.setRGBA(x + xx, y, ...p.line); img.setRGBA(x + xx, y + TILE - 1, ...p.riser); }
+  if (side === 'WL') { for (let yy = 0; yy < TILE; yy++) { img.setRGBA(x, y + yy, ...p.outline); img.setRGBA(x + 1, y + yy, ...p.shadow); } }
+  if (side === 'WR') for (let yy = 0; yy < TILE; yy++) { img.setRGBA(x + TILE - 2, y + yy, ...p.shadow); img.setRGBA(x + TILE - 1, y + yy, ...p.outline); }
+}
+function stairsLandTile(img, x, y, side) {
+  const p = stairPack();
+  for (let yy = 0; yy < TILE; yy++) {
+    const c = yy < 12 ? p.tread : yy < 15 ? p.riser : p.line; // slab, its front riser, the line under it
+    for (let xx = 0; xx < TILE; xx++) img.setRGBA(x + xx, y + yy, c[0], c[1], c[2], 255);
+    const rail = (sideKey, x0) => {
+      for (let col = 0; col < 6; col++) {
+        const q = stairRailPx(sideKey, 8 + yy, col);
+        const edge = (sideKey === 'L' && col === 5) || (sideKey === 'R' && col === 0);
+        if (edge) img.setRGBA(x + x0 + col, y + yy, ...p.line);
+        else if (q[3] > 0) img.setRGBA(x + x0 + col, y + yy, q[0], q[1], q[2], 255);
+      }
+    };
+    if (side === 'L') rail('L', 0);
+    if (side === 'R') rail('R', TILE - 6);
+  }
+}
+// A 5x6 wayfinding arrow (up); the down arrow is the same bitmap upside down.
+const STAIR_ARROW = ['..#..', '.###.', '#####', '..#..', '..#..', '..#..'];
+function stairArrowPixels(put, x0, y0, down) {
+  STAIR_ARROW.forEach((row, ry) => [...row].forEach((c, rx) => { if (c === '#') put(x0 + rx, y0 + (down ? 5 - ry : ry), 'wallHi'); }));
+}
+// The wall sign over a stairwell flight: a blue plate with a cream arrow on the cream wall.
+function intStairsSign(img, x, y, down) {
+  copyTile(img, x, y, 'intWallFace');
+  img.box(x + 3, y + 2, 10, 12, 'iclBlue');
+  stairArrowPixels((px, py, key) => img.set(px, py, key), x + 5, y + 5, down);
+}
+// The dark wood wall that closes the space between the foyer staircase's two upper flights (tour: "a dark/wood plain wall closes the
+// space under and behind it"), 2 tiles wide x 3 tall, with a blue "UP" plate on its top row. Drawn once, cropped per tile.
+let stairWallCache = null;
+function stairWallImg() {
+  if (stairWallCache) return stairWallCache;
+  const c = new Img(TILE * 2, TILE * 3);
+  c.fill(0, 0, 32, 48, 'darkWoodB');
+  c.fill(0, 0, 32, 2, 'darkWoodHi'); // the moulding along the top
+  c.fill(0, 2, 32, 1, 'darkWoodA');
+  c.box(3, 5, 26, 38, 'darkWoodB'); // one tall recessed panel across both tiles
+  c.fill(4, 6, 24, 1, 'darkWoodHi');
+  c.fill(4, 6, 1, 36, 'darkWoodHi');
+  c.fill(0, 44, 32, 3, 'darkWoodA'); // the skirting
+  c.fill(0, 47, 32, 1, 'K');
+  c.box(6, 9, 20, 13, 'iclBlue'); // the plate
+  stairArrowPixels((px, py, key) => c.set(px, py, key), 9, 12, false);
+  [...'UP'].forEach((ch, i) => SIGN_FONT_4X6[ch].forEach((rowBits, ry) => [...rowBits].forEach((b, rx) => { if (b === '#') c.set(16 + i * 5 + rx, 12 + ry, 'wallHi'); })));
+  stairWallCache = c;
+  return c;
+}
+function cropImg(img, x, y, src, sx, sy, w = TILE, h = TILE) {
+  for (let yy = 0; yy < h; yy++) {
+    for (let xx = 0; xx < w; xx++) {
+      const o = ((sy + yy) * src.w + sx + xx) * 4;
+      if (src.data[o + 3] > 0) img.setRGBA(x + xx, y + yy, src.data[o], src.data[o + 1], src.data[o + 2], src.data[o + 3]);
+    }
+  }
+}
+function intStairsWall(img, x, y, side, row) { cropImg(img, x, y, stairWallImg(), side === 'L' ? 0 : TILE, row * TILE); }
+
+// The lift: stainless double doors in a steel frame with a floor-indicator lamp band over them (two tiles wide, drawn once and
+// cropped), its open twin for the next package's door animation, and the call-button plate on the wall beside it.
+function liftDoorImg(open) {
+  const c = new Img(TILE * 2, TILE);
+  const p = stairPack();
+  const a = p.a;
+  const px = (x, y) => p.px(x, y);
+  const hi = px(20, 424), mid = px(20, 425), dark = px(13, 423), housing = hexToRgb(PALETTE.ironRail);
+  blitAtlas(c, 0, 0, a, 16, 423, 32, 1); // frame outline, from the pack
+  for (let xx = 0; xx < 32; xx++) { c.setRGBA(xx, 1, hi[0], hi[1], hi[2], 255); for (let yy = 2; yy <= 4; yy++) c.setRGBA(xx, yy, mid[0], mid[1], mid[2], 255); c.setRGBA(xx, 5, mid[0], mid[1], mid[2], 255); }
+  c.setRGBA(0, 1, ...dark); c.setRGBA(31, 1, ...dark);
+  for (let yy = 1; yy <= 5; yy++) { c.setRGBA(0, yy, ...dark); c.setRGBA(31, yy, ...dark); }
+  // the indicator housing: dark box, a lit amber up-arrow lamp and a dim down-arrow lamp
+  for (let yy = 1; yy <= 5; yy++) for (let xx = 7; xx <= 24; xx++) c.setRGBA(xx, yy, ...(yy === 1 || yy === 5 || xx === 7 || xx === 24 ? dark : [...housing, 255]));
+  const lit = hexToRgb(PALETTE.y), dim = [90, 90, 100];
+  [[12, 2], [11, 3], [12, 3], [13, 3]].forEach(([lx, ly]) => c.setRGBA(lx, ly, lit[0], lit[1], lit[2], 255));
+  [[19, 3], [20, 3], [21, 3], [20, 4]].forEach(([lx, ly]) => c.setRGBA(lx, ly, dim[0], dim[1], dim[2], 255));
+  blitAtlas(c, 0, 6, a, 16, 426, 32, 1); // the frame's lower outline
+  if (!open) {
+    blitAtlas(c, 0, 7, a, 16, 429, 32, 8); // the two steel leaves, with their brushed highlight band
+  } else {
+    const back = hexToRgb(PALETTE.doorLight), deep = hexToRgb(PALETTE.doorLightDeep);
+    for (let yy = 7; yy < 15; yy++) for (let xx = 1; xx < 31; xx++) {
+      const col = yy < 9 ? deep : back;
+      c.setRGBA(xx, yy, col[0], col[1], col[2], 255);
+    }
+    blitAtlas(c, 0, 7, a, 16, 429, 5, 8); // the leaves slid aside, one against each jamb
+    blitAtlas(c, 27, 7, a, 42, 429, 5, 8);
+  }
+  for (let xx = 0; xx < 32; xx++) c.setRGBA(xx, 15, ...dark); // the sill
+  return c;
+}
+let liftDoorCache = {};
+function liftDoorTile(img, x, y, side, open) {
+  const key = open ? 'open' : 'closed';
+  liftDoorCache[key] = liftDoorCache[key] || liftDoorImg(open);
+  cropImg(img, x, y, liftDoorCache[key], side === 'L' ? 0 : TILE, 0);
+}
+function intLiftPanel(img, x, y) {
+  copyTile(img, x, y, 'intWallFace');
+  blitAtlas(img, x + 5, y + 3, stairPack().a, 66, 448, 6, 9); // the pack's call-button plate (up / down)
 }
 
 // ---------- characters: recolored LimeZu Modern Interiors Free sprites (FB-0025, ADR 0013) ----------

@@ -2227,6 +2227,240 @@
       "solid": true,
       "overhead": false,
       "color": "#d6bd9f"
+    },
+    {
+      "name": "intStairsM0",
+      "solid": true,
+      "overhead": false,
+      "color": "#a49f9a"
+    },
+    {
+      "name": "intStairsM1",
+      "solid": true,
+      "overhead": false,
+      "color": "#b7b1ab"
+    },
+    {
+      "name": "intStairsM2",
+      "solid": true,
+      "overhead": false,
+      "color": "#d5cfc8"
+    },
+    {
+      "name": "intStairsM3",
+      "solid": true,
+      "overhead": false,
+      "color": "#d8d0c9"
+    },
+    {
+      "name": "intStairsEL0",
+      "solid": true,
+      "overhead": false,
+      "color": "#9f958b"
+    },
+    {
+      "name": "intStairsEL1",
+      "solid": true,
+      "overhead": false,
+      "color": "#aca097"
+    },
+    {
+      "name": "intStairsEL2",
+      "solid": true,
+      "overhead": false,
+      "color": "#bfb4a9"
+    },
+    {
+      "name": "intStairsEL3",
+      "solid": true,
+      "overhead": false,
+      "color": "#beb2a8"
+    },
+    {
+      "name": "intStairsER0",
+      "solid": true,
+      "overhead": false,
+      "color": "#9f958b"
+    },
+    {
+      "name": "intStairsER1",
+      "solid": true,
+      "overhead": false,
+      "color": "#aca097"
+    },
+    {
+      "name": "intStairsER2",
+      "solid": true,
+      "overhead": false,
+      "color": "#bfb4a9"
+    },
+    {
+      "name": "intStairsER3",
+      "solid": true,
+      "overhead": false,
+      "color": "#beb2a8"
+    },
+    {
+      "name": "intStairsWL0",
+      "solid": true,
+      "overhead": false,
+      "color": "#9e9895"
+    },
+    {
+      "name": "intStairsWL1",
+      "solid": true,
+      "overhead": false,
+      "color": "#aea8a4"
+    },
+    {
+      "name": "intStairsWL2",
+      "solid": true,
+      "overhead": false,
+      "color": "#c8c2bd"
+    },
+    {
+      "name": "intStairsWL3",
+      "solid": true,
+      "overhead": false,
+      "color": "#cbc3bf"
+    },
+    {
+      "name": "intStairsWR0",
+      "solid": true,
+      "overhead": false,
+      "color": "#9e9895"
+    },
+    {
+      "name": "intStairsWR1",
+      "solid": true,
+      "overhead": false,
+      "color": "#aea8a4"
+    },
+    {
+      "name": "intStairsWR2",
+      "solid": true,
+      "overhead": false,
+      "color": "#c8c2bd"
+    },
+    {
+      "name": "intStairsWR3",
+      "solid": true,
+      "overhead": false,
+      "color": "#cbc3bf"
+    },
+    {
+      "name": "intStairsFootM",
+      "solid": false,
+      "overhead": false,
+      "color": "#f3eee6"
+    },
+    {
+      "name": "intStairsFootWL",
+      "solid": false,
+      "overhead": false,
+      "color": "#e3ddd8"
+    },
+    {
+      "name": "intStairsFootWR",
+      "solid": false,
+      "overhead": false,
+      "color": "#e3ddd8"
+    },
+    {
+      "name": "intStairsLandL",
+      "solid": true,
+      "overhead": false,
+      "color": "#cec3b8"
+    },
+    {
+      "name": "intStairsLandM",
+      "solid": true,
+      "overhead": false,
+      "color": "#ede7e0"
+    },
+    {
+      "name": "intStairsLandR",
+      "solid": true,
+      "overhead": false,
+      "color": "#cec3b8"
+    },
+    {
+      "name": "intStairsWallL0",
+      "solid": true,
+      "overhead": false,
+      "color": "#604c42"
+    },
+    {
+      "name": "intStairsWallL1",
+      "solid": true,
+      "overhead": false,
+      "color": "#5d473c"
+    },
+    {
+      "name": "intStairsWallL2",
+      "solid": true,
+      "overhead": false,
+      "color": "#5f412c"
+    },
+    {
+      "name": "intStairsWallR0",
+      "solid": true,
+      "overhead": false,
+      "color": "#655043"
+    },
+    {
+      "name": "intStairsWallR1",
+      "solid": true,
+      "overhead": false,
+      "color": "#5e483d"
+    },
+    {
+      "name": "intStairsWallR2",
+      "solid": true,
+      "overhead": false,
+      "color": "#5e402c"
+    },
+    {
+      "name": "intStairsSignUp",
+      "solid": true,
+      "overhead": false,
+      "color": "#7e828a"
+    },
+    {
+      "name": "intStairsSignDown",
+      "solid": true,
+      "overhead": false,
+      "color": "#7e828a"
+    },
+    {
+      "name": "intLiftDoorL",
+      "solid": true,
+      "overhead": false,
+      "color": "#8e8d94"
+    },
+    {
+      "name": "intLiftDoorR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8f8f97"
+    },
+    {
+      "name": "intLiftOpenL",
+      "solid": false,
+      "overhead": false,
+      "color": "#928b85"
+    },
+    {
+      "name": "intLiftOpenR",
+      "solid": false,
+      "overhead": false,
+      "color": "#98928c"
+    },
+    {
+      "name": "intLiftPanel",
+      "solid": true,
+      "overhead": false,
+      "color": "#b7b3ac"
     }
   ]
 }

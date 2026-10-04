@@ -239,6 +239,27 @@ function parseOpenTiles(value) {
   return names.length ? names : null;
 }
 
+// ---------- the lift (P4b, FB-0064 / FB-0069) ----------
+// A map def's `lift` (src/maps.js MAIN_BLOCK_LIFT) is plain data: `floors` (each `{ label, map, liftName }`: what the choice says, the
+// map it lands on and the name of that floor's `lift` object, whose front tile she arrives on), a `question`, and optionally
+// `lockedStages` + `lockedLine` (the lift says that line instead of offering floors while the quest is in one of those stages,
+// the same way the roped-off stairs wait for the LUG volunteer). liftDialog() turns it into an ordinary dialog entry list for the
+// lift on map `mapKey` (src/dialog.js: lines, then `choices`): every floor except this one, then "Never mind". A chosen floor
+// runs the dialog `warp` action (src/dialog.js), which world.js warpTo() carries out with the same fade a stairs warp uses.
+function liftDialog(lift, mapKey) {
+  if (!lift) return [];
+  const entries = (lift.lockedStages || []).map((stage) => ({ id: `lift-locked-${stage}`, when: { stage }, lines: [lift.lockedLine] }));
+  entries.push({
+    id: 'lift',
+    lines: [lift.question || 'Which floor?'],
+    choices: [
+      ...lift.floors.filter((floor) => floor.map !== mapKey).map((floor) => ({ text: floor.label, actions: [{ warp: { to: floor.map, spawnAt: floor.liftName } }] })),
+      { text: 'Never mind' },
+    ],
+  });
+  return entries;
+}
+
 // ---------- title menu layout (FB-0075) ----------
 // The title screen's buttons are bottom-anchored to `bottom` (never centred: a taller menu must not creep down into the
 // parallax foreground strip) and never reach above `topMin` (the "LUG Treasure Hunt" subtitle). Adding "Quit" made the
@@ -495,6 +516,7 @@ function animalSheets(animals, species, layouts) {
 const INTERACT_PRIORITY = {
   keyStation: 3, // a key room's desk: the treasure hunt's own objective
   questNpc: 2, // a story NPC with dialog data (the volunteer, ...)
+  lift: 2, // P4b: a lift door's floor-choice list (E at the doors), never shadowed by a student standing nearby
   ambientNpc: 1, // campus atmosphere (src/ambient.js)
   animal: 1, // a talkable cat (src/animals.js): atmosphere too, never shadows a story object
 };

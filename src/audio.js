@@ -53,6 +53,8 @@ const SOUNDS = {
   doorOpen: { file: 'assets/audio/sfx/door-open.ogg', volume: 0.45, loop: false, category: 'sfx' },
   warpStairs: { file: 'assets/audio/sfx/warp-stairs.ogg', volume: 0.4, loop: false, category: 'sfx' },
   lockedDoorThud: { file: 'assets/audio/sfx/locked-door-thud.ogg', volume: 0.5, loop: false, category: 'sfx' },
+  // P4b (FB-0064 / FB-0069): the Main Block lift's arrival chime, synthesized (no pack has a clean two-note lift ding).
+  liftDing: { file: 'assets/audio/generated/lift-ding.wav', volume: 0.5, loop: false, category: 'sfx' },
 
   // ---------- mini-games (src/minigames/): jump/flap/line-clear are synth-generated (no pack had a
   // clean match, docs/ROADMAP.md M5 rule 6); win/lose reuse Kenney jingles ----------

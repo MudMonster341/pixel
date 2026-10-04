@@ -68,7 +68,11 @@ function coveredByDepthGroup(groups, x, y) {
 const TALL_TILES_BY_MAP = {
   'main-block-g': [
     'intColumnCapL', 'intColumnCapR', 'intColumnShaftL', 'intColumnShaftR', 'intColumnBaseL', 'intColumnBaseR',
-    'intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding', 'intFoyerTreadPlain', 'intPottedPlant',
+    // P4b: the staircase is the stair kit now (flight tiles, landing, the wall between the upper flights)
+    ...['M', 'EL', 'ER', 'WL', 'WR'].flatMap((kind) => [0, 1, 2, 3].map((row) => `intStairs${kind}${row}`)),
+    'intStairsLandL', 'intStairsLandM', 'intStairsLandR',
+    ...['L', 'R'].flatMap((side) => [0, 1, 2].map((row) => `intStairsWall${side}${row}`)),
+    'intPottedPlant',
   ],
   'main-block-1': ['intServerRack'],
   'main-block-3': ['intLabRack'],

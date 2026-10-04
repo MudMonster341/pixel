@@ -140,11 +140,19 @@ function synthCardWhoosh() {
   return tone(dur, () => 0, { wave: 'noise', ampFn: (t) => Math.sin((t / dur) * Math.PI) * 0.5 });
 }
 
+// P4b (FB-0064 / FB-0069): the lift's arrival chime -- a soft two-note "ding-dong" (E6 then C6), sine waves with a fast attack and a
+// long exponential-ish tail, the way a real lift announces its floor.
+function synthLiftDing() {
+  const note = (freq, dur) => tone(dur, () => freq, { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.004) * Math.exp(-t * 7) * 0.6 });
+  return concat(note(1318.51, 0.2), note(1046.5, 0.45));
+}
+
 const GENERATED = [
   { to: 'generated/minigame-jump.wav', build: synthJump },
   { to: 'generated/minigame-flap.wav', build: synthFlap },
   { to: 'generated/minigame-line-clear.wav', build: synthLineClear },
   { to: 'generated/card-whoosh.wav', build: synthCardWhoosh },
+  { to: 'generated/lift-ding.wav', build: synthLiftDing },
 ];
 
 // ---------- everything else: copied byte-for-byte from an already-credited CC0 pack ----------

@@ -187,6 +187,7 @@ class WorldScene extends Phaser.Scene {
     this.createAnimals();
     this.createPickups();
     this.createKeyStations();
+    this.createLifts();
 
     const { widthInPixels: width, heightInPixels: height } = this.map;
     this.physics.world.setBounds(0, 0, width, height);
@@ -243,7 +244,9 @@ class WorldScene extends Phaser.Scene {
     // same instant they always have) but sets `this.transitioning = true` itself, so the very first
     // update() tick after this still skips movement/warps/etc. -- exactly like a departure's own fade
     // already does, just for the walk-out instead of the walk-in.
-    if (this.viaWarpKind) this.playDoorArrival(this.viaWarpKind);
+    // P4b: she arrives from a lift ride (warpTo() below) standing in front of its doors, no walk-out: the lift "dings".
+    if (this.viaWarpKind === 'lift') AudioManager.play('liftDing');
+    else if (this.viaWarpKind) this.playDoorArrival(this.viaWarpKind);
 
     // ADR 0016 / docs/STORY.md "Opening": the full M3a chain's own bus-arrival-then-Mustafa-meets-her
     // beat, only on a genuinely fresh arrival at the campus's own default spawn (never on a debug
@@ -785,6 +788,19 @@ class WorldScene extends Phaser.Scene {
   // NPC uses (docs/ARCHITECTURE.md "content is data"). Already-collected stations (GameState.quest.
   // keys, restored from a save) are skipped entirely, the same way createPickups() skips an
   // already-taken pickup.
+  // P4b (FB-0064 / FB-0069): every Tiled `lift` object of this map (the stainless double doors the generator puts in a wall) is an
+  // interactable the way a key station is: E in front of it opens the floor-choice list from the map def's `lift` data
+  // (src/maps.js MAIN_BLOCK_LIFT, src/maplogic.js liftDialog()). The interaction point is the middle of its doorway, like a door's.
+  createLifts() {
+    this.lifts = (this.mapObjects || [])
+      .filter((o) => o.type === 'lift')
+      .map((o) => {
+        const cells = parseDoorCells(o.props.cells);
+        const centre = doorCenterPx({ x: Math.floor(o.x), y: Math.floor(o.y), cellsW: cells.w });
+        return { x: centre.x, y: centre.y, name: o.name, def: { id: `lift:${o.name}`, name: 'Lift', dialog: liftDialog(this.def.lift, this.mapKey) } };
+      });
+  }
+
   createKeyStations() {
     this.keyStations = (this.def.keyStations || [])
       .filter((def) => !GameState.quest.keys[def.id])
@@ -935,7 +951,8 @@ class WorldScene extends Phaser.Scene {
       .map((o) => {
         const rule = doorLockRule(this.def.doorLocks, o.name);
         // FB-0046: a two-tile doorway carries `cells` ("2x1"): every cell of it is the door (see maplogic.js parseDoorCells()).
-        const cells = o.type === 'door' ? parseDoorCells(o.props.cells) : { w: 1, h: 1 };
+        // P4b: a staircase's foot can be two tiles wide too (the foyer's, between its columns), so `cells` counts for stairs as well.
+        const cells = parseDoorCells(o.props.cells);
         return {
           x: Math.floor(o.x), y: Math.floor(o.y), width: o.width, cellsW: cells.w, cellsH: cells.h, to: o.props.to, spawnAt: o.props.toId,
           closed: Boolean(o.props.closed),
@@ -1060,6 +1077,7 @@ class WorldScene extends Phaser.Scene {
     for (const npc of this.npcs) consider('questNpc', 'npc', npc, npc.def);
     for (const ambient of this.ambientNpcs || []) consider('ambientNpc', 'npc', ambient.sprite, ambient.sprite.def);
     for (const ks of this.keyStations || []) consider('keyStation', 'keyStation', ks, ks.def);
+    for (const lift of this.lifts || []) consider('lift', 'lift', lift, lift.def); // P4b: E at a lift's doors
     // A tame, talkable cat (ADR 0018; lowest priority like an ambient student). Its tile centre is the
     // target, not its feet-anchored sprite, so the range matches the player's own centre.
     for (const animal of this.animals || []) {
@@ -1295,6 +1313,25 @@ class WorldScene extends Phaser.Scene {
         this.scene.restart({ map: warp.to, spawn: warp.spawn, spawnAt: warp.spawnAt, viaWarpKind: warp.kind });
       });
     }, to);
+  }
+
+  // P4b (FB-0064 / FB-0069): the lift ride. A dialog `{ warp: { to, spawnAt } }` action (src/dialog.js, the lift's floor choice, relayed
+  // by UIScene) lands here: the same fade-out and scene restart a stairs warp ends with, but no walk (she rides): she arrives in
+  // front of the doors of the lift named `spawnAt` on map `to`, and create() plays the ding. A missing map or object logs a warning and
+  // toasts instead of crashing (the same rule as checkWarps()); a lift's data is tested to never name one (tests/unit/p4b-stairs-lift.test.js).
+  warpTo({ to, spawnAt }) {
+    if (this.transitioning) return;
+    if (!MAPS[to]) {
+      console.warn(`warp to an unknown map "${to}"`);
+      this.game.events.emit('toast', 'Closed for now.');
+      return;
+    }
+    this.transitioning = true; // (this also stops her dead -- haltPlayer(), see the accessor above)
+    this.prompt.setVisible(false);
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.restart({ map: to, spawnAt, viaWarpKind: 'lift' });
+    });
   }
 
   // ADR 0015 door entry, arrival half (the reverse of playDoorDeparture): she appears hidden in the

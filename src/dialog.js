@@ -118,6 +118,9 @@ function hasNewDialog(npc, state) {
 //                                there, same as a full bag already did, and no key is ever handed over
 //   { journal: 'text' }        appends a clue/note to GameState.journal (M1's "journal (J)" leftover,
 //                                src/scenes/ui.js Journal), oldest first, never removed
+//   { warp: { to, spawnAt } }  take the player to another map, in front of the named door/stairs/lift object there (P4b: the lift's
+//                                floor choices, src/maplogic.js liftDialog()); world.js warpTo() fades out and restarts the scene
+//                                the way a stairs warp does. Does not suspend the list (nothing needs to follow it).
 //   { boxOpening: true }       the ending (docs/STORY.md "the box opens..."): asks to play the reward
 //                                box's opening sequence, then the birthday card, then return to the
 //                                title screen. Like `minigame`, this *suspends* the action list --
@@ -175,6 +178,9 @@ function runDialogActionsFrom(actions, from, state, onDone) {
         },
       });
       return;
+    } else if ('warp' in action) {
+      if (changed) { notifyStateChanged(); changed = false; }
+      emitDialogEvent('warp:requested', action.warp);
     } else if ('boxOpening' in action) {
       if (changed) { notifyStateChanged(); changed = false; }
       emitDialogEvent('box-opening:requested', {});

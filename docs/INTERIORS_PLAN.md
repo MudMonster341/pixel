@@ -212,7 +212,7 @@ correct"). A central **foyer** plus **two long wings**, all on the shared 40x40 
   (`intTotemTop`/`Base`; plain, no portraits). A **split staircase** against the LEFT side towards the back
   (x 13..18: a wide lower flight, a landing, two upper flights with a dark wall between them), two round columns
   at its foot (`intColumn*`), `depthGroup`s so she walks behind it. The `stairs` object **Main Block Stairs G (up)**
-  keeps its name and links; it sits on a stair mat at the foot, between the columns (15,25). **Low red and blue
+  keeps its name and links; it sits on the foot slab, between the columns (15,25). Since P4b (below) the staircase is the stair kit with gold handrails. **Low red and blue
   sofas** (`intSofaRed`/`intSofaBlue`) with small tables on the right back wall and along the left wall, never by
   the entrance. A **spiral chandelier** (two tiers of `intChandelier*`) on the overhead layer over the middle of
   the hall, not over the stairs. Career Services is a closed door in the left wall beside the stair; the Library is straight ahead through a doorway in the back wall (P4a, below).
@@ -236,8 +236,7 @@ correct"). A central **foyer** plus **two long wings**, all on the shared 40x40 
   spiral gold-ring chandelier is two tiers of the existing chandelier; the terrarium is the pack's glass pane + a
   potted ficus on a wood plinth cut round by a mask; the totem pillars are plain rectangles with a blue stripe;
   the "round" sofas are the pack's low pouf recoloured; the reception desks are the existing 3-piece desk
-  (horizontal, not along the wall); the staircase keeps the existing black iron rails (no white balustrade
-  tile); the foyer walls stay the plain cream wall (the wood skirting is on the wings' walls); no framed
+  (horizontal, not along the wall); the staircase's rails are LimeZu's gold handrails (P4b; the tour's white balustrade has no free tile); the foyer walls stay the plain cream wall (the wood skirting is on the wings' walls); no framed
   portraits (left out on purpose), LED strips or wall-art panels. Compass directions and the stair
   position are medium confidence in the source (the tour's camera can only be dragged): check in the playtest.
 - **Stairs no longer line up with the upper floors**: the ground floor's staircase is the visible split stair
@@ -387,6 +386,34 @@ floor, two big plants, two benches, a "LIBRARY" sign, a nameplate) and the **Lib
 no `to`: library-block-g stays unreachable as before) is on the lobby's back wall. The BITS wordmark on the foyer's back wall is split
 round the doorway ("BITS PILANI," left, "DUBAI CAMPUS" right). Tests: `tests/unit/p4a-interior-walls.test.js`.
 
+**P4b (2026-10-05, FB-0061/0063/0064/0069): stairs that read as stairs, and a working lift.** The Main Block's stairs (foyer and the
+stairwells on floors 1-3) are rebuilt from the stair kit: tiles `intStairs<kind><row>` (kind `M` treads, `EL`/`ER` gold handrail left/right,
+`WL`/`WR` stringer against a wall; row 0 = far end .. 3 = near end), the walkable foot slab `intStairsFootM/WL/WR`, the foyer's landing
+`intStairsLandL/M/R`, the dark wood wall between its upper flights `intStairsWall{L,R}{0,1,2}` (with the blue UP plate on row 0) and the
+wall arrows `intStairsSignUp/Down`. The art is cut from LimeZu Modern Interiors Free's stepped flight with gold handrails (see
+docs/research/asset-packs.md "P4b addendum"; no other pack has top-down stairs): cream tread over a darker riser with a dark line, so the
+bands alternate light/dark; the steps shrink and the flight darkens towards the far end (the "up" cue). Generator pieces:
+`Floor.stairBlock()` and `Floor.liftDoor()` (build-interiors.js), `stairwell()` (plans.js).
+- **Foyer staircase** (x 13..18): symmetric about its own centre line (x 16.0): a wide lower flight (3 rows, a rail on both outer edges),
+  a landing, two 2-wide upper flights (rail outside, stringer against the wall between them, which carries the UP plate), two round columns
+  at the foot, and a 2-tile foot slab between them (x 15..16) centred under the flight. The `Main Block Stairs G (up)` object, destination and
+  arrival tile are unchanged; it gained `cells: "2x1"` so both foot tiles take her up (stairs now honour `cells` like doors, world.js).
+- **Stairwells (floors 1-3)**: two 2-wide flights against the side walls (up at x 31..32, down at x 35..36; four solid tread rows, y 13..16,
+  over a walkable foot slab on y 17, the row of the `stairs` objects, which did not move: (32,17) up, (36,17) down, `facing: left`), the
+  gold handrail on the lane side, a stringer on the wall side, a blue UP / DOWN arrow plate on the wall over each flight, and the lift in the
+  middle of the top wall (x 33..34) between them, so the room is symmetric about x 34.0.
+- **The lift** (FB-0064/0069): stainless double doors (two tiles) with a floor-indicator lamp band over them and a call-button plate on the
+  next tile, one per floor: the stairwells' top wall on floors 1-3 (`Main Block Lift 1/2/3`) and the foyer's back wall, left corner,
+  beside the staircase (`Main Block Lift G`, doors x 11..12, y 14). It is a Tiled `lift` object (a point on the first door tile, `cells "2x1"`,
+  `facing: down`, `openTiles: intLiftOpenL,intLiftOpenR` -- the same shape as a door, so the door open/close animation of a later package
+  can play the open art). Pressing E in front of it (`WorldScene.createLifts()`, priority `lift` in INTERACT_PRIORITY) opens the standard
+  dialog list "Which floor?": every other floor, then "Never mind" (data: `MAIN_BLOCK_LIFT` in src/maps.js, built by `liftDialog()` in
+  src/maplogic.js). A floor choice is the new dialog action `{ warp: { to, spawnAt } }`: UIScene relays `warp:requested` to
+  `WorldScene.warpTo()`, which fades out and restarts the scene on the target map in front of that floor's lift (the same arrival rule as a
+  door: the object's own `facing`), and `create()` plays the ding (`liftDing`, synthesized in tools/make-audio.js). The lift never skips a
+  lock: until the LUG volunteer has set the task (stage `arrival`) it only says it is switched off, exactly like the roped-off stairs; room
+  doors keep their own locks. Tests: tests/unit/p4b-stairs-lift.test.js; the every-map completeness rules in tests/unit/completeness.test.js.
+
 ## Rough spots and simplifications (read before the owner asks "why...")
 
 - **Building shapes are simplified rectangles**, not the real (possibly L-shaped) footprints -- the
@@ -402,8 +429,8 @@ round the doorway ("BITS PILANI," left, "DUBAI CAMPUS" right). Tests: `tests/uni
 - **Furniture is simple by design** (the owner's "empty, furnished simply" decision): one or two
   pieces per type, repeated in a grid, not hand-decorated per room (the foyer and the 3 key rooms are
   the deliberate exceptions, FB-0030/0031).
-- **The lift is decorative only** -- it doesn't warp anywhere, per the ground-floor plan's "stairs +
-  a lift tile."
+- **The lift works since P4b** (below): it used to be a decorative grey tile that did nothing (FB-0064/0069); Library and Mechanical
+  Block have no lift.
 - **The three campus door objects live in the current (pre-ADR-0009) `build-campus.js`**, added in
   the smallest possible diff so this branch could be tested end to end; see "Outdoor connection"
   above for what the campus rebuild needs to emit to keep working with no changes here.

@@ -187,6 +187,35 @@ for (const key of MAP_KEYS) {
   });
 }
 
+// P4b (FB-0064 / FB-0069): the Main Block lift is a working warp, so it gets the same completeness rule as a door: every `lift` object
+// belongs to a map def with `lift` data, every floor in that data has a lift object on its map, every choice a lift offers lands on a
+// walkable front tile and is reachable, and no lift tile is a decoration without an object (a dead door).
+test('every lift: its map def has lift data, every choice lands on a walkable, reachable lift front tile of a real map, and no lift tile is a dead decoration', () => {
+  const problems = [];
+  const liftTile = /^intLift(Door|Open)/;
+  for (const m of Object.values(maps).filter((x) => x.tiled)) {
+    const lifts = m.objects.filter((o) => o.type === 'lift');
+    const structures = m.json.layers.find((l) => l.name === 'structures').data;
+    for (let i = 0; i < structures.length; i++) {
+      const name = TILE_NAMES[structures[i] - 1];
+      if (structures[i] && liftTile.test(name) && /Door/.test(name) && !lifts.some((o) => Math.floor(o.x) + (name.endsWith('R') ? 1 : 0) === i % m.width && Math.floor(o.y) === Math.floor(i / m.width))) {
+        problems.push(`${m.key}: lift door tile ${name} at (${i % m.width},${Math.floor(i / m.width)}) has no lift object`);
+      }
+    }
+    if (!lifts.length) { if (m.def.lift) problems.push(`${m.key} has lift data but no lift object`); continue; }
+    if (!m.def.lift) { problems.push(`${m.key} has a lift object but no lift data in its map def`); continue; }
+    for (const floor of m.def.lift.floors) {
+      const target = maps[floor.map];
+      if (!target) { problems.push(`${m.key}: lift floor "${floor.label}" names unknown map ${floor.map}`); continue; }
+      const dest = target.objects.find((o) => o.type === 'lift' && o.name === floor.liftName);
+      if (!dest) { problems.push(`${m.key}: lift floor "${floor.label}" -> ${floor.map} has no lift object "${floor.liftName}"`); continue; }
+      const land = arrivalTile(target, dest);
+      if (!walkable(target, land.x, land.y)) problems.push(`${m.key}: lift floor "${floor.label}" arrives on a solid tile (${land.x},${land.y}) of ${floor.map}`);
+    }
+  }
+  assert.deepEqual(problems, [], problems.join('\n  '));
+});
+
 test('text-grid maps: every warp points at a real map and lands on walkable floor, and that map has a warp back', () => {
   for (const m of Object.values(maps).filter((x) => !x.tiled)) {
     for (const w of m.def.warps || []) {
@@ -248,7 +277,8 @@ test('no two different closed doors (no `to`) in one map share the exact same li
 // "Interior map" = a Tiled map with `indoors: true`. "Room" = one of its named `area` objects. A "prop" is a tile on the
 // structures layer that is not wall, door, stairs, column or glass (so furniture, plants, benches, counters, signs...).
 // "Bare floor" = a walkable cell with no prop on it.
-const NOT_A_PROP = /^(intWall|wall|edge$|intDoor|doorway|intGlassDoor|intGlassPanel|intStairs|intAtrium|intFoyerStairs|intFoyerLanding|intFoyerTread|intColumn|intTerrarium|intTotem)/;
+// P4b: intLift (the lift's doors and call plate) is a wall fitting, not furniture, like a door.
+const NOT_A_PROP = /^(intWall|wall|edge$|intDoor|doorway|intGlassDoor|intGlassPanel|intStairs|intLift|intAtrium|intFoyerStairs|intFoyerLanding|intFoyerTread|intColumn|intTerrarium|intTotem)/;
 const interiorMaps = Object.values(maps).filter((m) => m.tiled && m.def.indoors);
 
 function propAt(m, structures, x, y) {

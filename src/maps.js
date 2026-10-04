@@ -8,6 +8,23 @@ const START_MAP = 'campus';
 // once the LUG volunteer has set the task (stages hunting/rewarded), so this is the only lock state.
 const STAIRS_ROPED_OFF = 'The stairs are roped off. Talk to the LUG volunteer first.';
 
+// P4b (FB-0064 / FB-0069): the Main Block lift. Plain data for src/maplogic.js liftDialog(): pressing E in front of a `lift` object
+// (tools/interiors/plans.js, one per floor) asks "Which floor?" and lists every floor but the one she is on, then "Never mind"; a
+// chosen floor warps her to the front tile of THAT floor's lift (`liftName` is the object's name on `map`). The lift never skips a
+// lock: while the hunt has not been given (stage 'arrival') it only says it is switched off, exactly as the roped-off stairs wait for
+// the LUG volunteer, and room locks (doorLocks) stay on the rooms.
+const MAIN_BLOCK_LIFT = {
+  question: 'Which floor?',
+  floors: [
+    { label: 'Ground floor', map: 'main-block-g', liftName: 'Main Block Lift G' },
+    { label: '1st floor', map: 'main-block-1', liftName: 'Main Block Lift 1' },
+    { label: '2nd floor', map: 'main-block-2', liftName: 'Main Block Lift 2' },
+    { label: '3rd floor', map: 'main-block-3', liftName: 'Main Block Lift 3' },
+  ],
+  lockedStages: ['arrival'],
+  lockedLine: 'The lift is switched off for the event. Talk to the LUG volunteer first.',
+};
+
 // Multi-tile buildings, stamped onto a map at a position (rows of tile names).
 const STRUCTURES = {
   house: [
@@ -54,6 +71,7 @@ const MAPS = {
     name: 'Main Block · Ground Floor',
     tiled: 'main-block-g',
     indoors: true,
+    lift: MAIN_BLOCK_LIFT,
     // Up to the 1st floor only opens once the volunteer has actually given the quest (docs/STORY.md
     // "Rules for the world": "the key rooms only open once the volunteer has given the task") --
     // 'rewarded' stays listed too so backtracking after the reward never re-locks the stairs.
@@ -94,6 +112,7 @@ const MAPS = {
     name: 'Main Block · 1st Floor',
     tiled: 'main-block-1',
     indoors: true,
+    lift: MAIN_BLOCK_LIFT,
     doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF }],
     keyStations: [
       // Coordinates sit exactly on a real furniture tile in each room (checked against the
@@ -110,6 +129,7 @@ const MAPS = {
     name: 'Main Block · 2nd Floor',
     tiled: 'main-block-2',
     indoors: true,
+    lift: MAIN_BLOCK_LIFT,
     // No key here (the Physics Lab moved to the 3rd floor, docs/INTERIORS_PLAN.md) -- this floor is
     // just a through-route to the 3rd, so it opens on the same condition as every other Main Block
     // stairwell rather than being sealed off (docs/STORY.md "the routes to the three key rooms").
@@ -120,6 +140,7 @@ const MAPS = {
     name: 'Main Block · 3rd Floor',
     tiled: 'main-block-3',
     indoors: true,
+    lift: MAIN_BLOCK_LIFT,
     keyStations: [
       // On a wood-topped physics-lab bench (FB-0030/0031 compact redesign).
       // Quality loop run 3 (2026-09-29): the bench layout varied (2 long benches + an island), so

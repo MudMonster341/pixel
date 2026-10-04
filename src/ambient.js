@@ -298,6 +298,7 @@ const AMBIENT = {
         "Welcome to the Physics Lab! Fair warning: gravity here is taken very seriously.",
         "Mind the jumps. I fell off three times. Okay, more.",
       ] },
-    { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 33, y: 14, facing: 'down' },
+    // P4b: moved from (33,14), which is the lift's front tile (the lift doors are on x 33..34 of the stairwell's top wall), to the open floor below.
+    { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 34, y: 19, facing: 'down' },
   ],
 };

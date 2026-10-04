@@ -76,6 +76,11 @@ function distancesFromSpawn() {
 }
 const dist = distancesFromSpawn();
 
+// P4b (FB-0061): the staircase is built from the stair kit (tools/make-assets.js stairsTile()): flight tiles `intStairs<kind><row>`,
+// a landing, a wall between the upper flights, and a walkable foot slab (replacing the old intFoyerStairs*/intFoyerTread*/intFoyerLanding).
+const FLIGHT_TILES = names.filter((n) => /^intStairs(M|EL|ER|WL|WR)[0-3]$/.test(n));
+const LAND_TILES = ['intStairsLandL', 'intStairsLandM', 'intStairsLandR'];
+
 const depthGroups = objects.filter((o) => o.type === 'depthGroup');
 const inDepthGroup = (x, y) => depthGroups.some((g) => x >= g.x && x < g.x + g.width && y >= g.y && y < g.y + g.height);
 
@@ -96,8 +101,8 @@ test('ADR 0020: the player spawns at the entrance, facing up; the exterior door 
 
 test('ADR 0020: the foyer floor is pale oak planks, with no marble and no darker runner anywhere on the floor', () => {
   for (let y = FOYER.y0; y <= FOYER.y1; y++) for (let x = FOYER.x0; x <= FOYER.x1; x++) {
-    const onStairMat = Math.floor(stairs.y) === y && Math.abs(Math.floor(stairs.x) + 0.5 - (x + 0.5)) <= 1; // the stairs object's own mat
-    if (onStairMat && nameAt(ground, x, y) === 'intStairsUp') continue;
+    const onStairMat = Math.floor(stairs.y) === y && Math.abs(Math.floor(stairs.x) + 0.5 - (x + 0.5)) <= 1; // the stairs object's own foot slab
+    if (onStairMat && nameAt(ground, x, y) === 'intStairsFootM') continue;
     assert.equal(nameAt(ground, x, y), 'intFloorOak', `foyer floor at (${x},${y}) is ${nameAt(ground, x, y)}`);
   }
   assert.equal(cells(ground, ['intFloorMarble', 'intFloorMarbleRunner']).length, 0, 'marble floor tiles are still on the ground floor');
@@ -178,8 +183,8 @@ test('ADR 0020: the stairs object keeps its name and links; it sits at the foot 
   assert.ok(dist(Math.floor(stairs.x), Math.floor(stairs.y)) > 0, 'the stairs object cannot be reached from the spawn');
 });
 
-test('ADR 0020: the staircase is split (one wide flight dividing into two upper flights), white-railed, with two round columns at its foot', () => {
-  const treads = cells(structures, ['intFoyerTreadPlain', 'intFoyerStairsL', 'intFoyerStairsR'], FOYER);
+test('ADR 0020: the staircase is split (one wide flight dividing into two upper flights), handrailed, with two round columns at its foot', () => {
+  const treads = cells(structures, FLIGHT_TILES, FOYER);
   assert.ok(treads.length >= 12, `expected a real block of treads, found ${treads.length}`);
   assert.ok(treads.every((t) => t.x + 1 <= AXIS), 'staircase tiles are not all in the left half of the hall');
   const ys = [...new Set(treads.map((t) => t.y))].sort((a, b) => a - b);
@@ -191,7 +196,7 @@ test('ADR 0020: the staircase is split (one wide flight dividing into two upper 
   };
   assert.equal(runs(ys[0]), 2, 'the top of the staircase should be two separate upper flights');
   assert.equal(runs(ys[ys.length - 1]), 1, 'the foot of the staircase should be one wide flight');
-  assert.ok(cells(structures, 'intFoyerLanding', FOYER).length >= 4, 'no landing where the flight divides');
+  assert.ok(cells(structures, LAND_TILES, FOYER).length >= 4, 'no landing where the flight divides');
   const columns = cells(structures, 'intColumnShaftL', FOYER);
   assert.equal(columns.length, 2, `expected two round columns, found ${columns.length}`);
   const footY = Math.max(...treads.map((t) => t.y));
@@ -215,7 +220,7 @@ test('ADR 0020: the LUG volunteer and "LUG Stall" are behind the left staircase,
   assert.ok(stall, 'no "LUG Stall" area');
   assert.equal(stall.props.kind, 'stall');
   assert.ok(volunteer.x >= stall.x && volunteer.x < stall.x + stall.width && volunteer.y >= stall.y && volunteer.y < stall.y + stall.height, 'the volunteer is outside the stall');
-  const treads = cells(structures, ['intFoyerTreadPlain', 'intFoyerStairsL', 'intFoyerStairsR'], FOYER);
+  const treads = cells(structures, FLIGHT_TILES, FOYER);
   const topY = Math.min(...treads.map((t) => t.y));
   assert.ok(volunteer.y < topY, `the volunteer (y ${volunteer.y}) is not behind the staircase (top y ${topY})`);
   assert.ok(volunteer.x + 1 <= AXIS, 'the stall is not on the left side');
@@ -240,7 +245,7 @@ test('ADR 0020: low red and blue sofas on the left AND right back walls, with sm
 test('ADR 0020: a spiral gold-ring chandelier hangs on the overhead layer over the middle of the hall, not over the stairs', () => {
   const rings = cells(overhead, ['intChandelier', 'intChandelierTR', 'intChandelierBL', 'intChandelierBR']);
   assert.ok(rings.length >= 4, 'no chandelier on the overhead layer');
-  const treads = cells(structures, ['intFoyerTreadPlain', 'intFoyerStairsL', 'intFoyerStairsR', 'intFoyerLanding'], FOYER);
+  const treads = cells(structures, [...FLIGHT_TILES, ...LAND_TILES], FOYER);
   const midX = rings.reduce((s, r) => s + r.x + 0.5, 0) / rings.length;
   const midY = rings.reduce((s, r) => s + r.y + 0.5, 0) / rings.length;
   assert.ok(Math.abs(midX - AXIS) <= 2.5, `chandelier is at x ${midX}, hall axis ${AXIS}`);
@@ -394,10 +399,17 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 //   room is now the black `intVoid` tile instead of `edge` (FB-0059), and (2) the stairwell's doorway, in a vertical wall, is now the
 //   side-on `intDoorwaySide` (FB-0065, build-interiors.js useSideVariants()). Same rooms, objects, properties, ids and layout; only
 //   those tile ids moved (previous hashes: bbc171e5..., b5db0bf7..., 2a9cadb7...).
+// 2026-10-05 (P4b, FB-0061/0063/0064/0069), a deliberate change to the stairwell only: all three were re-pinned because the stairwell was
+//   rebuilt with the stair kit (two stepped flights with gold handrails, a foot slab each, UP/DOWN wall plates; tools/interiors/plans.js
+//   stairwell()) and the decorative lift tile became a working lift (a `lift` object, stainless doors, a call plate and an indicator
+//   lamp between the flights). The rooms, every other object, property and id are unchanged, and so are the stairs objects (their
+//   names, destinations, positions, `facing`): tests/unit/p4b-stairs-lift.test.js pins those exactly. main-block-3's idle student
+//   moved from (33,14), the lift's front tile, to (34,19) (src/ambient.js; that is data, not map content). Previous hashes: 4d5aacd2...,
+//   d6ca049b..., c65216dd....
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': '4d5aacd2791582bc5230dae0d5877b40b66be9d46b49d523fa740e3f70bf336e',
-  'main-block-2': 'd6ca049b71d404b534bbd4a40d0ffc9df96961c2bc059f932e12602cb485822b',
-  'main-block-3': 'c65216ddd66c5334b857ac789da4620a6cc6e3af439bac170907ba31100505c5',
+  'main-block-1': 'b7f76ca376bcb2a4dfd7df39f525e5e274344554e575cfbd8d8930124c2c208a',
+  'main-block-2': 'd56d0152a2533acddf26c5abd627496592d00917d2ae32727266c50111cbbb92',
+  'main-block-3': '16da40cffb99855e55bd0919525d44ad435aa92502e7e4f5737027f16ecb9203',
 };
 for (const [key, hash] of Object.entries(UPPER_FLOOR_CONTENT_HASHES)) {
   test(`ADR 0020: ${key} has exactly its pre-rebuild layers, objects and properties (only the tileset size header may change)`, () => {

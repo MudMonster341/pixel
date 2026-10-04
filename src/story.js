@@ -64,7 +64,7 @@ const STORY = {
       when: { stage: 'hunting', notHasKey: 'physicsLab' },
       lines: [
         "Still looking, {name}? The first key's in the Physics Lab, up on the 3rd floor.",
-        "The lift's just for show — take the stairs!",
+        "Stairs or the lift, your pick. The lift is quicker, the stairs are free!",
       ],
     },
     {

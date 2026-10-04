@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:32:45.539Z",
-  "updatedAt": "2026-10-04T17:32:45.539Z",
+  "updatedAt": "2026-10-04T23:01:14.088Z",
   "details": "",
   "context": {
     "map": "main-block-3",
@@ -65,13 +65,28 @@
     }
   },
   "screenshot": "screenshots/FB-0069.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "A working lift between the four Main Block floors (E, pick a floor, fade and ding).",
+      "at": "2026-10-04T23:01:14.088Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/p4b-stairs-lift.test.js › FB-0069",
+    "commit": null,
+    "at": "2026-10-04T23:01:14.088Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:32:45.539Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-04T23:01:14.088Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

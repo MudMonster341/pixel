@@ -260,6 +260,12 @@ class UIScene extends Phaser.Scene {
       const world = this.scene.get('world');
       if (world.sys.isActive() && !world.transitioning) world.playBoxOpening();
     };
+    // A dialog `{ warp: { to, spawnAt } }` action (src/dialog.js) fires this: the lift's floor choice (P4b). Handled here for the same
+    // reason as the three above (a persistent scene, always reaching whichever WorldScene instance is current).
+    this.onWarpRequested = (payload) => {
+      const world = this.scene.get('world');
+      if (world.sys.isActive() && !world.transitioning) world.warpTo(payload);
+    };
     this.game.events.on('map-entered', this.onMapEntered);
     this.game.events.on('area-entered', this.onAreaEntered);
     this.game.events.on('toast', this.onToast);
@@ -268,6 +274,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.on('cutscene:requested', this.onCutsceneRequested);
     this.game.events.on('minigame:requested', this.onMinigameRequested);
     this.game.events.on('box-opening:requested', this.onBoxOpeningRequested);
+    this.game.events.on('warp:requested', this.onWarpRequested);
     this.events.once('shutdown', () => this.teardown());
 
     const world = this.scene.get('world');
@@ -342,6 +349,7 @@ class UIScene extends Phaser.Scene {
     this.game.events.off('cutscene:requested', this.onCutsceneRequested);
     this.game.events.off('minigame:requested', this.onMinigameRequested);
     this.game.events.off('box-opening:requested', this.onBoxOpeningRequested);
+    this.game.events.off('warp:requested', this.onWarpRequested);
     this.hotbar.teardown();
     this.tutorial.teardown();
   }

@@ -19,14 +19,35 @@ const MAIN_W = 40;
 const MAIN_H = 40;
 const MAIN_STAIRWELL = { x0: 30, y0: 12, x1: 37, y1: 21 };
 
-function stairwell(floor, name, { up, down } = {}) {
+// P4b (FB-0061/0063/0064/0069): the stairwell, rebuilt around LimeZu's stepped flight with gold handrails (tools/make-assets.js
+// stairsTile()). Two 2-wide flights stand against the side walls, rising up the screen (steps shrink and darken towards the far end,
+// a blue arrow plate on the wall over each says UP or DOWN), and the lift sits between them in the middle of the top wall, so the
+// room is symmetric about its centre line (x 34.0). Each flight is four tile rows of treads (solid) over a walkable foot slab on the
+// row of its `stairs` object (y 17); the gold handrail is on the open (lane) side, a plain stringer on the wall side. The stairs
+// objects, their destinations, arrival tiles and approach tiles are exactly what they were: (32,17) up and (36,17) down, both
+// `facing: left`. `lift` is the name of this floor's lift object (its tile and the choice list's arrival are in src/maps.js).
+function stairwell(floor, name, { up, down, lift } = {}) {
   floor.addRect('stairwell', { name, type: 'stairwell', wallKit: 'roomBuilder', ...MAIN_STAIRWELL });
-  floor.liftFeature('stairwell', MAIN_STAIRWELL.x0 + 1, MAIN_STAIRWELL.y1 - 1);
-  if (up) floor.stairsObject('stairwell', { name: `${name} (up)`, to: up.to, toId: up.toId, facing: 'left', dir: 'up', offset: [-2, 0] });
-  // The "(down)" flight sits at x 36, one tile from the stairwell's east wall (x 37). `facing` is the direction the player
+  const { x0, x1, y0 } = MAIN_STAIRWELL;
+  const mid = (x0 + x1 + 1) / 2; // 34.0: the room's centre line, an edge coordinate
+  floor.liftDoor(mid - 1, y0, lift); // doors on x 33..34, the call plate on x 35
+  if (up) {
+    floor.stairBlock(x0 + 1, y0 + 1, ['WL', 'ER'], [0, 1, 2, 3]); // x 31..32, y 13..16
+    floor.paintFloor(x0 + 1, 17, x0 + 1, 17, 'intStairsFootWL');
+    floor.paintFloor(x0 + 2, 17, x0 + 2, 17, 'intStairsFootM');
+    floor.placeStructure(x0 + 1, y0, 'intStairsSignUp');
+    floor.pointObject('stairs', `${name} (up)`, x0 + 2, 17, { to: up.to, toId: up.toId, facing: 'left' });
+  }
+  // The "(down)" flight sits at x 35..36, one tile from the stairwell's east wall (x 37). `facing` is the direction the player
   // faces on ARRIVAL and the arrival tile is one step that way (world.js resolveSpawnAt), so 'right' landed her inside the
   // wall (D07, 2026-10-04). 'left' puts her on the flight's own tile (35, 17), facing away from the wall.
-  if (down) floor.stairsObject('stairwell', { name: `${name} (down)`, to: down.to, toId: down.toId, facing: 'left', dir: 'down', offset: [2, 0] });
+  if (down) {
+    floor.stairBlock(x1 - 2, y0 + 1, ['EL', 'WR'], [0, 1, 2, 3]); // x 35..36, y 13..16
+    floor.paintFloor(x1 - 2, 17, x1 - 2, 17, 'intStairsFootM');
+    floor.paintFloor(x1 - 1, 17, x1 - 1, 17, 'intStairsFootWR');
+    floor.placeStructure(x1 - 1, y0, 'intStairsSignDown');
+    floor.pointObject('stairs', `${name} (down)`, x1 - 1, 17, { to: down.to, toId: down.toId, facing: 'left' });
+  }
 }
 
 // Quality loop (docs/quality/scorecard.md, Interior art run 1, "corridors are bare"): a corridor
@@ -199,6 +220,7 @@ const mainBlock1 = {
     dressCorridor(floor, corridor, { axis: 'h' });
 
     stairwell(floor, 'Main Block Stairs 1', {
+      lift: 'Main Block Lift 1',
       down: { to: 'main-block-g', toId: 'Main Block Stairs G (up)' },
       up: { to: 'main-block-2', toId: 'Main Block Stairs 2 (down)' },
     });
@@ -217,6 +239,7 @@ const mainBlock2 = {
     floor.addRect('landing', { name: 'Landing', type: 'lounge', wallKit: 'roomBuilder', x0: 3, y0: 12, x1: 30, y1: 21 });
 
     stairwell(floor, 'Main Block Stairs 2', {
+      lift: 'Main Block Lift 2',
       down: { to: 'main-block-1', toId: 'Main Block Stairs 1 (up)' },
       up: { to: 'main-block-3', toId: 'Main Block Stairs 3 (down)' },
     });
@@ -239,7 +262,7 @@ const mainBlock3 = {
     doorNameplate(floor, 'physicsLab', 'corridor');
     dressCorridor(floor, corridor, { axis: 'h' });
 
-    stairwell(floor, 'Main Block Stairs 3', { down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });
+    stairwell(floor, 'Main Block Stairs 3', { lift: 'Main Block Lift 3', down: { to: 'main-block-2', toId: 'Main Block Stairs 2 (up)' } });
     floor.connect('corridor', 'stairwell');
   },
 };

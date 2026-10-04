@@ -6,6 +6,15 @@ They are the core of the "wow" the owner asked for (see [the Day 3 plan, section
 Related decision: [ADR 0021](../../decisions/0021-friends-in-the-game-and-personal-touches.md) (named friends and professors as NPCs).
 Build rules: [agent-rules.md](agent-rules.md). Build order: after P1-P4; the key games (match-3 etc.) are P5; moments and bonus games come after P5, one per agent run, cut from the bottom up.
 
+## Settled with the owner (grilling round 1, 2026-10-04)
+1. **Second playtest (~10-08):** all 33 fixes plus only the cheap moments (unicorn M1, Mevin M2, the cover M5). The sumo, tower, Raja's chariot, the three friends and the ball pit follow, using the playtest feedback, and land by 10-09.
+2. **Moments are unskippable and play once only.** They do not activate a second time (not after Continue, not on replay; a brand-new save plays them again). They always end by themselves in 8-20 s.
+3. **Lines:** the agent drafts everything (friends, professors, Narda, Mevin, Mustafa); the owner asks for changes afterwards. Placeholders stay light.
+4. **Friends' looks:** the agent chooses distinctive looks (hair, skin tone, shirt, prop); the owner corrects from screenshots. Satvik: slightly darker skin tone and a camera, as a normal sprite.
+5. **Real names in the zip/hosted link, professors included:** fine as is (private gift, kind teasing, only the gags the owner gave).
+6. **Ball pit:** a simplified version in the TP room, built last, cut first.
+7. **Room 195 key: the tower climb only. Match-3 is DROPPED** (supersedes the earlier "match-3 now, tower later" and FB-0074's "candy crush"; Tetris is still removed). There is no match-3 fallback, so the tower needs the same soft-lock guards as every mini-game (skip after 3 losses, Esc quits, every run ends). Sumo vs Narda stays a bonus in the TP-room arcade.
+
 ## The owner's list (as sent, with their answers)
 
 1. **Unicorn at the entrance.** Outside, as she enters the campus: a unicorn is eating. She reacts. A prince with a crown comes in from the right, says he is always watching, climbs on the unicorn and
@@ -72,15 +81,13 @@ Taru (the princess) climbs: run, jump, climb ladders (up/down), dodge rolling ha
 **skip after 3 losses**, Esc quits. Pure logic in `src/minigames/tower-logic.js` on top of `platformer-physics.js` (ladder state, hazard spawn/roll rules, win/lose), unit-tested; art from CC0 packs + code. Closing beat: she opens the window, the prince
 climbs down saying thanks, the chameleon changes colour.
 
-## Mini-game line-up
-The owner's decision (2026-10-04): **match-3 first for the Room 195 key** (the safe option), with the tower climb preferred as the key game if it can be built well; sumo "as well".
-
+## Mini-game line-up (final, 2026-10-04)
 | Key | Game | Note |
 |---|---|---|
 | Physics Lab | **Hero vs villain** (the platformer, made harder: FB-0066) | generic stand-ins; themed cover (M5) |
-| ICL (fingerprint door, FB-0071) | the existing flyer "Server Dash" re-skinned as the fingerprint hack, then the lab with Alice | already built and tested; fits a computing lab |
-| Room 195 | **Match-3** now (FB-0074). **Swap to the tower climb (M8)** once it is built, tested and fun, then match-3 moves to the arcade. | Tetris is removed either way |
-| Bonus, TP room arcade | **Sumo vs Narda** (M7), the tower climb (M8) until it takes the key, match-3 if it is replaced | optional, no key; first to cut |
+| ICL (fingerprint door, FB-0071) | the existing flyer "Server Dash" re-skinned as the fingerprint hack, then the lab with Alice | already built and tested |
+| Room 195 | **Tower climb: save the prince (M8)** | replaces Tetris; match-3 is dropped |
+| Bonus, TP room arcade | **Sumo vs Narda** (M7) | optional, no key |
 
 ## Open questions for the owner
 1. Mevin: nothing else needed unless you want a surname/colour; "Jashn" stays your wording.

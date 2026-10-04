@@ -203,6 +203,20 @@ to wire into an above-player layer.
   **Art source (FB-0025):** the Kenney Roguelike Modern City pack's sidewalk-paver-with-gutter-line
   tile, rotated a quarter turn per side (corners overlay both sides' gutter-line bands on a plain
   paver base) — see `tools/make-assets.js` `atlasKerbEdge`/`PACK.kerbPaver`.
+- **Road autotile (P3a: FB-0048 / FB-0054 / FB-0055):** kerbs are no longer drawn per rectangle. Painters in
+  `build-campus.js` only say what a cell is (road, pavement, island pavement) and `tools/campus/autotile.js`
+  (pure, unit-tested on hand-made grids) picks every kerb tile once from the cell's 8 neighbours: a kerb line
+  only between pavement and open ground (never two kerb lines back to back), straight edges, outer corners
+  (`kerbTL`..`kerbBR`), **inner corners** (`kerbInTL`/`TR`/`BL`/`BR`, the pack's kerb elbow built into the plain
+  slab), **strips and caps** for one-tile-wide pavement (`kerbStripV`/`H`, `kerbCapT`/`B`/`L`/`R`), a lone island
+  (`kerbIsland`, the Kenney plaza set's own narrow-path pieces) and plain `kerbFill`. Island pavement (roundabout
+  rim, splitter islands) is kerbed on the sides that face the road instead. A pavement strip with road on both
+  sides is a junction leftover and becomes road; lane dashes stop two tiles short of every junction, island and
+  road end; a zebra crossing is laid where a path runs straight over a road to a path on the far side.
+  Roundabout: a stair-stepped oval (16 x 12 tiles, `layout.js` `roundabout`) with a kerbed lawn island, shrubs, a
+  splitter island in the gate arm and an aisle into each parking lot. Parking lot (`drawBayLot`): kerb, a row of
+  one-tile bays, a two-tile aisle, a row of bays, kerb; one front-view car per bay (never two stacked, at most two
+  side by side, about half the bays empty) and a shrub planting island at each row end.
 - `roadLineH` / `roadLineV`: a short dashed lane marking on asphalt, for a horizontal or vertical
   road. **Art source:** the pack's lane-dash tile (`PACK.laneDash`), `roadLineV` is the same source
   rotated 90°.

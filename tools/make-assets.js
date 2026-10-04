@@ -1588,6 +1588,25 @@ const TILES = [
   { name: 'intDoorFlush', draw: intDoorFlush },
   { name: 'intDoorDarkL', draw: intDoorDarkL },
   { name: 'intDoorDarkR', draw: intDoorDarkR },
+
+  // ---- road autotile kit (FB-0048/FB-0054/FB-0055, tools/campus/autotile.js): the kerb cases the Kenney
+  // sidewalk 9-slice above does not have. Appended at the end so every earlier tile index is unchanged.
+  // Inner (concave) corners: where a kerbed pavement turns around an outside corner, e.g. at a T junction
+  // or on the stair-stepped ring of a roundabout.
+  { name: 'kerbInTL', draw: (img, x, y) => kerbInner(img, x, y, 'TL') },
+  { name: 'kerbInTR', draw: (img, x, y) => kerbInner(img, x, y, 'TR') },
+  { name: 'kerbInBL', draw: (img, x, y) => kerbInner(img, x, y, 'BL') },
+  { name: 'kerbInBR', draw: (img, x, y) => kerbInner(img, x, y, 'BR') },
+  // A pavement one tile wide with a kerb on both long sides (a splitter island), its two ends, and a
+  // lone one-tile island: the Kenney plaza set's own narrow-path pieces.
+  { name: 'kerbCapT', draw: (img, x, y) => kerbPiece(img, x, y, 15, 3) },
+  { name: 'kerbCapB', draw: (img, x, y) => kerbPiece(img, x, y, 15, 5) },
+  { name: 'kerbCapL', draw: (img, x, y) => kerbPiece(img, x, y, 11, 5) },
+  { name: 'kerbCapR', draw: (img, x, y) => kerbPiece(img, x, y, 13, 5) },
+  { name: 'kerbStripV', draw: (img, x, y) => kerbPiece(img, x, y, 15, 4) },
+  { name: 'kerbStripH', draw: (img, x, y) => kerbPiece(img, x, y, 12, 5) },
+  { name: 'kerbIsland', draw: (img, x, y) => kerbPiece(img, x, y, 14, 5) },
+  { name: 'kerbFill', draw: walkway }, // plain pavement inside a kerbed area (same slab as `walkway`)
 ];
 
 // ---------- campus tiles ----------
@@ -1874,6 +1893,43 @@ function otherWallEnd(img, x, y, side) {
 function kerbEdge(img, x, y, sides) {
   if (sides.length === 1) walkwayEdge(img, x, y, sides);
   else walkwayCorner(img, x, y, sides);
+}
+
+// One tile of the Kenney plaza set copied as-is (a kerb strip/cap/island piece).
+function kerbPiece(img, x, y, col, row) {
+  const t = urbanTile(col, row);
+  blitAtlas(img, x, y, loadAtlas(t.atlas), t.sx, t.sy, 16, 16);
+}
+
+// An inner (concave) kerb corner: the plain sidewalk slab with a small elbow of kerb in the one corner
+// that touches the outside corner, so the straight kerb of the neighbour above/below and the neighbour
+// left/right of it join up around the bend. The elbow is the 4 x 6 px corner block of the pack's own
+// kerb band (4 px wide on the vertical sides, 6 px deep on the horizontal ones), with the pack's own
+// outline, highlight and shade pixels sampled from its edge tile: its outer edges are the band's
+// interior (they touch the neighbouring kerb pieces), its inner edges carry the band's dark outline.
+function kerbInner(img, x, y, corner) {
+  walkway(img, x, y);
+  const atlas = loadAtlas(SIDEWALK.edgeT.atlas);
+  const at = (c, r) => {
+    const i = ((SIDEWALK.edgeT.sy + r) * atlas.width + SIDEWALK.edgeT.sx + c) * 4;
+    return [atlas.data[i], atlas.data[i + 1], atlas.data[i + 2], 255];
+  };
+  const OUTLINE = at(6, 5);
+  const HIGHLIGHT = at(6, 1);
+  const SHADE = at(6, 3);
+  const top = corner[0] === 'T';
+  const left = corner[1] === 'L';
+  // The pack's band colour at tile row v: highlight on rows 1-2 / 11-12, shade on rows 3-4 / 13-15.
+  const bandColour = (v) => (v <= 2 || (v >= 11 && v <= 12) ? HIGHLIGHT : SHADE);
+  for (let dv = 0; dv < 6; dv++) {
+    for (let du = 0; du < 4; du++) {
+      const u = left ? du : 15 - du; // column inside the tile (du counts in from the outside corner)
+      const v = top ? dv : 15 - dv; // row inside the tile
+      const outline = du === 3 || dv === 5 || (du === 0 && dv === 0);
+      const colour = outline ? OUTLINE : bandColour(v);
+      img.setRGBA(x + u, y + v, colour[0], colour[1], colour[2], 255);
+    }
+  }
 }
 
 function roadLineH(img, x, y) {

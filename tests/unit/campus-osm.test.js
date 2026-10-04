@@ -161,7 +161,7 @@ test('FB-0020: the tennis net is a thin line (not a thick striped block), with p
 
 // ---------- Road-network connectivity: Gate 2's approach reaches D54 and the DIAC ring; parking touches a road ----------
 
-const ROAD_TILE_NAMES = new Set(['asphalt', 'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'roadLineH', 'roadLineV', 'crossingH', 'crossingV', 'parking']);
+const ROAD_TILE_NAMES = new Set(['asphalt', 'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'kerbInTL', 'kerbInTR', 'kerbInBL', 'kerbInBR', 'kerbCapT', 'kerbCapB', 'kerbCapL', 'kerbCapR', 'kerbStripV', 'kerbStripH', 'kerbIsland', 'kerbFill', 'roadLineH', 'roadLineV', 'crossingH', 'crossingV', 'parking']);
 const isRoadTile = (x, y) => x >= 0 && y >= 0 && x < W && y < H && ROAD_TILE_NAMES.has(groundNameAt(x, y));
 
 test('the road network connects Gate 2 out to the wider road system, and parking touches a road', () => {
@@ -367,7 +367,7 @@ test('a "gate2" cutscene trigger sits just inside Gate 2, spanning the avenue wi
 // "Hardscape" is every tile family a pedestrian or vehicle actually travels on: walkways, paving,
 // asphalt, kerb, lane markings, crossings and parking.
 const HARDSCAPE_TILE_NAMES = new Set([
-  'walkway', 'paving', 'asphalt', 'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+  'walkway', 'paving', 'asphalt', 'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'kerbInTL', 'kerbInTR', 'kerbInBL', 'kerbInBR', 'kerbCapT', 'kerbCapB', 'kerbCapL', 'kerbCapR', 'kerbStripV', 'kerbStripH', 'kerbIsland', 'kerbFill',
   'roadLineH', 'roadLineV', 'crossingH', 'crossingV', 'parking',
 ]);
 
@@ -418,7 +418,7 @@ test('the Athletics Track and Tennis Courts are reachable on foot from spawn', (
 
 // ---------- FB-0022: walkways/roads never overwrite a building's own footprint ----------
 
-const PATH_LIKE_GROUND = new Set(['walkway', 'asphalt', 'paving', 'parking', ...['T', 'B', 'L', 'R', 'TL', 'TR', 'BL', 'BR'].map((s) => `kerb${s}`), 'roadLineH', 'roadLineV', 'crossingH', 'crossingV']);
+const PATH_LIKE_GROUND = new Set(['walkway', 'asphalt', 'paving', 'parking', ...['T', 'B', 'L', 'R', 'TL', 'TR', 'BL', 'BR', 'InTL', 'InTR', 'InBL', 'InBR', 'CapT', 'CapB', 'CapL', 'CapR', 'StripV', 'StripH', 'Island', 'Fill'].map((s) => `kerb${s}`), 'roadLineH', 'roadLineV', 'crossingH', 'crossingV']);
 
 test('FB-0022: no walkway or road tile lies inside any building footprint', () => {
   // buildingFootprint objects (build-campus.js section 17) are the ground truth: the exact rectangles

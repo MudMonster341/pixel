@@ -109,24 +109,20 @@ module.exports = {
   // centreline -- 0.82 clears enough room on both sides of the entrance road for the parking lots
   // below while still sitting well east of the campus's own u-midpoint (biased towards the DIAC ring,
   // which this file places just east of the fence -- see RING_GAP_METERS in build-campus.js).
-  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40, uFraction: 0.82 },
-  // A small roundabout just inside Gate 2 (owner: "as soon as you get in there's a roundabout"),
-  // kept axis-aligned per ADR 0009 (a true circular kerb would need diagonal tiles) -- a paved square
-  // junction with a lawn-and-hedge traffic island in the middle. `outerHalfMeters`/`islandHalfMeters`
-  // are upper bounds: build-campus.js shrinks them if the real gate-to-Main-Block depth is tight.
-  // Quality loop, category 1 run 3 (2026-09-29): shrunk from 12 -- on this campus's own generated
-  // geometry, there wasn't enough depth left between the Main Block door and the entrance parking lot
-  // to also fit a real forecourt (owner: "at least 5-6 tiles") and the loop road, because most of the
-  // real gate-to-core depth was being spent well south of the parking lot (the roundabout itself, plus
-  // this gap to the fence). Shrinking this gap (combined with a smaller roundabout, build-campus.js's
-  // own comment on `roundaboutOuterHalf`) moves the roundabout and the parking lot closer to the gate
-  // -- exactly "push the parking back" -- freeing that depth for the forecourt instead. Still well
-  // clear of FB-0008/FB-0010's own "a real distance inside the gate" check (4 tiles, not 0).
-  roundabout: { avenueToRoundaboutMeters: 8, outerHalfMeters: 10, islandHalfMeters: 4 },
-  // Parking either side of the entrance road, just past the roundabout (owner: "parking on the left
-  // and right"). Depth is derived at build time from whatever depth is left after the roundabout and
-  // the loop road's own clearance from the Main Block are reserved (see build-campus.js section 11).
-  entranceParking: { widthMeters: 32, gapMeters: 6 },
+  // Gate 2 road (FB-0049): the east-west road the avenue meets runs `roadWestTiles` west of the avenue to a
+  // turning circle (`turnRadiusTiles`), and `roadEastTiles` east as a kerbed road before the plain external
+  // road carries on; `roadWidthMeters` is kerb to kerb (12 m = 5 lanes of asphalt + a pavement each side).
+  gate2: { nearWay: 1090992244, approachWidthMeters: 14, outerApproachMeters: 40, uFraction: 0.82, roadWestTiles: 30, roadEastTiles: 22, turnRadiusTiles: 4.6, roadWidthMeters: 12 },
+  // The Gate 2 roundabout (FB-0054), drawn on the tile grid as a stair-stepped circle (build-campus.js
+  // section 11b): `diameterTiles` across the outer pavement, ring road out to `roadRadius`, the kerbed
+  // island (a kerbed pavement rim round a lawn) out to `islandRadius` (tile units, from the centre);
+  // `stretchX` draws it that much wider than tall (a circle seen from a slightly raised camera).
+  // `lotGapTiles`: the aisle length between the ring and each parking lot; `minGateArmTiles`: the least
+  // road kept between the ring and Gate 2 (the build fails loudly if the loop road leaves less).
+  roundabout: { diameterTiles: 12, stretchX: 1.34, roadRadius: 5.3, islandRadius: 3.5, lotGapTiles: 3, minGateArmTiles: 3 },
+  // Parking either side of the roundabout (owner: "parking on the left and right"): a lot `widthMeters` wide
+  // (kerb to kerb), two rows of bays on a two-tile aisle that runs into the roundabout (drawBayLot).
+  entranceParking: { widthMeters: 32 },
   // The loop road around the academic core (owner: "internal roads form a loop... rather than one
   // straight avenue"), replacing the old single straight avenue all the way to the Main Block door.
   // Constant width, axis-aligned rectangle (ADR 0009); margin is generous on the sides with room

@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const layout = require('./layout');
+const autotile = require('./autotile');
 const { encodePNG } = require('../lib/png');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -77,6 +78,8 @@ const REQUIRED_TILES = [
   // quality loop, category 1 run 1 (2026-09-28): 2-tile lamp, roof/lawn variety, and Gate 2's props.
   'lampPostTop', 'bitsRoofB', 'bitsRoofC', 'otherRoofB', 'otherRoofC', 'lawn3', 'lawn4', 'lawn5',
   'gateSign', 'securityBooth', 'barrierArm',
+  // road autotile kit (FB-0048/54/55): inner corners, strip/cap/island pieces, plain kerbed pavement.
+  ...autotile.KERB_TILE_NAMES,
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -531,6 +534,16 @@ const inGrid = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
 const ground = new Int32Array(W * H).fill(TILE.sand);
 const structures = new Int32Array(W * H).fill(-1);
 const overhead = new Int32Array(W * H).fill(-1);
+// Pavement cells whose kerb faces the road (roundabout island, splitters) instead of open ground; the
+// final autotile pass (autotileRoads, below) reads this to pick each cell's kerb tile.
+const islandPad = new Uint8Array(W * H);
+// Cells a road rectangle (or the roundabout / lot painters) laid as carriageway: a later kerb ring never
+// replaces these, so crossing roads join up (FB-0055). Plain external roads (the raw OpenStreetMap fill) are
+// not in it: a kerb ring may still be drawn over those, as it always was.
+const roadOwned = new Uint8Array(W * H);
+// Ground tiles that are carriageway: a kerb ring never overwrites these (a later road crossing an
+// earlier one must not leave a kerb strip across the junction, FB-0055).
+const ROAD_GROUND = new Set([TILE.asphalt, TILE.roadLineH, TILE.roadLineV, TILE.crossingH, TILE.crossingV]);
 const roofOwner = new Int32Array(W * H).fill(-1);
 // roofOwner only covers a building's raw OSM footprint (the roof/parapet cells); the wall/window/
 // entrance rows drawBuilding paints below that footprint (section 9) are NOT in it. wallOwner is the
@@ -1090,10 +1103,14 @@ function paveRectFrame(u0, v0, u1, v1, fillName, laneAxis) {
     if (roofOwner[y * W + x] !== -1 || wallOwner[y * W + x] !== -1) return;
     const side = kerbSide(x, y);
     if (side) {
+      // FB-0055: a ring cell never replaces carriageway laid by another road, so crossing roads join up.
+      if (roadOwned[y * W + x]) return;
       structures[y * W + x] = -1;
       ground[y * W + x] = TILE[side];
       return;
     }
+    islandPad[y * W + x] = 0;
+    roadOwned[y * W + x] = fillName === 'asphalt' ? 1 : 0;
     let tile = TILE[fillName];
     if (laneAxis === 'v' && x === midX && (y - y0) % 4 < 2) tile = TILE.roadLineV;
     if (laneAxis === 'h' && y === midY && (x - x0) % 4 < 2) tile = TILE.roadLineH;
@@ -1124,6 +1141,7 @@ function fillRectFrame(u0, v0, u1, v1, tileName, skipInsideFence, crossWalls) {
     if (!crossWalls && wallOwner[y * W + x] !== -1) return; // ...or its wall, unless explicitly allowed
     structures[y * W + x] = -1;
     ground[y * W + x] = TILE[tileName];
+    roadOwned[y * W + x] = 0;
   });
 }
 // Two axis-aligned segments joining (u0,v0) to (u1,v1) with a right-angle bend, so any two points
@@ -1212,6 +1230,43 @@ function connectWalkway(p0, p1, bend = 'h') {
   connectRect([bypassU, p1[1]], p1, width, 'walkway', 'h', false, true);
 }
 
+// Cell painters for the road kit. They only lay down WHAT a cell is; the kerb tile each pavement cell gets
+// is decided once, at the end, by autotileRoads() (tools/campus/autotile.js).
+const cellFree = (x, y) => inGrid(x, y) && roofOwner[y * W + x] === -1 && wallOwner[y * W + x] === -1;
+function setRoadCell(x, y, tile = TILE.asphalt) {
+  if (!cellFree(x, y)) return false;
+  structures[y * W + x] = -1;
+  ground[y * W + x] = tile;
+  islandPad[y * W + x] = 0;
+  roadOwned[y * W + x] = tile === TILE.asphalt ? 1 : 0;
+  return true;
+}
+function setPadCell(x, y, island = false) {
+  if (!cellFree(x, y)) return false;
+  if (ROAD_GROUND.has(ground[y * W + x]) && !island) return false;
+  structures[y * W + x] = -1;
+  ground[y * W + x] = TILE.kerbFill;
+  islandPad[y * W + x] = island ? 1 : 0;
+  roadOwned[y * W + x] = 0;
+  return true;
+}
+// Pavement round a set of road cells: every open lawn/sand cell within one step (8 neighbours) of a road
+// cell becomes sidewalk, so a freshly drawn road gets a pavement on every side, with corners that follow
+// whatever shape the road has. `protect` holds cells (island, planting) that must stay as they are.
+function padAround(roadCells, protect = new Set()) {
+  for (const [x, y] of roadCells) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!inGrid(nx, ny) || protect.has(ny * W + nx)) continue;
+        const g = ground[ny * W + nx];
+        if (g === TILE.sand || LAWN_TILES.has(g)) setPadCell(nx, ny);
+      }
+    }
+  }
+}
+
 const AVENUE_W = layout.gate2.approachWidthMeters;
 // Outside the fence: a straight approach road south from the gate.
 paveRectFrame(gate2U - AVENUE_W / 2, fenceFrame.v1, gate2U + AVENUE_W / 2, outerApproachV1, 'asphalt', 'v');
@@ -1246,6 +1301,28 @@ if (d54Box && gate2NetworkPoint) {
   const d54Anchor = [fenceFrame.u0 - 40, (d54Box.v0 + d54Box.v1) / 2];
   connectRect(d54Anchor, gate2NetworkPoint, 9, 'asphalt', 'h', true);
 }
+// ---- FB-0049: the Gate 2 road continues west ----
+// The road the avenue meets (the bus road: it used to start at the avenue's mouth and run east only, so it
+// ended in sand with a cut-off pavement piece) now runs west as well, to a turning circle, and is a proper
+// kerbed road with a pavement on both sides and a dashed centre line for a stretch either side of the
+// junction (the plain external road carries on east). Pavement follows the road: both sides, round the
+// turning circle, and a kerb cap where it stops.
+{
+  const G = layout.gate2;
+  const rowC = gy(outerApproachV1);
+  const cyEdge = rowC + 0.5;
+  const turnX = gx(gate2U) - G.roadWestTiles;
+  const cxEdge = turnX + 0.5;
+  const circle = [];
+  for (let y = rowC - 7; y <= rowC + 7; y++) {
+    for (let x = turnX - 7; x <= turnX + 7; x++) {
+      if (Math.hypot(x + 0.5 - cxEdge, y + 0.5 - cyEdge) <= G.turnRadiusTiles && setRoadCell(x, y)) circle.push([x, y]);
+    }
+  }
+  paveRectFrame(minU + turnX * MPT, outerApproachV1 - G.roadWidthMeters / 2, gate2U + G.roadEastTiles * MPT, outerApproachV1 + G.roadWidthMeters / 2, 'asphalt', 'h');
+  padAround(circle);
+}
+
 // ================= 11b. roundabout, entrance parking, and the loop road =================
 // Owner's layout correction (2026-09-21, docs/research/bits-dubai-campus.md "Layout correction from
 // the owner"): the old straight avenue all the way from Gate 2 to the Main Block door "doesn't map
@@ -1258,142 +1335,168 @@ if (d54Box && gate2NetworkPoint) {
 // academic core's own front wall (`gateToCoreDepth`) -- rather than fixed metres, since the OSM
 // extract (not this file) decides how deep the campus actually is; every size is then clamped so nothing
 // can overlap the core, the fence, or the entrance parking regardless of exactly how that budget comes out.
-const RA = layout.roundabout;
+// ---- shared budget numbers (unchanged from the quality loop's own tuning) ----
 // The core's real south edge, for routing purposes, is past its raw roof/rect bbox: a BITS building's
 // front run is drawn FRONT_WALL_TILES deep (the readable-facade addendum, see drawBuilding), and that
-// facade band is a routing obstacle (wallOwner) exactly like the roof is. Budgeting off `coreBox.v1`
-// alone put the loop road's own southern clearance right on top of the Main Block's facade band --
-// paveRectFrame's wallOwner guard then silently skipped every cell of the loop's bottom strip that
-// overlapped it, breaking the loop in the middle instead of routing around it.
+// facade band is a routing obstacle (wallOwner) exactly like the roof is.
 const coreFrontV = coreBox.v1 + FRONT_WALL_TILES * MPT;
 const gateToCoreDepth = fenceFrame.v1 - coreFrontV;
-// Quality loop, category 1 run 3 (2026-09-29): shrunk from *0.16 -- freeing depth for a real forecourt
-// (see loopV1Floor/parkingV0 below) needed more room north of the roundabout than layout.js's own
-// avenueToRoundaboutMeters reduction alone could give without cutting the entrance avenue's own
-// straight leg down to almost nothing (FB-0008/FB-0010's own "a real distance inside the gate" check).
-// A smaller roundabout still leaves a real, walkable, kerb-ringed island (FB-0026) -- just not as
-// large as before -- and moves 2 metres of depth back towards the core for every 1 metre shrunk here.
-const roundaboutOuterHalf = Math.min(RA.outerHalfMeters, gateToCoreDepth * 0.11);
-const roundaboutIslandHalf = Math.max(MPT, Math.min(RA.islandHalfMeters, roundaboutOuterHalf - MPT * 2));
-const roundaboutCenter = [gate2U, fenceFrame.v1 - RA.avenueToRoundaboutMeters - roundaboutOuterHalf];
-
-// Gate -> roundabout: the short, dead-straight first leg (owner: "as soon as you get in there's a
-// roundabout"). wallOwner/roofOwner (paveRectFrame's own guard) keep this off any building regardless.
-paveRectFrame(gate2U - AVENUE_W / 2, roundaboutCenter[1] + roundaboutOuterHalf, gate2U + AVENUE_W / 2, fenceFrame.v1, 'asphalt', 'v');
-
-// The roundabout: a paved square junction (kept axis-aligned/rectilinear -- ADR 0009 rules out a
-// true circular kerb, which would need diagonal tiles). Quality loop, category 1 run 1 (2026-09-28):
-// "a proper circular or rounded island with a planted centre... and a kerb ring, not a flat grass
-// square" -- ADR 0009 still stands (no diagonal tiles), so "rounded" here is the same kerb-corner
-// treatment every other paved rectangle in this file already gets (kerbTL/TR/BL/BR soften the
-// corners): a real paved kerb ring around the island instead of a bare hedge outline, and a single
-// palm planted near its centre as the landmark instead of empty lawn (no hedge border this time --
-// a small island's hedge ring can span its own entire interior, leaving no open centre at all, which
-// is exactly as bad as the flat grass square this replaces; the kerb ring alone already reads as
-// "a real bounded island", see FB-0026's own test for the walkable-centre requirement).
-paveRectFrame(roundaboutCenter[0] - roundaboutOuterHalf, roundaboutCenter[1] - roundaboutOuterHalf, roundaboutCenter[0] + roundaboutOuterHalf, roundaboutCenter[1] + roundaboutOuterHalf, 'asphalt');
-forRectFrame(roundaboutCenter[0] - roundaboutIslandHalf, roundaboutCenter[1] - roundaboutIslandHalf, roundaboutCenter[0] + roundaboutIslandHalf, roundaboutCenter[1] + roundaboutIslandHalf, (x, y) => {
-  ground[y * W + x] = lawnPatch(x, y);
-});
-const roundaboutIslandBox = {
-  ix0: gx(roundaboutCenter[0] - roundaboutIslandHalf),
-  iy0: gy(roundaboutCenter[1] - roundaboutIslandHalf),
-  ix1: gx(roundaboutCenter[0] + roundaboutIslandHalf),
-  iy1: gy(roundaboutCenter[1] + roundaboutIslandHalf),
-};
-{
-  const { ix0, iy0, ix1, iy1 } = roundaboutIslandBox;
-  for (let x = ix0; x < ix1; x++) {
-    structOnLawn(x, iy0 - 1, TILE.kerbT);
-    structOnLawn(x, iy1, TILE.kerbB);
-  }
-  for (let y = iy0; y < iy1; y++) {
-    structOnLawn(ix0 - 1, y, TILE.kerbL);
-    structOnLawn(ix1, y, TILE.kerbR);
-  }
-  structOnLawn(ix0 - 1, iy0 - 1, TILE.kerbTL);
-  structOnLawn(ix1, iy0 - 1, TILE.kerbTR);
-  structOnLawn(ix0 - 1, iy1, TILE.kerbBL);
-  structOnLawn(ix1, iy1, TILE.kerbBR);
-  // The actual palm planting happens further down (plantTree/hasTreeClearance need
-  // TREE_CLEARANCE_TILES, a `const` declared later -- calling plantTree this early throws a
-  // temporal-dead-zone ReferenceError, found the hard way).
-}
-
-// Entrance parking, both sides of the road just past the roundabout (owner: "parking on the left and
-// right"). Depth is whatever's left of the gate-to-core budget once the loop road's own clearance
-// from the core is reserved (`loopClearance`), clamped to a sane range so a shallow campus still gets
-// a usable lot instead of a sliver.
-const PK = layout.entranceParking;
 const loopClearance = layout.loopRoad.widthMeters + MPT * 2; // the loop strip itself, plus a little lawn before the core's front wall
-const parkingV1 = roundaboutCenter[1] - roundaboutOuterHalf - MPT; // just north of the roundabout
-const parkingDepth = Math.min(30, Math.max(10, gateToCoreDepth * 0.3));
-// Quality loop, category 1 run 3 (2026-09-29): "the Main Block steps drop straight onto the sidewalk
-// and the loop road... make room for at least 5-6 tiles of forecourt". A hard requirement now (not
-// just one of several Math.max() preferences that an outer Math.min() could still silently override
-// downward, which is exactly what left the previous round's forecourt at ~3 tiles despite this same
-// comment already asking for 5): the loop road's own near (door-facing) edge must clear the *real*
-// drawn Main Block door (`mainDoor`) by at least FORECOURT_TILES tiles, full stop -- see loopV1Floor,
-// used both here and by loopBox.v1 below. Parking is what flexes instead (`layout.js`'s own
-// avenueToRoundaboutMeters was also shrunk this round -- "push the parking back" -- to give this
-// corridor enough real depth to keep both a full forecourt AND a real parking lot; MIN_PARKING_DEPTH
-// below is still a floor for how deep the lot itself should be, but never at the forecourt's expense).
-// Measured from the door, not the foot of the steps: "at least 5-6 tiles of forecourt... between the
-// steps and any road" (the owner's own wording) means open paver PLAZA past the 3-row staircase
-// (bitsStep1/2/3, drawn later in section 16.5) -- so this floor needs to clear the door by the
-// staircase's own depth (STEP_ROWS) *plus* that plaza depth, or the plaza works out to only
-// FORECOURT_TILES minus 3 deep, which is what happened the first time this was tried (measuring only
-// from the door left just ~3 tiles of real plaza once the steps ate their own 3 rows of it). 5 tiles
-// of plaza (the bottom of the owner's "5-6" ask), not 6: giving the entrance parking lot real depth
-// too (see MIN_PARKING_DEPTH below) needed the extra tile more than the plaza did.
+// The forecourt in front of the Main Block (see section 16.5): the loop road's near edge must clear the
+// real drawn door by the staircase's own depth plus a plaza of open pavers, 5 tiles deep (quality loop,
+// category 1 run 3: "at least 5-6 tiles of forecourt... between the steps and any road").
 const STEP_ROWS = 3;
 const FORECOURT_TILES = STEP_ROWS + 5;
 const FORECOURT_M = MPT * FORECOURT_TILES;
 const loopV1Floor = mainDoor[1] + FORECOURT_M + layout.loopRoad.widthMeters;
-// Shared with section 16.5's own forecourt-plaza paving below (and section 15's Main Block flanking
-// palms, which need to steer clear of this same rectangle) -- one number, not two copies that could
-// drift apart the way the old hard-coded `doorY+9` cap on the paving loop almost did this round.
+// Shared with section 16.5's forecourt paving and section 15's Main Block flanking palms.
 const FORECOURT_PLAZA_HALF = 6;
-// paveRectFrame's own kerb border eats 1 tile all round, and the lot is PK.widthMeters/MPT (16) tiles
-// wide, so its interior parking-tile count is (16-2)*(depthTiles-2) -- FB-0026's own `parkingTiles >
-// 20` floor needs at least 4 tiles of real depth ((16-2)*(4-2) = 28), not the 3 tiles a plain "at
-// least 1 row shows" comment used to assume (that gives only 14, silently under the actual test).
-const MIN_PARKING_DEPTH = MPT * 4;
-// If the corridor is too tight to give the lot even that much once the forecourt/loop floor is
-// honoured, the lot degenerates towards zero depth rather than the forecourt shrinking back down (the
-// owner explicitly allows changing this area's layout, parking included). The forecourt/loop floor is
-// the outer Math.max()'s own first argument, deliberately NOT wrapped in a further Math.min() the way
-// the old (pre-run-3) version was -- that outer min() is exactly what let a short corridor silently
-// eat back into the forecourt it was supposed to protect.
-const parkingV0 = Math.max(
-  loopV1Floor + MPT, // a 1-tile gap between the loop road and the lot -- still a real, visible seam
-  Math.min(Math.max(coreFrontV + loopClearance, parkingV1 - parkingDepth), parkingV1 - MIN_PARKING_DEPTH),
-);
-// Never past parkingV1 itself (a corridor too tight even for the forecourt/loop floor alone would
-// otherwise give the lot a negative depth) -- degenerates to a zero-depth lot rather than an invalid
-// rect; drawEntranceParkingLot below already only draws real cells, so a zero-depth lot simply draws
-// nothing rather than erroring.
-const parkingV0Safe = Math.min(parkingV0, parkingV1);
-const westLot = { u0: gate2U - AVENUE_W / 2 - PK.gapMeters - PK.widthMeters, v0: parkingV0Safe, u1: gate2U - AVENUE_W / 2 - PK.gapMeters, v1: parkingV1 };
-const eastLot = { u0: gate2U + AVENUE_W / 2 + PK.gapMeters, v0: parkingV0Safe, u1: gate2U + AVENUE_W / 2 + PK.gapMeters + PK.widthMeters, v1: parkingV1 };
-// Because gate2U sits inside the academic core's own u-range (it's offset off the Main Block's
-// centreline, section 6, but the core is wide), a lot flanking the avenue by its full width can reach
-// as far sideways as a building door's own approach column even though the two are well separated in
-// v -- found this way for the Main Block door: walking straight south from it for a few tiles led
-// into a parked car sitting in that exact column, in the west lot. The lot itself (and its own kerb/
-// spur, drawn below) keeps its full, real width -- only car PLACEMENT skips the column(s) directly
-// below a building door, so the ground still reads as one continuous lot but a straight walk away
-// from any of the three doors never meets a parked car.
-const DOOR_CLEAR_COLUMNS = [mainDoor, libraryDoor, mechDoor].map((d) => gx(d[0]));
-function drawEntranceParkingLot(rect, side) {
-  paveRectFrame(rect.u0, rect.v0, rect.u1, rect.v1, 'parking');
-  // A plain, kerb-less spur merging the lot into the avenue (fillRectFrame's own comment: giving a
-  // merging spur its own kerb ring would cut a seam right where the two roads are meant to join).
-  if (side === 'west') fillRectFrame(rect.u1, rect.v0, gate2U - AVENUE_W / 2, rect.v1, 'asphalt', false, false);
-  else fillRectFrame(gate2U + AVENUE_W / 2, rect.v0, rect.u0, rect.v1, 'asphalt', false, false);
+// The loop road's south kerb row (loopBox.v1, below): everything entrance-side hangs off this one number.
+const loopSouthV = Math.max(coreFrontV + loopClearance, loopV1Floor);
+
+// ---- the Gate 2 roundabout (FB-0054) ----
+// A round-looking ring road with a rounded island (lawn, a palm and shrubs) and four arms: the gate
+// avenue south, the avenue on to the loop road north, and an aisle into each parking lot east and west.
+// A splitter island sits in the gate arm. It is drawn on the tile grid as a stair-stepped circle:
+// cell (x, y) is road / island / lawn by the distance of its centre from the centre, and the
+// autotile pass turns the stair steps into kerb corners and inner corners so the ring reads round.
+const RB = layout.roundabout;
+const RB_R = RB.diameterTiles / 2;
+const gateRowY = gy(fenceFrame.v1);
+const loopSouthRow = gy(loopSouthV);
+const rbTopRow = loopSouthRow + 1; // directly under the loop road's own kerb row
+const rbCx = (gx(gate2U - AVENUE_W / 2) + gx(gate2U + AVENUE_W / 2) + 1) / 2; // centre column edge (even-width avenue)
+const rbCy = rbTopRow + RB_R;
+if (rbCy + RB_R + RB.minGateArmTiles > gateRowY) {
+  throw new Error(`roundabout does not fit between the loop road (row ${loopSouthRow}) and Gate 2 (row ${gateRowY})`);
 }
-drawEntranceParkingLot(westLot, 'west');
-drawEntranceParkingLot(eastLot, 'east');
+const roundaboutCenter = [minU + rbCx * MPT, minV + rbCy * MPT];
+const roundaboutOuterHalf = RB_R * MPT;
+const RB_RX = Math.round(RB_R * RB.stretchX); // half-width in tiles: the roundabout is drawn a little wider than tall
+const rbDist = (x, y) => Math.hypot((x + 0.5 - rbCx) / RB.stretchX, y + 0.5 - rbCy);
+
+// Gate -> roundabout: the short, dead-straight first leg (owner: "as soon as you get in there's a
+// roundabout"). Drawn first so the roundabout and its splitter island claim their own cells after it.
+paveRectFrame(gate2U - AVENUE_W / 2, minV + (rbTopRow + 2 * RB_R - 1) * MPT, gate2U + AVENUE_W / 2, fenceFrame.v1, 'asphalt', 'v');
+
+const rbRoad = [];
+const rbProtect = new Set();
+const lotAisleCells = [];
+const lotProtect = new Set(); // planting islands inside the lots: padAround must leave them alone
+const armX0 = gx(gate2U - AVENUE_W / 2) + 1;
+const armX1 = gx(gate2U + AVENUE_W / 2) - 1;
+{
+  const westArmX0 = rbCx - RB_RX - RB.lotGapTiles - 1;
+  const eastArmX1 = rbCx + RB_RX + RB.lotGapTiles;
+  // The island is every cell within islandRadius of the centre; its lawn is those cells whose eight
+  // neighbours are all island too, so the kerbed pavement round the lawn is one tile thick everywhere,
+  // corners included. The ring road is the band outside it out to roadRadius.
+  const inIsland = (x, y) => rbDist(x, y) <= RB.islandRadius;
+  for (let y = rbTopRow; y < rbTopRow + 2 * RB_R; y++) {
+    for (let x = rbCx - RB_RX; x < rbCx + RB_RX; x++) {
+      if (inIsland(x, y)) {
+        let inner = true;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!inIsland(x + dx, y + dy)) inner = false;
+        if (inner) setRoadCell(x, y, lawnPatch(x, y));
+        else setPadCell(x, y, true);
+        rbProtect.add(y * W + x);
+      } else if (rbDist(x, y) <= RB.roadRadius) {
+        if (setRoadCell(x, y)) rbRoad.push([x, y]);
+      }
+    }
+  }
+  // North arm (up to the loop road's kerb row, crossing it as one carriageway) and south arm, both
+  // the avenue's own width; west and east arms are the parking aisles, two tiles wide.
+  const armCell = (x, y) => {
+    if (inIsland(x, y)) return;
+    if (setRoadCell(x, y)) rbRoad.push([x, y]);
+  };
+  for (let y = loopSouthRow; y <= rbCy; y++) for (let x = armX0; x <= armX1; x++) armCell(x, y);
+  for (let y = rbCy; y < rbTopRow + 2 * RB_R + 1; y++) for (let x = armX0; x <= armX1; x++) armCell(x, y);
+  for (let y = rbCy - 1; y <= rbCy; y++) {
+    for (let x = westArmX0; x < rbCx - RB_RX + 1; x++) armCell(x, y);
+    for (let x = rbCx + RB_RX - 1; x <= eastArmX1; x++) armCell(x, y);
+  }
+  // Splitter island in the gate arm: a paved 2 x 2 block, kerbed on every side, right outside the ring.
+  const splitterY = rbTopRow + 2 * RB_R - 1;
+  for (let y = splitterY; y < splitterY + 2; y++) {
+    for (let x = rbCx - 1; x < rbCx + 1; x++) {
+      setPadCell(x, y, true);
+      rbProtect.add(y * W + x);
+    }
+  }
+}
+
+// ---- entrance parking (FB-0047): a real lot either side of the roundabout ----
+// Rows, top to bottom: kerb, a row of bays, a two-tile driving aisle, a row of bays, kerb. The aisle runs
+// straight into the roundabout's west / east arm. Every bay is one tile wide and one tile deep, so a car
+// (one tile, front view) fills its bay and is centred in it; only some bays hold a car (never three in a
+// row), planting islands with a shrub close each row, and there is never a second car behind the first.
+// D13 (2026-10-04): lots use only the Urban Pack front-view cars (one orientation, one scale).
+const PARKING_CARS = [TILE.carFrontYellow, TILE.carFrontRed, TILE.carFrontGreen];
+const BAY_ROWS = { top: 0, bayA: 1, aisleA: 2, aisleB: 3, bayB: 4, bottom: 5 };
+// `open`: which end the aisle leaves by ('east', 'west', or null). `avoid`: columns that stay car-free.
+function drawBayLot({ x0, x1, yTop, open, avoid = [], seed = 0 }) {
+  const clear = Math.ceil(layout.walkwayWidthMeters / MPT / 2) + 1;
+  const isAvoided = (x) => avoid.some((c) => Math.abs(x - c) <= clear);
+  const rowOf = (name) => yTop + BAY_ROWS[name];
+  const aisle = [rowOf('aisleA'), rowOf('aisleB')];
+  for (let y = yTop; y <= rowOf('bottom'); y++) {
+    for (let x = x0; x <= x1; x++) {
+      const ringCol = x === x0 || x === x1;
+      const ringRow = y === yTop || y === rowOf('bottom');
+      if (aisle.includes(y)) {
+        const opening = (x === x1 && open === 'east') || (x === x0 && open === 'west');
+        if (ringCol && !opening) setPadCell(x, y);
+        else if (setRoadCell(x, y)) lotAisleCells.push([x, y]);
+      } else if (ringRow || ringCol) {
+        setPadCell(x, y);
+      } else {
+        setRoadCell(x, y, TILE.parking);
+      }
+    }
+  }
+  // bays: a planting island at each row end and every seventh bay, cars in some of the rest
+  const bayXs = [];
+  for (let x = x0 + 1; x <= x1 - 1; x++) bayXs.push(x);
+  for (const bayRow of [rowOf('bayA'), rowOf('bayB')]) {
+    let run = 0;
+    bayXs.forEach((x, i) => {
+      const idx = bayRow * W + x;
+      if (!inGrid(x, bayRow) || ground[idx] !== TILE.parking) return;
+      const island = i === 0 || i === bayXs.length - 1 || (i % 7 === 6 && i < bayXs.length - 3);
+      if (island) {
+        ground[idx] = lawnPatch(x, bayRow);
+        structures[idx] = TILE.bush;
+        lotProtect.add(idx);
+        run = 0;
+        return;
+      }
+      if (hash(x + seed, bayRow) % 100 < 52 && run < 2 && !isAvoided(x)) {
+        structures[idx] = PARKING_CARS[hash(x, bayRow + seed) % PARKING_CARS.length];
+        run++;
+      } else {
+        run = 0;
+      }
+    });
+  }
+}
+const DOOR_CLEAR_COLUMNS = [mainDoor, libraryDoor, mechDoor].map((d) => gx(d[0]));
+const lotTop = rbCy - 3; // so the aisle rows are the roundabout's two centre rows
+const lotTiles = Math.round(layout.entranceParking.widthMeters / MPT);
+const westLotX1 = rbCx - RB_RX - RB.lotGapTiles;
+const westLotX0 = westLotX1 - lotTiles + 1;
+const eastLotX0 = rbCx + RB_RX + RB.lotGapTiles - 1;
+const eastLotX1 = eastLotX0 + lotTiles - 1;
+drawBayLot({ x0: westLotX0, x1: westLotX1, yTop: lotTop, open: 'east', avoid: DOOR_CLEAR_COLUMNS, seed: 3 });
+drawBayLot({ x0: eastLotX0, x1: eastLotX1, yTop: lotTop, open: 'west', avoid: DOOR_CLEAR_COLUMNS, seed: 11 });
+// Pavement round the roundabout cluster and both aisles; the lots' own kerb rows and the island stay as drawn.
+padAround(rbRoad.concat(lotAisleCells), new Set([...rbProtect, ...lotProtect]));
+const lotRect = (x0, x1) => ({ u0: minU + x0 * MPT, v0: minV + lotTop * MPT, u1: minU + x1 * MPT, v1: minV + (lotTop + BAY_ROWS.bottom) * MPT });
+const westLot = lotRect(westLotX0, westLotX1);
+const eastLot = lotRect(eastLotX0, eastLotX1);
+// The island's own landmark palm and shrubs are planted in section 15 (plantTree needs TREE_CLEARANCE_TILES).
+const roundaboutIslandBox = { ix0: rbCx - 2, iy0: rbCy - 2, ix1: rbCx + 2, iy1: rbCy + 2 };
 
 // The loop road around the academic core (owner: "internal roads form a loop... rather than one
 // straight avenue"), replacing the old single straight avenue all the way to the Main Block door.
@@ -1437,7 +1540,7 @@ const loopBox = {
   // supposed to protect (this round's own bug -- confirmed by direct ground-layer inspection: the
   // "5 tiles" the old comment promised only ever produced ~3 in practice). parkingV0 is now floored
   // against this same value instead (see above), so the two can never conflict.
-  v1: Math.max(coreFrontV + loopClearance, loopV1Floor),
+  v1: loopSouthV,
 };
 function drawLoopRoad(box, widthM) {
   paveRectFrame(box.u0, box.v0, box.u1, box.v0 + widthM, 'asphalt', 'h');
@@ -1497,19 +1600,6 @@ const courtsAnchor = [otherCourtsFeature.rect[0] + otherCourtsFeature.rect[2] / 
 connectWalkway(courtsAnchor, nearestReference(courtsAnchor));
 
 const parkingFeature = layout.manual.parking;
-// The connector leaves from the south edge of the parking rectangle (clear of the athletics track,
-// which sits just north of it) so the spur to the avenue never gets painted over by the track/turf
-// drawn afterwards (section 13).
-const parkingAnchor = [parkingFeature.rect[0] + parkingFeature.rect[2] / 2, parkingFeature.rect[1] + parkingFeature.rect[3]];
-// "Parking connects to a road": a direct asphalt spur to the loop road (section 11b) itself (not just
-// a pedestrian walkway node) -- the west parking lot sits well west of the academic core, so this
-// targets the loop's own west strip rather than the old single straight avenue, which no longer runs
-// this far north (the owner's layout correction replaced it with the loop). A little inset from the
-// loop's own north/south ends keeps the join off its corner kerb.
-{
-  const loopTargetV = Math.max(loopBox.v0 + MPT, Math.min(loopBox.v1 - MPT, parkingAnchor[1]));
-  connectRect(parkingAnchor, [loopBox.u0, loopTargetV], 5, 'asphalt', 'h');
-}
 
 // The avenue's last leg and the loop road itself are drawn at the very end of section 13, not here
 // (see the comment where they're actually called): the Courts feature (`otherCourts`, below) turned
@@ -1518,50 +1608,23 @@ const parkingAnchor = [parkingFeature.rect[0] + parkingFeature.rect[2] / 2, park
 
 // ================= 13. parking / courts / track =================
 
-paveRectFrame(parkingFeature.rect[0], parkingFeature.rect[1], parkingFeature.rect[0] + parkingFeature.rect[2], parkingFeature.rect[1] + parkingFeature.rect[3], 'parking');
-
-// FB-0025: a few parked cars (Pixel Vehicle Pack, assets/vendor/, CC0) so a lot doesn't read as an
-// empty grey rectangle. Placed only on plain 'parking' cells with nothing there yet (never on the
-// lot's own kerb ring, which paveRectFrame just drew) and in two rows hugging the north/south kerb
-// with a gap of at least one tile column between cars, so a wide open driving aisle stays down the
-// middle and every car has walkable ground on at least one side -- there's no walkway inside a lot
-// for FB-0022's "no solid tile on a walkway" rule to apply to, but leaving it open keeps the lot
-// itself crossable on foot, same as any other ground tile. Deterministic (no RNG, like the rest of
-// this generator): the 4 colors/models just cycle in a fixed order, restarting for each lot.
-// A function (not inlined once, section 11b's addendum: the two new entrance lots flanking Gate 2's
-// roundabout, "parking on the left and right", get the same treatment as the original Student Parking).
-function placeParkingCars(u0, v0, u1, v1, avoidColumns = []) {
-  // Quality loop, category 1 run 3 (2026-09-29): "a few parked cars in the right perspective (Kenney
-  // RPG Urban cars are top-down 3/4, use those)" -- mixed into the same round-robin pool as the
-  // existing Modern City/Pixel Vehicle Pack cars, rather than replacing them outright (the owner asked
-  // for "a few", not a wholesale swap, and every parking lot on campus draws from this one pool).
-  // D13 (2026-10-04): the pool used to mix the Pixel Vehicle Pack's side-view cars (29x13 sprites squeezed
-  // into one tile, so about 16x7 px: a car smaller than the player, lying across a bay that runs the other
-  // way) with these front-view Urban Pack cars (16x16, one tile). Two scales and two orientations in one lot.
-  // Lots now use only the Urban Pack front-view cars: one orientation (nose toward the camera, matching the
-  // bays) and one scale (one full tile, about the player's width). The carSedan/carSuv/carVan tiles are left in
-  // the tileset (tile order is pinned by tests) but are no longer placed anywhere.
-  const PARKING_CARS = [TILE.carFrontYellow, TILE.carFrontRed, TILE.carFrontGreen];
-  const x0 = gx(u0) + 1;
-  const x1 = gx(u1) - 1;
-  const y0 = gy(v0) + 1;
-  const y1 = gy(v1) - 1;
-  // A little clearance either side of an avoided column (a full walkway width, not just the one
-  // column a door's own u happens to round to), so a straight walk away from the door never grazes a
-  // car parked one tile off to the side of it either.
-  const clear = Math.ceil(layout.walkwayWidthMeters / MPT / 2) + 1;
-  const isAvoided = (x) => avoidColumns.some((c) => Math.abs(x - c) <= clear);
-  let n = 0;
-  for (const y of [y0, y1]) {
-    for (let x = x0; x < x1; x += 2) {
-      if (!inGrid(x, y) || isAvoided(x) || ground[y * W + x] !== TILE.parking || structures[y * W + x] !== -1) continue;
-      structures[y * W + x] = PARKING_CARS[n++ % PARKING_CARS.length];
-    }
+// Student Parking (FB-0047): the same lot design as the gate lots (drawBayLot, section 11b): kerb, bays, a
+// two-tile aisle, bays, kerb, with one car per bay and planting islands at the row ends. The aisle leaves by
+// the east end and a plain two-lane road (with pavement) runs on to the loop road's west strip, so the lot
+// is on the road network. "Parking connects to a road" (section 12's old spur left from the lot's south
+// edge; the aisle is the natural way out of a lot).
+{
+  const lotX0 = gx(parkingFeature.rect[0]);
+  const lotX1 = gx(parkingFeature.rect[0] + parkingFeature.rect[2]);
+  const lotYTop = gy(parkingFeature.rect[1]) + 1;
+  drawBayLot({ x0: lotX0, x1: lotX1, yTop: lotYTop, open: 'east', seed: 29 });
+  const spur = [];
+  const spurX1 = gx(loopBox.u0) + 2;
+  for (const y of [lotYTop + BAY_ROWS.aisleA, lotYTop + BAY_ROWS.aisleB]) {
+    for (let x = lotX1 + 1; x <= spurX1; x++) if (setRoadCell(x, y)) spur.push([x, y]);
   }
+  padAround(spur.concat(lotAisleCells), lotProtect);
 }
-placeParkingCars(parkingFeature.rect[0], parkingFeature.rect[1], parkingFeature.rect[0] + parkingFeature.rect[2], parkingFeature.rect[1] + parkingFeature.rect[3]);
-placeParkingCars(westLot.u0, westLot.v0, westLot.u1, westLot.v1, DOOR_CLEAR_COLUMNS);
-placeParkingCars(eastLot.u0, eastLot.v0, eastLot.u1, eastLot.v1, DOOR_CLEAR_COLUMNS);
 
 function otherCourt(x0, y0, x1, y1) {
   forRectFrame(x0, y0, x1, y1, (x, y) => (ground[y * W + x] = TILE.court));
@@ -1647,7 +1710,7 @@ function tennisCourt(x0, y0) {
 // connectWalkway/otherCourt paint over whatever's there with no regard for an already-kerbed road
 // underneath. Drawn here, they reclaim their own rectangles as the final, authoritative paint, so the
 // road reads as continuous asphalt/kerb end to end regardless of what got painted over it first.
-paveRectFrame(gate2U - AVENUE_W / 2, loopBox.v1, gate2U + AVENUE_W / 2, roundaboutCenter[1] - roundaboutOuterHalf, 'asphalt', 'v');
+// (the avenue's last leg to the roundabout is its north arm, drawn in section 11b)
 drawLoopRoad(loopBox, LOOP.widthMeters);
 
 // ================= 14. campus fence: a closed straight loop, broken only by the two gates =================
@@ -1698,8 +1761,8 @@ structOnLawn(gx(gate2U + AVENUE_W / 2 + 3), gy(fenceFrame.v1 - 2), TILE.flowerbe
 // a 1-tile margin all around the tree's own 2x3 footprint (canopy + trunk).
 const TREE_CLEARANCE_TILES = new Set([
   'walkway', 'asphalt', 'paving', 'parking', 'track', 'turf', 'court',
-  'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
   'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
+  ...autotile.KERB_TILE_NAMES,
 ]);
 function hasTreeClearance(cx, topY) {
   for (let y = topY - 1; y <= topY + 3; y++) {
@@ -1731,13 +1794,16 @@ function plantTree(cx, topY, kind) {
   return true;
 }
 
-// Quality loop, category 1 run 1 (2026-09-28): the roundabout island's own landmark palm (section
-// 11b built the kerb ring around it, but couldn't plant here yet -- see that section's own comment).
-// Offset into the island's NW quadrant, not dead centre, so FB-0026's own "the island's centre tile
-// stays walkable" test keeps passing.
+// The roundabout island's landmark palm and a couple of shrubs, on its 4 x 4 lawn core. The palm's trunk
+// stays off the exact centre tile (FB-0026: the island's centre stays walkable).
 {
-  const { ix0, iy0, ix1, iy1 } = roundaboutIslandBox;
-  plantTree(ix0 + Math.max(1, Math.floor((ix1 - ix0) * 0.25)), iy0 + Math.max(1, Math.floor((iy1 - iy0) * 0.25)), 'palm');
+  plantTree(rbCx - 1, rbCy - 2, 'palm'); // only fits if the lawn core is 3 rows tall and 2 wide: not this island
+  // shrubs scattered over the lawn, never on the exact centre tile
+  for (let y = rbCy - 3; y <= rbCy + 2; y++) {
+    for (let x = rbCx - RB_RX; x < rbCx + RB_RX; x++) {
+      if ((x + 2 * y) % 4 === 0 && !(x === Math.floor(rbCx) && y === Math.floor(rbCy))) structOnLawn(x, y, TILE.bush);
+    }
+  }
 }
 
 // Date palms lining the entrance avenue, and flanking the Main Block steps (docs/research/
@@ -1937,7 +2003,7 @@ for (const h of westHostels.concat(eastHostels)) {
 
 // A low decorative fence along each gate-side parking lot's near (avenue-facing) edge.
 for (const lot of [westLot, eastLot]) {
-  const y = gy(lot.v1);
+  const y = gy(lot.v0) - 1;
   for (let x = gx(lot.u0); x <= gx(lot.u1); x++) structOnLawn(x, y, TILE.lowFence);
 }
 
@@ -2110,6 +2176,62 @@ if (mainBlock.frontBand) {
     break;
   }
 }
+
+// ================= 16.6 road autotile: kerbs, pavements, junctions, lane markings (FB-0048/54/55) =================
+// One rule set for every road, applied once to the finished ground layer (tools/campus/autotile.js): each
+// pavement cell's kerb tile comes from its 8 neighbours, so a T junction, a roundabout's stair-stepped
+// ring, a dead end, a splitter island or a pavement meeting another pavement all come out right whichever
+// painter laid the cells down. Kerb tiles are only drawn between pavement and open ground (never
+// between two pavements, so a pavement beside another pavement is one surface, not two kerb lines:
+// FB-0048) and road never gets a kerb strip across it (FB-0055).
+function autotileRoads() {
+  const names = tileInfo.tiles.map((t) => t.name);
+  const CONNECTED = (name) => name === 'paving' || name === 'parking' || name.startsWith('walkway') || name.startsWith('bitsStep');
+  const classOf = (x, y) => {
+    if (!inGrid(x, y)) return 'O';
+    const i = y * W + x;
+    const g = ground[i];
+    if (ROAD_GROUND.has(g)) return 'R';
+    const name = names[g];
+    if (name.startsWith('kerb')) return islandPad[i] ? 'I' : 'P';
+    return CONNECTED(name) ? 'C' : 'O';
+  };
+  const { tiles, toRoad } = autotile.autotileKerbs(W, H, classOf);
+  for (const [x, y] of toRoad) ground[y * W + x] = TILE.asphalt;
+  for (const [key, name] of tiles) {
+    const [x, y] = key.split(',').map(Number);
+    ground[y * W + x] = TILE[name];
+  }
+  // Lane markings stop short of every junction, island and road end.
+  const isRoad = (x, y) => inGrid(x, y) && ROAD_GROUND.has(ground[y * W + x]);
+  const dashes = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const g = ground[y * W + x];
+      if (g === TILE.roadLineH) dashes.push([x, y, 'h']);
+      else if (g === TILE.roadLineV) dashes.push([x, y, 'v']);
+    }
+  }
+  const dropped = dashes.filter(([x, y, axis]) => !autotile.laneLineKept(isRoad, x, y, axis));
+  for (const [x, y] of dropped) ground[y * W + x] = TILE.asphalt;
+}
+// Zebra crossing over the gate arm, just inside Gate 2 (stripes run with the traffic, one tile deep, the
+// whole width of the carriageway), where the two pavements either side of the avenue meet the gate.
+for (let x = armX0; x <= armX1; x++) {
+  const i = (gateRowY - 2) * W + x;
+  if (ROAD_GROUND.has(ground[i])) ground[i] = TILE.crossingH;
+}
+// And wherever a walkway runs straight across a road to a walkway on the far side (autotile.findCrossings).
+{
+  const names = tileInfo.tiles.map((t) => t.name);
+  const isRoadCell = (x, y) => inGrid(x, y) && ROAD_GROUND.has(ground[y * W + x]);
+  const isPadCell = (x, y) => inGrid(x, y) && names[ground[y * W + x]].startsWith('kerb');
+  const isPathCell = (x, y) => inGrid(x, y) && /^walkway/.test(names[ground[y * W + x]]);
+  for (const { x, y, axis } of autotile.findCrossings(W, H, isRoadCell, isPadCell, isPathCell)) {
+    ground[y * W + x] = axis === 'v' ? TILE.crossingV : TILE.crossingH;
+  }
+}
+autotileRoads();
 
 // Re-stamp every building's entrance tiles now that all road/walkway/parking painting above has
 // finished: the entrance avenue and the walkway network both terminate right at a door, and a
@@ -2331,7 +2453,7 @@ rectObjectFrame('area', otherCourtsFeature.name, otherCourtsFeature.rect[0], oth
 rectObjectFrame('area', parkingFeature.name, parkingFeature.rect[0], parkingFeature.rect[1], parkingFeature.rect[0] + parkingFeature.rect[2], parkingFeature.rect[1] + parkingFeature.rect[3], [{ name: 'kind', type: 'string', value: 'parking' }]);
 // FB-0026 (owner's layout correction, 2026-09-21): the roundabout just inside Gate 2, parking either
 // side of the road past it, and the loop road around the academic core.
-rectObjectFrame('area', 'Gate 2 Roundabout', roundaboutCenter[0] - roundaboutOuterHalf, roundaboutCenter[1] - roundaboutOuterHalf, roundaboutCenter[0] + roundaboutOuterHalf, roundaboutCenter[1] + roundaboutOuterHalf, [{ name: 'kind', type: 'string', value: 'roundabout' }]);
+rectObjectGrid('area', 'Gate 2 Roundabout', rbCx - RB_RX, rbTopRow, rbCx + RB_RX - 1, rbTopRow + 2 * RB_R - 1, [{ name: 'kind', type: 'string', value: 'roundabout' }]);
 rectObjectFrame('area', 'Gate Parking (West)', westLot.u0, westLot.v0, westLot.u1, westLot.v1, [{ name: 'kind', type: 'string', value: 'parking' }]);
 rectObjectFrame('area', 'Gate Parking (East)', eastLot.u0, eastLot.v0, eastLot.u1, eastLot.v1, [{ name: 'kind', type: 'string', value: 'parking' }]);
 rectObjectFrame('area', 'Academic Core Loop Road', loopBox.u0, loopBox.v0, loopBox.u1, loopBox.v1, [{ name: 'kind', type: 'string', value: 'road' }]);

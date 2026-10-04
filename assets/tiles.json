@@ -1891,6 +1891,78 @@
       "solid": false,
       "overhead": false,
       "color": "#725f54"
+    },
+    {
+      "name": "kerbInTL",
+      "solid": false,
+      "overhead": false,
+      "color": "#a8aab2"
+    },
+    {
+      "name": "kerbInTR",
+      "solid": false,
+      "overhead": false,
+      "color": "#a8aab2"
+    },
+    {
+      "name": "kerbInBL",
+      "solid": false,
+      "overhead": false,
+      "color": "#a8aab2"
+    },
+    {
+      "name": "kerbInBR",
+      "solid": false,
+      "overhead": false,
+      "color": "#a8aab2"
+    },
+    {
+      "name": "kerbCapT",
+      "solid": false,
+      "overhead": false,
+      "color": "#a99e93"
+    },
+    {
+      "name": "kerbCapB",
+      "solid": false,
+      "overhead": false,
+      "color": "#a89d92"
+    },
+    {
+      "name": "kerbCapL",
+      "solid": false,
+      "overhead": false,
+      "color": "#a99b8b"
+    },
+    {
+      "name": "kerbCapR",
+      "solid": false,
+      "overhead": false,
+      "color": "#a99b8b"
+    },
+    {
+      "name": "kerbStripV",
+      "solid": false,
+      "overhead": false,
+      "color": "#a7a19d"
+    },
+    {
+      "name": "kerbStripH",
+      "solid": false,
+      "overhead": false,
+      "color": "#aa9d8e"
+    },
+    {
+      "name": "kerbIsland",
+      "solid": false,
+      "overhead": false,
+      "color": "#aa9a88"
+    },
+    {
+      "name": "kerbFill",
+      "solid": false,
+      "overhead": false,
+      "color": "#a8adb8"
     }
   ]
 }

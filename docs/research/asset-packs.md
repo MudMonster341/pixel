@@ -462,3 +462,10 @@ not added there now, since this task's brief was research-only and `tools/` was 
 4. **Still a gap:** no free pack was found for background students/crowd variety beyond what LimeZu's
    four named characters (Adam, Alex, Amelia, Bob) already give -- recoloring those four differently
    (as the game already plans for the lead) remains the only free option for NPC variety.
+
+## Addendum, 2026-10-04: road autotile pieces (P3a)
+
+No new pack. The road autotile (`tools/campus/autotile.js`, `tools/make-assets.js` `kerbPiece`/`kerbInner`) uses more
+tiles of the Kenney RPG Urban Pack (CC0) sheet already credited: its plaza set's narrow-path pieces (cols 11-15, rows
+3-5: strip, end caps, one-tile island) as the splitter/island kerbs, and the pack's own kerb band pixels (sampled from
+its edge tile) for the four inner-corner tiles that the 9-slice lacks. The car sprites are unchanged.

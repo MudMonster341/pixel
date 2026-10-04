@@ -287,7 +287,9 @@ test('the bus stop sits on the real Gate 2 road: asphalt under the wheels, sand 
   const playerSteps = steps.filter((s) => (s.placeActor || (s.move && s.move.actor === 'player')));
   const standPoints = [playerSteps[0].placeActor.at.offset, playerSteps[1].move.path.at(-1).offset];
   const sandRow = Math.floor(gy + standPoints[1][1]);
-  assert.equal(tileAt(Math.floor(gx + standPoints[1][0]), sandRow), 'sand', 'she should land on the pavement/sand');
+  // FB-0049: the road now has a kerbed pavement on both sides, so the first step south of it is pavement (kerb tile) or sand.
+  const landing = tileAt(Math.floor(gx + standPoints[1][0]), sandRow);
+  assert.ok(landing === 'sand' || landing.startsWith('kerb'), `she should land on the pavement/sand, not ${landing}`);
   // Her feet (8px below her origin) start below the bus's ground line, so she is drawn in front of it.
   assert.ok(gy + standPoints[0][1] + 0.5 > feetY, 'she would be hidden behind the bus when she steps out');
   // Camera: centred 6 tiles east of the gate, 10 tiles to each side. The bus starts fully off the left

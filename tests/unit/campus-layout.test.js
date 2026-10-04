@@ -273,7 +273,8 @@ test('quality loop: the roundabout island has a real kerb ring around it (not ju
   const cy = Math.floor(roundabout.y + roundabout.height / 2);
   let sawKerb = false;
   for (let x = Math.floor(roundabout.x); x < roundabout.x + roundabout.width; x++) {
-    if ((structNameAt(x, cy) || '').startsWith('kerb')) sawKerb = true;
+    // FB-0054: the island's kerbed rim is now ground (autotile.js), not a structure overlay on the lawn.
+    if ((groundNameAt(x, cy) || '').startsWith('kerb') || (structNameAt(x, cy) || '').startsWith('kerb')) sawKerb = true;
   }
   assert.ok(sawKerb, 'the roundabout island has no kerb tile bordering it');
 });
@@ -353,7 +354,7 @@ test('FB-0026: a loop road encircles the academic core and connects back to the 
 test('FB-0026: the walk from spawn to the Main Block door follows roads and walkways only', () => {
   const HARDSCAPE = new Set([
     'walkway', 'paving', 'asphalt', 'parking',
-    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'kerbInTL', 'kerbInTR', 'kerbInBL', 'kerbInBR', 'kerbCapT', 'kerbCapB', 'kerbCapL', 'kerbCapR', 'kerbStripV', 'kerbStripH', 'kerbIsland', 'kerbFill',
     'roadLineH', 'roadLineV', 'crossingH', 'crossingV',
   ]);
   const isHardscape = (x, y) => {
@@ -551,7 +552,7 @@ test('FB-0028: every walkway connects -- a hardscape-only walk (no cutting acros
   // building door specifically never needs to leave paving at all.)
   const HARDSCAPE = new Set([
     'walkway', 'paving', 'asphalt', 'parking',
-    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR',
+    'kerbT', 'kerbB', 'kerbL', 'kerbR', 'kerbTL', 'kerbTR', 'kerbBL', 'kerbBR', 'kerbInTL', 'kerbInTR', 'kerbInBL', 'kerbInBR', 'kerbCapT', 'kerbCapB', 'kerbCapL', 'kerbCapR', 'kerbStripV', 'kerbStripH', 'kerbIsland', 'kerbFill',
     'walkwayEdgeT', 'walkwayEdgeB', 'walkwayEdgeL', 'walkwayEdgeR',
     'walkwayCornerTL', 'walkwayCornerTR', 'walkwayCornerBL', 'walkwayCornerBR',
     'roadLineH', 'roadLineV', 'crossingH', 'crossingV',

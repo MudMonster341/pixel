@@ -16,23 +16,25 @@ To change a line, edit `src/campus-facts.js` (then update this table; `npm test`
 
 ## Roles and openers
 
-| role | name tag | openers (small talk, no facts) |
+FB-0051 (2026-10-04): the owner asked for funnier, weirder CS-student lines, so the openers below were rewritten (4-6 per CS-flavoured role: semicolons, "works on my machine", AI wrote it, sudo, vim, git push --force, deadlines, Wi-Fi, Stack Overflow, energy drinks). Light, never about a real person. Each opener is followed by one sourced fact; the facts did not change. **Owner: please read and tell me which to change or cut.**
+
+| role | name tag | openers (small talk, no facts; one is picked per student) |
 |------|----------|--------------------------------|
-| first-year | First-year | Hi! It's only my first few weeks, everything is still new. / Oh hey! Still finding my way around, honestly. |
-| lug-member | LUG member | Hey! Have you tried Linux yet? Just asking. / Penguins are underrated, you know. |
-| library-regular | Library regular | Shh... just kidding, hi! I practically live in the library. / Hello! Quiet campus day, the way I like it. |
-| tech-club-member | Tech club member | Hi! Sorry, I was thinking about a circuit. / Hey! I'm on my way to the lab. |
-| sports-player | Sports player | Hey! Just warming up, don't mind me. / Hi! Great day for a game. |
-| hostel-resident | Hostel mate | Hi! Just heading back to the hostel. / Hey! Is it dinner time yet? |
-| cs-student | CS student | Hey! Give me a second, my code is compiling. / Hi! Do you know any good debugging tricks? |
-| ai-student | CS student | Hello! I've been reading about machine learning all day. / Hi! Ask me anything about AI. Well, almost anything. |
-| quiz-club-member | Quiz club member | Hi! Quick question: how good is your trivia? / Hey! I'm in a quizzing mood today. |
-| cultural-club-member | Cultural club member | Hi! I'm rushing to a rehearsal. / Hey! Do you like music or art more? |
-| senior | Senior | Hi! Final stretch for me, can't wait. / Hey! I've been around campus a while now. |
-| volunteer | Volunteer | Hi there! Always happy to help. / Hey! Got a minute to chat? |
-| campus-regular | Student | Hi! I know my way around, so ask away. / Hello! Looking for something? |
-| acm-member | ACM member | Hi! Got a minute? I could talk about computing all day. / Hey! I'm heading to a chapter meeting. |
-| mtc-member | MTC member | Hi! Black and white, always. It saves time in the morning. / Hey! I'm off to a club meeting. |
+| first-year | First-year | Hi! It's only my first few weeks, everything is still new. / Oh hey! Still finding my way around. The map and I are not on speaking terms. / I've walked into the wrong class twice. Both times it sounded more interesting. / Hi! Do deadlines always land tomorrow, or is that just mine? / A senior told me to sleep more, then went for an energy drink. Mixed messages! |
+| lug-member | LUG member | Hey! Have you tried Linux yet? Just asking. / Penguins are underrated, you know. / sudo make me a sandwich... permission denied. Hi! / I use Linux, by the way. Sorry, it just slips out. / I once deleted my whole project folder with one command. I still say hello to it every morning. / My workflow is Stack Overflow, copy, paste, hope. Hi! |
+| library-regular | Library regular | Shh... just kidding, hi! I practically live in the library. / I came for one book. Four hours and thirty browser tabs later, here I am. / The library Wi-Fi and I have a complicated relationship. It's mostly one-sided. / Hello! Quiet campus day, the way I like it. / Quiet please, my code is thinking. |
+| tech-club-member | Tech club member | Hi! Sorry, I was thinking about a circuit. / Hey! I'm on my way to the lab. Have you tried turning it off and on again? / Our soldering iron has a better attendance record than I do. / Everything is a circuit if you stare at it long enough. Even lunch. / Magic smoke is what makes a circuit work. When it leaves, so does the circuit. |
+| sports-player | Sports player | Hey! Just warming up, don't mind me. / Hi! Great day for a game. / I run to clear my head. The bug is still waiting when I get back. |
+| hostel-resident | Hostel mate | Hi! Just heading back to the hostel. / Hey! Is it dinner time yet? / My Wi-Fi password is longer than my last essay. I type it with love. |
+| cs-student | CS student | It works on my machine. I have no idea why it doesn't work on yours. / I forgot a semicolon and lost an hour. We don't talk about it. / Quick question: is it a bug or a feature? Asking for my project. / My code compiled on the first try. I'm scared. Something is wrong. / I'm not procrastinating. I'm running a background process called Later. / Hey! Do you know how to exit vim? Asking for a friend. It's been three days. |
+| ai-student | CS student | The AI wrote my code. Now I'm politely asking it to explain it to me. / My model is ninety-nine percent accurate on the training data. We don't discuss the test data. / I asked a chatbot for advice. It said it would get back to me. Relatable. / Machine learning is just statistics with a better logo. / I trained a model all night. It learned to predict that I'm sleepy. / Hi! Ask me anything about AI. Well, almost anything. |
+| quiz-club-member | Quiz club member | Hi! Quick question: how good is your trivia? I'll know if you google it. / Fun fact: I know a lot of fun facts. Ask me one. Actually don't, I'll start. / Hey! I'm in a quizzing mood today. Phone a friend? I only have a calculator. / Stack Overflow answers my questions. I answer everyone else's. Fair trade. / Trick question: which comes first, the chicken or the compile error? |
+| cultural-club-member | Cultural club member | Hi! I'm rushing to a rehearsal. / Hey! Do you like music or art more? / I wrote a song about my code. It has a lot of bugs and one very sad chorus. |
+| senior | Senior | Hi! Final stretch for me, can't wait. / I've survived every deadline so far. Mostly with snacks and optimism. / Seniors don't panic. We quietly open seven tabs of Stack Overflow. / My advice: save the file, back it up, then save it again. / Hey! I've been around campus a while now. I know which seat has the best Wi-Fi. |
+| volunteer | Volunteer | Hi there! Always happy to help. / Hey! Got a minute to chat? / I signed up for one small thing. It is now my whole personality. |
+| campus-regular | Student | Hi! I know my way around, so ask away. / Hello! Looking for something? / If you need directions: left, then right, then ask someone else. That's my map. |
+| acm-member | ACM member | Hi! Got a minute? I could talk about computing all day. / Our meetings run on pizza and optimism. Mostly pizza. / I told my code it was just a phase. It's still in production. / I once used git push --force. We don't speak of the incident. Hi! / Competitive programming: because regular programming wasn't stressful enough. |
+| mtc-member | MTC member | Hi! Black and white, always. It saves time in the morning. / Our club motto is keep it simple. Our group chat disagrees. / We tried a colour scheme once. The meeting never recovered. / Hey! I'm off to a club meeting. It's for ideas. Mostly for snacks. |
 
 ## Placeholder lines (no sourced facts yet)
 
@@ -48,9 +50,33 @@ The research has nothing on the MTC club, so the MTC member says these light, no
 
 One ambient student can have a `name` (the name tag) and fixed `lines` (said the first time she talks to them, instead of the opener and a fact; later talks carry on with the role's facts). The data is in `src/ambient.js`. These are **PLACEHOLDERS for the owner to edit**: light, friendly, no invented personal facts.
 
+FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and its addendum):
+- `{name}` in a line is the player's name (it is "Taru" unless the player typed another). No line mentions a birthday: that stays the surprise at the end.
+- **Mustafa** (black and orange LUG hoodie) stands near each mini-game with a different fixed line, and repeats only that line. The three tiles: Physics Lab (main-block-3, 9,4), ICL (main-block-1, 5,9), Room 195 (main-block-1, 27,4).
+- **Professors** keep their tag as "Prof. <first name>" (names only, no surnames). After the jokes the sourced fact about that professor is said (Raja CF12, Angel CF22, Elakkiya CF23), nothing else.
+  Raja's last line hints at the chariot scene that comes in a later package. The girls (Sana, Shraddha, Palak), Mevin and Narda are also a later package.
+- The other friends carry on with their role's facts after their own lines (e.g. Sid, a CS student, shares a CS fact).
+- Looks: Satvik has a camera and a slightly deeper skin tone, Prof. Angel has small white wings, Prof. Raja a gold-trimmed maroon jacket. The hair length is the pack body's own (three hair shapes), so people differ by hair colour, skin, shirt and body.
+- Risky lines to look at first: Prof. Raja ("I carry myself like royalty"), Prof. Elakkiya ("goated", "no mercy"), Prof. Angel ("the wings are real"), Najam ("Sleep is a feature I turned off").
+
 | name | where | lines |
 |------|-------|-------|
-| Deanne | campus, avenue bench (tile 243,162), role hostel-resident | Hi, I'm Deanne! I live in the hostel. / Hostel dinner is the best part of my day, honestly. That and my chai. / I know every quiet corner on this campus. Ask me anything. |
+| Sid | campus, patrols 232,160 to 248,165, sheet npc-friend-sid | Hey {name}! I'm Sid. Quick question: how many browser tabs is too many? I'm at forty and climbing. / My laptop fan is louder than my lecture right now. It's a duet. / If you hear screaming from the lab, don't worry. It's just me and a merge conflict. |
+| Deanne | campus, tile 243,162 | Hi, I'm Deanne! I live in the hostel. / Hostel dinner is the best part of my day, honestly. That and my chai. / I know every quiet corner on this campus. Ask me anything. |
+| Akshit | campus, tile 221,137, sheet npc-friend-akshit | Akshit here. My rules: nothing before coffee, nothing after midnight, nothing without a backup. / Is it a bug or a feature? Depends on whether the demo is today. / I'd tell you a UDP joke, but you might not get it. |
+| Satvik | campus, tile 215,134, sheet npc-friend-satvik | Hold still, {name}! The light is perfect. Say cheese... or say semicolon, it works for us too. / I photograph everything here: sunsets, lunch, bugs on the screen. Mostly lunch. / My camera's one rule: if it's a good moment, it's a good shot. Strike a pose! |
+| Varun | campus, tile 238,136, sheet npc-friend-varun | I'm Varun. I came for a quick chat and stayed for a long one. / My code has two states: it works, and nobody touch it. / Is the canteen open? Asking for my stomach. It has no Wi-Fi and no patience. |
+| Mitul | campus, tile 190,63, sheet npc-friend-mitul | Mitul reporting! Fun fact: it's always a missing semicolon. Always. / I counted my deadlines. Then I stopped counting, for my own health. / Hydration check, {name}! Water first. Then energy drink number seven. |
+| Siva | campus, tile 150,115, sheet npc-friend-siva | Siva here! I use dark mode for everything. Even this conversation. / Why do programmers prefer dark mode? Because light attracts bugs. / If it works, don't touch it. If it doesn't, also don't touch it. Go get chai. |
+| Prof. Raja | main-block-g, tile 26,19, sheet npc-prof-raja | Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture. / I carry myself like royalty because my timetable demands it. Mostly the Monday ones. / I have a ride coming. Quite soon, actually. |
+| Shamsuddin | main-block-g, patrols 22,24 to 27,24, sheet npc-friend-shamsuddin | Shamsuddin! I name my files final, final2 and really_final. It's called version control. / My code review was one question mark. I'm still thinking about it. / Wi-Fi is the one thing I can't compile, debug or fix. Good luck! |
+| Mustafa | main-block-1, tile 5,9, sheet npc-mustafa | The ICL is basically one long exhale. Tap gently, don't mash. / My record there is embarrassing. I'm not telling. |
+| Mustafa | main-block-1, tile 27,4, sheet npc-mustafa | Room 195: stack things neatly, like my to-do list. Only one of those works. / Pieces fall, rows clear. If only deadlines did that too. |
+| Prof. Elakkiya | main-block-1, patrols 8,20 to 20,20, sheet npc-prof-elakkiya | Ah, {name}! Ready for a pop quiz? They say my quizzes are hard. I say they build character. / Some students call me goated. I just call it a fair quiz with no mercy. / Remember: no panic, and read the question twice. Maybe three times. Good luck! |
+| Najam | main-block-2, tile 10,14, sheet npc-friend-najam | Najam here. I only open my laptop when it's charged and I'm brave. / I made a to-do list. Item one: stop making to-do lists. / Sleep is a feature I turned off this semester. Not recommended. |
+| Prof. Angel | main-block-2, tile 24,14, sheet npc-prof-angel | Hello {name}! Yes, I'm Prof. Angel. And yes, the wings are real. Mostly. / Angel is my name and patience is my superpower. Don't worry, I'll go easy. I'm an angel, not a miracle worker. / If your grades are heavenly, thank the wings. If not, bless you, there's always the next exam. |
+| Karthik | main-block-3, patrols 14,19 to 27,19, sheet npc-friend-karthik | I'm Karthik. I fixed one bug today and made three new ones. Net growth! / If Stack Overflow goes down, so do I. It's like a holiday, but scary. / Read the error message. Then read it again. Then blame the compiler. |
+| Mustafa | main-block-3, tile 9,4, sheet npc-mustafa | Welcome to the Physics Lab! Fair warning: gravity here is taken very seriously. / Mind the jumps. I fell off three times. Okay, more. |
 
 ## Facts (43)
 

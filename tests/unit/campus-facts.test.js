@@ -41,15 +41,15 @@ test('research file: the parser found the facts table and the faculty rows', () 
   assert.ok(PROFESSORS.includes('Pranav Mothabhau Pawar'));
 });
 
-test('roles: about 12-16 roles, each with a label and 1-2 role-flavoured openers that state no fact', () => {
+test('roles: about 12-16 roles, each with a label and 1-6 role-flavoured openers that state no fact', () => {
   const ids = Object.keys(CAMPUS_ROLES);
   assert.ok(ids.length >= 12 && ids.length <= 16, `expected about 12 roles, found ${ids.length}`);
   for (const id of ids) {
     const role = CAMPUS_ROLES[id];
     assert.ok(role.label && role.label.length <= 24, `${id}: needs a short label`);
-    assert.ok(role.openers.length >= 1 && role.openers.length <= 2, `${id}: 1-2 openers`);
+    assert.ok(role.openers.length >= 1 && role.openers.length <= 6, `${id}: 1-6 openers (FB-0051: the CS roles got funnier, longer pools)`);
     for (const opener of role.openers) {
-      assert.ok(opener.length <= 80, `${id}: opener too long: "${opener}"`);
+      assert.ok(opener.length <= 110, `${id}: opener too long: "${opener}"`);
       assert.doesNotMatch(opener, /\d/, `${id}: an opener is small talk, not a fact: "${opener}"`);
     }
   }
@@ -296,8 +296,7 @@ test('FB-0050: campus-amb-sit-2 (the avenue bench) is "Deanne", with a few light
   assert.equal(campusTalkLines(entry.role, entry.id, newCampusTalkState(), entry).name, 'Deanne');
   // Every other hostel resident keeps the role label, which is "Hostel mate" now; "Hostel resident" is gone.
   assert.equal(CAMPUS_ROLES['hostel-resident'].label, 'Hostel mate');
-  const named = Object.values(AMBIENT).flat().filter((e) => e.name);
-  assert.deepEqual(named.map((e) => e.id), ['campus-amb-sit-2'], 'only Deanne is a named ambient character so far');
+  assert.ok(Object.values(AMBIENT).flat().some((e) => e.id === 'campus-amb-sit-2' && e.name === 'Deanne'), 'Deanne is still a named ambient character (P2b adds the friends and professors, see the FB-0051 tests)');
   assert.ok(!fs.readFileSync(path.join(ROOT, 'src', 'campus-facts.js'), 'utf8').includes('Hostel resident'));
 });
 
@@ -339,7 +338,7 @@ test('FB-0057: ambientSheetKey() picks the club variant by role and falls back t
 
 test('FB-0057: the MTC role has friendly openers and 2-3 placeholder lines, and 3 MTC students stand on the campus / Main Block', () => {
   const role = CAMPUS_ROLES['mtc-member'];
-  assert.ok(role.openers.length >= 1 && role.openers.length <= 2);
+  assert.ok(role.openers.length >= 1 && role.openers.length <= 6);
   assert.ok(role.smallTalk.length >= 2 && role.smallTalk.length <= 3);
   for (const line of role.smallTalk) assert.doesNotMatch(line, /\d/, `MTC has no sourced facts, so a placeholder line states none: "${line}"`);
   const talk = campusTalkLines('mtc-member', 'any-mtc', newCampusTalkState());

@@ -3404,22 +3404,30 @@ function blitCharFrame(img, dx, dy, atlas, sx, remap, legRemap = null) {
 // docs/research/asset-packs.md's character addendum already proved out. Anything not in the map
 // passes through unchanged, so a character can keep its own hair/skin and only have its clothes
 // recolored (see the NPCs below).
-function buildCharacter(name, recolorMap, legMap = null) {
+// `overlay` (FB-0051, optional): { behind?, front? }, each `(img, fx, fy, dir) => void` drawing a small text-sprite prop
+// (an angel's wings, a camera; see FRIEND_PROPS below) into the 16x24 frame whose top-left is (fx, fy), before (behind)
+// or after (front) the body is blitted into it, once per frame of the sheet (idle, walk, idle-anim).
+function buildCharacter(name, recolorMap, legMap = null, overlay = null) {
   const idle = charSheet(name, 'idle');
   const run = charSheet(name, 'run');
   const idleAnim = charSheet(name, 'idle_anim');
   const remap = remapExact(recolorMap);
   const legRemap = legMap ? remapExact({ ...recolorMap, ...legMap }) : null;
   const img = new Img(CHAR_COLS * CHAR_W, CHAR_ROWS.length * CHAR_H);
+  const frame = (dir, fx, fy, atlas, sx) => {
+    if (overlay && overlay.behind) overlay.behind(img, fx, fy, dir);
+    blitCharFrame(img, fx, fy, atlas, sx, remap, legRemap);
+    if (overlay && overlay.front) overlay.front(img, fx, fy, dir);
+  };
   CHAR_ROWS.forEach((dir, row) => {
     const y = row * CHAR_H;
     const dirIndex = CHAR_DIR_INDEX[dir];
-    blitCharFrame(img, 0, y, idle, dirIndex * CHAR_W, remap, legRemap);
+    frame(dir, 0, y, idle, dirIndex * CHAR_W);
     const block = dirIndex * CHAR_WALK_FRAMES;
     for (let f = 0; f < CHAR_WALK_FRAMES; f++) {
-      blitCharFrame(img, (1 + f) * CHAR_W, y, run, (block + f) * CHAR_W, remap, legRemap);
+      frame(dir, (1 + f) * CHAR_W, y, run, (block + f) * CHAR_W);
     }
-    blitCharFrame(img, (1 + CHAR_WALK_FRAMES) * CHAR_W, y, idleAnim, (block + CHAR_IDLE_ANIM_FRAME) * CHAR_W, remap, legRemap);
+    frame(dir, (1 + CHAR_WALK_FRAMES) * CHAR_W, y, idleAnim, (block + CHAR_IDLE_ANIM_FRAME) * CHAR_W);
   });
   return img;
 }
@@ -3496,14 +3504,9 @@ const STUDENT_B_RECOLOR = {
 };
 
 // Mustafa, the LUG organiser who meets her at the gate (docs/STORY.md "Opening", ADR 0016 -- a script
-// actor, src/scripts.js SCRIPTS.opening/gate2, not a placed map NPC). Only 4 named characters exist in
-// this pack (Amelia/Adam/Alex/Bob, all already spoken for: the lead/volunteer/student-a/student-b), so
-// this reuses Adam's own body again -- same as the volunteer -- with a warm maroon organiser polo
-// instead of Adam's teal, so the two don't read as the same character recolored twice standing side by
-// side (they never actually do in this game, but the same reasoning as STUDENT_A/B_RECOLOR applies).
-const MUSTAFA_MAROON = '#a33b4a';
-const MUSTAFA_MAROON_HI = '#c8637a';
-const MUSTAFA_RECOLOR = { '#805e8e': MUSTAFA_MAROON, '#9f74a8': MUSTAFA_MAROON_HI };
+// actor, src/scripts.js SCRIPTS.opening/gate2) and stands near the three mini-games (FB-0051). He reuses Adam's
+// body like the LUG volunteer, but FB-0051 gives him his own look: black hair, a black and orange LUG hoodie
+// (HOODIE_BLACK_ORANGE, built with the friends below as FRIEND_LOOKS['friend-mustafa']).
 
 // ---------- ambient campus/Main Block life (quality loop, Characters run 1, 2026-09-29) ----------
 // "The world is empty" -- background students, walking, sitting, chatting (src/maps.js `ambient`,
@@ -3571,6 +3574,146 @@ const AMBIENT_BODIES = {
 function buildClubCharacter(body, plainRecolor, outfitId) {
   const tables = clubOutfitTables(body, plainRecolor, CLUB_OUTFITS[outfitId]);
   return buildCharacter(body, tables.top, tables.legs);
+}
+
+// ---------- named friends and professors (FB-0051, decisions/0021) ----------
+// The owner's friends, Mustafa (black and orange LUG hoodie) and three professors are small named NPCs
+// (src/ambient.js entries with a `name`, `lines` and `sheet`). Same pipeline as the club outfits above and the same
+// three pack bodies (Adam/Alex/Bob, plus Amelia for the two women professors): only hair, skin and clothes are
+// recolored, so each person is `body x hair x skin x outfit`. One sheet each, `npc-<id>.png` (id = FRIEND_LOOKS key).
+// The source colours of each body were decoded by row (see buildCharacter / clubOutfitTables notes above).
+// Hair keys per body, [highlight, base, shade, side shade]; a hair set below is [highlight, base, shade].
+const FRIEND_HAIR_KEYS = {
+  Adam: ['#959d58', '#687253', '#5f694a', '#5d6043'],
+  Alex: ['#ba8d5e', '#957350', '#8d7051', '#8a6552'],
+  Bob: ['#716b6e', '#5d585f', '#555157', '#555157'],
+  Amelia: ['#ba8d5e', '#957350', '#8d7051', '#8a6552'], // hair keys of the lead's body (AMELIA_RECOLOR)
+};
+const FRIEND_HAIR = {
+  black: ['#4b4350', '#2a2530', '#1e1a24'],
+  darkbrown: ['#6b4a38', '#3f2a20', '#2f2018'],
+  brown: ['#a06a3f', '#7a4a2a', '#5e3820'],
+  auburn: ['#c0603a', '#9a3f22', '#74301a'],
+  ginger: ['#e08a3c', '#c0661f', '#984d14'],
+  grey: ['#e0e0e8', '#b4b4c0', '#8a8a98'],
+  silver: ['#f2f2f6', '#cfcfd8', '#a6a6b4'],
+  salt: ['#b4b4c4', '#3a3640', '#2a2630'], // black hair with a silver sheen
+};
+// Skin: the pack's light skin colours (all three bodies share them) swapped for a deeper tone. `fair` keeps them.
+const FRIEND_SKIN = {
+  fair: {},
+  wheat: { '#ffcbb0': '#f0b98f', '#ffb893': '#e8a97e', '#f6ae9f': '#dc9b78', '#f69784': '#cf8566', '#e19b9b': '#d08a7a', '#c9a495': '#b98b76' },
+  tan: { '#ffcbb0': '#d9a070', '#ffb893': '#cf9362', '#f6ae9f': '#c4885c', '#f69784': '#b87550', '#e19b9b': '#b87866', '#c9a495': '#a47860' },
+  brown: { '#ffcbb0': '#b9784a', '#ffb893': '#ae6e42', '#f6ae9f': '#a2643a', '#f69784': '#955a32', '#e19b9b': '#9a5e46', '#c9a495': '#86503a' },
+};
+// Amelia's skin is darker in the source (AMELIA_RECOLOR lifts it to the lead's fair tones): other skin for her body.
+const AMELIA_SKIN = {
+  fair: {},
+  wheat: { '#bf8b78': '#f0b98f', '#a77a67': '#dc9b78', '#b57972': '#dc9b78', '#aa5e56': '#cf8566', '#b58472': '#dc9b78', '#b2736d': '#cf8566' },
+};
+
+function friendRecolor(body, hairId, skinId) {
+  const keys = FRIEND_HAIR_KEYS[body];
+  const hair = FRIEND_HAIR[hairId];
+  const map = {};
+  keys.forEach((key, i) => { map[key] = hair[Math.min(i, 2)]; });
+  return { ...map, ...(body === 'Amelia' ? AMELIA_SKIN[skinId] : FRIEND_SKIN[skinId]) };
+}
+
+// A plain outfit (the same fields CLUB_OUTFITS uses): `shirt` is the main colour, hi/shade derived from it.
+function mixHex(hex, toward, t) {
+  const a = hexToRgb(hex);
+  const b = hexToRgb(toward);
+  return `#${[0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t).toString(16).padStart(2, '0')).join('')}`;
+}
+function plainOutfit(shirt, pants, extra = {}) {
+  return {
+    shirt, hi: mixHex(shirt, '#ffffff', 0.35), shade: mixHex(shirt, '#000000', 0.3),
+    jacket: shirt, inner: '#e8e8ee', innerHi: '#ffffff', pants, shoes: '#27324a', ...extra,
+  };
+}
+// Mustafa's LUG hoodie: Adam's torso is a darker colour (shirt) with a lighter band across the belly and on the
+// cuffs (hi), so black and orange land as a black hoodie with orange pocket band and cuffs, the LUG colours (FB-0051).
+const HOODIE_BLACK_ORANGE = { shirt: '#1e1e24', hi: '#f28c1e', shade: '#121216', jacket: '#1e1e24', inner: '#f28c1e', innerHi: '#ffbb55', pants: '#2f3b57', shoes: '#121216' };
+
+// ---- tiny prop overlays (text sprites, the way held items are drawn): Angel's wings and Satvik's camera ----
+const PROP_COLORS = { K: '#1a1c2c', W: '#ffffff', S: '#bfd0e8', D: '#4b4b5e', L: '#6fc3ff', G: '#e0b84f' };
+// `rows` maps a frame row (0-23) to a 16-character string of PROP_COLORS letters ('.' = nothing).
+function stampProp(img, fx, fy, rows) {
+  for (const [row, text] of Object.entries(rows)) {
+    for (let x = 0; x < text.length; x++) {
+      const hex = PROP_COLORS[text[x]];
+      if (hex) { const [r, g, b] = hexToRgb(hex); img.setRGBA(fx + x, fy + Number(row), r, g, b, 255); }
+    }
+  }
+}
+// A left half (8 characters, cols 0-7) mirrored into the right half.
+const mirrorRows = (halves) => Object.fromEntries(Object.entries(halves).map(([row, half]) => [row, half + [...half].reverse().join('')]));
+const flipRows = (rows) => Object.fromEntries(Object.entries(rows).map(([row, text]) => [row, [...text].reverse().join('')]));
+// Wings: behind the body when she faces us (tips poke out above the ears and beside the hips), across the back when she
+// faces away, one wing on the back side in profile.
+const WINGS_FRONT_VIEW = mirrorRows({
+  0: '..KK....', 1: '.KWWK...', 2: 'KWWWK...', 3: 'KWWSK...', 4: 'KWSK....', 5: 'KWK.....', 6: 'KK......',
+  16: 'K.......', 19: 'K.......', 20: 'KWK.....', 21: 'KWSK....', 22: 'KWK.....', 23: '.K......',
+});
+const WINGS_BACK_VIEW = mirrorRows({
+  7: '.KK.....', 8: 'KWWK....', 9: 'KWWWK...', 10: 'KWWWWK..', 11: 'KWWSWWK.', 12: 'KWSWWWW.', 13: 'KSWWSWW.',
+  14: '.KWWSWW.', 15: '.KSWWSW.', 16: '..KSWWW.', 17: '..KSSWW.', 18: '...KSSW.', 19: '....KKK.',
+});
+const WINGS_SIDE_LEFT = { // facing left: the wing is on the right (the back)
+  9: '..........KK....', 10: '.........KWWK...', 11: '........KWWWWK..', 12: '........KWSWWWK.', 13: '........KWWSWWK.',
+  14: '.........KWWSWK.', 15: '.........KSWWWK.', 16: '..........KWSWK.', 17: '..........KSWK..', 18: '...........KWK..', 19: '............KK..',
+};
+const WINGS = {
+  behind: (img, fx, fy, dir) => { if (dir === 'down') stampProp(img, fx, fy, WINGS_FRONT_VIEW); },
+  front: (img, fx, fy, dir) => {
+    if (dir === 'up') stampProp(img, fx, fy, WINGS_BACK_VIEW);
+    if (dir === 'left') stampProp(img, fx, fy, WINGS_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(WINGS_SIDE_LEFT));
+  },
+};
+// A small camera at the chest, lens forward (and a strap), nothing from behind.
+const CAMERA_DOWN = { 14: '......K..K......', 15: '.....KKKKKK.....', 16: '.....KDLLDK.....', 17: '.....KDLWDK.....', 18: '.....KKKKKK.....' };
+const CAMERA_LEFT = { 15: '..KKKKK.........', 16: '..LLDDK.........', 17: '..LWDDK.........', 18: '..KKKKK.........' };
+const CAMERA = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down') stampProp(img, fx, fy, CAMERA_DOWN);
+    if (dir === 'left') stampProp(img, fx, fy, CAMERA_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(CAMERA_LEFT));
+  },
+};
+
+// body: the pack character; hair/skin: FRIEND_HAIR / FRIEND_SKIN ids; outfit: a CLUB_OUTFITS-shaped object.
+// `prop`: an overlay above. Key = sheet name without `npc-`. The three women/men of FB-0051 who are not here are a later package.
+const FRIEND_LOOKS = {
+  'friend-sid': { body: 'Alex', hair: 'brown', skin: 'wheat', outfit: plainOutfit('#2aa198', '#2f3b57') },
+  'friend-akshit': { body: 'Adam', hair: 'black', skin: 'tan', outfit: plainOutfit('#e0b030', '#3a3a4a') },
+  'friend-varun': { body: 'Bob', hair: 'black', skin: 'fair', outfit: plainOutfit('#c0392b', '#2a2f45', { inner: '#e8e8ee' }) },
+  'friend-mitul': { body: 'Alex', hair: 'darkbrown', skin: 'tan', outfit: plainOutfit('#e6e6ee', '#4a4f66') },
+  'friend-karthik': { body: 'Adam', hair: 'brown', skin: 'brown', outfit: plainOutfit('#3d8a3f', '#2f2f3a') },
+  'friend-siva': { body: 'Bob', hair: 'auburn', skin: 'tan', outfit: plainOutfit('#d98a2b', '#2f3b57', { inner: '#fff1d0', innerHi: '#ffffff' }) },
+  'friend-shamsuddin': { body: 'Alex', hair: 'black', skin: 'wheat', outfit: plainOutfit('#7a5ad9', '#2f3b57') },
+  'friend-najam': { body: 'Adam', hair: 'ginger', skin: 'fair', outfit: plainOutfit('#d0558a', '#2c3550') },
+  'friend-satvik': { body: 'Alex', hair: 'black', skin: 'brown', outfit: plainOutfit('#5f7a3a', '#3a3a4a'), prop: CAMERA },
+  'friend-mustafa': { body: 'Adam', hair: 'black', skin: 'wheat', outfit: HOODIE_BLACK_ORANGE },
+  // Professors (adult look: grey or black hair, jacket/blazer). Raja: a gold-trimmed maroon jacket over a gold shirt.
+  'prof-raja': { body: 'Bob', hair: 'grey', skin: 'wheat', outfit: { ...plainOutfit('#7a1530', '#e8dcc0'), jacket: '#7a1530', inner: '#e0b84f', innerHi: '#ffe27a', pants: '#e8dcc0', shoes: '#a8812a' } },
+};
+function buildFriendCharacter(look) {
+  const tables = clubOutfitTables(look.body, friendRecolor(look.body, look.hair, look.skin), look.outfit);
+  return buildCharacter(look.body, tables.top, tables.legs, look.prop || null);
+}
+// The two women professors use the lead's body (AMELIA_RECOLOR) with their own hair, blazer and skirt.
+const PROF_WOMEN = {
+  'prof-elakkiya': { hair: 'salt', skin: 'wheat', top: '#1f5f6b', topHi: '#4aa0ad', skirt: '#2b2b3a' }, // a teal blazer, dark skirt
+  'prof-angel': { hair: 'black', skin: 'fair', top: '#8fb0dc', topHi: '#d6e4f7', skirt: '#5a6a8a', prop: WINGS }, // soft blue, with wings
+};
+function buildProfWoman(look) {
+  const recolor = {
+    ...AMELIA_RECOLOR, ...friendRecolor('Amelia', look.hair, look.skin),
+    '#a85377': look.top, '#b95d72': look.topHi, '#c78c59': look.skirt, '#b35e3f': look.skirt,
+  };
+  return buildCharacter('Amelia', recolor, null, look.prop || null);
 }
 
 // ---------- character customisation (M3a, docs/STORY.md "Opening" step 3) ----------
@@ -4186,7 +4329,7 @@ for (const [id, swatch] of Object.entries(CLOTHES_SWATCHES)) {
 write('npc-volunteer.png', buildClubCharacter('Adam', ADAM_RECOLOR, 'lug')); // the LUG volunteer: orange and black (FB-0057)
 write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
-write('npc-mustafa.png', buildCharacter('Adam', MUSTAFA_RECOLOR)); // ADR 0016: the opening's own script actor
+write('npc-mustafa.png', buildFriendCharacter(FRIEND_LOOKS['friend-mustafa'])); // ADR 0016: the opening's own script actor; FB-0051: black and orange LUG hoodie
 // Quality loop, Characters run 1: 6 more recolors (2 each of Adam/Alex/Bob) for ambient campus/Main
 // Block life -- src/maps.js `ambient` entries, src/scenes/world.js createAmbient().
 write('npc-ambient-a.png', buildCharacter('Adam', AMBIENT_A_RECOLOR));
@@ -4199,6 +4342,12 @@ write('npc-ambient-f.png', buildCharacter('Bob', AMBIENT_F_RECOLOR));
 for (const [character, [body, recolor]] of Object.entries(AMBIENT_BODIES)) {
   for (const outfitId of Object.keys(CLUB_OUTFITS)) write(`npc-${character}-${outfitId}.png`, buildClubCharacter(body, recolor, outfitId));
 }
+
+// FB-0051: the owner's friends and the professors (src/ambient.js `sheet`): npc-friend-<name>.png, npc-prof-<name>.png.
+for (const [id, look] of Object.entries(FRIEND_LOOKS)) {
+  if (id !== 'friend-mustafa') write(`npc-${id}.png`, buildFriendCharacter(look));
+}
+for (const [id, look] of Object.entries(PROF_WOMEN)) write(`npc-${id}.png`, buildProfWoman(look));
 
 // Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
 // 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.

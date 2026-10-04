@@ -24,7 +24,12 @@
 //         her lines). Both are plain data read by campusTalkLines() (src/campus-facts.js) and world.js
 //         buildAmbientNpc(); an entry with neither behaves exactly as before. Lines are the owner's to approve
 //         (docs/research/campus-lines-review.md, "Named characters"); never invent personal facts about a real person.
-//   The student's clothes come from her ROLE, not from the entry: a club role (CAMPUS_ROLES[role].outfit) draws with
+//   sheet?, factIds?: OPTIONAL, also for named characters (FB-0051, P2b: the owner's friends, Mustafa and three professors).
+//         `sheet` is the entry's own texture key (e.g. 'npc-friend-sid'; tools/make-assets.js FRIEND_LOOKS / PROF_WOMEN draw it, wings
+//         and camera included), which wins over the role's outfit in ambientSheetKey(); `character` stays the plain body used as the
+//         fallback if that sheet never loaded. `factIds` (e.g. ['CF23']) limits which of the role's facts the character says after
+//         her fixed lines; `[]` means only the fixed lines, said again every time (Mustafa). A line may use `{name}`: the player's name.
+//   The student's clothes come from her ROLE, not from the entry (unless it has a `sheet`): a club role (CAMPUS_ROLES[role].outfit) draws with
 //         the club's colours, `npc-<character>-<outfit>` (FB-0057, src/campus-facts.js ambientSheetKey()).
 //   kind: 'patrol'  -- { waypoints: [{x,y}, ...], loop?, speed, pauseMs, facing? }
 //                       `loop: true` cycles through the waypoints in order, wrapping to the first
@@ -54,8 +59,14 @@ const AMBIENT = {
       waypoints: [{ x: 246, y: 165 }, { x: 241, y: 152 }, { x: 233, y: 140 }] },
     { id: 'campus-amb-walk-2', character: 'ambient-b', role: 'campus-regular', kind: 'patrol', speed: 60, pauseMs: 1000,
       waypoints: [{ x: 240, y: 150 }, { x: 226, y: 132 }] },
-    { id: 'campus-amb-walk-3', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 55, pauseMs: 900,
-      waypoints: [{ x: 232, y: 160 }, { x: 248, y: 165 }] },
+    { id: 'campus-amb-walk-3', character: 'ambient-c', role: 'cs-student', kind: 'patrol', speed: 55, pauseMs: 900,
+      waypoints: [{ x: 232, y: 160 }, { x: 248, y: 165 }],
+      name: "Sid", sheet: 'npc-friend-sid',
+      lines: [
+        "Hey {name}! I'm Sid. Quick question: how many browser tabs is too many? I'm at forty and climbing.",
+        "My laptop fan is louder than my lecture right now. It's a duet.",
+        "If you hear screaming from the lab, don't worry. It's just me and a merge conflict.",
+      ] },
     // A closed lap around the Athletics Track (`loop: true`), faster than a walk -- "jogging".
     { id: 'campus-amb-jog', character: 'ambient-c', role: 'sports-player', kind: 'patrol', speed: 110, pauseMs: 0, loop: true,
       waypoints: [{ x: 120, y: 90 }, { x: 165, y: 90 }, { x: 165, y: 108 }, { x: 120, y: 108 }] },
@@ -71,7 +82,13 @@ const AMBIENT = {
     { id: 'campus-amb-sit-2', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 243, y: 162, facing: 'left',
       name: 'Deanne',
       lines: ["Hi, I'm Deanne! I live in the hostel.", 'Hostel dinner is the best part of my day, honestly. That and my chai.', 'I know every quiet corner on this campus. Ask me anything.'] },
-    { id: 'campus-amb-sit-3', character: 'student-b', role: 'ai-student', kind: 'idle', x: 221, y: 137, facing: 'right' },
+    { id: 'campus-amb-sit-3', character: 'ambient-a', role: 'ai-student', kind: 'idle', x: 221, y: 137, facing: 'right',
+      name: "Akshit", sheet: 'npc-friend-akshit',
+      lines: [
+        "Akshit here. My rules: nothing before coffee, nothing after midnight, nothing without a backup.",
+        "Is it a bug or a feature? Depends on whether the demo is today.",
+        "I'd tell you a UDP joke, but you might not get it.",
+      ] },
     // A pair chatting, facing each other.
     { id: 'campus-amb-chat-1', character: 'ambient-f', role: 'quiz-club-member', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat' },
     { id: 'campus-amb-chat-2', character: 'ambient-b', role: 'cultural-club-member', kind: 'chat', x: 223, y: 141, facing: 'left', pairId: 'campus-chat' },
@@ -82,8 +99,21 @@ const AMBIENT = {
       waypoints: [{ x: 252, y: 145 }, { x: 264, y: 145 }] },
 
     // ---- Main Block forecourt ----
-    { id: 'campus-amb-forecourt-1', character: 'ambient-a', role: 'volunteer', kind: 'idle', x: 215, y: 134, facing: 'right' },
-    { id: 'campus-amb-forecourt-2', character: 'student-b', role: 'campus-regular', kind: 'idle', x: 238, y: 136, facing: 'left' },
+    // FB-0051 (P2b): Satvik with his camera at the foot of the Main Block, and Varun on the other side of the forecourt.
+    { id: 'campus-amb-forecourt-1', character: 'ambient-c', role: 'cultural-club-member', kind: 'idle', x: 215, y: 134, facing: 'right',
+      name: "Satvik", sheet: 'npc-friend-satvik',
+      lines: [
+        "Hold still, {name}! The light is perfect. Say cheese... or say semicolon, it works for us too.",
+        "I photograph everything here: sunsets, lunch, bugs on the screen. Mostly lunch.",
+        "My camera's one rule: if it's a good moment, it's a good shot. Strike a pose!",
+      ] },
+    { id: 'campus-amb-forecourt-2', character: 'ambient-e', role: 'campus-regular', kind: 'idle', x: 238, y: 136, facing: 'left',
+      name: "Varun", sheet: 'npc-friend-varun',
+      lines: [
+        "I'm Varun. I came for a quick chat and stayed for a long one.",
+        "My code has two states: it works, and nobody touch it.",
+        "Is the canteen open? Asking for my stomach. It has no Wi-Fi and no patience.",
+      ] },
 
     // ---- Library front: the courtyard behind the Library Block entrance ----
     { id: 'campus-amb-lib-1', character: 'ambient-e', role: 'library-regular', kind: 'idle', x: 236, y: 102, facing: 'down' },
@@ -114,7 +144,13 @@ const AMBIENT = {
     { id: 'campus-amb-sidegate', character: 'ambient-c', role: 'campus-regular', kind: 'idle', x: 80, y: 68, facing: 'right' },
 
     // ---- Sports: the courts, tennis courts and the track's infield ----
-    { id: 'campus-amb-court-1', character: 'ambient-a', role: 'sports-player', kind: 'idle', x: 190, y: 63, facing: 'down' },
+    { id: 'campus-amb-court-1', character: 'ambient-c', role: 'sports-player', kind: 'idle', x: 190, y: 63, facing: 'down',
+      name: "Mitul", sheet: 'npc-friend-mitul',
+      lines: [
+        "Mitul reporting! Fun fact: it's always a missing semicolon. Always.",
+        "I counted my deadlines. Then I stopped counting, for my own health.",
+        "Hydration check, {name}! Water first. Then energy drink number seven.",
+      ] },
     { id: 'campus-amb-court-2', character: 'ambient-d', role: 'sports-player', kind: 'idle', x: 211, y: 64, facing: 'left' },
     { id: 'campus-amb-court-3', character: 'student-a', role: 'quiz-club-member', kind: 'patrol', speed: 55, pauseMs: 900,
       waypoints: [{ x: 178, y: 61 }, { x: 205, y: 61 }] },
@@ -124,7 +160,13 @@ const AMBIENT = {
     { id: 'campus-amb-track-1', character: 'ambient-b', role: 'sports-player', kind: 'idle', x: 145, y: 98, facing: 'up' },
 
     // ---- Student parking ----
-    { id: 'campus-amb-park-1', character: 'student-b', role: 'cs-student', kind: 'idle', x: 150, y: 115, facing: 'down' },
+    { id: 'campus-amb-park-1', character: 'ambient-e', role: 'cs-student', kind: 'idle', x: 150, y: 115, facing: 'down',
+      name: "Siva", sheet: 'npc-friend-siva',
+      lines: [
+        "Siva here! I use dark mode for everything. Even this conversation.",
+        "Why do programmers prefer dark mode? Because light attracts bugs.",
+        "If it works, don't touch it. If it doesn't, also don't touch it. Go get chai.",
+      ] },
     { id: 'campus-amb-park-2', character: 'ambient-c', role: 'lug-member', kind: 'patrol', speed: 55, pauseMs: 1000,
       waypoints: [{ x: 130, y: 116 }, { x: 168, y: 116 }] },
 
@@ -142,14 +184,27 @@ const AMBIENT = {
     // least 3 tiles from the LUG volunteer (14,16) behind the left staircase, the stairs object (15,25), and every
     // door, and never in a one-tile lane (the ramp's rail lanes, the staircase's west lane) or a doorway.
     // By the right-back sofas, and in the open hall west of the terrarium.
-    { id: 'mbg-amb-sit-1', character: 'ambient-a', role: 'first-year', kind: 'idle', x: 26, y: 19, facing: 'left' },
+    // FB-0051 (P2b): Prof. Raja waits in the hall (a later package sends a chariot for him), Shamsuddin crosses it.
+    { id: 'mbg-amb-sit-1', character: 'ambient-e', role: 'tech-club-member', kind: 'idle', x: 26, y: 19, facing: 'left', factIds: ['CF12'],
+      name: "Prof. Raja", sheet: 'npc-prof-raja',
+      lines: [
+        "Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture.",
+        "I carry myself like royalty because my timetable demands it. Mostly the Monday ones.",
+        "I have a ride coming. Quite soon, actually.",
+      ] },
     { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 14, y: 31, facing: 'right' },
     // A pair chatting in the front of the hall, between the reception desks.
     { id: 'mbg-amb-chat-1', character: 'ambient-d', role: 'quiz-club-member', kind: 'chat', x: 22, y: 33, facing: 'right', pairId: 'mbg-chat' },
     { id: 'mbg-amb-chat-2', character: 'ambient-e', role: 'cultural-club-member', kind: 'chat', x: 23, y: 33, facing: 'left', pairId: 'mbg-chat' },
     // Walking across the hall past the sofas, and back and forth in front of the reception desks.
-    { id: 'mbg-amb-walk-1', character: 'student-a', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 700,
-      waypoints: [{ x: 22, y: 24 }, { x: 27, y: 24 }] },
+    { id: 'mbg-amb-walk-1', character: 'ambient-c', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 700,
+      waypoints: [{ x: 22, y: 24 }, { x: 27, y: 24 }],
+      name: "Shamsuddin", sheet: 'npc-friend-shamsuddin',
+      lines: [
+        "Shamsuddin! I name my files final, final2 and really_final. It's called version control.",
+        "My code review was one question mark. I'm still thinking about it.",
+        "Wi-Fi is the one thing I can't compile, debug or fix. Good luck!",
+      ] },
     { id: 'mbg-amb-walk-2', character: 'ambient-c', role: 'acm-member', kind: 'patrol', speed: 50, pauseMs: 700,
       waypoints: [{ x: 13, y: 33 }, { x: 24, y: 33 }] },
     // The wings: one in each wing-end lobby, one waiting in the right-hand office corridor.
@@ -169,20 +224,52 @@ const AMBIENT = {
     // interact ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile
     // corridor or a room's only doorway.
     { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 6, y: 11, facing: 'left' },
-    { id: 'mb1-amb-icl-2', character: 'ambient-e', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right' },
+    // FB-0051 (P2b): Mustafa, in his black and orange LUG hoodie, stands near each of the three mini-game key stations with his own
+    // FIXED line (`factIds: []`: he says only these, every time). Here: the ICL (this tile is 3.2 tiles from it).
+    { id: 'mb1-amb-icl-2', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right', factIds: [],
+      name: "Mustafa", sheet: 'npc-mustafa',
+      lines: [
+        "The ICL is basically one long exhale. Tap gently, don't mash.",
+        "My record there is embarrassing. I'm not telling.",
+      ] },
+    // Room 195: at the far end of the two-row room, 3.2 tiles from the teacher's desk, so the desk stays clear.
+    { id: 'mb1-amb-mustafa-195', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 27, y: 4, facing: 'left', factIds: [],
+      name: "Mustafa", sheet: 'npc-mustafa',
+      lines: [
+        "Room 195: stack things neatly, like my to-do list. Only one of those works.",
+        "Pieces fall, rows clear. If only deadlines did that too.",
+      ] },
     // 2 in the corridor.
     { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 13, y: 17 }, { x: 25, y: 17 }] },
-    { id: 'mb1-amb-corridor-2', character: 'ambient-f', role: 'senior', kind: 'patrol', speed: 50, pauseMs: 800,
-      waypoints: [{ x: 8, y: 20 }, { x: 20, y: 20 }] },
+    { id: 'mb1-amb-corridor-2', character: 'ambient-a', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
+      waypoints: [{ x: 8, y: 20 }, { x: 20, y: 20 }], factIds: ['CF23'],
+      name: "Prof. Elakkiya", sheet: 'npc-prof-elakkiya',
+      lines: [
+        "Ah, {name}! Ready for a pop quiz? They say my quizzes are hard. I say they build character.",
+        "Some students call me goated. I just call it a fair quiz with no mercy.",
+        "Remember: no panic, and read the question twice. Maybe three times. Good luck!",
+      ] },
   ],
 
   // The 2nd floor is a through-route to the 3rd (docs/INTERIORS_PLAN.md): the landing corridor.
   'main-block-2': [
-    { id: 'mb2-amb-landing-1', character: 'ambient-a', role: 'quiz-club-member', kind: 'idle', x: 10, y: 14, facing: 'down' },
+    { id: 'mb2-amb-landing-1', character: 'ambient-a', role: 'quiz-club-member', kind: 'idle', x: 10, y: 14, facing: 'down',
+      name: "Najam", sheet: 'npc-friend-najam',
+      lines: [
+        "Najam here. I only open my laptop when it's charged and I'm brave.",
+        "I made a to-do list. Item one: stop making to-do lists.",
+        "Sleep is a feature I turned off this semester. Not recommended.",
+      ] },
     { id: 'mb2-amb-landing-2', character: 'student-a', role: 'cultural-club-member', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 7, y: 19 }, { x: 24, y: 19 }] },
-    { id: 'mb2-amb-landing-3', character: 'ambient-e', role: 'volunteer', kind: 'idle', x: 24, y: 14, facing: 'left' },
+    { id: 'mb2-amb-landing-3', character: 'ambient-a', role: 'ai-student', kind: 'idle', x: 24, y: 14, facing: 'left', factIds: ['CF22'],
+      name: "Prof. Angel", sheet: 'npc-prof-angel',
+      lines: [
+        "Hello {name}! Yes, I'm Prof. Angel. And yes, the wings are real. Mostly.",
+        "Angel is my name and patience is my superpower. Don't worry, I'll go easy. I'm an angel, not a miracle worker.",
+        "If your grades are heavenly, thank the wings. If not, bless you, there's always the next exam.",
+      ] },
     // 2026-10-04 (defect sweep D06): the landing is now a furnished lounge, so a chatting pair by the upper seating
     // sets and one student at the vending machine make it feel lived in. Row 14 and the lower right are open floor.
     { id: 'mb2-amb-landing-chat-1', character: 'ambient-b', role: 'quiz-club-member', kind: 'chat', x: 15, y: 14, facing: 'right', pairId: 'mb2-landing-chat' },
@@ -196,8 +283,21 @@ const AMBIENT = {
     // that corridor (tests/unit/story-clearance.test.js, 2026-10-03).
     { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 9, y: 20, facing: 'up' },
     // The corridor below the lab and the stairwell landing.
-    { id: 'mb3-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
-      waypoints: [{ x: 14, y: 19 }, { x: 27, y: 19 }] },
+    { id: 'mb3-amb-corridor-1', character: 'ambient-a', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
+      waypoints: [{ x: 14, y: 19 }, { x: 27, y: 19 }],
+      name: "Karthik", sheet: 'npc-friend-karthik',
+      lines: [
+        "I'm Karthik. I fixed one bug today and made three new ones. Net growth!",
+        "If Stack Overflow goes down, so do I. It's like a holiday, but scary.",
+        "Read the error message. Then read it again. Then blame the compiler.",
+      ] },
+    // FB-0051 (P2b): Mustafa at the Physics Lab: 4.2 tiles from the lab bench (the key station), in the room's own top row.
+    { id: 'mb3-amb-mustafa-lab', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 9, y: 4, facing: 'down', factIds: [],
+      name: "Mustafa", sheet: 'npc-mustafa',
+      lines: [
+        "Welcome to the Physics Lab! Fair warning: gravity here is taken very seriously.",
+        "Mind the jumps. I fell off three times. Okay, more.",
+      ] },
     { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 33, y: 14, facing: 'down' },
   ],
 };

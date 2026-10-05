@@ -206,6 +206,6 @@ test('FB-0075/FB-0076: stopGameplayScenes() stops exactly the gameplay scenes th
 test('FB-0075/FB-0076: the gameplay scene list covers the world, HUD, cutscene, the ending chain and every mini-game scene', () => {
   const GAMEPLAY_SCENES = evaluate('GAMEPLAY_SCENES');
   const MINIGAMES = evaluate('MINIGAMES');
-  for (const key of ['world', 'ui', 'cutscene', 'box-opening', 'card', 'credits']) assert.ok(GAMEPLAY_SCENES.includes(key), key);
+  for (const key of ['world', 'ui', 'cutscene', 'box-opening', 'finale', 'card', 'credits']) assert.ok(GAMEPLAY_SCENES.includes(key), key);
   for (const def of Object.values(MINIGAMES)) assert.ok(GAMEPLAY_SCENES.includes(def.sceneKey), `${def.sceneKey} would be left running`);
 });

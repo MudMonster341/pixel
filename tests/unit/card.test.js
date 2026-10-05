@@ -145,3 +145,16 @@ test('every scene that builds its own DialogBox calls dialog.update from its own
     assert.match(src, /^\s*update\(time, delta\) \{[\s\S]*?this\.dialog\.update\(time, delta\)/m, `${file} builds a DialogBox but never calls this.dialog.update(time, delta) from update()`);
   }
 });
+
+// W3 (the finale): the card is unchanged by it. It still opens from the same dark colour with its own fade-in, which is what the finale's
+// fade-to-black hands over to, and it never depends on the finale having run ("Watch the Card Again" starts the card directly).
+test('W3: the card still starts from black on its own (the finale fades to black into it), and does not need the finale', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { ROOT } = require('../helpers/game-data');
+  const source = fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'card.js'), 'utf8');
+  assert.match(source, /beginSequence\(\) \{\s*this\.cameras\.main\.setBackgroundColor\('#1a1610'\);\s*this\.cameras\.main\.fadeIn\(250, 0, 0, 0\);/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'finale.js'), 'utf8'), /this\.cameras\.main\.fadeOut\(FINALE\.leaveFadeMs, 0, 0, 0\)/);
+  assert.match(source, /this\.scene\.start\('credits', \{ raw \}\)/, 'the card still hands off to the credits');
+  assert.doesNotMatch(source.replace(/\/\/.*$/gm, ''), /finale/i, 'no code in the card refers to the finale');
+});

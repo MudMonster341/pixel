@@ -414,7 +414,10 @@ test('offline audio: the bundle manifest has an mp3 for every ogg the game refer
   assert.equal(pack.mp3PathFor('assets/audio/sfx/a.ogg'), 'assets/audio/sfx/a.mp3');
   assert.equal(pack.mp3PathFor('assets/audio/generated/a.wav'), 'assets/audio/generated/a.wav', 'wav is left alone');
   const wavs = bundledManifest().filter((a) => a.path.endsWith('.wav'));
-  assert.ok(wavs.length >= 1 && wavs.every((a) => fs.statSync(a.abs).size < 100 * 1024), 'the generated wav sfx stay as small WAV files');
+  // The generated sfx stay small WAV files; the one exception is W3's synthesized "Happy Birthday" song (~15 s, ~650 KB as a 22 kHz mono WAV: a 14.9 s
+  // chiptune is not worth a second encoder pipeline for the offline bundle's few hundred KB).
+  const sizeOk = (a) => fs.statSync(a.abs).size < (a.path.endsWith('/happy-birthday.wav') ? 1024 * 1024 : 100 * 1024);
+  assert.ok(wavs.length >= 1 && wavs.every(sizeOk), 'the generated wav sfx stay as small WAV files (the song under 1 MB)');
 });
 
 test('offline audio: every converted file is a valid MP3 whose length matches its Ogg source (within 2%, in fact exact)', () => {

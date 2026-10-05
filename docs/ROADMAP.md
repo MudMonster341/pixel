@@ -87,6 +87,7 @@ source asset packages... change all the trees, pavements, everything."
 - [x] Keys as real items, with the tracker and journal updating (2026-09-22)
 - [x] The reward box: opening animation, then the card (2026-09-22)
 - [x] The birthday card: animated pixel card, photo slots from `assets/card/`, the owner's messages, optional video (2026-09-22)
+- [x] W3, the birthday finale between the box and the card (`src/scenes/finale.js`, 2026-10-05): a tiered cake with 22 candles she blows out by HOLDING Space / E / Enter (or the mouse), then fireworks over a Dubai skyline and a chiptune "Happy Birthday"; chain box -> finale -> card -> credits -> title. Unit-tested (`tests/unit/finale.test.js`); not yet looked at in a browser (the owner's build-then-test rule), see docs/GAME_FEEL.md "The birthday finale"
 
 ## M4 — Mini-games
 

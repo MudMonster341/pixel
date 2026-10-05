@@ -168,10 +168,10 @@ function startGame() {
     scene: [
       first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, WorldScene, UIScene,
       CutsceneScene, HeroScene, FlappyScene, TowerScene,
-      // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off straight to
-      // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see
-      // src/scenes/world.js playBoxOpening()).
-      BoxOpeningScene, CardScene, CreditsScene,
+      // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off to FinaleScene (the cake, the
+      // candles, the fireworks, W3), which hands off to CardScene, then CreditsScene, which ends on 'title' --
+      // none of them ever resumes 'world'/'ui' (see src/scenes/world.js playBoxOpening()).
+      BoxOpeningScene, FinaleScene, CardScene, CreditsScene,
       // FB-0075: where "Quit" (title) and "Quit Game" (pause menu) end up.
       GoodbyeScene,
     ], // later scenes draw on top

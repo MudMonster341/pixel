@@ -77,6 +77,14 @@ const SOUNDS = {
   // ---------- the ending ----------
   boxOpen: { file: 'assets/audio/sfx/box-open.ogg', volume: 0.5, loop: false, category: 'sfx' },
   cardWhoosh: { file: 'assets/audio/generated/card-whoosh.wav', volume: 0.4, loop: false, category: 'sfx' },
+  // W3 (the birthday finale, src/scenes/finale.js, tools/make-audio.js synthHappyBirthday() ...): a soft "pff" per candle blown out, the
+  // rocket / burst / sparkle of the fireworks, and the chiptune "Happy Birthday to You" (~14.9 s, played ONCE through playMusic(): the
+  // card's own bed fades back in when the card starts, so it is a 'music' sound that does not loop).
+  blowPff: { file: 'assets/audio/generated/blow-pff.wav', volume: 0.35, loop: false, category: 'sfx' },
+  fireworkWhoosh: { file: 'assets/audio/generated/firework-whoosh.wav', volume: 0.3, loop: false, category: 'sfx' },
+  fireworkPop: { file: 'assets/audio/generated/firework-pop.wav', volume: 0.4, loop: false, category: 'sfx' },
+  fireworkCrackle: { file: 'assets/audio/generated/firework-crackle.wav', volume: 0.3, loop: false, category: 'sfx' },
+  happyBirthday: { file: 'assets/audio/generated/happy-birthday.wav', volume: 0.55, loop: false, category: 'music', oneShot: true },
 };
 
 const AUDIO_CATEGORIES = ['music', 'sfx', 'ui'];

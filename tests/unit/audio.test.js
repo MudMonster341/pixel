@@ -42,11 +42,14 @@ test('audio: every registered sound has a volume in [0, 1] and a valid category'
   }
 });
 
-test('audio: every music-category sound loops (nothing meant to be a bed ever plays once and goes silent)', () => {
+// W3: the one deliberate exception is the finale's "Happy Birthday" song, a music-slider sound played once (`oneShot: true`) that never needs to loop.
+test('audio: every music-category sound loops (nothing meant to be a bed ever plays once and goes silent), except a declared one-shot song', () => {
   const { SOUNDS } = loadGameData();
   for (const [id, def] of Object.entries(SOUNDS)) {
-    if (def.category === 'music') assert.equal(def.loop, true, `${id}: a music track should loop`);
+    if (def.category === 'music' && !def.oneShot) assert.equal(def.loop, true, `${id}: a music track should loop`);
+    if (def.oneShot) assert.equal(def.loop, false, `${id}: a one-shot song must not loop`);
   }
+  assert.deepEqual(Object.entries(SOUNDS).filter(([, def]) => def.oneShot).map(([id]) => id), ['happyBirthday']);
 });
 
 test('audio: the story\'s minimum sound list is all registered (docs/ROADMAP.md M5 rule 3)', () => {

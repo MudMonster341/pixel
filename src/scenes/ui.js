@@ -1287,11 +1287,11 @@ class ControlsPanel {
 
 // ---------- leaving the game: back to the title, or out of it (FB-0075, FB-0076) ----------
 // Every scene a play session can have alive underneath the one on screen: the world and its HUD, a
-// cutscene or mini-game that paused the world, the ending's own chain (box opening, card, credits).
+// cutscene or mini-game that paused the world, the ending's own chain (box opening, finale, card, credits).
 // Starting the title (or the goodbye screen) from ANY of them must leave none of these behind -- the
 // ending used to hand over to the title with the world still sitting paused under it (the player,
 // her foyer position and all), which is what the feedback overlay and a later "Continue" then saw.
-const GAMEPLAY_SCENES = ['world', 'ui', 'cutscene', 'box-opening', 'card', 'credits', 'minigame-hero', 'minigame-flappy', 'minigame-tower'];
+const GAMEPLAY_SCENES = ['world', 'ui', 'cutscene', 'box-opening', 'finale', 'card', 'credits', 'minigame-hero', 'minigame-flappy', 'minigame-tower'];
 
 // Stops every gameplay scene except `scene` itself (a scene's own start() below stops it), so what is
 // left running is exactly the one scene about to be started. Safe to call when nothing is alive.

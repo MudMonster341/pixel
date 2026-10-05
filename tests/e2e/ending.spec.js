@@ -1,5 +1,5 @@
 // The ending (docs/STORY.md "the box opens...", docs/ROADMAP.md M3): the reward box's opening
-// sequence, then the birthday card, skippable, ending back on the title screen with the save kept.
+// sequence, the birthday finale (cake, candles, fireworks; W3), then the birthday card, skippable, ending back on the title screen with the save kept.
 // Reaches the reward the same shortcut tests/e2e/interiors.spec.js and tests/e2e/minigames.spec.js
 // already use (setting GameState.quest directly) rather than replaying the whole 3-key hunt --
 // tests/e2e/story.spec.js already covers that walk in full, this spec starts from its very last step.
@@ -48,6 +48,35 @@ function cardState(page) {
       recipient: scene.config ? scene.config.recipient : null,
     };
   });
+}
+
+// W3: the finale between the box and the card (src/scenes/finale.js). Not yet run (the build-phase rule: unit tests only; the pure rules are in
+// tests/unit/finale.test.js). HOLD Space until the cake's candles are all out (it takes about 3 s of holding), wait for the fireworks, let the 2 s skip
+// grace pass, then press Enter to skip on to the card.
+function finaleState(page) {
+  return page.evaluate(() => {
+    const scene = game.scene.getScene('finale');
+    return { active: game.scene.isActive('finale'), phase: scene ? scene.phase : null, candlesOut: scene ? scene.candlesOut : null, recipient: scene ? scene.recipient : null };
+  });
+}
+
+async function playFinale(page) {
+  await expect.poll(async () => (await finaleState(page)).active, { timeout: 10_000 }).toBe(true);
+  expect((await finaleState(page)).recipient).toBe('Taru'); // {name} is the recipient, not the typed name
+  await page.waitForTimeout(400);
+  // Esc is no skip while the candles are the interaction.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  expect((await finaleState(page)).phase).toBe('candles');
+  await page.keyboard.down('Space');
+  await expect.poll(async () => (await finaleState(page)).phase, { timeout: 10_000 }).not.toBe('candles');
+  await page.keyboard.up('Space');
+  await expect.poll(async () => (await finaleState(page)).phase, { timeout: 10_000 }).toBe('celebration');
+  await page.keyboard.press('Enter'); // inside the 2 s grace: ignored
+  await page.waitForTimeout(300);
+  expect((await finaleState(page)).phase).toBe('celebration');
+  await page.waitForTimeout(2000);
+  await page.keyboard.press('Enter'); // now it skips on to the card
 }
 
 // The credits ignore skip keys for their first moments (so the key that closes the card can't skip them by
@@ -103,6 +132,9 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   await expect.poll(async () => (await boxState(page)).canSkip, { timeout: 10_000 }).toBe(true);
   await page.keyboard.press('Escape');
 
+  // ---------- the finale (W3): blow out the candles, watch the fireworks, skip on ----------
+  await playFinale(page);
+
   // ---------- the card ----------
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
   const card = await cardState(page);
@@ -151,6 +183,7 @@ test('"Watch the Card Again" from the title jumps straight to the card, skipping
   await talkUntilRewarded(page);
   await expect.poll(async () => (await boxState(page)).canSkip, { timeout: 10_000 }).toBe(true);
   await page.keyboard.press('Escape'); // straight through the box
+  await playFinale(page); // ...then the finale (hold Space for the candles, skip the fireworks)
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
   await page.keyboard.press('Escape'); // straight through the card, on to the credits
   await expect.poll(async () => page.evaluate(() => game.scene.isActive('credits')), { timeout: 10_000 }).toBe(true);

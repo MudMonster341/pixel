@@ -2,8 +2,8 @@
 // card -- confetti, a cake with candles, floating hearts, a photo slideshow and the owner's own
 // messages, typed out one at a time -- ending by handing off to the credits scene (src/scenes/credits.js:
 // wishes, "THE END", back to the title screen). Started by
-// src/scenes/box-opening.js once the box has finished opening (never returns to 'world': the game is
-// over from here, docs/ROADMAP.md M3), and also reachable directly from the title screen's "Watch
+// src/scenes/finale.js (the cake and fireworks, W3, which box-opening.js starts once the box has finished
+// opening; never returns to 'world': the game is over from here, docs/ROADMAP.md M3), and also reachable directly from the title screen's "Watch
 // the Card Again" (src/scenes/title.js, once a save with `quest.stage === 'rewarded'` exists).
 //
 // Content lives in src/card.js (buildCardConfig()) and, for real use, in the owner's own

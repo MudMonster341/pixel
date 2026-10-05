@@ -1,4 +1,4 @@
-// Plays the offline bundle from file:// (title -> name -> bus -> Mustafa -> stall -> 3 keys -> box -> card -> credits -> title).
+// Plays the offline bundle from file:// (title -> name -> bus -> Mustafa -> stall -> 3 keys -> box -> finale (hold Space, skip) -> card -> credits -> title).
 // usage: npm run pack:offline && node tools/qa-offline-play.js [chromium|webkit]
 // Build-phase-after check (docs/QUALITY_LOOP.md): runs a real browser, never leave it running. Mini-games are
 // won through scene.win(true) (they are covered by tests/e2e/minigames.spec.js); screenshots go to the OS temp dir.
@@ -158,6 +158,18 @@ const active = (page, k) => page.evaluate((s) => game.scene.isActive(s), k);
   await page.screenshot({ path: path.join(OUT, `${engine}-box.png`) });
   await until(page, () => game.scene.getScene('box-opening').canSkip, 'box canSkip', 15000);
   await page.keyboard.press('Escape');
+  // W3: the finale: HOLD Space until the cake's candles are all out, watch the fireworks for a few seconds, then skip on to the card.
+  await until(page, () => game.scene.isActive('finale'), 'finale', 15000);
+  await sleep(1500);
+  await page.screenshot({ path: path.join(OUT, `${engine}-finale-candles.png`) });
+  await page.keyboard.down('Space');
+  await until(page, () => game.scene.getScene('finale').phase !== 'candles', 'candles out', 12000);
+  await page.keyboard.up('Space');
+  await until(page, () => game.scene.getScene('finale').phase === 'celebration', 'fireworks', 10000);
+  await sleep(3500);
+  await page.screenshot({ path: path.join(OUT, `${engine}-finale-fireworks.png`) });
+  log('finale phase', await page.evaluate(() => game.scene.getScene('finale').phase));
+  await page.keyboard.press('Enter');
   await until(page, () => game.scene.isActive('card'), 'card', 15000);
   log('card up; recipient', await page.evaluate(() => game.scene.getScene('card').config.recipient));
   await sleep(1500);

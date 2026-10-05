@@ -65,8 +65,9 @@ perspective in the cutscene art, and movement that eases rather than snaps.
    - Each key is won by beating a **mini-game** (see below).
 9. **The reward.** She returns to the stall with all 3 keys. The volunteer says she's the **first to
    finish** and hands her a **small box**.
-10. **The box opens** into a full-screen **animated birthday card**: photos, drawings, animation, and
-    a video at the end.
+10. **The box opens**, then the **birthday finale** (a cake, candles she blows out, fireworks over the Dubai skyline,
+    "Happy Birthday" played as a chiptune), then a full-screen **animated birthday card**: photos, drawings,
+    animation, and a video at the end (see "The box and the birthday card" below).
 
 ## Amendments from the birthday sprint (2026-10-03; ADRs 0017-0019)
 
@@ -111,17 +112,29 @@ gift can never be blocked by a hard game.
 ## The box and the birthday card (the ending, built 2026-09-22)
 
 When she turns in all 3 keys, the volunteer hands over a small box (`GameState.quest.stage` becomes
-`'rewarded'`). That immediately plays three things back to back, then returns to the title screen:
+`'rewarded'`). That immediately plays four things back to back, then returns to the title screen (box -> finale -> card -> credits -> title):
 
 1. **The box opens** (`src/scenes/box-opening.js`): it appears, the lid creaks open, golden light
    and pixel sparkles rise, and the screen fills with light. Skippable with Esc, but only *after* the
    lid has fully opened -- a stray keypress right as the volunteer's last line closes can't rob the
    moment. If `assets/cutscenes/video/box-opening.mp4` exists, it plays that instead of the drawn
    version (see `docs/research/cutscene-video-prompts.md` "Prompt 3").
-2. **The birthday card** (`src/scenes/card.js`): a full-screen pixel card that opens, with confetti,
+2. **The birthday finale** (`src/scenes/finale.js`, W3, built 2026-10-05; the cake and the fireworks are the celebration, the card
+   then reads as the personal message afterwards). The warm light of the box fades into a dusk over a Dubai skyline silhouette (a needle
+   tower, a sail-shaped hotel, an arched tower, lit windows: all generic shapes). On a table stands a tiered cake with **22 small candles**
+   and Taru (her sprite, 3x) beside it; "Make a wish, Taru!". **She holds Space / E / Enter (or the mouse / a finger)** to blow: a breath
+   meter fills and the flames go out one by one, left to right, over about 3 s of holding (they lean away and flicker harder, thin smoke
+   rises, a soft "pff" each; letting go pauses it and blown-out candles stay out). Nobody can get stuck: after 8 s without progress
+   "Hold SPACE to blow!" pulses, after 20 s the rest go out by themselves. When the last flame is out: a beat of silence and "Make a
+   wish...", a warm flash, then ~15 s of **fireworks** (rising trails, bursts of sparks, a few rings and hearts, flickering windows) with a
+   synthesized two-voice chiptune of the traditional "Happy Birthday to You" (public domain tune) and "Happy Birthday, Taru!". The name is
+   the card's recipient ("Taru" unless `card.json` says otherwise); no age is shown here. During the candles the held key is the
+   interaction, never a skip; from 2 s into the fireworks Esc / Enter / Space / a click skip on to the card; it fades to the card by itself
+   when the song is over. The scene works fully silent. "Watch the Card Again" does not replay the finale.
+3. **The birthday card** (`src/scenes/card.js`): a full-screen pixel card that opens, with confetti,
    a cake with candles, floating hearts, a photo slideshow and the messages below, typed out one at a
    time. When the last message closes it hands on to the credits.
-3. **The credits** (`src/scenes/credits.js`, ADR 0019, see "The credits" below): "Happy Birthday, Taru",
+4. **The credits** (`src/scenes/credits.js`, ADR 0019, see "The credits" below): "Happy Birthday, Taru",
    "Happy 22", the wishes one by one, "THE END", then back to the title screen -- the save is kept, so
    **"Continue"** picks up exactly where she was, and a new **"Watch the Card Again"** option (only
    shown once a save has actually reached this point) jumps straight back to the card (and then the

@@ -187,12 +187,13 @@ test('CreditsScene is registered: script tags in order, scene list, scene key', 
   assert.ok(dataTag > cardTag && cardTag >= 0, 'src/credits.js must load after src/card.js (it reuses DEFAULT_RECIPIENT)');
   assert.ok(sceneTag > cardSceneTag && cardSceneTag >= 0, 'the credits scene loads after the card scene');
   assert.ok(sceneTag > dataTag, 'the scene loads after its data');
-  assert.match(main, /BoxOpeningScene, CardScene, CreditsScene/, 'CreditsScene must be in the game config scene list');
+  assert.match(main, /BoxOpeningScene, FinaleScene, CardScene, CreditsScene/, 'CreditsScene must be in the game config scene list');
   assert.match(read('src', 'scenes', 'credits.js'), /class CreditsScene extends Phaser\.Scene[\s\S]*?super\('credits'\)/);
 });
 
-test('the ending chain: box-opening -> card -> credits -> title, and "Watch the Card Again" enters at the card', () => {
-  assert.match(read('src', 'scenes', 'box-opening.js'), /this\.scene\.start\('card'\)/);
+test('the ending chain: box-opening -> finale -> card -> credits -> title, and "Watch the Card Again" enters at the card', () => {
+  assert.match(read('src', 'scenes', 'box-opening.js'), /this\.scene\.start\('finale'\)/);
+  assert.match(read('src', 'scenes', 'finale.js'), /this\.scene\.start\('card'\)/, 'the finale hands off to the card');
   assert.match(read('src', 'scenes', 'card.js'), /this\.scene\.start\('credits'/, 'the card hands off to the credits');
   assert.doesNotMatch(read('src', 'scenes', 'card.js'), /this\.scene\.start\('title'\)/, 'the card no longer returns to the title itself');
   assert.match(read('src', 'scenes', 'credits.js'), /this\.scene\.start\('title'\)/, 'the credits return to the title');

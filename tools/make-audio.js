@@ -26,6 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
+const HB = require('./lib/happy-birthday');
 const SAMPLE_RATE = 22050;
 
 // ---------- tiny WAV encoder (mono, 16-bit PCM, no dependencies) ----------
@@ -205,6 +206,78 @@ function synthRimshot() {
   return mix(tom, delayed(0.17, synthSnare(31, 0.18)), delayed(0.4, synthCrash())).map((v) => v * 0.8);
 }
 
+// W3 (the birthday finale, src/scenes/finale.js): the sounds of the cake and the fireworks, and the chiptune song. Every noise uses a fixed
+// seed, so the files are byte-identical on every run (tests/unit/assets.test.js).
+
+// A soft breath, "pff": a short hump of noise, smoothed (a 3-sample average keeps the lows) so it never hisses.
+function synthBlowPff() {
+  const dur = 0.22;
+  const noise = tone(dur, () => 0, { wave: 'noise', seed: 41, ampFn: (t) => Math.pow(Math.sin((t / dur) * Math.PI), 0.7) * 0.5 });
+  return noise.map((v, i) => (v + (i > 0 ? noise[i - 1] : 0) + (i > 1 ? noise[i - 2] : 0)) / 3);
+}
+
+// A rocket going up: rising noise (smoothed more and more thinly: it gets brighter) under a thin rising whistle.
+function synthFireworkWhoosh() {
+  const dur = 0.7;
+  const hiss = tone(dur, () => 0, { wave: 'noise', seed: 52, ampFn: (t) => Math.pow(t / dur, 1.4) * Math.exp(-Math.max(0, t - 0.55) * 18) * 0.5 });
+  const whistle = tone(dur, (t) => 500 + 1500 * (t / dur), { wave: 'sine', ampFn: (t) => Math.pow(t / dur, 1.2) * Math.exp(-Math.max(0, t - 0.6) * 25) * 0.12 });
+  return mix(brighten(hiss).map((v) => v * 1.4), whistle);
+}
+
+// The burst: a low thump and a bright crack of noise, both gone fast.
+function synthFireworkPop() {
+  const dur = 0.45;
+  const thump = tone(dur, (t) => 70 + 90 * Math.exp(-t * 30), { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.002) * Math.exp(-t * 9) * 0.8 });
+  const crack = brighten(tone(dur, () => 0, { wave: 'noise', seed: 63, ampFn: (t) => Math.min(1, t / 0.001) * Math.exp(-t * 16) * 0.75 }));
+  return mix(thump, crack).map((v) => v * 0.8);
+}
+
+// The sparkle that follows some bursts: ~30 tiny clicks at seeded times, thinning out and getting quieter.
+function synthFireworkCrackle() {
+  const dur = 0.9;
+  const random = seededRandom(74);
+  const clicks = [];
+  for (let i = 0; i < 30; i++) {
+    const at = Math.pow(random(), 1.6) * (dur - 0.05); // more clicks early, fewer late
+    const gain = (1 - at / dur) * (0.3 + 0.7 * random());
+    clicks.push(delayed(at, brighten(tone(0.02, () => 0, { wave: 'noise', seed: 80 + i, ampFn: (t) => Math.exp(-t * 200) * 0.9 * gain }))));
+  }
+  return mix(new Float32Array(Math.round(dur * SAMPLE_RATE)), ...clicks).map((v) => v * 0.8);
+}
+
+// "Happy Birthday to You" as a two-voice chiptune: a square-wave melody (a little vibrato on the long notes) over a triangle-wave
+// "oom-pah-pah" bass. The tune and the chords are data in tools/lib/happy-birthday.js. About 14.9 s (src/finale.js FINALE.songMs).
+function synthHappyBirthday() {
+  const beat = 60 / HB.HAPPY_BIRTHDAY_BPM;
+  const total = HB.HAPPY_BIRTHDAY_BEATS * beat + HB.HAPPY_BIRTHDAY_TAIL_SECONDS;
+  const out = new Float32Array(Math.round(total * SAMPLE_RATE));
+  const lay = (chunk, at) => {
+    const start = Math.round(at * SAMPLE_RATE);
+    for (let i = 0; i < chunk.length && start + i < out.length; i++) out[start + i] += chunk[i];
+  };
+  // melody
+  let at = 0;
+  const lastIndex = HB.HAPPY_BIRTHDAY_TUNE.length - 1;
+  HB.HAPPY_BIRTHDAY_TUNE.forEach((note, i) => {
+    const freq = HB.noteFreq(note.pitch);
+    const dur = note.beats * beat + (i === lastIndex ? HB.HAPPY_BIRTHDAY_TAIL_SECONDS - 0.05 : 0);
+    const sound = Math.min(dur, note.beats * beat * 0.92 + (i === lastIndex ? HB.HAPPY_BIRTHDAY_TAIL_SECONDS - 0.05 : 0)); // a tiny gap between notes
+    const vibrato = (t) => freq * (1 + (t > 0.25 ? 0.006 * Math.sin(2 * Math.PI * 5.5 * t) : 0));
+    const env = (t) => Math.min(1, t / 0.006) * (t < sound - 0.04 ? 0.85 + 0.15 * Math.exp(-t * 6) : Math.max(0, (sound - t) / 0.04) * 0.85) * (i === lastIndex ? Math.exp(-Math.max(0, t - note.beats * beat) * 2.5) : 1);
+    lay(tone(sound, vibrato, { wave: 'square', ampFn: env }).map((v) => v * 0.3), at);
+    at += note.beats * beat;
+  });
+  // bass: one chord per bar after the one-beat pick-up
+  HB.HAPPY_BIRTHDAY_BASS.forEach(([root, upperA, upperB], bar) => {
+    const barStart = (1 + 3 * bar) * beat;
+    const pluck = (freq, dur, gain) => tone(dur, () => freq, { wave: 'triangle', ampFn: (t) => Math.min(1, t / 0.004) * Math.exp(-t * 5) * gain });
+    lay(pluck(root, beat * 1.4, 0.5), barStart);
+    lay(pluck(upperA, beat * 0.9, 0.3), barStart + beat);
+    lay(pluck(upperB, beat * 0.9, 0.3), barStart + 2 * beat);
+  });
+  return out.map((v) => Math.max(-1, Math.min(1, v)));
+}
+
 const GENERATED = [
   { to: 'generated/minigame-jump.wav', build: synthJump },
   { to: 'generated/minigame-flap.wav', build: synthFlap },
@@ -217,6 +290,11 @@ const GENERATED = [
   { to: 'generated/drum-crash.wav', build: synthCrash },
   { to: 'generated/drum-roll.wav', build: synthDrumRoll },
   { to: 'generated/drum-rimshot.wav', build: synthRimshot },
+  { to: 'generated/blow-pff.wav', build: synthBlowPff },
+  { to: 'generated/firework-whoosh.wav', build: synthFireworkWhoosh },
+  { to: 'generated/firework-pop.wav', build: synthFireworkPop },
+  { to: 'generated/firework-crackle.wav', build: synthFireworkCrackle },
+  { to: 'generated/happy-birthday.wav', build: synthHappyBirthday },
 ];
 
 // ---------- everything else: copied byte-for-byte from an already-credited CC0 pack ----------

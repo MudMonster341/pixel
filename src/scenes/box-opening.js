@@ -1,10 +1,11 @@
 // The reward box's opening (docs/STORY.md "the box opens...", docs/ROADMAP.md M3): the volunteer's
 // 'reward' dialog entry ends with `{ boxOpening: true }` (src/dialog.js, src/story.js) the instant
-// she's turned in all 3 keys -- this scene plays that moment, then hands off to the birthday card
+// she's turned in all 3 keys -- this scene plays that moment, then hands off to the birthday finale
+// (src/scenes/finale.js: the cake, the candles she blows out, the fireworks; W3), which hands on to the card
 // (src/scenes/card.js) and never returns to 'world' (the game is over from here, docs/ROADMAP.md M3
 // "ends... returns to the title screen"). Launched by WorldScene.playBoxOpening() exactly like
 // src/scenes/cutscene.js is launched for a cutscene: 'world' is paused first, but unlike a cutscene
-// this scene doesn't resume it -- it starts the 'card' scene instead.
+// this scene doesn't resume it -- it starts the 'finale' scene instead.
 //
 // Two versions, same beats (box appears -> lid creaks open -> golden light and sparkles rise ->
 // screen fills with light -> the card begins), per the owner's own brief and
@@ -217,12 +218,12 @@ class BoxOpeningScene extends Phaser.Scene {
   }
 
   // The scene's own end state is already full light (the drawn version fades a full-screen rect to
-  // opaque; the video's last frame is whatever the clip ends on) -- src/scenes/card.js starts on the
-  // same warm-light background color, so this hands off without a hard cut (docs/GAME_FEEL.md).
+  // opaque; the video's last frame is whatever the clip ends on) -- src/scenes/finale.js starts on the
+  // same warm-light colour (0xfff1a8) and fades it out, so this hands off without a hard cut (docs/GAME_FEEL.md).
   finish() {
     if (this.finished) return;
     this.finished = true;
-    this.time.delayedCall(BOX_SKIP_FADE_MS, () => this.scene.start('card'));
+    this.time.delayedCall(BOX_SKIP_FADE_MS, () => this.scene.start('finale'));
   }
 }
 

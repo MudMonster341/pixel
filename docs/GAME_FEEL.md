@@ -385,6 +385,31 @@ barrier: text, the UI, the mini-games, the ending and the cutscenes are untouche
 - **Looking at it without a browser**: `node tools/preview-daylight.js [out.png] [--map campus] [--crop x0,y0,w,h] [--scale 2] [--indoor]`
   renders a real map crop four times (morning, midday, golden hour, dusk) with the game's own colour maths into one strip PNG.
 
+## The birthday finale: the cake, the candles, the fireworks (wow idea W3, with W9's skyline)
+
+The ending's celebration, between the box and the card (docs/STORY.md "The box and the birthday card"). The feel rules it follows:
+
+- **No hard cut at either end.** It starts from the warm light the box ends on (a full-screen 0xfff1a8 cover that fades out over 0.9 s) and leaves by
+  a camera fade to black into the card (which fades in from black as before). A failsafe timer guarantees the hand-off; a hard stop at 60 s guarantees
+  the scene ends whatever happens.
+- **HOLD to blow, and the world answers at once.** The candles are the interaction, so nothing skips them: the 22 flames go out one at a time (about
+  136 ms each while a key is held; the whole cake takes ~3 s), each flame leans away from her and flickers harder the longer she blows, a thin wisp of
+  smoke rises from each one that goes out, and a soft "pff" plays (at most one per 100 ms). Releasing pauses (the flames settle upright, the blown-out
+  ones stay out). The held state comes from keydown/keyup (and the pointer), never from key repeat, and is cleared on window blur.
+- **Nobody is stuck.** A hint ("Hold SPACE to blow!") pulses after 8 s without progress; after 20 s the rest go out by themselves. The wish / flash /
+  fireworks run on a fixed schedule; the skip (Esc, Enter, Space, E, a click) works from 2 s into the fireworks, never earlier, and a key still held down from
+  the candles (a repeat event) never skips.
+- **The celebration is calm, pretty and finite.** 15 bursts in the pastel palette of the credits (sparks 24-40 per burst, rings, hearts, a triple at the
+  end), cheap closed-form particles (no physics, at most ~100 alive, ~300 shapes a frame at the peak), windows of the skyline flicker, soft hearts and
+  sparkles drift all through, confetti falls during the show, balloons bob. Nothing flashes faster than the warm flash (0.45 s, once).
+- **Pure logic, code-drawn art.** Rules, schedule, the seeded firework show and the failsafes are `src/finale.js` (no `Math.random`); the drawing is
+  shape lists in `src/finale-art.js` (rects / ellipses / circles) replayed onto Graphics, the static parts baked into three textures once; the sky is
+  the credits' dusk (`CREDITS_SKY_STOPS`, pinned by a test). The song and the effects are synthesized by `tools/make-audio.js` (tune data in
+  `tools/lib/happy-birthday.js`). Tests: `tests/unit/finale.test.js`.
+- **Looking at it without a browser:** the layout was checked by rasterising the same shape lists onto an RGBA buffer (`tools/lib/png.js`) and opening the PNG
+  (a throw-away script: the candle phase, a blowing frame and two firework frames). The real thing needs a look in a browser (`npm run qa:shots` has
+  the finale frames `ending-03b..d`).
+
 ## What to check before calling a new screen "done"
 
 Beyond `npm test` green and a look with `npm run qa:shots` (docs/TESTING.md, docs/QA_PLAN.md):

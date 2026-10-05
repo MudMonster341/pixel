@@ -1,5 +1,5 @@
-// FB-0076 ("after the end just take user back to the main screen"). The ending is box opening -> card -> credits -> title
-// (and "Watch the Card Again" enters at the card). Today's credits already return to the title on their own, so this pins the
+// FB-0076 ("after the end just take user back to the main screen"). The ending is box opening -> finale (W3: the cake, the candles,
+// the fireworks) -> card -> credits -> title (and "Watch the Card Again" enters at the card, skipping the finale). Today's credits already return to the title on their own, so this pins the
 // whole chain as one rule: nothing in it ever needs a key press to carry on after THE END, nothing in it can stall (a video
 // that never answers, a camera fade event that never arrives), and no scene of it leaves the player in the world -- the world
 // used to stay paused underneath the title with her foyer position, which the feedback overlay and a later "Continue" saw.
@@ -13,7 +13,7 @@ const { ROOT, loadGameData, plain } = require('../helpers/game-data');
 const read = (...parts) => fs.readFileSync(path.join(ROOT, ...parts), 'utf8').replace(/\r\n/g, '\n'); // checkouts on Windows have CRLF
 
 const game = loadGameData();
-for (const file of ['src/scenes/ui.js', 'src/scenes/box-opening.js', 'src/scenes/card.js', 'src/scenes/credits.js', 'src/scenes/title.js']) game.runScript(file);
+for (const file of ['src/scenes/ui.js', 'src/scenes/box-opening.js', 'src/scenes/finale.js', 'src/scenes/card.js', 'src/scenes/credits.js', 'src/scenes/title.js']) game.runScript(file);
 const { evaluate } = game;
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -190,12 +190,14 @@ test('FB-0076: the box opening plays its drawn version when the optional clip ne
 
 // ---------- the whole chain ----------
 
-test('FB-0076: the chain is box opening -> card -> credits -> title, "Watch the Card Again" enters at the card, and nothing in it returns to the world', () => {
-  assert.match(read('src', 'scenes', 'box-opening.js'), /this\.scene\.start\('card'\)/);
+test('FB-0076 / W3: the chain is box opening -> finale -> card -> credits -> title, "Watch the Card Again" enters at the card, and nothing in it returns to the world', () => {
+  assert.match(read('src', 'scenes', 'box-opening.js'), /this\.scene\.start\('finale'\)/);
+  assert.doesNotMatch(read('src', 'scenes', 'box-opening.js'), /this\.scene\.start\('card'\)/, 'the box no longer goes straight to the card');
+  assert.match(read('src', 'scenes', 'finale.js'), /this\.scene\.start\('card'\)/);
   assert.match(read('src', 'scenes', 'card.js'), /this\.scene\.start\('credits', \{ raw \}\)/);
   assert.match(read('src', 'scenes', 'credits.js'), /this\.scene\.start\('title'\)/);
   assert.match(read('src', 'scenes', 'title.js'), /this\.scene\.start\('card'\)/, 'Watch the Card Again plays the card, then (via it) the credits, then ends on the title');
-  for (const file of ['box-opening.js', 'card.js', 'credits.js']) {
+  for (const file of ['box-opening.js', 'finale.js', 'card.js', 'credits.js']) {
     const source = read('src', 'scenes', file);
     assert.doesNotMatch(source, /scene\.(start|launch|resume|wake|run)\(\s*'(world|ui|boot)'/, `${file} must never hand control back to the world`);
   }
@@ -211,4 +213,17 @@ test('FB-0076: no step of the chain waits for a key to carry on after THE END (e
   assert.doesNotMatch(showTheEnd, /keyboard|isDown|once\('keydown/);
   assert.match(source, /this\.at\(t\.madeBy\.start, \(\) => this\.showMadeBy\(\)\);/);
   assert.equal((source.match(/keyboard\.on\(/g) || []).length, 1, 'one key handler, for skipping ahead only');
+});
+
+// ---------- the finale (W3) ----------
+
+test('W3: the title / goodbye clean-up stops a live finale like every other scene of the ending, and the finale itself hands over to the card only', () => {
+  const stopGameplayScenes = evaluate('stopGameplayScenes');
+  const { scene, log } = fakeScene('title', ['finale', 'world', 'ui']);
+  stopGameplayScenes(scene);
+  assert.deepEqual(plain(log), ['stop:world', 'stop:ui', 'stop:finale'], 'nothing of the ending is left alive under the title');
+  const source = read('src', 'scenes', 'finale.js');
+  assert.equal((source.match(/this\.scene\.start\(/g) || []).length, 1, 'one hand-over');
+  assert.match(source, /this\.scene\.start\('card'\)/);
+  assert.match(source, /this\.cameras\.main\.once\('camerafadeoutcomplete', go\);\s*this\.time\.delayedCall\(FINALE\.leaveFailsafeMs, go\);/, 'the same fade + failsafe pair the card and the credits use (FB-0076)');
 });

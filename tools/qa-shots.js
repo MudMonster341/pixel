@@ -669,6 +669,20 @@ async function shootEnding(browser) {
     await page.waitForTimeout(400);
     await shoot(page, 'ending-03-box-light');
 
+    // W3: the finale (src/scenes/finale.js): the cake with its 22 lit candles, the flames going out while Space is HELD, the fireworks.
+    await waitFor(page, () => game.scene.isActive('finale'), { timeout: 15000 });
+    await page.waitForTimeout(1500);
+    await shoot(page, 'ending-03b-finale-candles');
+    await page.keyboard.down('Space');
+    await waitFor(page, () => game.scene.getScene('finale').candlesOut >= 10, { timeout: 8000 });
+    await shoot(page, 'ending-03c-finale-blowing');
+    await waitFor(page, () => game.scene.getScene('finale').phase !== 'candles', { timeout: 8000 });
+    await page.keyboard.up('Space');
+    await waitFor(page, () => game.scene.getScene('finale').phase === 'celebration', { timeout: 8000 });
+    await page.waitForTimeout(3500);
+    await shoot(page, 'ending-03d-finale-fireworks');
+    await page.keyboard.press('Enter'); // past the 2 s skip grace: on to the card
+
     await waitFor(page, () => game.scene.isActive('card'), { timeout: 15000 });
     // Long enough for the cover's own 400ms fade-in (src/scenes/card.js showCover()) to finish, so
     // this shot shows the cover cleanly instead of blended mid-fade with the interior behind it.

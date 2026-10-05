@@ -33,6 +33,9 @@
   <script src="src/scripts.js"></script>
   <script src="src/card.js"></script>
   <script src="src/credits.js"></script>
+  <!-- W3 (the birthday finale between the box and the card): its rules/schedule/fireworks (pure) and its drawing as shape lists; loads after card.js (renderCardText). -->
+  <script src="src/finale.js"></script>
+  <script src="src/finale-art.js"></script>
   <script src="src/maplogic.js"></script>
   <script src="src/state.js"></script>
   <!-- The small unskippable moments (unicorn, Mevin): the pacing table and rules, pure data/logic. -->
@@ -61,10 +64,11 @@
   <script src="src/minigames/flappy.js"></script>
   <script src="src/minigames/tower.js"></script>
   <script src="src/scenes/cutscene.js"></script>
-  <!-- The ending (docs/STORY.md "the box opens..."): box-opening.js/card.js both use
+  <!-- The ending (docs/STORY.md "the box opens..."): box-opening.js/finale.js/card.js use
        DialogBox/drawPanel/uiText/COLORS/GAME_WIDTH from ui.js (above) and CARD_CONFIG_URL/
        CARD_PHOTOS_DIR/CARD_VIDEO_URL/BOX_VIDEO_URL/buildCardConfig from src/card.js (above). -->
   <script src="src/scenes/box-opening.js"></script>
+  <script src="src/scenes/finale.js"></script>
   <script src="src/scenes/card.js"></script>
   <script src="src/scenes/credits.js"></script>
   <!-- FB-0075: the goodbye screen ("Quit" on the title, "Quit Game" in the pause menu); needs Button/makePanel/uiText/leaveGameTo from ui.js. -->

@@ -32,6 +32,8 @@ const SCRIPTS = [
   'src/card.js',
   // The credits phase after the card (decisions/0019): pure data + the timeline, loaded right after card.js.
   'src/credits.js',
+  // The birthday finale (W3): the blow / schedule / firework rules and its drawing as shape lists, pure; loaded after card.js (renderCardText).
+  'src/finale.js', 'src/finale-art.js',
 ];
 
 // Just enough of Phaser's EventEmitter for state.js and for a fake `game.events` in save tests.

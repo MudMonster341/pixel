@@ -2114,8 +2114,8 @@ class WorldScene extends Phaser.Scene {
   }
 
   // The ending (docs/STORY.md "the box opens..."): unlike playCutscene()/launchMinigame() above,
-  // nothing ever resumes 'world' or 'ui' afterwards -- src/scenes/box-opening.js hands off straight
-  // to src/scenes/card.js, which ends on the title screen (docs/ROADMAP.md M3 "returns to the title
+  // nothing ever resumes 'world' or 'ui' afterwards -- src/scenes/box-opening.js hands off to
+  // src/scenes/finale.js, then src/scenes/card.js, which ends on the title screen (docs/ROADMAP.md M3 "returns to the title
   // screen, keeping the save"), the same way PauseMenu.quitToTitle() (src/scenes/ui.js) stops both
   // scenes on its way there. Stopping 'ui' here (not just pausing 'world') also avoids a real bug a
   // pause would leave behind: 'ui' would keep listening for Esc the whole time box-opening/card own

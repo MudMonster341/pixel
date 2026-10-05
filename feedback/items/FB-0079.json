@@ -1,0 +1,61 @@
+{
+  "id": "FB-0079",
+  "title": "name the acm member aakar",
+  "type": "change",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-05T17:23:49.362Z",
+  "updatedAt": "2026-10-05T17:23:49.362Z",
+  "details": "make him sound thoda like a sci fi evil villan about like tech, so join acm, and then doemtihng like dr evil. make him wear sky blue",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 18,
+      "y": 34
+    },
+    "pixel": {
+      "x": 290,
+      "y": 546
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": true,
+    "build": "2226e24",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-05T17:23:09.254Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0079.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-05T17:23:49.362Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

@@ -227,7 +227,7 @@ const MOMENT_UNICORN_STEPS = [
   { spawnActor: { id: 'prince', sprite: 'npc-prince', at: gateTile(23, -5), facing: 'left' } },
   { frame: { actor: 'unicorn', frame: UNICORN.headUp } },
   { move: { actor: 'prince', path: [gateTile(13, -5)], speed: 5.5 } },
-  { say: { speaker: 'Prince', lines: ["Don't mind me. I'm always watching."], autoMs: 1400 } },
+  { say: { speaker: 'Prince', lines: ["Don't mind me. If you're ever a little tipsy, I'll always watch out for you."], autoMs: 2700 } },
   { move: { actor: 'prince', path: [gateTile(10, -5)], speed: 3 } },
   // He mounts: he is gone from the lawn and sits on its back.
   { despawnActor: 'prince' },

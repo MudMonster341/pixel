@@ -354,7 +354,7 @@ test('FB-0051: M1 says the owner\'s exact line, then the prince\'s, then hers; t
   assert.equal(says.length, 3);
   assert.deepEqual(says[0].lines, ["WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?"], 'the owner\'s inside joke, exactly as written');
   assert.equal(says[0].speaker, '{name}');
-  assert.deepEqual(says[1], { speaker: 'Prince', lines: ["Don't mind me. I'm always watching."], autoMs: says[1].autoMs });
+  assert.deepEqual(says[1], { speaker: 'Prince', lines: ["Don't mind me. If you're ever a little tipsy, I'll always watch out for you."], autoMs: says[1].autoMs });
   assert.deepEqual(says[2].lines, ['Huh... is this the actual BITS?']);
   assert.equal(says[2].speaker, '{name}');
   assert.ok(game.renderLine('{name}', { playerName: 'Zara' }) === 'Zara' && game.renderLine('{name}', game.GameState) === 'Taru');
@@ -847,7 +847,7 @@ test('FB-0051: the e2e helpers switch moments off by default (openGame and openT
 test('FB-0051: the review doc lists the moment lines (so the owner can edit them), and no line says anything about a birthday', () => {
   const doc = read('docs', 'research', 'campus-lines-review.md');
   for (const text of [
-    "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?", "Don't mind me. I'm always watching.", 'Huh... is this the actual BITS?',
+    "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?", "Don't mind me. If you're ever a little tipsy, I'll always watch out for you.", 'Huh... is this the actual BITS?',
     'WOAHHH, {name}! You da goat!', 'Come watch me perform at Jashn some day!', 'Mevin (Treble)',
     'Ah, {name}! Class is dismissed. A king never walks.', 'My ride. Kindly mind the marks, {name}.', 'Okay. Never mind. This is definitely BITS.',
     '{name}!', 'There you are! We have been looking everywhere.', 'Come to the canteen with us. We saved you a seat!', 'Give me a few minutes, I still have a hunt to finish.', 'Fine. But the chai will not wait forever.',
@@ -1569,4 +1569,83 @@ test('FB-0051: the three friends\' sheets (Sana, Shraddha, Palak) exist as 16x24
   for (const name of ['sana', 'shraddha', 'palak']) assert.match(tool, new RegExp(`'friend-${name}': \\{ hair:`));
   // they are script actors only: nobody stands on a map (the ambient roster still has no Sana, Shraddha or Palak)
   for (const list of Object.values(AMBIENT)) for (const e of list) assert.ok(!/^(Sana|Shraddha|Palak)$/.test(e.name || ''), `${e.name} is an ambient NPC`);
+});
+
+// ---------- FB-0078: the unicorn looked like a white pig with a horn; the prince promises to watch out for her ----------
+
+test('FB-0078: the unicorn sheet is still 6 frames of 32x32 and is a slim, tall, long-legged horse with a mane, a horn and pink hooves (not a flat white blob)', () => {
+  const sheet = MOMENT_SHEETS.unicorn;
+  const img = png(sheet.file);
+  assert.equal(img.width, 32 * 6);
+  assert.equal(img.height, 32);
+  assert.equal(sheet.frameWidth, 32);
+  assert.equal(sheet.frameHeight, 32);
+  assert.equal(Object.keys(sheet.frames).length, 6);
+  const hexAt = (x, y) => { const i = (y * img.width + x) * 4; return img.data[i + 3] ? `#${[0, 1, 2].map((k) => img.data[i + k].toString(16).padStart(2, '0')).join('')}` : null; };
+  const bounds = (f) => {
+    let top = 99; let bottom = -1;
+    for (let y = 0; y < 32; y++) for (let x = f * 32; x < (f + 1) * 32; x++) if (hexAt(x, y)) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
+    return { top, bottom };
+  };
+  for (let f = 0; f < 6; f++) {
+    const counts = new Map();
+    let opaque = 0;
+    for (let y = 0; y < 32; y++) for (let x = f * 32; x < (f + 1) * 32; x++) { const c = hexAt(x, y); if (c) { opaque++; counts.set(c, (counts.get(c) || 0) + 1); } }
+    assert.ok(counts.size >= 8, `frame ${f} has only ${counts.size} colours`);
+    assert.ok(Math.max(...counts.values()) / opaque < 0.6, `frame ${f} is mostly one flat colour`);
+  }
+  const colors = new Set();
+  for (let y = 0; y < 32; y++) for (let x = 0; x < img.width; x++) { const c = hexAt(x, y); if (c) colors.add(c); }
+  for (const c of ['#f6f2fa', '#cdc4e0']) assert.ok(colors.has(c), `the coat lacks ${c} (pearl and pale lilac shadow)`);
+  for (const c of ['#ff8fc7', '#b690ff', '#7fd6ff']) assert.ok(colors.has(c), `the mane and tail lack ${c} (pink, lilac, sky)`);
+  for (const c of ['#f0c648', '#fff2c2']) assert.ok(colors.has(c), `the horn lacks ${c} (gold spiral)`);
+  assert.ok(colors.has('#ff9fcb'), 'pink hooves');
+  // standing frames: hooves on the feet anchor (the lowest row is row 30; MOMENT_SHEETS.unicorn.feet = 15 below the centre)
+  for (const f of [0, 1, 2, 3]) assert.equal(bounds(f).bottom, 30, `frame ${f}: the hooves are on the feet anchor`);
+  assert.equal(sheet.feet, 15);
+  // head-up frame: the horn rises above a tall body, and below the belly there are only four slim legs (a pig has a wide belly down to the grass)
+  assert.ok(bounds(sheet.frames.headUp).top <= 2, 'the horn rises well above the head');
+  let legRow = 0;
+  for (let x = 2 * 32; x < 3 * 32; x++) if (hexAt(x, 27)) legRow++;
+  assert.ok(legRow >= 8 && legRow <= 18, `four slim legs at row 27 (${legRow} opaque pixels)`);
+  // the pack's chubby horse is gone from the unicorn: the generator draws the slim horse itself
+  assert.doesNotMatch(read('tools', 'make-moments.js'), /SpriteSheetBrownSide/);
+});
+
+test('FB-0078: the prince promises, in a cute way, to always watch out for her if she is ever drunk; the old line is gone; her lines are untouched', () => {
+  const says = SCRIPTS.momentUnicorn.filter((s) => s.say).map((s) => plain(s.say));
+  assert.equal(says.length, 3);
+  const prince = says[1];
+  assert.equal(prince.speaker, 'Prince');
+  assert.equal(prince.lines.length, 1);
+  assert.equal(prince.lines[0], "Don't mind me. If you're ever a little tipsy, I'll always watch out for you.");
+  assert.match(prince.lines[0], /watch out/);
+  assert.match(prince.lines[0], /tipsy/);
+  assert.doesNotMatch(prince.lines[0], /always watching/);
+  assert.ok(prince.autoMs >= 2000 && prince.autoMs <= 3000, `reading time ${prince.autoMs} ms for the longer line`);
+  // Taru's own lines (the owner's inside joke) stay exactly as written
+  assert.deepEqual(says[0].lines, ["WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?"]);
+  assert.deepEqual(says[2].lines, ['Huh... is this the actual BITS?']);
+  // the old line is nowhere in the source, and the review doc the owner edits shows the new one
+  assert.doesNotMatch(read('src', 'scripts.js'), /I'm always watching/);
+  const doc = read('docs', 'research', 'campus-lines-review.md');
+  assert.ok(doc.includes("Don't mind me. If you're ever a little tipsy, I'll always watch out for you."));
+  assert.ok(!doc.includes("I'm always watching."));
+});
+
+test('FB-0078: M1 still lasts 8-20 s with the longer prince line, from every tile it can fire on, and never waits for a key', () => {
+  const m = MOMENTS.find((x) => x.script === 'momentUnicorn');
+  const here = mapOf(m.map);
+  const rect = momentTriggerRect(m, here.anchor);
+  let tiles = 0;
+  for (let ty = rect.y0; ty <= rect.y1; ty++) {
+    for (let tx = rect.x0; tx <= rect.x1; tx++) {
+      if (!here.walkable(tx, ty)) continue;
+      const tl = momentTimeline(SCRIPTS.momentUnicorn, { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      assert.equal(tl.needsInput, false);
+      assert.ok(tl.durationMs >= MOMENT_MIN_MS && tl.durationMs <= MOMENT_MAX_MS, `M1 lasts ${Math.round(tl.durationMs)} ms with her at ${tx},${ty}`);
+      tiles++;
+    }
+  }
+  assert.ok(tiles >= 20);
 });

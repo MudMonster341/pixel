@@ -133,7 +133,7 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | Moment | Where | Speaker | Line |
 |---|---|---|---|
 | M1 the unicorn and the prince | just inside Gate 2 (first time only, after the welcome) | {name} | WOAH, WHAT? I'm not drunk yet, so why is a unicorn here? |
-| | | Prince | Don't mind me. I'm always watching. |
+| | | Prince | Don't mind me. If you're ever a little tipsy, I'll always watch out for you. |
 | | | {name} | Huh... is this the actual BITS? |
 | M2 Mevin the drummer (plays for Treble, the music club; runs in with a drum kit, drums a bar, ends on a rimshot, runs off) | the brick forecourt in front of the Main Block, as she first walks up to the Main Block, about 6 s after M1 ends | Mevin (Treble) | WOAHHH, {name}! You da goat! |
 | | | Mevin (Treble) | Come watch me perform at Jashn some day! |

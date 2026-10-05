@@ -1,0 +1,61 @@
+{
+  "id": "FB-0080",
+  "title": "name the sports person mahin, he was playing badminton",
+  "type": "change",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-05T17:25:39.147Z",
+  "updatedAt": "2026-10-05T17:25:39.147Z",
+  "details": "",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 5,
+      "y": 11
+    },
+    "pixel": {
+      "x": 94,
+      "y": 177
+    },
+    "facing": "right",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": true,
+    "build": "2226e24",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-05T17:25:16.086Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0080.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-05T17:25:39.147Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

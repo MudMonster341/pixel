@@ -1183,3 +1183,8 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 ## 2026-10-05 (Day 4) - qa-shots flows for M3/M4/album/selfie; looked at them
 
 `node tools/qa-shots.js --only moment-03,moment-04,album,selfie`: 9 captured, 0 skipped. Looked: chariot beside the stairs with Raja speaking above the dialog; the three girls in a row beside her (distinct looks, clear of the box); album placeholders/locked/3 polaroids with confetti; selfie preview card + saved PNG (no HUD in the file, polaroid frame, caption "Selfie, BITS Dubai Campus"). Full test round started next.
+
+## 2026-10-05 (Day 4, evening) - owner's 2nd playtest: FB-0077 (Gate 2 barrier), FB-0078 (unicorn)
+
+**FB-0078 fixed (1157 unit green):** unicorn redrawn (the Ninja Adventure horse is a 23x16 chibi blob: a recolour could never fix "looks like a pig"), so `buildUnicornSheet` in tools/make-moments.js now draws a slim pearl horse with pastel mane/tail, pink hooves, gold horn (code-drawn, a conscious exception to FB-0025, said so in the fix note); prince: "Don't mind me. If you're ever a little tipsy, I'll always watch out for you." (autoMs 2700). Looked at the 4x sheet: reads as a unicorn.
+**Next:** FB-0077 the Gate 2 boom barrier opens when she nears and stays open (door-animation system).

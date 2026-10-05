@@ -103,7 +103,7 @@ climbs down saying thanks, the chameleon changes colour.
 None from rounds 1-2. Cut order if time runs short: M6 ball pit, then M3 Raja's chariot, then M7 sumo, then M4. Keep M1, M2, M5 and the tower climb (it is the Room 195 key).
 
 ## Draft lines (placeholders; the owner edits)
-- **M1** Taru: "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?" Prince: "Don't mind me. I'm always watching." (mounts, flies off) Taru: "Huh... is this the actual BITS?"
+- **M1** Taru: "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?" Prince: "Don't mind me. If you're ever a little tipsy, I'll always watch out for you." (FB-0078; was "I'm always watching.") (mounts, flies off) Taru: "Huh... is this the actual BITS?"
 - **M2** Mevin: "WOAHHH, TARU! You da goat!" ... "Come watch me perform at Jashn some day!" (rimshot) Name tag: "Mevin (Treble)".
 - **M3** Raja: "Ah, {name}! Class is dismissed. A king never walks." (a chariot rumbles in) "My ride. Kindly mind the marks, {name}." Taru: "Okay. Never mind. This is definitely BITS."
 - **M4** Sana: "Taru!" Shraddha: "There you are!" Palak: "Come to the canteen with us, we saved you a seat." Taru: "Give me a few minutes, one more key to find."

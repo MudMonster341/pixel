@@ -1,0 +1,81 @@
+{
+  "id": "FB-0078",
+  "title": "Unicorn is cutre, the pricne should sya ill always watch out if you are evr drunk, in a cute way",
+  "type": "change",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "fixed",
+  "createdAt": "2026-10-05T17:21:33.477Z",
+  "updatedAt": "2026-10-05T17:33:55.929Z",
+  "details": "",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 247,
+      "y": 152
+    },
+    "pixel": {
+      "x": 3953,
+      "y": 2441
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2226e24",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-05T17:21:06.712Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0078.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The unicorn is redrawn as a slim pearl-white horse with a pastel mane and tail, pink hooves and a gold horn (the free packs only have round chibi animals, which is why the old one looked like a pig, so this one is drawn in code: tell me if you would rather use a pack or your own picture). The prince now says: Don't mind me. If you're ever a little tipsy, I'll always watch out for you. Your own lines are unchanged.",
+      "at": "2026-10-05T17:33:55.929Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/moments.test.js › FB-0078: the prince promises, in a cute way, to always watch out for her",
+    "commit": null,
+    "at": "2026-10-05T17:33:55.929Z"
+  },
+  "history": [
+    {
+      "at": "2026-10-05T17:21:33.477Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-05T17:23:56.899Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T17:33:55.929Z",
+      "by": "agent",
+      "status": "fixed"
+    }
+  ]
+}

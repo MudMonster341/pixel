@@ -100,28 +100,85 @@ test.describe('Talkable campus students (ADR 0018)', () => {
     await expect.poll(async () => (await student(page, id)).speed, { timeout: 5000 }).toBeGreaterThan(0);
   });
 
-  test('every ambient student on the campus has a role and a name tag that is a role label', async ({ page }) => {
+  // FB-0050/0051 (P2a/P2b): a few entries are NAMED characters (src/ambient.js `name`, e.g. Deanne, Sid, Prof. Raja): their tag is that name; every
+  // other student's tag is its role label. A named entry still has a valid role.
+  test('every ambient student on the campus has a role and a name tag that is its own name (named entries) or its role label', async ({ page }) => {
     await openGame(page, { map: 'campus' });
     await waitForMap(page, 'campus');
     const bad = await page.evaluate(() => game.scene.getScene('world').ambientNpcs
-      .filter((a) => !CAMPUS_ROLES[a.def.role] || a.sprite.def.name !== CAMPUS_ROLES[a.def.role].label)
+      .filter((a) => !CAMPUS_ROLES[a.def.role] || a.sprite.def.name !== (a.def.name || CAMPUS_ROLES[a.def.role].label))
       .map((a) => a.def.id));
     expect(bad).toEqual([]);
   });
 
-  test('a talkable student near a story object never takes the key station\'s E', async ({ page }) => {
-    await openGame(page, { map: 'main-block-1' });
-    await waitForMap(page, 'main-block-1');
-    await startGame(page);
-    // P5c (FB-0071): the ICL is a sealed lab now and its students wait in the corridor outside. Teleported beside the lab's core console (the key
-    // station, (6,11)) and Alice, E there is the console's or Alice's, never a talkable student's.
-    await teleport(page, 6, 12);
-    await page.keyboard.press('e');
-    await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);
-    const talk = await dialogNow(page);
-    const roleLabels = await page.evaluate(() => Object.values(CAMPUS_ROLES).map((r) => r.label));
-    expect(roleLabels).not.toContain(talk.speaker);
-  });
+  // Story objects always win E over a student (src/maplogic.js pickInteractable(), tests/unit/story-clearance.test.js). By design the authored data keeps
+  // every student at least two interact ranges (3 tiles) from every key station and quest NPC (and since P5c nobody stands near the ICL's console
+  // any more), so no real student can ever be "near" a station. Two checks per map instead of one fixed spot:
+  //  1. the live scene keeps that geometry: no ambient student within one interact range of a key station or quest NPC (indeed 2 ranges);
+  //  2. the priority rule itself, with a student forced into the worst case: one pushed next to the player, 3px nearer than the key station
+  //     (inside INTERACT_TIE_MARGIN), must still lose, and E opens the station's dialog (its name, not a role label).
+  // physicsLab (main-block-3) and room195 (main-block-1) are used: neither sits in front of the ICL's sealed hatch, Alice or a mini-game start
+  // (the key is marked taken first, so E shows the station's own "already taken" line and starts no mini-game).
+  for (const [mapKey, stationId] of [['main-block-3', 'physicsLab'], ['main-block-1', 'room195']]) {
+    test(`a talkable student near a story object never takes the key station's E (${mapKey}: ${stationId})`, async ({ page }) => {
+      await openGame(page, { map: mapKey });
+      await waitForMap(page, mapKey);
+      await startGame(page);
+
+      // 1. live geometry
+      const geometry = await page.evaluate(() => {
+        const world = game.scene.getScene('world');
+        const story = [
+          ...world.keyStations.map((ks) => ({ id: `key station ${ks.def.id}`, x: ks.x, y: ks.y })),
+          ...world.npcs.map((n) => ({ id: `npc ${n.def.id}`, x: n.x, y: n.y })),
+        ];
+        const tooClose = [];
+        for (const a of world.ambientNpcs) {
+          for (const s of story) {
+            const d = Math.hypot(a.sprite.x - s.x, a.sprite.y - s.y);
+            if (d < 2 * INTERACT_RANGE) tooClose.push(`${a.def.id} is ${d.toFixed(1)}px from ${s.id}`);
+          }
+        }
+        return { students: world.ambientNpcs.length, tooClose };
+      });
+      expect(geometry.students).toBeGreaterThan(0);
+      expect(geometry.tooClose).toEqual([]);
+
+      // 2. the priority rule in the worst case
+      const stationName = await page.evaluate((id) => {
+        const world = game.scene.getScene('world');
+        GameState.quest.keys[id] = true; // already taken: E shows the "done" line, no mini-game starts
+        return world.keyStations.find((k) => k.def.id === id).def.name;
+      }, stationId);
+      const tile = await page.evaluate((id) => {
+        const ks = game.scene.getScene('world').keyStations.find((k) => k.def.id === id);
+        return { x: Math.floor(ks.x / 16), y: Math.floor(ks.y / 16) };
+      }, stationId);
+      await teleport(page, tile.x, tile.y + 1);
+      const setup = await page.evaluate((id) => {
+        const world = game.scene.getScene('world');
+        const ks = world.keyStations.find((k) => k.def.id === id);
+        const student = world.ambientNpcs.find((a) => a.def.kind === 'idle');
+        const toStation = Math.hypot(world.player.x - ks.x, world.player.y - ks.y);
+        // Off physics (it must not shove her), placed beside her, 3px nearer to her than the station is.
+        student.sprite.body.enable = false;
+        student.sprite.setPosition(world.player.x + (toStation - 3), world.player.y);
+        const toStudent = Math.hypot(world.player.x - student.sprite.x, world.player.y - student.sprite.y);
+        const found = world.nearestInteractable();
+        return { toStation, toStudent, role: found && found.role, kind: found && found.kind };
+      }, stationId);
+      expect(setup.toStation).toBeLessThan(24); // she is in the station's range
+      expect(setup.toStudent).toBeLessThan(setup.toStation); // and the student really is the nearer one
+      expect(setup.role).toBe('keyStation'); // still the station's E
+      await page.keyboard.press('e');
+      await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);
+      const talk = await dialogNow(page);
+      expect(talk.speaker).toBe(stationName);
+      const roleLabels = await page.evaluate(() => Object.values(CAMPUS_ROLES).map((r) => r.label));
+      expect(roleLabels).not.toContain(talk.speaker);
+      await finishDialog(page);
+    });
+  }
 });
 
 test.describe('Campus animals (ADR 0018)', () => {

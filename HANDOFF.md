@@ -1,6 +1,6 @@
 # Handoff — read this first
 
-**Updated 2026-10-04 (end of Day 2 of the birthday sprint, after the owner's first playtest).** Then read
+**Updated 2026-10-05 (evening of Day 3: packages P1-P5 done).** Then read
 [docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md) (**the plan for what to do next**),
 [CLAUDE.md](CLAUDE.md), and the last entries of [MEMORY.md](MEMORY.md) and [ERRORS.md](ERRORS.md) (ERR-0010..0015).
 Older plan with the finished Day 1-2 packages: [docs/plans/2026-10-03-birthday-sprint.md](docs/plans/2026-10-03-birthday-sprint.md).
@@ -20,38 +20,20 @@ Owner's wishes: cute and soft look with story meaning; art need not be insane bu
 feel; people and animals moving; talk to everyone and learn campus facts. After the first playtest: **"the game is fine, but the wow aspect isn't
 there yet"**, plus 33 feedback items. **Ratings stay paused.**
 
-## State (2026-10-04)
+## State (2026-10-05, Day 3 evening)
 
-`main` is pushed (origin/main = `2fad122`, plus local docs commits since; this handoff's own commit may be ahead). Last full `npm test`:
-**unit 691 green + 185/185 browser tests green** (run twice; one unreproduced e2e failure in a push attempt: ERR-0015). Nothing is running
-(the owner started their own server with `node server.js` for the playtest; it is theirs).
+`main` is **ahead of origin by many commits, NOT pushed** (push only when the owner says; the pre-push hook runs the full suite, 9-17 min). Last full run today:
+**unit 970 green + 185/185 browser tests green** (182 on the first run, the 3 failures were stale specs, fixed and rerun). Nothing is running.
 
-### Done (Days 1-2)
-Offline bundle (Safari-safe MP3 audio), credits scene, RTA bus with door animation, talkable students + cats and birds, campus facts, **foyer and
-two wings rebuilt to the 3D tour** (ADR 0020), 13 closed nameplated wing doors that each speak a line, a story-clearance test, a **completeness test**
-(textures, door targets and arrival tiles, lock reasons, furniture density, life per reachable map), `tools/qa-offline-play.js` (title -> credits from
-file:// or `PLAY_URL`, Chromium or WebKit), a defect sweep ([docs/quality/defect-sweep-2026-10-04.md](docs/quality/defect-sweep-2026-10-04.md): D01-D11,
-D13-D17, D19 fixed; D12, D18, D20-D23 left on purpose) and the card typewriter bug (ERR-0014). Hosting build `npm run pack:site`.
+### Done on Day 3 (feedback packages P1-P5, all committed, FB items marked fixed in the Inbox)
+- **P1 controls/UI:** E/Space/Enter advance messages (one handler); the player halts under any script/overlay (ERR-0016); panel frame right/bottom border restored (ERR-0017); Quit (title + pause) + goodbye scene; ending chain hardened; Main Block door glass solid, two-tile doorways.
+- **P2:** ICVL -> ICL everywhere (save migration); named ambient NPCs (`name`, `lines`, `sheet`, `factIds`): Deanne, 9 friends, 3 Mustafas (black+orange hoodie) near the games, Prof. Elakkiya/Angel/Raja; club outfits (ACM dark pink, LUG orange/black, MTC black/white, others sky blue); funnier CS openers. Lines for the owner: docs/research/campus-lines-review.md.
+- **P3 outdoors:** `tools/render-map-crop.js` (LOOK at any map without a browser), kerb/road autotile (`tools/campus/autotile.js`), oval roundabout, road west with a turning circle, real parking lots, RTA bus stop + bay + shelter, full-width barrier, new palms/leafy trees.
+- **P4 Main Block:** black void, side-on doors/windows, Library lobby at the foyer back-centre (door still closed), stairs from the LimeZu pack, working lifts on 4 floors, every door/lift animates (closed/half/open).
+- **P5 mini-games:** Room 195 = **tower climb** (Tetris removed; match-3 dropped by the owner), Physics Lab = hero fight (kitten hero vs shadow bat, original stand-ins, Z shoots, themed cover), ICL = sealed spaceship lab: scanner + "ICL Fingerprint Hack" opens the door, Alice the robot gives the key.
+- The owner's "moments" (unicorn+prince, Mevin, Raja's chariot, Sana/Shraddha/Palak, ball pit, sumo vs Narda) are designed and the questions settled: **docs/plans/2026-10-04-moments-and-small-touches.md** (not built yet).
 
-### The owner's playtest feedback (2026-10-04): 33 NEW items FB-0044..FB-0076 are waiting
-Run `npm run feedback`, then `npm run feedback -- show FB-00xx` for each (many are just a screenshot + a title). The plan groups them into
-packages P1-P5 with notes and open questions: **[docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md)**.
-In short:
-- **P1 controls/UI:** E and Enter both advance messages (FB-0045), stop the player when an overlay shows (FB-0072), cut-off text box and wordy
-  instructions (FB-0073), item bar (FB-0068), a way to quit (FB-0075), after the end go back to the main screen (FB-0076), entrance run animation +
-  not walking over the door/wall line (FB-0046).
-- **P2 names/dialogue/costumes:** hostel resident -> **Deanne** (FB-0050); funnier CS-student lines, friends **Sid, Akshit, Varun, Mitul, Karthik**,
-  **Mustafa** (black and orange hoodie) near all the games with a fixed line (FB-0051); club colours MTC black/white, ACM dark pink, LUG orange/black,
-  others sky blue (FB-0057); **ICVL is really "ICL"** (FB-0070). See [ADR 0021](decisions/0021-friends-in-the-game-and-personal-touches.md).
-- **P3 campus outdoors:** a Dubai RTA bus stop and the road continuing left (FB-0044/0049), real parking bays (FB-0047), double pavement lining
-  (FB-0048), barrier fully down (FB-0052), broken/mismatched trees (FB-0053/0056), a proper roundabout and road/pavement styles (FB-0054/0055).
-- **P4 Main Block interiors:** window, black for inaccessible areas instead of "dirt", door facing, **stairs that look like stairs** with a proper
-  tileset (FB-0058..0065), **all doors animate open/close** (FB-0067), the lift (FB-0069).
-- **P5 mini-games:** replace Tetris with a **match-3** (FB-0074); the **ICL** is a fingerprint-locked lab opened by a mini-game, modern spaceship-like,
-  robot "Alice" (FB-0071); Physics Lab: students + a harder hero-vs-villain fight (FB-0066, use generic stand-ins, not Hello Kitty/Batman).
-- **P6 the wow layer** (plan section B): friends as characters, memory album, blow-the-candles + fireworks finale, golden-hour lighting, juice pass,
-  selfie mode, phone hints, passport, Dubai flavour. The owner picks; the recommended set is W1, W4, W3, W2, W6.
-FB-0025 stays a standing rule: free asset packs only, no hand-drawn art. Old items waiting on the owner to verify in the Inbox: FB-0023, 0024, 0027..0043.
+### Owner's 33 items: FB-0044..FB-0076 all fixed except FB-0051 (in progress: chariot, the three girls, Mevin, Narda are moments) and FB-0075/0076 await their check. FB-0076 has a question to the owner in the thread.
 
 ## Owner decisions (all settled)
 Offline bundle + a hosted link as backup (Netlify Drop, unlisted, card photos included; **the owner uploads it**, an account login is needed: ADR 0022);
@@ -60,16 +42,13 @@ wing doors closed + each says a line; no ruler portraits; **named friends allowe
 roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent at a time, monitored** (see Rules).
 
 ## What is LEFT (in order)
-1. **Triage** the 33 items (`npm run feedback`), ask the owner about the unclear ones, then execute packages **P1 -> P5** one agent at a time
-   (plan section A and the schedule in section C). Mark fixed items (`npm run feedback -- fix FB-00xx "..."`). Add `FB-XXXX:` regression tests.
-2. **Wow layer** (P6) with the owner's picks, incl. the owner's "moments" ([docs/plans/2026-10-04-moments-and-small-touches.md](docs/plans/2026-10-04-moments-and-small-touches.md): unicorn+prince, Mevin, Raja's chariot, ball pit, tower-climb game; 6 open questions); needs the friends' lines/jokes and the card photos from the owner.
-3. After each visual package: `npm run qa:shots` and LOOK at the shots; `npm run qa:offline` for the bundle. Full test once per day (pre-push hook).
-4. **Final handover (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; update
-   `../2D_pixel_game-play`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + the zip + `HOW_TO_OPEN.txt`.
-5. Later: resume the quality loop ([docs/QUALITY_LOOP.md](docs/QUALITY_LOOP.md)); `src/scenes/ui.js` is large (split it only after the loop).
+1. **Cheap moments** (owner's Q1a: in the 10-08 playtest): M1 unicorn+prince, M2 Mevin (Treble drummer); spaced, unskippable, play once (docs/plans/2026-10-04-moments-and-small-touches.md). Cover (M5) is done.
+2. **Wow layer**, on the recommended answers (the owner did not answer round 3): W4 golden hour (outdoors + warm tint indoors, moves with the keys), W3 finale (cake with 22 candles blown out one by one, fireworks over a Dubai skyline, chiptune "Happy Birthday", THEN the card, credits, title), W9 Dubai flavour, juice pass; later W2 album + W6 selfie (placeholders, photos swapped in via `assets/card/`).
+3. **Later moments** (after the 10-08 playtest, by 10-09): Raja's chariot, Sana/Shraddha/Palak scene, TP-room ball pit + arcade with sumo vs Narda (the TP-room door opens from the start, owner's choice).
+4. **Before handover:** `npm run qa:shots` (LOOK at them), `npm run qa:offline`, the full `npm test`, update `../2D_pixel_game-play`, tell the owner it is ready for the 2nd playtest (~10-08).
+5. **Final (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + zip + `HOW_TO_OPEN.txt`.
 
-**Cut line:** W7/W8, then W6/W2, then match-3 art polish, then extra ambient lines. **Never cut:** P1 (controls, quit, ending -> title), the bundle and
-hosted link, credits, soft-lock guards, the completeness checklist, the full test before handover.
+**Cut line:** TP-room ball pit, then Raja's chariot, then sumo, then the three-girls scene, then W6/W2. Keep M1, M2, the finale, golden hour. **Never cut:** P1 (done), the bundle and hosted link, credits, soft-lock guards, completeness checklist, the full test before handover.
 
 ## What the owner provides (and when)
 - **Card assets** (photos, closing video, final wishes, recipient/age) in `assets/card/` (gitignored; shape in `assets/card/card.example.json`):

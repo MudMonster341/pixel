@@ -194,9 +194,14 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(true);
   expect(await page.evaluate(() => game.scene.getScene('ui').isBlocking())).toBe(true); // movement blocked while it's open
   const journalRows = await page.evaluate(() => game.scene.getScene('ui').journal.rowTexts.map((t) => t.text));
-  // One journal line for the quest start, one per key found -- the reward's own line comes later.
-  expect(journalRows.length).toBe(4);
+  // One journal line for the quest start, one for cracking the ICL scanner (P5c, FB-0071: the door opens), one per key found -- the reward's own
+  // line comes later. In the order she did them here: start, scanner, ICL key, Room 195 key, Physics Lab key.
+  expect(journalRows.length).toBe(5);
   expect(journalRows[0]).toContain('3 keys hidden around campus');
+  expect(journalRows[1]).toContain('Hacked the fingerprint scanner: the ICL door is open.');
+  expect(journalRows[2]).toContain('Found a key in the core console of the ICL.');
+  expect(journalRows[3]).toContain('Found a key on the teacher');
+  expect(journalRows[4]).toContain('Found a key on a bench in the Physics Lab.');
   await page.keyboard.press('Escape');
   await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(false);
 
@@ -218,8 +223,8 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   s = await state(page);
   expect(s.quest.stage).toBe('rewarded');
   expect(countItem(s.slots, 'lugBox')).toBe(1);
-  // One journal line for the quest start, one per key found, one for the reward.
-  expect(s.journal.length).toBe(5);
+  // One journal line for the quest start, one for the ICL scanner/door, one per key found, one for the reward.
+  expect(s.journal.length).toBe(6);
   expect(s.journal[s.journal.length - 1]).toMatch(/first to finish/);
 
   // Receiving the box immediately starts the ending (docs/STORY.md "the box opens..."); the sequence

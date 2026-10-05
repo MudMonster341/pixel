@@ -602,10 +602,10 @@ async function shootMomentChariot(browser) {
   await page.close();
 }
 
-// ---- M4: Sana, Shraddha and Palak (campus, in front of the Main Block door, once she holds the second key) ----
+// ---- M4: Sana, Shraddha and Palak (3rd floor, the corridor outside the Physics Lab, once she holds the Physics Lab key) ----
 async function shootMomentFriends(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  const baseUrl = `${BASE_URL}/?dev=0&map=campus&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
+  const baseUrl = `${BASE_URL}/?dev=0&map=main-block-3&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
   const scriptRunning = () => game.scene.getScene('world').scriptRunner.isRunning;
   const scriptIdle = () => !game.scene.getScene('world').scriptRunner.isRunning;
 
@@ -615,20 +615,20 @@ async function shootMomentFriends(browser) {
       await waitReady(page);
       await page.evaluate(() => {
         GameState.quest.stage = 'hunting';
-        GameState.quest.keys = { physicsLab: true, icl: true, room195: false }; // M4 needs two keys
-        // gate2 so Mustafa does not play; entrance so the Main Block steps beat does not hold her at the door first
-        for (const key of ['gate2', 'entrance']) GameState.seenCutscenes.add(key);
+        GameState.quest.keys = { physicsLab: true, icl: false, room195: false }; // M4 needs the Physics Lab key (and only that one)
+        // gate2 so Mustafa does not play; entrance so the Main Block steps beat does not hold her; the key-room beat is over
+        for (const key of ['gate2', 'entrance', 'keyRoom:physicsLab']) GameState.seenCutscenes.add(key);
         GameState.seenMoments = new Set(['m1', 'm2', 'm3']); // the earlier ones have played...
         GameState.lastMomentAt = GameState.playSeconds - 1000; // ...long ago on the play clock, so the 90 s gap is long over
       });
     });
     return ok ? momentRect(page, 'm4') : null;
   })();
-  if (!rect) { warn('moment-04-friends', 'no setup or no trigger rectangle for m4 on the campus'); await page.close(); return; }
+  if (!rect) { warn('moment-04-friends', 'no setup or no trigger rectangle for m4 on main-block-3'); await page.close(); return; }
 
   const started = await tryStep(page, 'moment-04-friends (start)', async () => {
-    // the forecourt, a few rows in front of the door (the shootMoments M2 spot): the friends line up to her right
-    const tile = await walkableInRect(page, rect, { x: rect.x0 + 3, y: rect.y1 - 1 });
+    // the corridor just outside the lab door (x 5..20, rows 19..20): the friends line up to her east, level with her
+    const tile = await walkableInRect(page, rect, { x: 9, y: rect.y0 });
     if (!tile) throw new Error('no walkable tile inside the m4 trigger');
     await teleport(page, tile.x, tile.y);
     await waitFor(page, scriptRunning, { timeout: 12000 });

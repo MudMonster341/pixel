@@ -106,6 +106,7 @@ async function talkUntilRewarded(page) {
 }
 
 test('finishing the story opens the box, then the card, skippable, and returns to the title keeping the save', async ({ page }) => {
+  test.setTimeout(90_000); // the finale made the chain ~21 s on a quiet machine: ERR-0012/0013 headroom for a loaded one; assertions unchanged
   const { errors } = await openGame(page, { map: 'main-block-g', save: true, profile: 'ending-e2e' });
   await startGame(page);
   await page.evaluate(() => {
@@ -171,6 +172,7 @@ test('finishing the story opens the box, then the card, skippable, and returns t
 });
 
 test('"Watch the Card Again" from the title jumps straight to the card, skipping the box and the world', async ({ page }) => {
+  test.setTimeout(90_000); // ~23 s quiet (title -> world -> box -> finale -> card); headroom for load, assertions unchanged
   const { errors } = await openGame(page, { map: 'main-block-g', save: true, profile: 'ending-e2e-watch' });
   await startGame(page);
   await page.evaluate(() => {

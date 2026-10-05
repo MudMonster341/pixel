@@ -205,6 +205,9 @@ const CHARIOT = MOMENT_SHEETS.chariot.frames;
 const gateTile = (dx, dy) => ({ anchor: 'Gate 2 (Main Entrance)', offset: [dx - 0.5, dy - 0.5] });
 const doorTile = (dx, dy) => ({ anchor: 'Main Block entrance', offset: [dx - 0.5, dy - 0.5] });
 const stairsTile = (dx, dy) => ({ anchor: 'Main Block Stairs G (up)', offset: [dx - 0.5, dy - 0.5] }); // the Main Block foyer's staircase (tile 15,25)
+// The 3rd-floor Physics Lab area's tile (12,10), the anchor of M4's trigger: labTile(0, 9) is the corridor tile (12,19) below the lab door. The
+// area object's centre is (12, 10.5), so x takes the plain dx and y the usual -0.5 (the tile-centre formula of the helpers above).
+const labTile = (dx, dy) => ({ anchor: 'Physics Lab', offset: [dx, dy - 0.5] });
 const playerTile = (dx, dy) => ({ actor: 'player', offset: [dx - 0.5, dy - 0.5] });
 
 // M1, the unicorn and the prince (the owner's own inside joke, her line EXACTLY as written). Just inside Gate 2: a unicorn grazes on the
@@ -384,24 +387,28 @@ const MOMENT_CHARIOT_STEPS = [
 ];
 
 // M4, Sana, Shraddha and Palak (the owner, FB-0051: "all good friends of taru ... all three come up and say hi taru, come to the canteen with
-// us or spend some time with us, small scene like that"). Outside the Main Block door, once she holds the second key (src/moments.js): she has
-// just come back out and the three friends find her. They walk in together along the road verge from the east (the one lane open to
-// everyone, as Mevin does), up onto her row and stand in a line 2-4 tiles to her RIGHT, level with her (never lower than her own feet: the
-// dialog box covers the bottom ~40% of the screen, tests/unit/moments.test.js checks every `say`). Sana, Shraddha, Palak: "Taru!" / "There
-// you are!" / the canteen invitation; she says she has a hunt to finish; a kind tease; they wave (hearts and a note) and head off east to
-// the canteen the way they came. She is never moved. No line says anything about a birthday (the surprise stays for the end). About 15 s.
+// us or spend some time with us, small scene like that"; moved 2026-10-05: "the friends can meet Taru after the Physics Lab on the third
+// floor"). In the 3rd-floor corridor just outside the Physics Lab, once she holds the Physics Lab key (src/moments.js): she has just come out
+// of the lab and the three friends find her. They walk in together along the corridor from the stairs end (east), and stand in a line 2-4
+// tiles to her EAST, level with her (the corridor is three rows tall and she is on row 19 or 20 there: never lower than her own feet, the
+// dialog box covers the bottom ~40% of the screen, tests/unit/moments.test.js checks every `say`). Sana, Shraddha, Palak: "Taru!" /
+// "There you are!" / the canteen invitation; she says she has a hunt to finish; a kind tease; they wave (hearts and a note) and head back
+// east toward the stairs and the canteen. She is never moved. No line says anything about a birthday (the surprise stays for the end).
+// About 15 s. Their start and exit places are fixed corridor tiles in the stairs room (labTile), well past the screen edge (the camera
+// stops at the map's edge, so a spot relative to her could still be in view); their places beside her are relative to her (playerTile).
 const MOMENT_FRIENDS_STEPS = [
   { lockInput: true },
   { letterbox: 'in' },
-  // The three start off screen on the road verge, a tile apart, Sana in front.
-  { spawnActor: { id: 'sana', sprite: 'npc-friend-sana', at: doorTile(15, 9), facing: 'left' } },
-  { spawnActor: { id: 'shraddha', sprite: 'npc-friend-shraddha', at: doorTile(16, 9), facing: 'left' } },
-  { spawnActor: { id: 'palak', sprite: 'npc-friend-palak', at: doorTile(17, 9), facing: 'left' } },
-  // Along the verge, then up diagonally to their places beside her (the first leg ends on three separate tiles so they never stack).
+  // The three start off screen in the stairs room, on corridor row 19, a tile apart, Sana in front.
+  { spawnActor: { id: 'sana', sprite: 'npc-friend-sana', at: labTile(19, 9), facing: 'left' } },
+  { spawnActor: { id: 'shraddha', sprite: 'npc-friend-shraddha', at: labTile(20, 9), facing: 'left' } },
+  { spawnActor: { id: 'palak', sprite: 'npc-friend-palak', at: labTile(21, 9), facing: 'left' } },
+  // Along row 19 to the corridor's east end (x 27..29, west of the doorway at x 30, so the slant down to row 20 never clips the wall piece at
+  // 30,20), then straight to their places beside her (three separate tiles in the same order: they never stack).
   { parallel: [
-    { move: { actor: 'sana', path: [doorTile(8, 9), playerTile(2, -0.5)], speed: 7.5 } },
-    { move: { actor: 'shraddha', path: [doorTile(9, 9), playerTile(3, -0.5)], speed: 7.5 } },
-    { move: { actor: 'palak', path: [doorTile(10, 9), playerTile(4, -0.5)], speed: 7.5 } },
+    { move: { actor: 'sana', path: [labTile(15, 9), playerTile(2, 0)], speed: 8 } },
+    { move: { actor: 'shraddha', path: [labTile(16, 9), playerTile(3, 0)], speed: 8 } },
+    { move: { actor: 'palak', path: [labTile(17, 9), playerTile(4, 0)], speed: 8 } },
     { sequence: [{ wait: 500 }, { face: { actor: 'player', toward: 'sana' } }, { emote: { actor: 'player', kind: '!' } }] },
   ] },
   { face: { actor: 'sana', dir: 'left' } },
@@ -412,16 +419,16 @@ const MOMENT_FRIENDS_STEPS = [
   { say: { speaker: 'Palak', lines: ['Come to the canteen with us. We saved you a seat!'], autoMs: 1100 } },
   { say: { speaker: '{name}', lines: ["Give me a few minutes, I still have a hunt to finish."], autoMs: 1200 } },
   { say: { speaker: 'Sana', lines: ['Fine. But the chai will not wait forever.'], autoMs: 1000 } },
-  // They wave, delighted (a heart each, a note from Palak), and head back along the verge toward the canteen.
+  // They wave, delighted (a heart each, a note from Palak), and head back along the corridor toward the stairs and the canteen.
   { parallel: [
     { emote: { actor: 'sana', kind: 'heart' } },
     { emote: { actor: 'shraddha', kind: 'heart' } },
     { emote: { actor: 'palak', kind: 'note' } },
   ] },
   { parallel: [
-    { sequence: [{ face: { actor: 'sana', dir: 'right' } }, { move: { actor: 'sana', path: [doorTile(8, 9), doorTile(15, 9)], speed: 7.5 } }] },
-    { sequence: [{ wait: 150 }, { face: { actor: 'shraddha', dir: 'right' } }, { move: { actor: 'shraddha', path: [doorTile(9, 9), doorTile(16, 9)], speed: 7.5 } }] },
-    { sequence: [{ wait: 300 }, { face: { actor: 'palak', dir: 'right' } }, { move: { actor: 'palak', path: [doorTile(10, 9), doorTile(17, 9)], speed: 7.5 } }] },
+    { sequence: [{ face: { actor: 'sana', dir: 'right' } }, { move: { actor: 'sana', path: [labTile(15, 9), labTile(19, 9)], speed: 8 } }] },
+    { sequence: [{ wait: 150 }, { face: { actor: 'shraddha', dir: 'right' } }, { move: { actor: 'shraddha', path: [labTile(16, 9), labTile(20, 9)], speed: 8 } }] },
+    { sequence: [{ wait: 300 }, { face: { actor: 'palak', dir: 'right' } }, { move: { actor: 'palak', path: [labTile(17, 9), labTile(21, 9)], speed: 8 } }] },
   ] },
   { despawnActor: 'sana' },
   { despawnActor: 'shraddha' },

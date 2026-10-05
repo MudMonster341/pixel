@@ -1,6 +1,6 @@
 # Handoff — read this first
 
-**Day 3 is fully written up in [HANDOVER.md](HANDOVER.md) (what was done, commits, switches, seen vs unseen, to-do); read it right after this page. Pickup prompt: [docs/NEXT_SESSION_PROMPT.md](docs/NEXT_SESSION_PROMPT.md).**
+**Day 3 and the Day 4 addendum (evening 2026-10-05: juice, M3, M4, W2 album, W6 selfie, the owner's 2nd-playtest fixes FB-0077..0082, M4 moved to the 3rd floor) are written up in [HANDOVER.md](HANDOVER.md) (what was done, commits, switches, seen vs unseen, to-do); read it right after this page. Pickup prompt: [docs/NEXT_SESSION_PROMPT.md](docs/NEXT_SESSION_PROMPT.md). Waiting on the owner: the content of the new cut scene after the ICL lab (and a possible last one), card assets in assets/card/, the FB-0076 answer.**
 
 **Updated 2026-10-05 (evening of Day 3: packages P1-P5 done).** Then read
 [docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md) (**the plan for what to do next**),

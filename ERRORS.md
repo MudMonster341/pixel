@@ -427,3 +427,8 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Cause:** the owner's usage limit resets on a clock, so a running agent simply dies; a scripted bulk edit without a backup can truncate a big file.
 **What worked:** (1) after any "agent failed" notice run `git status` and `npm run test:unit` first: the tree held every edit made so far and was either clean or green; (2) resume the SAME agent with `SendMessage` (its context survives; say what is already in the tree and to finish the brief); (3) after a bulk-edit incident rebuild from `git show HEAD:<file>` plus the agent's edits and review `git diff --stat` for surprises. Nothing was lost.
 **Rule:** never run two agents at once, and never run the browser suite while an agent edits (a half-written tree makes failures meaningless).
+
+## ERR-0019 - ending.spec timed out only under load (2026-10-05)
+**Symptom:** the second full run of the day (15.2 min instead of 10) failed 3 specs on the 30 s test timeout (ending x2, depth-groups door-mash); all three pass alone (ending 21-23 s each).
+**Cause:** not a game regression: the finale lengthened the ending chain to ~21 s on a quiet machine, and the owner was playing on the same machine at the time.
+**Fix:** `test.setTimeout(90_000)` on the two ending specs (assertions unchanged, same rule as ERR-0012/0013). depth-groups.spec:170 stays at 30 s (9.5 s alone); if it fails again under load, give it the same headroom.

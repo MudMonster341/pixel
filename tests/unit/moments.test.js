@@ -944,8 +944,9 @@ test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-
   const withMoments = urls.filter((u) => !u.includes('moments=0'));
   // the moment flows only: M1/M2 (shootMoments), M3 the chariot (shootMomentChariot) and M4 the friends (shootMomentFriends)
   assert.equal(withMoments.length, 3, `only the moment flows load with moments on: ${withMoments}`);
-  assert.equal(withMoments.filter((u) => /map=campus&title=0&intro=0&save=0/.test(u)).length, 2);
-  assert.equal(withMoments.filter((u) => /map=main-block-g&title=0&intro=0&save=0/.test(u)).length, 1);
+  assert.equal(withMoments.filter((u) => /map=campus&title=0&intro=0&save=0/.test(u)).length, 1, 'M1/M2 on the campus');
+  assert.equal(withMoments.filter((u) => /map=main-block-g&title=0&intro=0&save=0/.test(u)).length, 1, 'M3 in the foyer');
+  assert.equal(withMoments.filter((u) => /map=main-block-3&title=0&intro=0&save=0/.test(u)).length, 1, 'M4 on the 3rd floor (moved from the campus, 2026-10-05)');
   assert.match(shots, /async function shootMoments\(browser\)/);
   assert.match(shots, /\['moments \(unicorn, Mevin\)', shootMoments, \[/);
   assert.match(shots, /shoot\(page, 'moment-01-unicorn'\)/);
@@ -1352,64 +1353,176 @@ test('FB-0051: runner: `sparkles` with kind "dust" puffs soft beige ellipses at 
 
 const keyed = (n, over = {}) => fresh({ quest: { keys: { physicsLab: n >= 1, icl: n >= 2, room195: n >= 3 } }, ...over });
 
-test('FB-0051: M4 is in the table: the campus, the Main Block door, after the second key, default pacing, last in the order', () => {
+// M4 moved (the owner, 2026-10-05: "the friends can meet Taru after the Physics Lab on the third floor"): the 3rd-floor corridor outside the
+// Physics Lab, once she holds the Physics Lab key.
+const floor3 = () => mapOf('main-block-3');
+const keysOf = (physicsLab, icl, room195) => ({ quest: { keys: { physicsLab, icl, room195 } } });
+const clampCamX = (px, here) => Math.min(Math.max(px, 160), here.json.width * 16 - 160); // the camera stops at the map's edge (world.js setBounds)
+
+test('FB-0051: M4 is in the table: the 3rd floor (main-block-3), the Physics Lab corridor, after the Physics Lab key, default pacing, last in the order', () => {
   const m = momentOf('m4');
   assert.equal(MOMENTS.at(-1).id, 'm4');
-  assert.equal(m.map, 'campus');
+  assert.equal(m.map, 'main-block-3', 'no longer on the campus forecourt');
   assert.equal(m.script, 'momentFriends');
-  assert.deepEqual(plain(m.after), { keys: 2 });
+  assert.deepEqual(plain(m.after), { keyIds: ['physicsLab'] }, 'her Physics Lab key, not just any key');
+  assert.equal(m.after.keys, undefined);
   assert.equal(m.minGapS, undefined);
   assert.equal(m.sameVisitOk, undefined);
   assert.equal(m.afterFreeS, undefined);
   assert.equal(momentGapS(m), MOMENT_GAP_S, 'the default 90 s gap');
   assert.equal(momentFitsVisit(m, 1), false, 'and one moment per map visit');
-  assert.equal(m.trigger.anchor, 'Main Block entrance');
+  assert.equal(m.trigger.anchor, 'Physics Lab', 'the lab\'s own area object');
   assert.ok(Array.isArray(SCRIPTS.momentFriends));
+  // the trigger is the corridor just outside the lab door (x 5..20, rows 19..20 of the three-row corridor), not the lab and not the stairs room
+  const here = floor3();
+  const r = rectOf('m4');
+  assert.deepEqual(plain(r), { x0: 5, y0: 19, x1: 20, y1: 20 });
+  for (const x of [11, 12]) assert.ok(here.walkable(x, 17), `the lab door tile ${x},17`);
+  assert.ok(r.x0 <= 11 && r.x1 >= 12, 'it spans the lab door');
+  assert.ok(r.y0 > 17, 'it is the corridor below the door, not the lab');
+  const stairs = here.anchor('Main Block Stairs 3 (down)');
+  assert.ok(r.x1 < stairs.x - 10, 'well clear of the stairs room');
+  // nothing else moved: the campus keeps M1 and M2 only, the foyer M3, the 3rd floor M4
+  assert.deepEqual(plain(MOMENTS.map((x) => [x.id, x.map])), [['m1', 'campus'], ['m2', 'campus'], ['m3', 'main-block-g'], ['m4', 'main-block-3']]);
+  assert.deepEqual(plain(momentOf('m2').trigger), { anchor: 'Main Block entrance', dx0: -6, dx1: 5, dy0: 1, dy1: 9 }, 'M2 is unaffected');
+  assert.deepEqual(plain(momentOf('m2').after), { moments: ['m1'] });
 });
 
-test('FB-0051: M4 waits for the second key: no key or one key holds it back, two (any two) or three start it, once only, only inside its trigger on the campus, never while anything is up', () => {
-  const due = (n, over = {}, state = keyed(n)) => momentDue(state, 1000, ctxFor('m4', over));
-  assert.equal(due(0), null, 'no key');
-  assert.equal(due(1), null, 'one key is not enough');
-  assert.equal(due(2)?.id, 'm4', 'the second key');
-  assert.equal(due(3)?.id, 'm4', 'all three: still due the first time');
-  for (const quest of [{ physicsLab: false, icl: true, room195: true }, { physicsLab: true, icl: false, room195: true }]) {
-    assert.equal(momentDue(fresh({ quest: { keys: quest } }), 1000, ctxFor('m4'))?.id, 'm4', 'any two keys count');
-  }
-  assert.equal(due(1, { keys: 2 })?.id, 'm4', 'ctx.keys wins');
+test('FB-0051: `after: { keyIds: [...] }` needs exactly those keys (state.quest.keys), whatever else she holds; ctx.keys (a count) never stands in for it', () => {
+  const { momentKeyIdsHeld } = game;
+  assert.equal(momentKeyIdsHeld(keysOf(true, false, false), ['physicsLab']), true);
+  assert.equal(momentKeyIdsHeld(keysOf(false, true, false), ['physicsLab']), false, 'only the ICL key');
+  assert.equal(momentKeyIdsHeld(keysOf(false, true, true), ['physicsLab']), false, 'two other keys');
+  assert.equal(momentKeyIdsHeld(keysOf(true, true, true), ['physicsLab', 'icl']), true);
+  assert.equal(momentKeyIdsHeld(keysOf(true, false, true), ['physicsLab', 'icl']), false, 'every listed key is needed');
+  assert.equal(momentKeyIdsHeld(keysOf(true, true, true), []), true, 'an empty list asks for nothing');
+  assert.equal(momentKeyIdsHeld({ seenMoments: new Set() }, ['physicsLab']), false, 'a bare state has no quest: no keys');
+  assert.equal(momentKeyIdsHeld(keysOf(true, true, true), ['nope']), false, 'an unknown id is never held');
+  // through momentDue, with a throw-away table so it does not depend on M4's own trigger
+  const table = (ids) => [{ id: 'mx', map: 'main-block-3', script: 'x', trigger: momentOf('m4').trigger, after: { keyIds: ids } }];
+  const dueWith = (quest, ids, over = {}) => momentDue(fresh(keysOf(...quest)), 1000, ctxFor('m4', { moments: table(ids), ...over }));
+  assert.equal(dueWith([false, false, false], ['physicsLab']), null);
+  assert.equal(dueWith([false, true, false], ['physicsLab']), null, 'icl only: no');
+  assert.equal(dueWith([false, true, true], ['physicsLab']), null);
+  assert.equal(dueWith([true, false, false], ['physicsLab'])?.id, 'mx');
+  assert.equal(dueWith([true, true, true], ['physicsLab'])?.id, 'mx');
+  assert.equal(dueWith([false, true, false], ['physicsLab'], { keys: 3 }), null, 'ctx.keys is a count, not an id');
+  assert.equal(dueWith([true, false, false], ['physicsLab', 'icl']), null, 'both needed');
+  assert.equal(dueWith([true, true, false], ['physicsLab', 'icl'])?.id, 'mx');
+  // it combines with `keys` and the rest of `after`
+  const both = [{ id: 'my', map: 'main-block-3', script: 'x', trigger: momentOf('m4').trigger, after: { keys: 2, keyIds: ['physicsLab'] } }];
+  const dueBoth = (quest) => momentDue(fresh(keysOf(...quest)), 1000, ctxFor('m4', { moments: both }));
+  assert.equal(dueBoth([true, false, false]), null, 'the id is held but not two keys');
+  assert.equal(dueBoth([false, true, true]), null, 'two keys but not the id');
+  assert.equal(dueBoth([true, true, false])?.id, 'my');
+  // a moment without keyIds is untouched by the new rule (M1, M3)
+  assert.equal(momentDue(fresh(), 100, ctxFor('m1'))?.id, 'm1');
+  assert.equal(momentDue(fresh(keysOf(false, true, false)), 100, ctxFor('m3'))?.id, 'm3');
+});
+
+test('FB-0051: M4 waits for the Physics Lab key: no key, or only the ICL / Room 195 key, holds it back; the Physics Lab key (alone or with others) starts it, once only, only inside its trigger on the 3rd floor, never while anything is up', () => {
+  const due = (quest, over = {}, state = fresh(keysOf(...quest))) => momentDue(state, 1000, ctxFor('m4', over));
+  assert.equal(due([false, false, false]), null, 'no key');
+  assert.equal(due([false, true, false]), null, 'only the ICL key (she played the games out of order)');
+  assert.equal(due([false, false, true]), null, 'only the Room 195 key');
+  assert.equal(due([false, true, true]), null, 'two keys, but not the Physics Lab one');
+  assert.equal(due([true, false, false])?.id, 'm4', 'the Physics Lab key');
+  assert.equal(due([true, true, false])?.id, 'm4');
+  assert.equal(due([true, true, true])?.id, 'm4', 'all three: still due the first time');
+  assert.equal(due([false, true, false], { keys: 3 }), null, 'ctx.keys does not count');
   // once only, ever
-  assert.equal(momentDue(keyed(3, { seenMoments: new Set(['m4']) }), 1e9, ctxFor('m4')), null);
-  assert.equal(momentDue({ ...keyed(2), seenMoments: ['m4'] }, 1e9, ctxFor('m4')), null, 'an array works too');
+  assert.equal(due([true, true, true], {}, fresh({ ...keysOf(true, true, true), seenMoments: new Set(['m4']) })), null);
+  assert.equal(due([true, false, false], {}, fresh({ ...keysOf(true, false, false), seenMoments: ['m4'] })), null, 'an array works too');
   // where and when
   const r = rectOf('m4');
-  for (const [tileX, tileY] of [[r.x0 - 1, r.y0 + 1], [r.x1 + 1, r.y0 + 1], [r.x0 + 2, r.y0 - 1], [r.x0 + 2, r.y1 + 1]]) {
-    assert.equal(due(2, { tileX, tileY }), null, `outside the trigger at ${tileX},${tileY}`);
+  const has = [true, false, false];
+  for (const [tileX, tileY] of [[r.x0 - 1, r.y0], [r.x1 + 1, r.y0], [r.x0 + 2, r.y0 - 1], [r.x0 + 2, r.y1 + 1], [12, 17], [5, 7]]) {
+    assert.equal(due(has, { tileX, tileY }), null, `outside the trigger at ${tileX},${tileY} (the lab itself, row 18 and the stairs room do not start it)`);
   }
-  assert.equal(due(2, { map: 'main-block-g' }), null, 'never on another map');
-  assert.equal(due(2, { blocked: true }), null);
-  assert.equal(due(2, { enabled: false }), null, '?moments=0');
+  assert.equal(due(has, { tileX: r.x0, tileY: r.y0 })?.id, 'm4', 'a corner of the rectangle');
+  assert.equal(due(has, { tileX: r.x1, tileY: r.y1 })?.id, 'm4', 'the opposite corner');
+  for (const map of ['campus', 'main-block-g', 'main-block-1', 'main-block-2']) assert.equal(due(has, { map }), null, `never on ${map}`);
+  assert.equal(due(has, { blocked: true }), null);
+  assert.equal(due(has, { enabled: false }), null, '?moments=0');
   // the default pacing: 90 s after the last moment (any moment), and never two on one map visit
-  const after = (now, over) => momentDue(keyed(2, { seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 300 }), now, ctxFor('m4', over));
+  const after = (now, over) => momentDue(fresh({ ...keysOf(true, false, false), seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 300 }), now, ctxFor('m4', over));
   assert.equal(after(306, {}), null, 'not the 6 s of the entrance pair');
   assert.equal(after(389.9, {}), null);
   assert.equal(after(390, {})?.id, 'm4', '90 s after the last moment');
   assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
-  // it needs neither M2 nor M3 to have played (an old save, or she skipped past them)
-  assert.equal(momentDue(keyed(2, { seenMoments: new Set() }), 1000, ctxFor('m4'))?.id, 'm4');
+  // it needs none of M1-M3 to have played (an old save, or she skipped past them)
+  assert.equal(due(has, {}, fresh({ ...keysOf(true, false, false), seenMoments: new Set() }))?.id, 'm4');
 });
 
-test('FB-0051: M4 and M2 share the Main Block forecourt but cannot block each other: with both due, M2 goes first (table order), M4 comes on a later visit after the 90 s', () => {
-  const state = keyed(2, { seenMoments: new Set(['m1']) });
-  const r2 = rectOf('m2');
-  const r4 = rectOf('m4');
-  assert.ok(r4.x0 >= r2.x0 && r4.x1 <= r2.x1 && r4.y0 === r2.y0 && r4.y1 === r2.y1, 'M4 is a part of the M2 forecourt');
-  const tile = { tileX: r4.x0 + 2, tileY: r4.y0 + 2 };
-  assert.equal(momentDue(state, 1000, ctxFor('m2', tile))?.id, 'm2');
-  markMomentStarted(state, 'm2', 1000);
-  markMomentEnded(state, 1015);
-  assert.equal(momentDue(state, 1020, ctxFor('m4', { ...tile, visitCount: 1 })), null, 'not on the same visit, not 5 s later');
-  assert.equal(momentDue(state, 1090, ctxFor('m4', { ...tile, visitCount: 0 })), null, 'under 90 s after M2 ended');
-  assert.equal(momentDue(state, 1105, ctxFor('m4', { ...tile, visitCount: 0 }))?.id, 'm4', 'a later visit, 90 s after M2 ended');
+test('FB-0051: M4 waiting for its 90 s never loses the scene: she stays in the corridor, or comes back on a later visit, and the first free frame inside the trigger plays it', () => {
+  const r = rectOf('m4');
+  const state = fresh({ ...keysOf(true, false, false), seenMoments: new Set(['m1', 'm2', 'm3']) });
+  markMomentStarted(state, 'm3', 500);
+  markMomentEnded(state, 515); // e.g. the chariot played just before she took the stairs up and walked into the lab
+  const at = (now, over = {}) => momentDue(state, now, ctxFor('m4', { tileX: r.x0 + 6, tileY: r.y0, ...over }));
+  assert.equal(at(520), null, 'the gap is not over: nothing yet');
+  assert.equal(at(604.9), null);
+  assert.equal(at(605)?.id, 'm4', '90 s after M3 ended, wherever in the corridor she is');
+  assert.equal(at(605, { blocked: true }), null, 'a dialog or anything else up: wait for the next free frame');
+  assert.equal(at(605.016, { blocked: false })?.id, 'm4', 'which is the very next frame');
+  // she walked on east out of the rectangle while it was not due: nothing happens there, and it is not lost
+  assert.equal(at(700, { tileX: r.x1 + 3, tileY: r.y0 }), null);
+  assert.equal(at(700, { tileX: r.x1 - 2, tileY: r.y1 })?.id, 'm4', 'back in the corridor later: it plays');
+  // a later visit of the floor: the same rules, the per-visit counter starts again at 0
+  assert.equal(at(5000, { visitCount: 0 })?.id, 'm4');
+  assert.equal(at(5000, { visitCount: 1 }), null, 'but only one moment per visit');
+  // checking never marks it as played, and without the key it stays quiet
+  assert.equal(state.seenMoments.has('m4'), false, 'momentDue is pure: it never marks anything');
+  const noKey = fresh({ ...keysOf(false, true, false), seenMoments: new Set(['m1', 'm2', 'm3']) });
+  assert.equal(momentDue(noKey, 5000, ctxFor('m4', { tileX: r.x0 + 6, tileY: r.y0 })), null);
+});
+
+test('FB-0051: M4\'s trigger is a full cut across the 3rd-floor corridor: she cannot reach the Physics Lab door from the stairs, or the stairs from inside the lab, without crossing it', () => {
+  const here = floor3();
+  const r = rectOf('m4');
+  const inRect = (x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const flood = (start) => {
+    assert.ok(here.walkable(...start) && !inRect(...start), `start ${start} is open and outside the trigger`);
+    const seen = new Set([start.join(',')]);
+    const stack = [start];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { // diagonals too: the most generous walk
+        const nx = x + dx;
+        const ny = y + dy;
+        if (seen.has(`${nx},${ny}`) || !here.walkable(nx, ny) || inRect(nx, ny)) continue;
+        seen.add(`${nx},${ny}`);
+        stack.push([nx, ny]);
+      }
+    }
+    return seen;
+  };
+  const stairs = here.anchor('Main Block Stairs 3 (down)');
+  const lift = here.anchor('Main Block Lift 3');
+  const stairsStep = [Math.floor(stairs.x), Math.floor(stairs.y) + 1]; // where she steps off the stairs
+  const fromStairs = flood(stairsStep);
+  assert.ok(fromStairs.size > 30, `sanity: the stairs room and the east end of the corridor (${fromStairs.size} tiles)`);
+  assert.ok(fromStairs.has(`${Math.floor(lift.x)},${Math.floor(lift.y) + 1}`), 'the lift landing is on the stairs side');
+  // nothing in the lab, nothing at the lab door and nothing of the corridor west of the trigger is reachable from the stairs side
+  for (let y = 4; y <= 18; y++) for (let x = 4; x <= 20; x++) assert.ok(!fromStairs.has(`${x},${y}`), `${x},${y} (the lab, the lab door or row 18) is reachable from the stairs without crossing M4's trigger`);
+  for (let x = 4; x < r.x0; x++) for (const y of [18, 19, 20]) assert.ok(!fromStairs.has(`${x},${y}`), `the corridor's west end at ${x},${y}`);
+  assert.ok(here.walkable(12, 18) && here.walkable(12, 17) && here.walkable(11, 17), 'sanity: the door and the tile in front of it are real floor');
+  const station = MAPS['main-block-3'].keyStations[0];
+  assert.equal(station.id, 'physicsLab');
+  assert.ok(!fromStairs.has(`${station.x},${station.y + 1}`), 'the key station is only reachable through the trigger');
+  // and from inside the lab (beside the key station) the stairs side is only reachable through it
+  const inLab = flood([station.x, station.y + 1]);
+  assert.ok(inLab.size > 100, `sanity: the lab floor (${inLab.size} tiles)`);
+  assert.ok(inLab.has('12,18') && inLab.has('12,17'), 'she can leave the lab as far as the door and the tile just outside it');
+  assert.ok(!inLab.has(stairsStep.join(',')), 'the stairs');
+  assert.ok(!inLab.has(`${Math.floor(lift.x)},${Math.floor(lift.y) + 1}`), 'the lift');
+  for (let x = r.x0; x <= 29; x++) for (const y of [19, 20]) assert.ok(!inLab.has(`${x},${y}`), `the corridor at ${x},${y} is only reachable through the trigger`);
+  // Row 18 is benches and plants with a blocked tile every third column, which is what makes rows 19..20 a complete cut: in at least three
+  // columns of the rectangle nothing is open above it except the lab's own door row, so no walk can slip past on row 18.
+  const cutColumns = [];
+  for (let x = r.x0; x <= r.x1; x++) if (!here.walkable(x, 18)) cutColumns.push(x);
+  assert.ok(cutColumns.length >= 3, `columns where row 18 is blocked: ${cutColumns}`);
+  assert.ok((r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) <= 40, 'a modest area: the corridor outside the lab, not the floor');
 });
 
 test('FB-0051: M4 plays in order: three friends walk in together, Sana, Shraddha, Palak, the canteen invitation, her answer, a kind tease, a wave, they leave; no line mentions a birthday', () => {
@@ -1440,14 +1553,19 @@ test('FB-0051: M4 plays in order: three friends walk in together, Sana, Shraddha
   assert.deepEqual(flat.filter((s) => s.type === 'despawnActor').map((s) => s.body).sort(), ['palak', 'sana', 'shraddha']);
   // she is never moved
   assert.ok(!flat.some((s) => s.type === 'move' && s.body.actor === 'player'));
+  // nothing in the script points at the campus any more: the only anchor it names is the 3rd-floor lab area (the player is a relative point)
+  const anchors = new Set(JSON.stringify(steps).match(/"anchor":"[^"]+"/g));
+  assert.deepEqual([...anchors], ['"anchor":"Physics Lab"']);
+  assert.ok(floor3().anchor('Physics Lab'), 'and it exists on main-block-3');
 });
 
-test('FB-0051: M4 on the real campus: 8-20 s (about 15 s) from every trigger tile, ends without a key press, every actor ends despawned, and every spot they walk on is open ground', () => {
-  const here = mapOf('campus');
+test('FB-0051: M4 on the real 3rd floor: 8-20 s (about 15 s) from every trigger tile, ends without a key press, every actor ends despawned, and every spot AND every straight walk between spots is open corridor', () => {
+  const here = floor3();
   const rect = rectOf('m4');
   let tiles = 0;
   let min = Infinity;
   let max = 0;
+  const feet = (w) => [Math.floor(w.x / 16), Math.floor((w.y + 7) / 16)];
   for (let ty = rect.y0; ty <= rect.y1; ty++) {
     for (let tx = rect.x0; tx <= rect.x1; tx++) {
       if (!here.walkable(tx, ty)) continue;
@@ -1460,69 +1578,96 @@ test('FB-0051: M4 on the real campus: 8-20 s (about 15 s) from every trigger til
       assert.deepEqual(Object.keys(tl.actors).sort(), ['palak', 'sana', 'shraddha']);
       for (const [id, a] of Object.entries(tl.actors)) {
         assert.equal(a.despawned, true, `${id} is gone at the end`);
-        for (const w of a.waypoints) assert.ok(here.walkable(Math.floor(w.x / 16), Math.floor((w.y + 7) / 16)), `${id} stands on a blocked tile (${w.x / 16},${w.y / 16}) with her at ${tx},${ty}`);
+        for (const w of a.waypoints) assert.ok(here.walkable(...feet(w)), `${id} stands on a blocked tile (${w.x / 16},${w.y / 16}) with her at ${tx},${ty}`);
+        // the straight line between two waypoints (the runtime tweens in a straight line) never crosses a wall, a bench or a doorframe
+        for (let i = 1; i < a.waypoints.length; i++) {
+          const p = a.waypoints[i - 1];
+          const q = a.waypoints[i];
+          const n = Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 4) || 1;
+          for (let k = 0; k <= n; k++) {
+            const t = k / n;
+            const [wx, wy] = feet({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
+            assert.ok(here.walkable(wx, wy), `${id} walks through a blocked tile (${wx},${wy}) with her at ${tx},${ty}`);
+          }
+        }
       }
       assert.equal(tl.player.waypoints.length, 1, 'she is never walked anywhere');
     }
   }
-  assert.ok(tiles >= 40, `${tiles} walkable trigger tiles`);
-  assert.ok(min >= 11000 && max <= 19500, `M4 lasts ${Math.round(min)}-${Math.round(max)} ms`);
+  assert.ok(tiles >= 30, `${tiles} walkable trigger tiles`);
+  assert.ok(min >= 12000 && max <= 19500, `M4 lasts ${Math.round(min)}-${Math.round(max)} ms`);
   assert.ok(min >= MOMENT_MIN_MS && max <= MOMENT_MAX_MS);
 });
 
-test('FB-0051: M4: during every line the three stand in a row to her right, level with her or above, never behind the dialog box, never on top of her or each other, never off the screen', () => {
-  const here = mapOf('campus');
+test('FB-0051: M4: they come in from past the east edge of the picture and leave that way; during every line the three stand in a row 2-4 tiles to her east, level with her, never behind the dialog box, never on top of her or each other, never off the screen', () => {
+  const here = floor3();
   const rect = rectOf('m4');
   for (let ty = rect.y0; ty <= rect.y1; ty++) {
     for (let tx = rect.x0; tx <= rect.x1; tx++) {
       if (!here.walkable(tx, ty)) continue;
       const tl = momentTimeline(SCRIPTS.momentFriends, { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
       assert.equal(tl.says.length, 5);
+      const cam = clampCamX(tl.player.x, here); // the camera stops at the map's edge: she is left of centre in the west part of the corridor
       for (const say of tl.says) {
+        assert.equal(say.camY, tl.player.y, 'the camera is on her (indoors, no pan)');
         assert.deepEqual(plain(say.actors.map((a) => a.id).sort()), ['palak', 'sana', 'shraddha'], 'all three are on screen for every line');
         const xs = say.actors.map((a) => a.x).sort((a, b) => a - b);
         for (const a of say.actors) {
           assert.ok(a.y + 8 <= say.camY + 14, `${a.id} is behind the dialog box with her at ${tx},${ty}`);
-          assert.ok(a.x > tl.player.x + 16 && a.x - tl.player.x <= 4 * 16 + 1, `${a.id} is not 2-4 tiles to her right`);
-          assert.ok(Math.abs(a.x - say.camX) <= 160 - 16, `${a.id} is off the side of the screen`);
+          assert.equal(a.y, tl.player.y, `${a.id} is level with her`);
+          assert.ok(a.x >= tl.player.x + 2 * 16 && a.x <= tl.player.x + 4 * 16, `${a.id} is not 2-4 tiles to her east`);
+          assert.ok(Math.abs(a.x - cam) <= 160 - 16, `${a.id} is off the side of the screen with her at ${tx},${ty}`);
         }
         assert.ok(xs[1] - xs[0] >= 16 && xs[2] - xs[1] >= 16, 'a tile apart: nobody stands on anybody');
+      }
+      // they appear and disappear off screen (past the picture's east edge by more than their own half width), wherever she stands
+      for (const a of Object.values(tl.actors)) {
+        for (const w of [a.waypoints[0], a.waypoints.at(-1)]) assert.ok(w.x - cam > 160 + 8, `an actor pops in or out at x ${w.x / 16} in view, with her at ${tx},${ty}`);
       }
     }
   }
   // Sana is the one beside her, then Shraddha, then Palak
-  const tl = momentTimeline(SCRIPTS.momentFriends, { anchor, player: { x: 225 * 16 + 8, y: 133 * 16 + 8 } });
+  const tl = momentTimeline(SCRIPTS.momentFriends, { anchor: here.anchor, player: { x: 12 * 16 + 8, y: 19 * 16 + 8 } });
   const x = Object.fromEntries(tl.says[0].actors.map((a) => [a.id, a.x]));
   assert.ok(x.sana < x.shraddha && x.shraddha < x.palak);
+  assert.deepEqual([x.sana, x.shraddha, x.palak].map((v) => (v - 8) / 16), [14, 15, 16]);
+  // they leave toward the stairs: the same far east spots they came from, on corridor row 19
+  const walk = tl.actors.sana.waypoints;
+  assert.deepEqual([walk[0], walk.at(-1)].map((w) => [(w.x - 8) / 16, (w.y - 8) / 16]), [[31, 19], [31, 19]]);
 });
 
-test('FB-0051: M4\'s trigger: everyone coming out of the Main Block door arrives inside it (the tile in front of each doorway cell), and the forecourt is only reachable from the campus through it', () => {
+test('FB-0051: M4: the actors reach her from the stairs end through the doorway between the stairs room and the corridor (x 30, rows 18-19), never through the wall at 30,20', () => {
+  const here = floor3();
+  assert.ok(here.walkable(30, 19) && here.walkable(30, 18), 'the doorway');
+  assert.ok(!here.walkable(30, 20), 'the wall piece below it');
   const rect = rectOf('m4');
-  const door = campusObjects.find((o) => o.name === 'Main Block entrance');
-  const cells = [Math.floor(door.x), Math.floor(door.x) + 1].map((x) => [x, Math.floor(door.y)]);
-  const inRect = (x, y) => x >= rect.x0 && x <= rect.x1 && y >= rect.y0 && y <= rect.y1;
-  for (const [cx, cy] of cells) assert.ok(inRect(cx, cy + 1), `the arrival tile ${cx},${cy + 1} in front of the door is inside the trigger`);
-  // flood from the spawn, never entering the trigger: the tile in front of the doorway is unreachable that way
-  const spawn = campusObjects.find((o) => o.type === 'spawn');
-  const start = [Math.floor(spawn.x), Math.floor(spawn.y)];
-  const seen = new Set([start.join(',')]);
-  const stack = [start];
-  let touched = false;
-  while (stack.length) {
-    const [x, y] = stack.pop();
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx;
-      const ny = y + dy;
-      const k = `${nx},${ny}`;
-      if (seen.has(k) || !walkable(nx, ny)) continue;
-      if (inRect(nx, ny)) { touched = true; continue; } // stop at the trigger
-      seen.add(k);
-      stack.push([nx, ny]);
+  for (const ty of [rect.y0, rect.y1]) {
+    for (const tx of [rect.x0, 12, rect.x1]) {
+      const tl = momentTimeline(SCRIPTS.momentFriends, { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      for (const a of Object.values(tl.actors)) {
+        for (let i = 1; i < a.waypoints.length; i++) {
+          const p = a.waypoints[i - 1];
+          const q = a.waypoints[i];
+          // the line's height where it passes x 30: inside the doorway (rows 18..19), not in the wall at row 20
+          const t = (30 * 16 + 8 - p.x) / (q.x - p.x);
+          if (t < 0 || t > 1) continue;
+          const yAt = p.y + (q.y - p.y) * t;
+          assert.ok(Math.floor((yAt + 7) / 16) <= 19, `a walk crosses x 30 at row ${Math.floor((yAt + 7) / 16)}`);
+        }
+      }
     }
   }
-  assert.ok(touched, 'the walk from the spawn reaches the trigger');
-  for (const [cx, cy] of cells) assert.ok(!seen.has(`${cx},${cy + 1}`), `the tile in front of the door (${cx},${cy + 1}) is not reachable without entering the trigger`);
-  assert.ok((rect.x1 - rect.x0 + 1) * (rect.y1 - rect.y0 + 1) <= 150, 'a modest area');
+});
+
+test('FB-0051: M4\'s QA shot script plays it on main-block-3 with only the Physics Lab key, the player placed in the corridor trigger, and keeps its two shot names', () => {
+  const src = read('tools', 'qa-shots.js');
+  const body = src.slice(src.indexOf('async function shootMomentFriends'), src.indexOf('// ---- the memory album'));
+  assert.match(body, /map=main-block-3/);
+  assert.match(body, /GameState\.quest\.keys = \{ physicsLab: true, icl: false, room195: false \}/);
+  assert.doesNotMatch(body, /map=campus/);
+  assert.match(body, /momentRect\(page, 'm4'\)/);
+  assert.match(body, /moment-04-friends-a/);
+  assert.match(body, /moment-04-friends-b/);
 });
 
 test('FB-0051: the three friends\' sheets (Sana, Shraddha, Palak) exist as 16x24 4-row character sheets, are preloaded and in the offline bundle, differ from everyone else in hair, skin and top, and are made by the generator', () => {

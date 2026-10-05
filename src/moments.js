@@ -27,8 +27,9 @@ const MOMENT_MAX_MS = 20000;
 // In the order she meets them. `trigger` is a rectangle of tiles on `map`, written as offsets from the tile of a named map object
 // (so a regenerated campus that moves the gate or the door moves the trigger with it, ADR 0016): tile (anchor + [dx, dy]), the
 // rectangle spans dx0..dx1 x dy0..dy1 inclusive. `after`: { moments: ['m1'] } must have played; { cutscene: 'gate2' } must have been
-// seen (the Gate 2 welcome / opening, src/scenes/world.js); { keys: N } she must hold at least N of the three keys (M3, the chariot, N = 1;
-// M4, the three friends, N = 2). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
+// seen (the Gate 2 welcome / opening, src/scenes/world.js); { keys: N } she must hold at least N of the three keys (M3, the chariot, N = 1);
+// { keyIds: ['physicsLab'] } she must hold THESE keys (ids as in state.quest.keys: physicsLab, icl, room195; she may play the games in any
+// order, so a moment tied to one key's place names that key, M4, the three friends, the Physics Lab key). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
 // after another: `minGapS` REPLACES MOMENT_GAP_S (seconds of play since the last moment ENDED), `sameVisitOk: true` lets it start on a
 // map visit that already had a moment (MOMENT_PER_VISIT). `afterFreeS`: she must have had that many seconds of FREE control (not inside
 // a script, cutscene, dialog, door walk or any overlay: ctx.freeSeconds) since the last of those ended, so a moment never starts the
@@ -78,13 +79,16 @@ const MOMENTS = [
   {
     id: 'm4',
     name: 'Sana, Shraddha and Palak',
-    map: 'campus',
+    map: 'main-block-3',
     script: 'momentFriends',
-    // In front of the Main Block door again, on the way back out (x 219..228, y 129..137 on the real campus: the steps, the forecourt and
-    // the pavement beside the door; M2's area minus its east edge, so the three friends' places 2-4 tiles to her right stay clear of the
-    // palm at x234). Everyone leaving the Main Block arrives on the tile in front of the door, which lies inside it.
-    trigger: { anchor: 'Main Block entrance', dx0: -6, dx1: 3, dy0: 1, dy1: 9 },
-    after: { keys: 2 }, // once she holds the second key (the second mini-game); default pacing (90 s gap, one per map visit)
+    // The 3rd-floor corridor just outside the Physics Lab (x 5..20, y 19..20 on the real map; the owner, 2026-10-05: "the friends can
+    // meet Taru after the Physics Lab on the third floor"). The anchor is the lab's own area object (its tile is 12,10). The corridor is
+    // three rows tall (y 18..20) but row 18 is a row of benches and plants with a blocked tile at x 5, 8, 11, 14, 17, 20 ..., so every walk
+    // along the corridor, from the stairs to the lab door and back, crosses rows 19..20 at one of those columns: the rectangle is a full
+    // cut across the corridor (tests/unit/moments.test.js floods the real map). She steps out of the door onto (12,18) and into the
+    // rectangle on her next step. The friends stand level with her on rows 19..20, never on the cluttered row 18.
+    trigger: { anchor: 'Physics Lab', dx0: -7, dx1: 8, dy0: 9, dy1: 10 },
+    after: { keyIds: ['physicsLab'] }, // once she holds the Physics Lab key (not just any key); default pacing (90 s gap, one per map visit)
   },
 ];
 
@@ -127,6 +131,12 @@ function momentKeysHeld(state, ctx) {
   return state.quest && state.quest.keys ? Object.values(state.quest.keys).filter(Boolean).length : 0;
 }
 
+// Whether she holds every key in `ids` (state.quest.keys: { physicsLab, icl, room195 } booleans); false for a bare test state with no quest.
+function momentKeyIdsHeld(state, ids) {
+  const keys = state.quest && state.quest.keys;
+  return Boolean(keys) && ids.every((id) => Boolean(keys[id]));
+}
+
 // Which moment, if any, should start right now. Pure: everything it needs is passed in.
 //   state: see the header. now: the play clock, in seconds.
 //   ctx: { map, tileX, tileY (the player's feet tile), enabled (momentsEnabled()), blocked (a dialog, mini-game, key-room script, any
@@ -147,6 +157,7 @@ function momentDue(state, now, ctx) {
     if ((after.moments || []).some((id) => !seen.has(id))) continue;
     if (after.cutscene && !(state.seenCutscenes && state.seenCutscenes.has(after.cutscene))) continue;
     if (after.keys && momentKeysHeld(state, ctx) < after.keys) continue;
+    if (after.keyIds && !momentKeyIdsHeld(state, after.keyIds)) continue;
     const rect = momentTriggerRect(moment, ctx.anchor);
     if (!rect) continue;
     if (ctx.tileX < rect.x0 || ctx.tileX > rect.x1 || ctx.tileY < rect.y0 || ctx.tileY > rect.y1) continue;

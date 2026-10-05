@@ -26,7 +26,8 @@ Each loop run (the scheduled task, or a live session) does exactly one category:
 1. **Pick** the category with the lowest score in [quality/scorecard.md](quality/scorecard.md)
    (ties: the one rated longest ago).
 2. **Test that category once:** start the game, capture what the category needs (`npm run qa:shots`,
-   the category's own e2e specs, a short scripted playthrough), then **stop every server**.
+   the category's own e2e specs, a short scripted playthrough; `qa:shots` also covers the moments, the album and the selfie, and
+   `node tools/qa-shots.js --only <flow>` re-runs just one), then **stop every server**.
 3. **Rate** every area of that category against the rubric below, 1-10, and write the scores plus
    concrete issues (what's wrong, where, which screenshot) into the scorecard.
 4. **Fix** the category: group the issues into one or two Sonnet briefs, build-only (Phase A rules).

@@ -37,6 +37,15 @@ const INTERIOR_MAPS = [
   'mechanical-block-g', 'mechanical-block-1',
 ];
 
+// `--only a,b` (or `--only=a,b`): run only the flows whose tags match (see the flows table in main()). Empty = every flow.
+const ONLY = (() => {
+  const argv = process.argv.slice(2);
+  const i = argv.findIndex((a) => a === '--only' || a.startsWith('--only='));
+  if (i < 0) return [];
+  const value = argv[i].startsWith('--only=') ? argv[i].slice('--only='.length) : argv[i + 1] || '';
+  return value.split(',').map((s) => s.trim()).filter(Boolean);
+})();
+
 function log(msg) {
   console.log(`[qa-shots] ${msg}`);
 }
@@ -497,6 +506,237 @@ async function shootMoments(browser) {
   await page.close();
 }
 
+// ---------- the later moments (M3 the chariot, M4 the three friends), the album page and the selfie ----------
+// Same rules as shootMoments: moments ON (so these URLs pass no `moments=0`; `intro=0&save=0&audio=0` as there), the state set by hand after
+// the world is up, every wait polling real game state with its own bounded timeout, and a "finish" step so the game is free again at the end.
+
+// The nearest walkable tile to `prefer` ({ x, y }) INSIDE the inclusive tile rectangle `rect` ({ x0, y0, x1, y1 }): not under an overhead tile (a
+// canopy would hide her) and not on or beside a door / staircase / lift (landing there would warp her out of the trigger). Null if there is none.
+async function walkableInRect(page, rect, prefer) {
+  return page.evaluate(([r, pref]) => {
+    const world = game.scene.getScene('world');
+    const warps = (world.mapObjects || []).filter((o) => ['door', 'stairs', 'sealedDoor', 'lift', 'gate', 'scanner'].includes(o.type));
+    const nearWarp = (x, y) => warps.some((o) => x >= o.x - 1 && x <= o.x + (o.width || 1) && y >= o.y - 1 && y <= o.y + (o.height || 1));
+    let best = null;
+    let bestDist = Infinity;
+    for (let y = r.y0; y <= r.y1; y++) {
+      for (let x = r.x0; x <= r.x1; x++) {
+        if (!isWalkableTile(world.tileData, world.tileInfo, x, y)) continue;
+        if (world.overheadLayer && world.overheadLayer.getTileAt(x, y)) continue;
+        if (nearWarp(x, y)) continue;
+        const dist = (x - pref.x) * (x - pref.x) + (y - pref.y) * (y - pref.y);
+        if (dist < bestDist) { bestDist = dist; best = { x, y }; }
+      }
+    }
+    return best;
+  }, [rect, prefer]);
+}
+
+// The trigger rectangle of one moment on the page's current map (the anchor lookup shootMoments uses), or null when its anchor is missing.
+function momentRect(page, id) {
+  return page.evaluate((momentId) => {
+    const world = game.scene.getScene('world');
+    const moment = MOMENTS.find((m) => m.id === momentId);
+    return moment ? momentTriggerRect(moment, (name) => resolveAnchor(world.mapObjects, name)) : null;
+  }, id);
+}
+
+// ---- M3: Prof. Raja's chariot (main block ground floor, once she holds the first key) ----
+async function shootMomentChariot(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=main-block-g&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
+  const scriptRunning = () => game.scene.getScene('world').scriptRunner.isRunning;
+  const scriptIdle = () => !game.scene.getScene('world').scriptRunner.isRunning;
+
+  const rect = await (async () => {
+    const ok = await tryStep(page, 'moment-03-chariot (setup)', async () => {
+      await page.goto(baseUrl);
+      await waitReady(page);
+      await page.evaluate(() => {
+        GameState.quest.stage = 'hunting';
+        GameState.quest.keys = { physicsLab: true, icl: false, room195: false }; // M3 needs one key
+        for (const key of ['gate2', 'entrance', 'keyRoom:physicsLab', 'keyRoom:icl', 'keyRoom:room195']) GameState.seenCutscenes.add(key);
+        GameState.seenMoments = new Set(); // m3 has no moment before it (`after` is only the key)
+        GameState.lastMomentAt = null;
+      });
+    });
+    return ok ? momentRect(page, 'm3') : null;
+  })();
+  if (!rect) { warn('moment-03-chariot', 'no setup or no trigger rectangle for m3 on main-block-g'); await page.close(); return; }
+
+  const started = await tryStep(page, 'moment-03-chariot (start)', async () => {
+    const tile = await walkableInRect(page, rect, { x: Math.round((rect.x0 + rect.x1) / 2), y: Math.round((rect.y0 + rect.y1) / 2) });
+    if (!tile) throw new Error('no walkable tile inside the m3 trigger');
+    await teleport(page, tile.x, tile.y);
+    await waitFor(page, scriptRunning, { timeout: 12000 }); // checkMoment() fires on the first free frame inside the trigger
+  });
+
+  if (started) {
+    // a: the arrival. The chariot actor exists, has come down the hall (>= 90 px from where it was first seen) and has stood still for 6 frames.
+    await tryStep(page, 'moment-03-chariot-a', async () => {
+      await waitFor(page, () => {
+        const actor = game.scene.getScene('world').scriptRunner.actors.get('chariot');
+        if (!actor || !actor.sprite) { window.__qaChariot = null; return false; }
+        const y = actor.sprite.y;
+        const s = window.__qaChariot;
+        if (!s) { window.__qaChariot = { y0: y, last: y, still: 0 }; return false; }
+        s.still = Math.abs(y - s.last) < 0.05 ? s.still + 1 : 0;
+        s.last = y;
+        return y - s.y0 >= 90 && s.still >= 6;
+      }, { timeout: 20000 });
+      await shoot(page, 'moment-03-chariot-a');
+    });
+    // b: mid-dialog, Raja's reply ("My ride. Kindly mind the marks"), the line fully typed out, chariot parked beside him.
+    await tryStep(page, 'moment-03-chariot-b', async () => {
+      await waitFor(page, () => {
+        const d = game.scene.getScene('ui').dialog;
+        return d.isOpen && d.typing === false && /Raja/.test(d.name.text) && /Kindly/.test(d.body.text);
+      }, { timeout: 20000 });
+      await shoot(page, 'moment-03-chariot-b');
+    });
+    // finish: let it end (about 17 s in all) so the game is free again
+    await tryStep(page, 'moment-03-chariot (finish)', async () => {
+      await waitFor(page, scriptIdle, { timeout: 25000 });
+    });
+  }
+  await page.close();
+}
+
+// ---- M4: Sana, Shraddha and Palak (campus, in front of the Main Block door, once she holds the second key) ----
+async function shootMomentFriends(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
+  const scriptRunning = () => game.scene.getScene('world').scriptRunner.isRunning;
+  const scriptIdle = () => !game.scene.getScene('world').scriptRunner.isRunning;
+
+  const rect = await (async () => {
+    const ok = await tryStep(page, 'moment-04-friends (setup)', async () => {
+      await page.goto(baseUrl);
+      await waitReady(page);
+      await page.evaluate(() => {
+        GameState.quest.stage = 'hunting';
+        GameState.quest.keys = { physicsLab: true, icl: true, room195: false }; // M4 needs two keys
+        // gate2 so Mustafa does not play; entrance so the Main Block steps beat does not hold her at the door first
+        for (const key of ['gate2', 'entrance']) GameState.seenCutscenes.add(key);
+        GameState.seenMoments = new Set(['m1', 'm2', 'm3']); // the earlier ones have played...
+        GameState.lastMomentAt = GameState.playSeconds - 1000; // ...long ago on the play clock, so the 90 s gap is long over
+      });
+    });
+    return ok ? momentRect(page, 'm4') : null;
+  })();
+  if (!rect) { warn('moment-04-friends', 'no setup or no trigger rectangle for m4 on the campus'); await page.close(); return; }
+
+  const started = await tryStep(page, 'moment-04-friends (start)', async () => {
+    // the forecourt, a few rows in front of the door (the shootMoments M2 spot): the friends line up to her right
+    const tile = await walkableInRect(page, rect, { x: rect.x0 + 3, y: rect.y1 - 1 });
+    if (!tile) throw new Error('no walkable tile inside the m4 trigger');
+    await teleport(page, tile.x, tile.y);
+    await waitFor(page, scriptRunning, { timeout: 12000 });
+  });
+
+  if (started) {
+    // a: the three in a row beside her, Palak (the last of them) speaking the canteen invitation, the line fully typed out.
+    await tryStep(page, 'moment-04-friends-a', async () => {
+      await waitFor(page, () => {
+        const world = game.scene.getScene('world');
+        const d = game.scene.getScene('ui').dialog;
+        const here = ['sana', 'shraddha', 'palak'].every((id) => world.scriptRunner.actors.has(id));
+        return here && d.isOpen && d.typing === false && /Palak/.test(d.name.text);
+      }, { timeout: 20000 });
+      await shoot(page, 'moment-04-friends-a');
+    });
+    // b: after they have left: the script is over, control is back and the camera follows her again.
+    await tryStep(page, 'moment-04-friends-b', async () => {
+      await waitFor(page, scriptIdle, { timeout: 25000 });
+      await waitFor(page, () => game.scene.getScene('world').freeSeconds >= 0.6, { timeout: 8000 });
+      await shoot(page, 'moment-04-friends-b');
+    });
+    // finish: nothing left to wait for (b already needed the script to be over); make sure no dialog or script is left owning the screen
+    await tryStep(page, 'moment-04-friends (finish)', async () => {
+      await waitFor(page, () => !game.scene.getScene('world').scriptRunner.isRunning && !game.scene.getScene('ui').dialog.isOpen, { timeout: 5000 });
+    });
+  }
+  await page.close();
+}
+
+// ---- the memory album (journal page 2, W2): 0, 1 and 3 keys ----
+async function shootAlbum(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&moments=0&intro=0&save=0&audio=0`;
+  const journalOpen = () => game.scene.getScene('ui').journal.visible;
+  const ready = await tryStep(page, 'album (setup)', async () => {
+    await page.goto(baseUrl);
+    await waitReady(page);
+    await waitFor(page, () => game.scene.getScene('world').freeSeconds >= 0.5, { timeout: 8000 });
+  });
+  if (!ready) { await page.close(); return; }
+
+  const cases = [
+    ['album-0-keys', { physicsLab: false, icl: false, room195: false }],
+    ['album-1-key', { physicsLab: true, icl: false, room195: false }],
+    ['album-3-keys', { physicsLab: true, icl: true, room195: true }],
+  ];
+  for (const [name, keys] of cases) {
+    await tryStep(page, name, async () => {
+      await page.evaluate((k) => { GameState.quest.keys = k; }, keys);
+      await page.keyboard.press('j');
+      await waitFor(page, journalOpen, { timeout: 5000 });
+      // the album file / photos load the first time the journal opens with a key in hand; wait for that to finish (it never starts with 0 keys)
+      await waitFor(page, () => game.scene.getScene('ui').journal.albumState !== 'loading', { timeout: 10000 });
+      await page.keyboard.press('Tab');
+      await waitFor(page, () => game.scene.getScene('ui').journal.page === 'album', { timeout: 5000 });
+      await page.waitForTimeout(700); // the polaroids' pop-in tweens settle
+      await shoot(page, name);
+    }, { resetUrl: baseUrl });
+    // finish: close it again so the next case (and the game) starts free
+    await tryStep(page, `${name} (close)`, async () => {
+      if (await page.evaluate(journalOpen)) await page.keyboard.press('j');
+      await waitFor(page, () => !game.scene.getScene('ui').journal.visible, { timeout: 5000 });
+    }, { resetUrl: baseUrl });
+  }
+  await page.close();
+}
+
+// ---- selfie mode (P, W6): the polaroid card in the corner, and the PNG it downloads ----
+// The selfie is ON by default (`?selfie=0` turns it off), so this URL passes nothing for it. The whole sequence is only ~1.6 s (flash, card slides up,
+// holds ~0.85 s, fades), so the preview shot is taken as soon as the card's texture exists plus its slide-in, not "2 s after the key".
+async function shootSelfie(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&moments=0&intro=0&save=0&audio=0`;
+  const ready = await tryStep(page, 'selfie (setup)', async () => {
+    await page.goto(baseUrl);
+    await waitReady(page);
+    await waitFor(page, () => game.scene.getScene('world').freeSeconds >= 1, { timeout: 8000 }); // selfieAllowed() wants 0.3 s of free control
+  });
+  if (!ready) { await page.close(); return; }
+
+  await tryStep(page, 'selfie-01-preview', async () => {
+    // register the download wait BEFORE the key so the event cannot be missed; a miss is logged below, not thrown
+    const download = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('p');
+    // the card's texture is created the moment the picture is composed, then it slides up (150 ms delay + 340 ms) and holds ~850 ms
+    await waitFor(page, () => game.scene.getScene('ui').textures.exists('selfie-preview'), { timeout: 5000 });
+    await page.waitForTimeout(600);
+    await shoot(page, 'selfie-01-preview');
+
+    const file = await download;
+    if (!file) {
+      warn('selfie-02-file', 'no download event within 5 s of pressing P');
+    } else {
+      const target = path.join(OUT_DIR, 'selfie-02-file.png');
+      await file.saveAs(target);
+      SUMMARY.captured.push('selfie-02-file');
+      log(`saved ${path.relative(ROOT, target)} (downloaded as ${file.suggestedFilename()})`);
+    }
+  }, { resetUrl: baseUrl });
+
+  // finish: the controller ends itself (card gone, HUD back); wait for that so the game is free
+  await tryStep(page, 'selfie (finish)', async () => {
+    await waitFor(page, () => !game.scene.getScene('world').selfie.busy, { timeout: 8000 });
+  });
+  await page.close();
+}
+
 // ---------- title screen, loading screen, pause menu and the controls panel (FB-0023/0024) ----------
 
 async function shootTitleAndPause(browser) {
@@ -777,7 +1017,9 @@ async function main() {
   // { recursive: true } so a leftover qa-shots/intro/ (tools/qa-shots-intro.js's own output
   // directory, nested inside this same gitignored qa-shots/ folder) doesn't crash this cleanup --
   // this script never writes there itself, but doesn't need to preserve it across a run either.
-  for (const file of fs.readdirSync(OUT_DIR)) fs.rmSync(path.join(OUT_DIR, file), { recursive: true, force: true });
+  // With `--only` the folder is left alone (the earlier shots stay; the new ones overwrite their own names).
+  if (!ONLY.length) for (const file of fs.readdirSync(OUT_DIR)) fs.rmSync(path.join(OUT_DIR, file), { recursive: true, force: true });
+  else log(`--only ${ONLY.join(',')}: running just the matching flows, keeping the existing shots`);
 
   log(`starting server.js on port ${PORT} (feedback dir: ${FEEDBACK_DIR})`);
   const server = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
@@ -800,16 +1042,23 @@ async function main() {
     // wait/teleport/screenshot take the rest of itself down -- this outer try/catch is belt and
     // suspenders for a failure tryStep didn't anticipate (e.g. browser.newPage() itself throwing),
     // so the flows after it still run either way.
+    // [label, fn, tags]: `--only <name>[,<name>...]` runs just the flows with a tag that matches (equal, or one starts with the other: `--only moment`
+    // runs all the moment flows, `--only moment-03` just the chariot, `--only album`, `--only selfie`).
     const flows = [
-      ['outdoor points', shootOutdoors],
-      ['indoor floors/rooms', shootIndoors],
-      ['Gate 2 script + UI', shootCutscene],
-      ['moments (unicorn, Mevin)', shootMoments],
-      ['title/pause/menus', shootTitleAndPause],
-      ['mini-games', shootMinigames],
-      ['ending sequence', shootEnding],
+      ['outdoor points', shootOutdoors, ['outdoor']],
+      ['indoor floors/rooms', shootIndoors, ['indoor']],
+      ['Gate 2 script + UI', shootCutscene, ['cutscene', 'ui']],
+      ['moments (unicorn, Mevin)', shootMoments, ['moment-01', 'moment-02']],
+      ['title/pause/menus', shootTitleAndPause, ['title', 'loading', 'pause']],
+      ['mini-games', shootMinigames, ['minigame']],
+      ['moment 3 (the chariot)', shootMomentChariot, ['moment-03', 'chariot']],
+      ['moment 4 (the three friends)', shootMomentFriends, ['moment-04', 'friends']],
+      ['journal album', shootAlbum, ['album']],
+      ['selfie (P)', shootSelfie, ['selfie']],
+      ['ending sequence', shootEnding, ['ending']],
     ];
-    for (const [label, fn] of flows) {
+    for (const [label, fn, tags] of flows) {
+      if (ONLY.length && !tags.some((tag) => ONLY.some((want) => tag === want || tag.startsWith(want) || want.startsWith(tag)))) continue;
       try {
         await fn(browser);
       } catch (err) {

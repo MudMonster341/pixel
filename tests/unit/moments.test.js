@@ -942,10 +942,12 @@ test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-
   const urls = [...shots.matchAll(/\$\{BASE_URL\}\/\?dev=0[^`]*/g)].map((m) => m[0]);
   assert.ok(urls.length >= 6, `found ${urls.length} URLs`);
   const withMoments = urls.filter((u) => !u.includes('moments=0'));
-  assert.equal(withMoments.length, 1, `only the moments flow loads with moments on: ${withMoments}`);
-  assert.match(withMoments[0], /map=campus&title=0&intro=0&save=0/);
+  // the moment flows only: M1/M2 (shootMoments), M3 the chariot (shootMomentChariot) and M4 the friends (shootMomentFriends)
+  assert.equal(withMoments.length, 3, `only the moment flows load with moments on: ${withMoments}`);
+  assert.equal(withMoments.filter((u) => /map=campus&title=0&intro=0&save=0/.test(u)).length, 2);
+  assert.equal(withMoments.filter((u) => /map=main-block-g&title=0&intro=0&save=0/.test(u)).length, 1);
   assert.match(shots, /async function shootMoments\(browser\)/);
-  assert.match(shots, /\['moments \(unicorn, Mevin\)', shootMoments\]/);
+  assert.match(shots, /\['moments \(unicorn, Mevin\)', shootMoments, \[/);
   assert.match(shots, /shoot\(page, 'moment-01-unicorn'\)/);
   assert.match(shots, /shoot\(page, 'moment-02-mevin'\)/);
   assert.match(shots, /tryStep\(page, 'moment-01-unicorn'/);
@@ -954,6 +956,28 @@ test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-
   const intro = read('tools', 'qa-shots-intro.js');
   for (const url of intro.match(/\$\{BASE_URL\}\/\?dev=0[^`]*/g)) assert.ok(url.includes('moments=0'), url);
   assert.match(read('tools', 'qa-offline-play.js'), /moments=0/);
+});
+
+test('QA: qa-shots has flows for M3, M4, the album and the selfie (shot names, tryStep, finish steps, --only filter), each in the main sequence', () => {
+  const shots = read('tools', 'qa-shots.js');
+  for (const name of ['moment-03-chariot-a', 'moment-03-chariot-b', 'moment-04-friends-a', 'moment-04-friends-b',
+    'album-0-keys', 'album-1-key', 'album-3-keys', 'selfie-01-preview', 'selfie-02-file']) {
+    assert.ok(shots.includes(name), `qa-shots mentions ${name}`);
+  }
+  for (const fn of ['shootMomentChariot', 'shootMomentFriends', 'shootAlbum', 'shootSelfie']) {
+    assert.match(shots, new RegExp(`async function ${fn}\\(browser\\)`));
+    assert.match(shots, new RegExp(`', ${fn}, \\[`), `${fn} is in the flows table`);
+  }
+  assert.match(shots, /tryStep\(page, 'moment-03-chariot \(finish\)'/);
+  assert.match(shots, /tryStep\(page, 'moment-04-friends \(finish\)'/);
+  assert.match(shots, /tryStep\(page, 'selfie \(finish\)'/);
+  assert.match(shots, /page\.waitForEvent\('download'/);
+  assert.match(shots, /--only/);
+  // the ending stays the last flow, and the selfie / album flows keep moments off
+  assert.ok(shots.indexOf('shootSelfie, [') < shots.indexOf('shootEnding, ['));
+  const selfieSrc = shots.slice(shots.indexOf('async function shootSelfie'), shots.indexOf('async function shootTitleAndPause'));
+  assert.match(selfieSrc, /moments=0/);
+  assert.ok(!/&selfie=0/.test(selfieSrc), 'the selfie flow leaves the selfie on');
 });
 
 // ---------- always visible above the dialog box; no "E" prompt ----------

@@ -39,6 +39,11 @@ not part of `npm test`). Positions come from the generated maps' own objects, no
 numbers. Look at the screenshots (docs/QA_PLAN.md section 3 has the checklist) before calling a
 version ready to play, the same way `npm test` needs to be green first.
 
+It also covers the moments (M1 to M4: `moment-01..04-*`), the Journal album page (`album-0-keys`, `album-1-key`,
+`album-3-keys`) and selfie mode (`selfie-01-preview`, and the downloaded PNG as `selfie-02-file`).
+`node tools/qa-shots.js --only moment-03` (or `moment-04`, `album`, `selfie`; comma-separated; any flow tag) runs just those
+flows and keeps the existing shots in `qa-shots/`.
+
 ## Where tests run
 
 - **Before every push:** `.githooks/pre-push` runs `npm test`. `npm install` switches the hook on

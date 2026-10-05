@@ -70,6 +70,7 @@ class CardScene extends Phaser.Scene {
   init() {
     this.ended = false;
     this.missingPhotoKeys = new Set();
+    this.slidePhotos = []; // the card's photos, then (all keys found) the album's: src/album.js cardSlidePhotos()
     this.timers = []; // every looping/delayed timer this scene starts, so skipToEnd() can kill them all at once
   }
 
@@ -111,11 +112,14 @@ class CardScene extends Phaser.Scene {
     const raw = this.cache.json.get('card-config');
     this.config = buildCardConfig(raw);
 
-    if (this.config.photos.length === 0) {
+    // W2: once every key is found the memory album's photos (src/album.js) follow the card's own in the slideshow; with no album entries
+    // (the common case) this is exactly config.photos.
+    this.slidePhotos = cardSlidePhotos(this.config, GameState.quest.keys);
+    if (this.slidePhotos.length === 0) {
       this.beginSequence();
       return;
     }
-    this.config.photos.forEach((photo, i) => this.load.image(`card-photo-${i}`, `${CARD_PHOTOS_DIR}${photo.file}`));
+    this.slidePhotos.forEach((photo, i) => this.load.image(`card-photo-${i}`, `${CARD_PHOTOS_DIR}${photo.file}`));
     this.load.once('complete', () => this.beginSequence());
     this.load.start();
   }
@@ -334,11 +338,14 @@ class CardScene extends Phaser.Scene {
   // all (the common case on a fresh checkout), src/card.js's own buildCardSlides() falls back to the
   // temporary slideshow (TEMP_CARD_SLIDES) instead of a single repeated placeholder -- see its own
   // comment for why "real photos always win" lives there, not here.
+  // W2: an album photo whose file failed to load is simply left out (never a placeholder slide for it): with no real photo anywhere the
+  // slideshow is the temporary one, exactly as before.
   buildSlides() {
-    return buildCardSlides(this.config.photos, (i) => {
-      const key = `card-photo-${i}`;
-      const missing = this.missingPhotoKeys.has(key) || !this.textures.exists(key);
-      return missing ? 'card-placeholder-photo' : key;
+    const isMissing = (i) => this.missingPhotoKeys.has(`card-photo-${i}`) || !this.textures.exists(`card-photo-${i}`);
+    const usable = this.slidePhotos.map((photo, i) => ({ photo, i })).filter(({ photo, i }) => !photo.album || !isMissing(i));
+    return buildCardSlides(usable.map((u) => u.photo), (n) => {
+      const i = usable[n].i;
+      return isMissing(i) ? 'card-placeholder-photo' : `card-photo-${i}`;
     });
   }
 

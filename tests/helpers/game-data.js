@@ -32,6 +32,8 @@ const SCRIPTS = [
   // The ending's card content (docs/STORY.md "the ending"): pure data/validation, no Phaser -- see
   // src/card.js's own header comment for why this needs to tolerate a missing/malformed card.json.
   'src/card.js',
+  // The memory album (W2): the Journal's polaroid slots and the card slideshow merge, pure; loaded after card.js (reads its `album`).
+  'src/album.js',
   // The credits phase after the card (decisions/0019): pure data + the timeline, loaded right after card.js.
   'src/credits.js',
   // The birthday finale (W3): the blow / schedule / firework rules and its drawing as shape lists, pure; loaded after card.js (renderCardText).

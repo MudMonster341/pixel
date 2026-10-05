@@ -57,7 +57,7 @@ roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent a
 **Cut line:** the TP room is already parked; then Raja's chariot, then the three-girls scene, then W6/W2. Keep M1, M2, the finale, golden hour. **Never cut:** P1 (done), the bundle and hosted link, credits, soft-lock guards, completeness checklist, the full test before handover.
 
 ## What the owner provides (and when)
-- **Card assets** (photos, closing video, final wishes, recipient/age) in `assets/card/` (gitignored; shape in `assets/card/card.example.json`):
+- **Card assets** (photos, the 3 memory-album photos + captions (`album`), closing video, final wishes, recipient/age) in `assets/card/` (gitignored; shape in `assets/card/card.example.json`):
   by ~2026-10-07. Placeholders work until then.
 - **Friends' lines and inside jokes**, the real clubs/colours if different, and photos for the memory album/selfie (W1/W2): from 10-05.
 - Answers to feedback questions in the O overlay; the second playtest on ~10-08. Optionally: any Mac (or a friend's) to open the link/zip once.

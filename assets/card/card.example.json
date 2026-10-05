@@ -10,6 +10,11 @@
     { "file": "1.jpg", "caption": "Caption for the first photo" },
     { "file": "2.jpg", "caption": "Caption for the second photo" }
   ],
+  "album": [
+    { "file": "a1.jpg", "caption": "Caption of the 1st polaroid (the Physics Lab key)" },
+    { "file": "a2.jpg", "caption": "Caption of the 2nd polaroid (the ICL key)" },
+    { "file": "a3.jpg", "caption": "Caption of the 3rd polaroid (the Room 195 key)" }
+  ],
   "wishes": [
     "A short wish, shown on its own for about three seconds.",
     "Write about eight of them; {name} becomes the recipient.",

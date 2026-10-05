@@ -15,7 +15,7 @@
 //   2. every `assets/${...}` template in src/, expanded from the content that fills it in (maps,
 //      character sheets, cutscenes, clothes colours, card slides) -- a template with no handler here
 //      makes the build FAIL, so a new kind of dynamic asset can't be silently left out;
-//   3. the git-ignored owner content assets/card/ (card.json, the photos it lists, optional video.mp4)
+//   3. the git-ignored owner content assets/card/ (card.json, the photos and album photos it lists, optional video.mp4)
 //      and the optional box-opening video, read at build time.
 // Every required asset must exist or the build throws. Source packs (assets/vendor, assets/External
 // Tilesets) are never embedded: the game doesn't load anything from them at runtime.
@@ -217,11 +217,19 @@ function collectRuntimeAssets({ root = ROOT, exists = fs.existsSync, readFile = 
     } catch (error) {
       throw new Error(`pack-offline: assets/card/card.json is not valid JSON (${error.message})`);
     }
-    for (const photo of Array.isArray(card.photos) ? card.photos : []) {
-      if (!photo || typeof photo.file !== 'string' || !photo.file.trim()) continue;
-      const file = photo.file.trim();
-      if (file.includes('..') || path.isAbsolute(file)) throw new Error(`pack-offline: card.json photo "${file}" must be a plain file name in assets/card/photos/`);
-      add(`assets/card/photos/${file.replace(/\\/g, '/')}`, 'listed in assets/card/card.json');
+    // `photos` (the slideshow) and `album` (W2, the Journal's memory album: the first 3 entries, src/card.js ALBUM_MAX_ENTRIES) list files in
+    // the same folder; a file both list is embedded once.
+    const listed = [
+      ['photos', Array.isArray(card.photos) ? card.photos : [], 'listed in assets/card/card.json'],
+      ['album', Array.isArray(card.album) ? card.album.slice(0, 3) : [], 'album entry in assets/card/card.json'],
+    ];
+    for (const [field, entries, reason] of listed) {
+      for (const photo of entries) {
+        if (!photo || typeof photo.file !== 'string' || !photo.file.trim()) continue;
+        const file = photo.file.trim();
+        if (file.includes('..') || path.isAbsolute(file)) throw new Error(`pack-offline: card.json ${field} "${file}" must be a plain file name in assets/card/photos/`);
+        add(`assets/card/photos/${file.replace(/\\/g, '/')}`, reason);
+      }
     }
   } else {
     notes.push('assets/card/card.json not found: the card will use the default messages and the generated slideshow (docs/STORY.md "How to put your photos and messages in")');

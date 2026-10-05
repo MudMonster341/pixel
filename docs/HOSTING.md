@@ -26,7 +26,7 @@ console errors, audio running in Chromium.
 
 ## When the card photos / video / final wishes change
 
-Put them in `assets/card/` (card.json, photos, optional video.mp4), run `npm run pack:site` again, and drag the new
+Put them in `assets/card/` (card.json, photos incl. the 3 `album` ones, optional video.mp4), run `npm run pack:site` again, and drag the new
 `dist/offline-site` folder onto the same site (Netlify -> Deploys -> drag the folder onto the "Deploy" box). The link stays.
 The video must stay small (the whole site is one folder of embedded data; a big mp4 makes the first load slow).
 

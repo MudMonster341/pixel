@@ -1167,3 +1167,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** moment `m4` (campus, Main Block forecourt x219..228 y129..137, `after: { keys: 2 }`, default pacing): three new generated sheets `npc-friend-sana/shraddha/palak` (FRIEND_WOMEN in tools/make-assets.js: yellow top + flower clip / violet + magenta glasses / coral + teal tote), script `momentFriends` (~15-17 s, "Come to the canteen with us. We saved you a seat!", Taru "Give me a few minutes, I still have a hunt to finish.", hearts/note, they walk off east). FB-0051 -> fixed (owner checks).
 **Check in a browser:** walk-in diagonals vs the palm at (234,135), row placement beside her, facing/walk anim, emotes on the right heads, Sana's clip. No e2e/qa-shots for M3/M4 yet.
 **Next:** W2 memory album + W6 selfie (placeholders), qa-shots for M3/M4, then card assets -> final pack.
+
+## 2026-10-05 (Day 4) - W2 memory album: 1117 unit tests green
+
+**Did:** `src/album.js` (pure slots: locked / photo / placeholder per key), optional `album` (<=3 entries, photos in `assets/card/photos/`) in card.json, Journal "Album" page (Tab / Left-Right / A-D; code-drawn tilted polaroids, placeholder = pastel + heart + "A memory for you", locked = "?", unlock pop), card slideshow appends album photos after all 3 keys, packer embeds album files (pack:offline and pack:site). 24 `W2:` tests. card.example.json + docs updated.
+**Check in a browser:** J with 1/2/3 keys then Tab, cover-crop of real photos inside the rotated polaroid, missing file -> placeholder; one console 404 for card.json on a checkout without it (same as the card scene).
+**Next:** W6 selfie (P key), qa-shots for M3/M4/album, wait for card assets, final pack.

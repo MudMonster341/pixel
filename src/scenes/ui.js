@@ -1940,6 +1940,10 @@ class Onboarding {
 // (src/dialog.js `{ journal: '...' }` actions) oldest first. Rebuilt every time it opens, so it
 // always reflects whatever's been added since it was last shown.
 
+// W2: the Album page's geometry (JournalPanel.buildAlbum() below): three 150x178 polaroids 174 px apart in a 200 px tall viewport --
+// a card border of 8, a 134x110 photo window and a 60 px caption strip underneath.
+const ALBUM_LAYOUT = { viewportH: 200, spacing: 174, w: 150, h: 178, border: 8, photoW: 134, photoH: 110, stripH: 60 };
+
 class JournalPanel {
   constructor(scene) {
     this.scene = scene;
@@ -1957,6 +1961,16 @@ class JournalPanel {
     this.title = uiText(scene, GAME_WIDTH / 2, 0, 'JOURNAL', 16, COLORS.highlight).setOrigin(0.5);
     this.footer = uiText(scene, GAME_WIDTH / 2, 0, 'J / ESC TO CLOSE', 8, COLORS.dim).setOrigin(0.5);
     this.rowTexts = [];
+    // W2 (the memory album, src/album.js): a second page of this panel (TAB / Left / Right switch). `albumParts` are the polaroid containers
+    // of the current build (destroyed on every rebuild); `albumConfig` is card.json read through buildCardConfig() the first time the journal
+    // opens with a key in hand (null until then and whenever the file is missing: every polaroid is then a placeholder); `albumSeen` are the
+    // key ids whose polaroid the page has already shown this session, so only a NEW one pops.
+    this.page = 'clues';
+    this.albumParts = [];
+    this.albumConfig = null;
+    this.albumState = 'idle'; // 'idle' -> 'loading' -> 'ready'
+    this.albumMissing = new Set(); // album-photo-N keys whose file failed to load
+    this.albumSeen = new Set();
     // FB-0041a: the mask shape that clips rows to the panel's own scrollable viewport (below) --
     // never added to the display list itself, just used to build a GeometryMask.
     this.maskShape = scene.make.graphics({}, false);
@@ -1967,20 +1981,92 @@ class JournalPanel {
     // (maxScroll === 0), so this is harmless whenever there's nothing to scroll.
     for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(-1); });
     for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(1); });
+    // W2: Tab / Left / Right flip between the clues and the album (Tab's own browser focus move is cancelled while the journal is open).
+    for (const key of ['TAB', 'LEFT', 'RIGHT', 'A', 'D']) {
+      scene.input.keyboard.on(`keydown-${key}`, (e) => {
+        if (!this.visible) return;
+        if (key === 'TAB' && e && e.preventDefault) e.preventDefault();
+        if (!e.repeat) this.setPage(this.page === 'clues' ? 'album' : 'clues');
+      });
+    }
   }
 
   open() {
     this.visible = true;
     this.scroll = 0;
+    this.page = 'clues';
+    this.requestAlbum();
     this.build();
     this.parts.forEach((part) => part.setVisible(true));
     this.rowTexts.forEach((text) => text.setVisible(true));
+    this.albumParts.forEach((part) => part.setVisible(true));
   }
 
   close() {
     this.visible = false;
     this.parts.forEach((part) => part.setVisible(false));
     this.rowTexts.forEach((text) => text.setVisible(false));
+    this.albumParts.forEach((part) => part.setVisible(false));
+  }
+
+  // W2: switch page and redraw (a no-op while closed).
+  setPage(page) {
+    if (!this.visible || this.page === page) return;
+    this.page = page;
+    this.scroll = 0;
+    this.redraw();
+  }
+
+  // Rebuild whichever page is showing and make its objects visible (build() creates them; the panel's own parts are already shown).
+  redraw() {
+    this.build();
+    this.rowTexts.forEach((text) => text.setVisible(true));
+    this.albumParts.forEach((part) => part.setVisible(true));
+  }
+
+  // W2: read assets/card/card.json (the owner's album entries) and the album photos it lists, ONCE, the first time the journal opens with at least
+  // one key in hand: nothing is requested before there is a polaroid to show (a fresh game, and the e2e specs, never ask for the optional file).
+  // Same mechanism as the card scene (the offline bundle inlines the same files); a missing/bad file or photo just leaves placeholders. Never throws.
+  requestAlbum() {
+    if (this.albumState !== 'idle' || !Object.values(GameState.quest.keys).some(Boolean)) return;
+    this.albumState = 'loading';
+    const load = this.scene.load;
+    const onError = (file) => { if (file && typeof file.key === 'string' && file.key.startsWith('album-photo-')) this.albumMissing.add(file.key); };
+    const finish = () => {
+      load.off('loaderror', onError);
+      this.albumState = 'ready';
+      if (this.visible) this.redraw(); // the photos (or the lack of them) just arrived
+    };
+    try {
+      load.on('loaderror', onError);
+      load.json('album-config', CARD_CONFIG_URL);
+      load.once('complete', () => {
+        try {
+          this.albumConfig = buildCardConfig(this.scene.cache.json.get('album-config') || null);
+          let queued = 0;
+          this.albumConfig.album.forEach((entry, i) => {
+            if (!entry || this.scene.textures.exists(`album-photo-${i}`)) return;
+            load.image(`album-photo-${i}`, `${CARD_PHOTOS_DIR}${entry.file}`);
+            queued++;
+          });
+          if (!queued) { finish(); return; }
+          load.once('complete', finish);
+          load.start();
+        } catch (error) { finish(); }
+      });
+      load.start();
+    } catch (error) {
+      finish();
+    }
+  }
+
+  // The three polaroid descriptors for now (src/album.js albumSlots()): a photo only counts if its texture really loaded.
+  albumSlotsNow() {
+    const hasPhoto = (file, index) => {
+      const key = `album-photo-${index}`;
+      return this.scene.textures.exists(key) && !this.albumMissing.has(key);
+    };
+    return albumSlots(this.albumConfig, GameState.quest.keys, hasPhoto);
   }
 
   toggle() {
@@ -1997,6 +2083,12 @@ class JournalPanel {
   // in a masked viewport instead of just growing forever when there are many/long entries.
   build() {
     this.rowTexts.forEach((text) => text.destroy());
+    this.rowTexts = [];
+    // W2: a tween left running on a destroyed polaroid would throw, so stop theirs first.
+    this.albumParts.forEach((part) => { this.scene.tweens.killTweensOf(part); part.destroy(); });
+    this.albumParts = [];
+    if (this.page === 'album') { this.buildAlbum(); return; }
+    this.title.setText('JOURNAL');
     const entries = GameState.journal.length ? GameState.journal : ['No clues yet -- go talk to someone.'];
     const bodyW = this.w - 64;
     this.rowTexts = entries.map((line) => uiText(this.scene, this.x + 32, 0, `• ${line}`, 8, COLORS.text).setWordWrapWidth(bodyW).setDepth(116));
@@ -2020,7 +2112,12 @@ class JournalPanel {
     this.panel.setPosition(this.x, y);
     this.panel.setPanelSize(this.w, h);
     this.title.setPosition(GAME_WIDTH / 2, y + 26);
-    this.footer.setText(this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- J / ESC TO CLOSE' : 'J / ESC TO CLOSE');
+    // W2: the footer also points at the album page, and says so loudly when a new polaroid is waiting there.
+    const slots = this.albumSlotsNow();
+    const fresh = albumNewSlots(slots, this.albumSeen).length > 0;
+    const tabHint = fresh ? 'TAB: NEW POLAROID!' : `TAB: ALBUM ${albumUnlockedCount(slots)}/${ALBUM_SLOT_COUNT}`;
+    this.footer.setText(`${this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- ' : ''}${tabHint} -- J / ESC TO CLOSE`)
+      .setColor(fresh ? COLORS.highlight : COLORS.dim);
     this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);
 
     this.maskShape.clear().fillStyle(0xffffff).fillRect(this.x + 16, this.viewY, this.w - 32, this.viewportH);
@@ -2031,6 +2128,107 @@ class JournalPanel {
 
   layoutRows() {
     this.rowTexts.forEach((text, i) => text.setPosition(this.x + 32, this.viewY - this.scroll + this.rowRelY[i]));
+  }
+
+  // ---------- W2: the Album page (src/album.js) ----------
+
+  // Three polaroids side by side in a fixed-size panel (nothing to scroll): a white card with a thicker bottom strip for the caption, each
+  // tilted a little. Unlocked: the owner's photo (cover-fitted) or a placeholder (pastel gradient, a code-drawn heart, "A memory for you");
+  // locked: a dim card with a "?". A polaroid not shown before pops in (juice, off with ?juice=0).
+  buildAlbum() {
+    const slots = this.albumSlotsNow();
+    const h = this.headerH + ALBUM_LAYOUT.viewportH + this.footerH;
+    const y = Math.round((GAME_HEIGHT - h) / 2);
+    this.box = { x: this.x, y, w: this.w, h };
+    this.viewportH = ALBUM_LAYOUT.viewportH;
+    this.viewY = y + this.headerH;
+    this.maxScroll = 0;
+    this.scroll = 0;
+    this.rowRelY = [];
+
+    this.panel.setPosition(this.x, y);
+    this.panel.setPanelSize(this.w, h);
+    this.title.setText('ALBUM').setPosition(GAME_WIDTH / 2, y + 26);
+    const fresh = albumNewSlots(slots, this.albumSeen);
+    this.footer.setText(`TAB: CLUES -- ${albumUnlockedCount(slots)}/${ALBUM_SLOT_COUNT} MEMORIES -- J / ESC TO CLOSE`).setColor(COLORS.dim);
+    this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);
+
+    const cy = this.viewY + ALBUM_LAYOUT.viewportH / 2;
+    for (const slot of slots) {
+      const cx = GAME_WIDTH / 2 + (slot.index - 1) * ALBUM_LAYOUT.spacing;
+      const polaroid = this.drawPolaroid(slot, cx, cy);
+      this.albumParts.push(polaroid);
+      if (fresh.includes(slot.index)) this.popPolaroid(polaroid, cx, cy, fresh.indexOf(slot.index));
+    }
+    for (const slot of slots) if (slot.unlocked) this.albumSeen.add(slot.keyId);
+  }
+
+  // One polaroid as a container centred on (cx, cy), tilted by the slot's angle (children are laid out around 0,0).
+  drawPolaroid(slot, cx, cy) {
+    const L = ALBUM_LAYOUT;
+    const scene = this.scene;
+    const left = -L.w / 2;
+    const top = -L.h / 2;
+    const photoX = left + L.border;
+    const photoY = top + L.border;
+    const stripY = photoY + L.photoH;
+    const box = scene.add.container(cx, cy).setDepth(116).setAngle(slot.angle);
+    const g = scene.add.graphics();
+    box.add(g);
+    g.fillStyle(0x000000, 0.35).fillRect(left + 3, top + 4, L.w, L.h); // drop shadow
+    g.fillStyle(slot.unlocked ? 0xfdf8ec : 0x5a5e74, 1).fillRect(left, top, L.w, L.h); // the white card (dim when locked)
+    g.lineStyle(1, slot.unlocked ? 0xd9ccaa : 0x474b60, 1).strokeRect(left + 0.5, top + 0.5, L.w - 1, L.h - 1);
+
+    if (!slot.unlocked) {
+      g.fillStyle(0x34374b, 1).fillRect(photoX, photoY, L.photoW, L.photoH);
+      box.add(uiText(scene, 0, photoY + L.photoH / 2, '?', 24, COLORS.dim).setOrigin(0.5));
+      box.add(uiText(scene, 0, stripY + 12, '???', 8, '#8a8fa8').setOrigin(0.5, 0));
+      return box;
+    }
+
+    if (slot.kind === 'photo') {
+      g.fillStyle(0x222222, 1).fillRect(photoX, photoY, L.photoW, L.photoH);
+      const img = scene.add.image(0, photoY + L.photoH / 2, `album-photo-${slot.index}`);
+      // Cover-fit: scale the photo to fill the window and crop (around its centre) what sticks out; the origin stays the centre, so the crop
+      // needs no repositioning, and it rotates with the polaroid like everything else in the container.
+      const sw = img.width || 1;
+      const sh = img.height || 1;
+      const scale = Math.max(L.photoW / sw, L.photoH / sh);
+      img.setCrop((sw - L.photoW / scale) / 2, (sh - L.photoH / scale) / 2, L.photoW / scale, L.photoH / scale).setScale(scale);
+      box.add(img);
+    } else {
+      // The placeholder: a pastel gradient (horizontal bands), a heart, two small sparkles and "A memory for you".
+      const BANDS = 8;
+      const from = [0xff, 0xd6, 0xe8];
+      const to = [0xd6, 0xe4, 0xff];
+      for (let b = 0; b < BANDS; b++) {
+        const t = b / (BANDS - 1);
+        const c = from.map((v, k) => Math.round(v + (to[k] - v) * t));
+        g.fillStyle((c[0] << 16) | (c[1] << 8) | c[2], 1).fillRect(photoX, photoY + (L.photoH * b) / BANDS, L.photoW, Math.ceil(L.photoH / BANDS));
+      }
+      const hy = photoY + 38;
+      g.fillStyle(0xff7aa8, 1).fillCircle(-11, hy - 4, 12).fillCircle(11, hy - 4, 12).fillTriangle(-22, hy + 1, 22, hy + 1, 0, hy + 28);
+      g.fillStyle(0xffffff, 0.55).fillCircle(-14, hy - 8, 3);
+      box.add(scene.add.star(photoX + 26, photoY + 22, 4, 2, 6, 0xffe27a));
+      box.add(scene.add.star(photoX + L.photoW - 24, photoY + 30, 4, 1.5, 5, 0xffffff));
+      box.add(uiText(scene, 0, photoY + L.photoH - 22, 'A memory for you', 8, '#c2527f').setOrigin(0.5, 0));
+    }
+
+    const caption = uiText(scene, 0, stripY + 8, slot.caption, 8, '#4a3520').setOrigin(0.5, 0).setAlign('center').setWordWrapWidth(L.photoW, true);
+    let size = 8;
+    while (caption.height > L.stripH - 12 && size > 5) caption.setFontSize(--size); // a long caption shrinks instead of spilling off the card
+    box.add(caption);
+    return box;
+  }
+
+  // The little unlock pop: the polaroid springs up from small with a puff of confetti (cosmetic; nothing with ?juice=0).
+  popPolaroid(polaroid, cx, cy, order) {
+    try {
+      if (!juiceEnabled()) return;
+      polaroid.setScale(0.4).setAlpha(0.2);
+      this.scene.tweens.add({ targets: polaroid, scale: 1, alpha: 1, delay: order * 140, duration: 380, ease: 'Back.easeOut', onComplete: () => polaroid.setScale(1).setAlpha(1) });
+      this.scene.time.delayedCall(order * 140 + 120, () => { if (this.visible && this.page === 'album') playConfettiBurst(this.scene, { x: cx, y: cy - 20 }, 120); });
+    } catch (error) { polaroid.setScale(1).setAlpha(1); }
   }
 
   scrollBy(direction) {

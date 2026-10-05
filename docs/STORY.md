@@ -182,6 +182,11 @@ never breaks the card):
     { "file": "1.jpg", "caption": "Caption for the first photo" },
     { "file": "2.jpg", "caption": "Caption for the second photo" }
   ],
+  "album": [
+    { "file": "a1.jpg", "caption": "Caption of the 1st polaroid (the Physics Lab key)" },
+    { "file": "a2.jpg", "caption": "Caption of the 2nd polaroid (the ICL key)" },
+    { "file": "a3.jpg", "caption": "Caption of the 3rd polaroid (the Room 195 key)" }
+  ],
   "wishes": [
     "A short wish, shown on its own for about three seconds.",
     "Write about eight of them; {name} becomes the recipient."
@@ -202,6 +207,13 @@ never breaks the card):
   optional; leave it out (or empty) for no caption on that photo. A `file` that doesn't actually
   exist in the folder falls back to the placeholder illustration for that one slide (its caption
   still shows), rather than breaking the rest of the slideshow.
+- `album` (W2, the memory album): up to 3 photos, one per LUG key in this order: the Physics Lab key, the
+  ICL key, the Room 195 key. Each key she finds unlocks its polaroid on the Journal's Album page (J, then
+  Tab); `file` is again a name inside `assets/card/photos/`, `caption` is optional (a default like "Memory 1:
+  the Physics Lab key" shows without one). Left out, or a missing file, a slot is a placeholder polaroid
+  ("A memory for you"): nothing breaks. Once all three keys are found, the card's slideshow also plays the
+  album's photos after the `photos` (a file listed in both plays once). Square-ish or landscape photos fit
+  the polaroid window best (it crops to fill).
 
 ### The credits (after the card, built 2026-10-03, ADR 0019)
 

@@ -94,7 +94,7 @@ Derived from what the game actually loads, never a hand-kept list:
   mini-game backgrounds, box/card art, UI kit, ...;
 - the templates (`assets/${...}`) expanded from the content: character sheets (`characterSheets()`), Tiled
   maps, cutscene art, clothes colours, the temporary card slides;
-- the git-ignored owner content, read at build time: `assets/card/card.json`, every photo it lists in
+- the git-ignored owner content, read at build time: `assets/card/card.json`, every photo it lists (`photos` and `album`) in
   `assets/card/photos/`, and the optional `assets/card/video.mp4`; plus the optional
   `assets/cutscenes/video/box-opening.mp4`. Videos over 150 MB make the build fail (compress them).
 

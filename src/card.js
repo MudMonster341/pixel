@@ -23,7 +23,10 @@
 //     "photos": [
 //       { "file": "1.jpg", "caption": "..." },        // "file" is a name inside assets/card/photos/
 //       { "file": "2.jpg", "caption": "..." }
-//     ]
+//     ],
+//     "album": [                                     // the Journal's memory album (src/album.js): up to 3
+//       { "file": "a1.jpg", "caption": "..." }        // entries, one per LUG key in key order; "file" is also a
+//     ]                                               // name inside assets/card/photos/
 //   }
 // `{name}` in a message is replaced with the resolved recipient name (the same `{name}` token
 // src/dialog.js uses for the typed player name -- but here it is the recipient, "Taru" by default).
@@ -52,6 +55,7 @@ const DEFAULT_CARD_MESSAGES = [
 ];
 
 const CARD_CONFIG_URL = 'assets/card/card.json';
+const ALBUM_MAX_ENTRIES = 3; // src/album.js ALBUM_SLOT_COUNT: one polaroid per LUG key
 const CARD_PHOTOS_DIR = 'assets/card/photos/';
 const CARD_VIDEO_URL = 'assets/card/video.mp4';
 const BOX_VIDEO_URL = 'assets/cutscenes/video/box-opening.mp4';
@@ -84,10 +88,19 @@ function buildCardConfig(raw) {
         }))
     : [];
 
+  // The memory album (src/album.js): the first 3 entries, kept IN PLACE -- a malformed entry becomes `null` (that slot stays a placeholder)
+  // rather than shifting the later photos onto the wrong keys. Absent/invalid -> [] (every slot a placeholder).
+  const album = Array.isArray(source.album)
+    ? source.album.slice(0, ALBUM_MAX_ENTRIES).map((p) => (p && typeof p === 'object' && typeof p.file === 'string' && p.file.trim()
+      ? { file: p.file.trim(), caption: typeof p.caption === 'string' ? p.caption.trim() : '' }
+      : null))
+    : [];
+
   return {
     recipient,
     messages: (messages.length ? messages : DEFAULT_CARD_MESSAGES).map((line) => renderCardText(line, recipient)),
     photos,
+    album,
   };
 }
 

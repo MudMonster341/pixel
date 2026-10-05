@@ -1179,3 +1179,7 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** `src/selfie.js` (pure crop/filename/caption/gate + `createSelfie`): P in free control only (0.3 s free), HUD hidden for exactly one frame while `renderer.snapshotArea` grabs a 4:3 crop around her and nearby friends, saved as a PNG on a white polaroid frame via blob + `<a download>` (data-URL fallback, then preview only), flash + generated `shutter.wav`, preview card bottom-left, toast. `?selfie=0` (e2e default off). Controls list + README updated. 36 `W6:` tests.
 **Check in a browser:** HUD absent from the image, WebGL vs Canvas snapshot, P during dialog/pause/moments is a no-op, Safari download behaviour (unverifiable here).
 **Next:** qa-shots flows for M3/M4/album/selfie, then the one full test round (unit + browser + qa:shots + qa:offline), then update the play copy.
+
+## 2026-10-05 (Day 4) - qa-shots flows for M3/M4/album/selfie; looked at them
+
+`node tools/qa-shots.js --only moment-03,moment-04,album,selfie`: 9 captured, 0 skipped. Looked: chariot beside the stairs with Raja speaking above the dialog; the three girls in a row beside her (distinct looks, clear of the box); album placeholders/locked/3 polaroids with confetti; selfie preview card + saved PNG (no HUD in the file, polaroid frame, caption "Selfie, BITS Dubai Campus"). Full test round started next.

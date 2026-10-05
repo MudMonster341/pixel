@@ -17,6 +17,8 @@ const SCRIPTS = [
   'src/moments.js', 'src/save.js',
   // Golden hour (src/daylight.js): the day's phases, tint/vignette/halo numbers, lamp scan and dust motes, pure.
   'src/daylight.js',
+  // The juice pass (src/juice.js): the sparkle/shake/confetti/emote plans, pure; its drawing helpers only touch Phaser when called.
+  'src/juice.js',
   // M5 sound (docs/ROADMAP.md): the SOUNDS registry + AudioManager (src/audio.js) are pure data/logic
   // -- AudioManager.game stays null under this sandbox (nothing ever calls .init()), so every method
   // that touches Phaser is a guarded no-op, safe to load here the same as everything else in this list.

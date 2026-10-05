@@ -151,7 +151,7 @@ class HeroScene extends MinigameBaseScene {
         break;
       case 'hit':
         AudioManager.play('lockedDoorThud');
-        this.hurtFlash();
+        this.hurtHit(); // juice: a red pulse and a small shake (framework-scene.js)
         this.refreshHearts(true);
         this.burst(p.x, p.y - 22);
         break;
@@ -165,7 +165,7 @@ class HeroScene extends MinigameBaseScene {
         this.setScore(heroHitsLanded(hv));
         this.refreshBar();
         this.burst(event.x, event.y);
-        this.cameras.main.shake(90, 0.003);
+        shakeCamera(this, 90, 0.003);
         break;
       case 'clink':
         this.burst(event.x, event.y, HVS_FRAME.sparkle);
@@ -179,7 +179,7 @@ class HeroScene extends MinigameBaseScene {
         break;
       case 'defeated':
         AudioManager.play('lockedDoorThud');
-        this.cameras.main.shake(220, 0.006);
+        shakeCamera(this, 150, 0.004); // src/juice.js: gentle, and never longer than 150 ms
         this.burst(event.x, event.y - 32);
         this.showBubble(event.x);
         break;
@@ -347,12 +347,6 @@ class HeroScene extends MinigameBaseScene {
     this.tweens.add({
       targets: spark, scale: HVS_SCALE * 1.4, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: () => spark.destroy(),
     });
-  }
-
-  // One light pulse over the whole screen (a hit on her): a single fade, not a repeating flash.
-  hurtFlash() {
-    const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xff4a4a, 0.28).setOrigin(0, 0).setDepth(250).setScrollFactor(0);
-    this.tweens.add({ targets: flash, alpha: 0, duration: 240, ease: 'Cubic.easeOut', onComplete: () => flash.destroy() });
   }
 
   // The villain's line after he falls, in a speech bubble over him (the same panel look as the rest of the game).

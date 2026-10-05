@@ -150,6 +150,21 @@ class MinigameBaseScene extends Phaser.Scene {
     this.flashScreen(); // juice: a brief, subtle win flash, right before the win card eases in
     recordAttempt(GameState, this.gameId, skipped ? 'skipped' : 'won', this.score);
     this.card.showWin(this.def, skipped, () => this.finish('won'));
+    this.winConfetti(); // juice: a small burst of paper bits over the win card (src/juice.js)
+  }
+
+  // Juice (src/juice.js): a small confetti burst out of the win card's key-icon spot (at most 24 pieces, ~1 s, destroys itself); nothing waits on it.
+  winConfetti() {
+    const box = this.card && this.card.box;
+    playConfettiBurst(this, { x: GAME_WIDTH / 2, y: box ? winCardLayout(box.y).iconCenterY : GAME_HEIGHT * 0.4 });
+  }
+
+  // Juice: she was hit (the hero fight's volleys, the tower's barrels, a firewall in Flappy): one brief red pulse and a short, gentle camera shake
+  // (src/juice.js clamps it to <= 150 ms and a small amplitude; nothing at all with ?juice=0 or when the OS asks for reduced motion).
+  hurtHit() {
+    this.hurtHitAt = this.time.now;
+    flashOverlay(this, 0xff4a4a, 0.28, 240, 250);
+    shakeCamera(this, 120, 0.004);
   }
 
   // A quick, subtle full-canvas white flash (coordinator brief "juice": "a win flash; keep it
@@ -166,9 +181,9 @@ class MinigameBaseScene extends Phaser.Scene {
     this.setHudVisible(false);
     this.onPanelShown();
     AudioManager.play('minigameLose');
-    // A small screen shake (coordinator brief: "small") -- felt, not jarring; the card fades in right
-    // on top of it a moment later.
-    this.cameras.main.shake(160, 0.006);
+    // A small screen shake and red pulse (coordinator brief: "small") -- felt, not jarring; the card fades in right on top of them a moment
+    // later. A lethal hit (hero fight, tower) already did both a moment ago through hurtHit(), so they are not doubled.
+    if (this.time.now - (this.hurtHitAt ?? -1e9) > 400) this.hurtHit();
     const { canSkip } = recordAttempt(GameState, this.gameId, 'lost', this.score);
     this.card.showGameOver(this.def, this.score, canSkip, {
       onRetry: () => this.beginAttempt(),

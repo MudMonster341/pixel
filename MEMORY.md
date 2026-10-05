@@ -1149,3 +1149,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 
 **Did:** The owner parked the TP room (ball pit + arcade + sumo vs Narda: "not a priority now"). Wrote HANDOVER.md (full Day 3 record), ADR 0024 (mini-game line-up + moments system), ERR-0018 (usage-limit stops, bad edit script), rewrote docs/NEXT_SESSION_PROMPT.md, refreshed HANDOFF/CONTEXT and the statuses of the moments plan and the Day 3 plan.
 **Next:** the owner's second playtest; then M3/M4 (close FB-0051), juice, W2/W6, card assets, final zip + site by 10-09.
+
+## 2026-10-05 (Day 4 start) - Juice pass (W5): 1073 unit tests green
+
+**Did:** `npm run feedback`: nothing new (owner has not played the second build; no edits to campus-lines-review.md; no NPC line mentions a birthday). Juice pass by one Sonnet agent: `src/juice.js` (pure plans + shape-drawn effects, `?juice=0`, wall-clock failsafe), key-pickup sparkle flying to the "Keys n/3" tracker label (also for Alice's key), mini-game hit flash/shake (`hurtHit`) and win confetti, "!" over a person who stops to talk and a heart over named friends after the talk. 15 `JUICE:` tests.
+**Check in a browser:** sparkle target in pill vs expanded state, confetti on the win card, shake gentleness, `?juice=0`.
+**Next:** M3 Prof. Raja's chariot (main-block-g), M4 Sana/Shraddha/Palak, then W2/W6 placeholders.

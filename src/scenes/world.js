@@ -570,6 +570,7 @@ class WorldScene extends Phaser.Scene {
 
   endAmbientTalk(ambient) {
     ambient.talking = false;
+    ambient.alertShown = false; // the next talk gets its "!" again (src/juice.js talkEmote())
     ambient.pausedUntil = this.time.now + AMBIENT_TALK_RESUME_MS;
     if (ambient.def.kind !== 'patrol') { // back to its authored pose
       ambient.facing = ambient.def.facing || 'down';
@@ -662,16 +663,34 @@ class WorldScene extends Phaser.Scene {
     this.spawnAmbientEmote(ambient.sprite.x, ambient.sprite.y - 22);
   }
 
-  spawnAmbientEmote(x, y) {
+  // `glyph`/`holdMs`: the "..." of a chatting pair by default; a person who stops and turns to her gets a "!" (src/juice.js talkEmote()).
+  spawnAmbientEmote(x, y, glyph = '...', holdMs = 700) {
     const container = this.add.container(x, y).setDepth(200000).setScale(0.4);
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1c2c, 0.85).fillRoundedRect(-12, -10, 24, 20, 4);
-    const glyph = this.add.text(0, 0, '...', { fontFamily: FONT, fontSize: '10px', color: COLORS.text }).setOrigin(0.5);
-    container.add([bg, glyph]);
+    const text = this.add.text(0, 0, glyph, { fontFamily: FONT, fontSize: '10px', color: COLORS.text }).setOrigin(0.5);
+    container.add([bg, text]);
     this.tweens.add({ targets: container, scale: 1, duration: 180, ease: 'Back.easeOut' });
-    this.time.delayedCall(700, () => {
+    this.time.delayedCall(holdMs, () => {
       this.tweens.add({ targets: container, alpha: 0, duration: 200, onComplete: () => container.destroy() });
     });
+  }
+
+  // The "!" / heart over an ambient person at the start / end of a talk (src/juice.js talkEmote(): never during a script or a moment, once per
+  // talk, a heart only for a named friend). Decoration only: it must never get in the way of the conversation, so any failure is swallowed.
+  talkEmoteFor(phase, ambient) {
+    try {
+      if (!juiceEnabled() || this.transitioning) return;
+      const emote = talkEmote(phase, ambient.def, { scriptRunning: this.scriptRunner.isRunning, alertShown: ambient.alertShown });
+      if (!emote) return;
+      const s = ambient.sprite;
+      if (emote.kind === '!') {
+        ambient.alertShown = true;
+        this.spawnAmbientEmote(s.x, s.y - 22, '!', emote.holdMs);
+      } else {
+        this.spawnHeartEmote(s.x, s.y - 22);
+      }
+    } catch (error) { /* decoration only */ }
   }
 
   // "Only update ones near the camera" (this task's own brief, performance): an ambient NPC outside
@@ -1472,6 +1491,7 @@ class WorldScene extends Phaser.Scene {
       // The entry itself is passed as `named`: its optional `name`/`lines` make a named character (FB-0050).
       talk = campusTalkLines(ambientTalker.def.role, ambientTalker.def.id, GameState.campusTalk, ambientTalker.def);
       this.beginAmbientTalk(ambientTalker);
+      this.talkEmoteFor('start', ambientTalker); // a small "!" as she stops and turns
     } else if (animalTalker) {
       talk = { name: 'Cat', lines: ANIMAL_TALK_LINES };
       animalTalker.state = { ...animalTalker.state, talking: true };
@@ -1519,8 +1539,12 @@ class WorldScene extends Phaser.Scene {
     // or, if `choices` is set, shows the picked list and calls back with whichever option the player
     // chose. Either way, only one actions list ever runs: the choice's own, or the entry's own when
     // there was no choice to make.
+    const keysBefore = Object.values(GameState.quest.keys).filter(Boolean).length;
     this.scene.get('ui').dialog.open(talk ? talk.name : found.label, lines, (choice) => {
-      if (ambientTalker) this.endAmbientTalk(ambientTalker); // she walks on
+      if (ambientTalker) {
+        this.endAmbientTalk(ambientTalker); // she walks on
+        this.talkEmoteFor('end', ambientTalker); // a heart over a named friend
+      }
       if (animalTalker) animalTalker.state = { ...animalTalker.state, talking: false };
       applyDialogActions((choice || entry).actions, GameState, (result) => {
         // A key station's "take" entry starts with a `minigame` action (src/story.js); the key is
@@ -1535,6 +1559,9 @@ class WorldScene extends Phaser.Scene {
         // too): the door opens, and a key station whose key is now held drops its floating icon.
         this.syncGates();
         this.syncKeyStations();
+        // A key handed over by a person rather than taken from a desk (Alice gives the ICL key too) has no floating icon to collect: the sparkle
+        // starts at whoever gave it, unless collectKeyStation() already sparkled for this very hand-over.
+        if (countKeysHeld(GameState) > keysBefore && this.time.now - (this.keySparkleAt ?? -1e9) > 150) this.emitKeySparkle(found.target.x, found.target.y - 12);
       });
     }, choices);
     // FB-0036: emitted *after* dialog.open() (which sets DialogBox.isOpen synchronously), not before
@@ -1565,12 +1592,20 @@ class WorldScene extends Phaser.Scene {
     if (ks.taken) return;
     ks.taken = true;
     this.refreshDaylight(); // a key found: the day moves on (golden hour, dusk); the same check also runs on every state change
+    this.emitKeySparkle(ks.sprite.x, ks.sprite.y);
     ks.shadow.destroy();
     this.tweens.killTweensOf(ks.sprite);
     this.tweens.add({
       targets: ks.sprite, y: ks.sprite.y - 10, alpha: 0, duration: 250,
       onComplete: () => ks.sprite.destroy(),
     });
+  }
+
+  // Juice (src/juice.js): a LUG key was just given at world point (x, y). The UI scene draws the burst there and the sparkles that fly to its key
+  // counter (UIScene.playKeySparkle(), a separate scene, so this is an event like every other HUD message). Cosmetic: nothing waits for it.
+  emitKeySparkle(x, y) {
+    this.keySparkleAt = this.time.now;
+    if (juiceEnabled()) this.game.events.emit('key-sparkle', { x, y });
   }
 
   updatePickups() {

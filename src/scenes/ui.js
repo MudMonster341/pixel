@@ -274,7 +274,10 @@ class UIScene extends Phaser.Scene {
     this.game.events.on('cutscene:requested', this.onCutsceneRequested);
     this.game.events.on('minigame:requested', this.onMinigameRequested);
     this.game.events.on('box-opening:requested', this.onBoxOpeningRequested);
+    // Juice (src/juice.js): a LUG key was just given at a world point; sparkle there and fly to the key counter. Cosmetic, never blocks anything.
+    this.onKeySparkle = (point) => this.playKeySparkle(point);
     this.game.events.on('warp:requested', this.onWarpRequested);
+    this.game.events.on('key-sparkle', this.onKeySparkle);
     this.events.once('shutdown', () => this.teardown());
 
     const world = this.scene.get('world');
@@ -310,6 +313,18 @@ class UIScene extends Phaser.Scene {
       else if (this.journal.visible) this.journal.close();
       else if (!this.dialog.isOpen) this.pause.onEscape();
     });
+  }
+
+  // The key-pickup sparkle (src/juice.js playKeySparkle()): `point` is a WORLD position; the world camera turns it into a screen position (this
+  // scene is a separate, unzoomed 960x540 camera), a burst pops there and a few sparkles arc to the quest tracker's key counter, which pulses
+  // as the last one lands. Any problem (no camera yet, a scene already gone) just means no sparkle.
+  playKeySparkle(point) {
+    try {
+      const cam = this.scene.get('world').cameras.main;
+      const from = worldToScreen(point.x, point.y, cam.worldView, cam.zoom, GAME_WIDTH, GAME_HEIGHT);
+      if (this.keySparkle) this.keySparkle.destroy(); // a second key right behind the first restarts it rather than stacking
+      this.keySparkle = playKeySparkle(this, from, this.questTracker.keyTarget(), () => this.questTracker.pop());
+    } catch (error) { /* decoration only */ }
   }
 
   // FB-0035: true only while the 'world' scene actually owns the screen -- running (not paused for a
@@ -350,6 +365,9 @@ class UIScene extends Phaser.Scene {
     this.game.events.off('minigame:requested', this.onMinigameRequested);
     this.game.events.off('box-opening:requested', this.onBoxOpeningRequested);
     this.game.events.off('warp:requested', this.onWarpRequested);
+    this.game.events.off('key-sparkle', this.onKeySparkle);
+    if (this.keySparkle) this.keySparkle.destroy();
+    this.keySparkle = null;
     this.hotbar.teardown();
     this.tutorial.teardown();
   }
@@ -1723,6 +1741,22 @@ class QuestTracker {
       this.lastObjectiveText = text;
       this.expand();
     }
+  }
+
+  // Where the key counter is on the screen right now (the "Keys n/3" line of the pill, or the keys line of the expanded panel): the middle of
+  // whichever is showing, for the key-pickup sparkle (src/juice.js) to fly to.
+  keyTarget() {
+    const label = this.expanded ? this.keysText : this.pillKeys;
+    return { x: label.x + label.width / 2, y: label.y + label.height / 2 };
+  }
+
+  // A tiny scale pulse on that counter as a sparkle lands (the label grows from its top-left corner; always back to exactly 1 afterwards).
+  pop() {
+    const label = this.expanded ? this.keysText : this.pillKeys;
+    if (this.popTween) this.popTween.stop(); // only its own pulse: the label's fade (setScriptHidden) is a different tween and stays
+    this.pillKeys.setScale(1);
+    this.keysText.setScale(1);
+    this.popTween = this.scene.tweens.add({ targets: label, scale: 1.35, duration: 70, yoyo: true, ease: 'Quad.easeOut', onComplete: () => label.setScale(1) });
   }
 
   // Widens/heightens to the full objective (title + wrapped sentence + keys line) for a few seconds

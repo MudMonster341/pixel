@@ -164,7 +164,7 @@ class TowerScene extends MinigameBaseScene {
         break;
       case 'hit':
         AudioManager.play('lockedDoorThud');
-        this.hurtFlash();
+        this.hurtHit(); // juice: a red pulse and a small shake (framework-scene.js)
         this.refreshHearts(true);
         break;
       case 'smash':
@@ -260,12 +260,6 @@ class TowerScene extends MinigameBaseScene {
         this.tweens.add({ targets: heart, scale: TW_SCALE, duration: 260, ease: 'Back.easeOut' });
       }
     });
-  }
-
-  // One light pulse over the whole screen (a hit): a single fade, not a repeating flash.
-  hurtFlash() {
-    const flash = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xff4a4a, 0.28).setOrigin(0, 0).setDepth(250).setScrollFactor(0);
-    this.tweens.add({ targets: flash, alpha: 0, duration: 240, ease: 'Cubic.easeOut', onComplete: () => flash.destroy() });
   }
 
   // A barrel or pot breaking on her: a few shards flying out and fading.

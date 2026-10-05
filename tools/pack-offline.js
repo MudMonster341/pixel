@@ -37,7 +37,7 @@ const BUNDLE_FOLDER_NAME = 'LUG-Treasure-Hunt'; // the folder she gets when she 
 // Data scripts the content-derived list needs (pure data, no Phaser) -- same set tests/helpers/game-data.js loads.
 const DATA_SCRIPTS = [
   'src/items.js', 'src/story.js', 'src/ambient.js', 'src/campus-facts.js', 'src/animals.js', 'src/maps.js', 'src/cutscenes.js',
-  'src/objective-routes.js', 'src/scripts.js', 'src/card.js', 'src/maplogic.js', 'src/state.js', 'src/moments.js', 'src/audio.js',
+  'src/objective-routes.js', 'src/scripts.js', 'src/card.js', 'src/maplogic.js', 'src/state.js', 'src/moments.js', 'src/daylight.js', 'src/audio.js',
 ];
 
 const MIME = {

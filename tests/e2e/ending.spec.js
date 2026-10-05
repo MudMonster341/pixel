@@ -158,7 +158,7 @@ test('"Watch the Card Again" from the title jumps straight to the card, skipping
   await expect.poll(async () => page.evaluate(() => game.scene.isActive('title')), { timeout: 10_000 }).toBe(true);
 
   // Reload straight to the title (a fresh page, same save) and pick "Watch the Card Again".
-  const params = new URLSearchParams({ dev: '0', cutscene: '0', save: '1', profile: 'ending-e2e-watch', intro: '0', moments: '0' });
+  const params = new URLSearchParams({ dev: '0', cutscene: '0', save: '1', profile: 'ending-e2e-watch', intro: '0', moments: '0', daylight: '0' });
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   await page.waitForFunction(() => game.scene.getScene('title').menuItems.some((item) => item.id === 'watch-card'));

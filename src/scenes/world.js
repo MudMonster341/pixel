@@ -17,6 +17,8 @@ const FOOTSTEP_INTERVAL_INDOOR_MS = 380;
 // Depth for the "overhead" Tiled layer (tree canopies, ADR 0008): always above every character,
 // whose depth is set to their own y each frame (a few thousand px at most on the biggest map).
 const OVERHEAD_DEPTH = 1_000_000;
+// Golden hour (createDaylight() below): the tint sits above EVERYTHING in this scene, the overhead canopies included (the UI is another scene).
+const DAYLIGHT_OVERLAY_DEPTH = 2_000_000;
 const INTERACT_RANGE = 24;
 const PICKUP_RANGE = 10;
 // ADR 0016: how close she has to walk to a key station's desk for its own "walking in" beat to fire --
@@ -225,6 +227,8 @@ class WorldScene extends Phaser.Scene {
       .startFollow(this.player, true, 0.18, 0.18)
       .centerOn(this.player.x, this.player.y)
       .fadeIn(250, 0, 0, 0);
+    // Golden hour: the light for the current phase of the hunt (src/daylight.js); after the camera is zoomed, since it is sized from it.
+    this.createDaylight();
 
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT');
     // One-shot keys use keydown events; polling JustDown loses taps shorter than a frame (ERR-0001).
@@ -997,10 +1001,175 @@ class WorldScene extends Phaser.Scene {
       });
   }
 
+  // ---------- Golden hour (src/daylight.js, docs/GAME_FEEL.md "Daylight") ----------
+  // The light moves from morning to dusk as the keys are found. Drawn in THIS scene, above every world layer (the tree canopies, depth
+  // OVERHEAD_DEPTH, included, so the tint is even) and below the whole UI (UIScene is a separate scene, drawn on top of this one). One MULTIPLY
+  // rectangle (the tint), one vignette image, a few additive halos on the lamps/chandeliers and a few additive dust motes: nothing is
+  // interactive and nothing allocates per frame. `?daylight=0` builds none of it (tests/e2e/helpers.js).
+  createDaylight() {
+    this.daylight = null;
+    if (!daylightEnabled()) return;
+    this.ensureDaylightTextures();
+    const cam = this.cameras.main;
+    const indoors = Boolean(this.def.indoors);
+    // Camera-space objects (scrollFactor 0) are zoomed about the camera's centre, so they are placed at the centre of the camera's own
+    // 960x540 and sized to the part of that the zoom shows (plus a margin), never to the world.
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+    const w = cam.width / cam.zoom + 4;
+    const h = cam.height / cam.zoom + 4;
+    const overlay = this.add.rectangle(cx, cy, w, h, 0xffffff, 1).setScrollFactor(0).setDepth(DAYLIGHT_OVERLAY_DEPTH)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY);
+    const vignette = this.add.image(cx, cy, 'daylight-vignette').setScrollFactor(0).setDepth(DAYLIGHT_OVERLAY_DEPTH + 2).setDisplaySize(w, h);
+    const halos = this.daylightSpots().map((spot) => this.add.image(spot.x, spot.y, 'daylight-halo').setDepth(DAYLIGHT_OVERLAY_DEPTH + 1)
+      .setDisplaySize(spot.size, spot.size).setBlendMode(Phaser.BlendModes.ADD).setVisible(false));
+    const motes = [];
+    const moteState = [];
+    if (!indoors) {
+      for (let i = 0; i < DAYLIGHT_MOTE_MAX; i++) {
+        moteState.push(moteInit(i));
+        motes.push(this.add.image(cx, cy, 'daylight-mote').setScrollFactor(0).setDepth(DAYLIGHT_OVERLAY_DEPTH + 3)
+          .setBlendMode(Phaser.BlendModes.ADD).setVisible(false));
+      }
+    }
+    const phase = dayPhaseFromQuest(GameState.quest);
+    const target = daylightParams(phase, indoors);
+    this.daylight = {
+      overlay, vignette, halos, motes, moteState, indoors, cx, cy, w, h,
+      phaseIndex: phase.index, t: 1, startedAt: 0, lastTint: -1, motesShown: false,
+      cur: copyParams(target, {}), from: copyParams(target, {}), to: target,
+    };
+    this.applyDaylight(this.daylight.cur); // the scene starts in the current phase: no transition on a map change or a Continue
+    this.daylightListener = () => this.refreshDaylight();
+    this.game.events.on('state-changed', this.daylightListener);
+    this.events.once('shutdown', () => this.destroyDaylight());
+  }
+
+  // The cached glow textures (a canvas each, made once per game: textures outlive a scene restart). Their colours are baked in, so neither
+  // renderer has to tint anything; they are set to LINEAR so the pixel-art NEAREST default never turns a gradient into blocks.
+  ensureDaylightTextures() {
+    const make = (key, size, paint) => {
+      if (this.textures.exists(key)) return;
+      const texture = this.textures.createCanvas(key, size[0], size[1]);
+      paint(texture.getContext());
+      texture.refresh();
+      texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    };
+    const [vr, vg, vb] = DAYLIGHT_VIGNETTE_RGB;
+    // The vignette: clear in the middle, deepening toward the corners (an ellipse, so the sides and the top/bottom fall off together).
+    make('daylight-vignette', [480, 270], (ctx) => {
+      ctx.setTransform(1, 0, 0, 270 / 480, 240, 135);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 340);
+      g.addColorStop(0, `rgba(${vr},${vg},${vb},0)`);
+      g.addColorStop(0.5, `rgba(${vr},${vg},${vb},0)`);
+      g.addColorStop(0.8, `rgba(${vr},${vg},${vb},0.45)`);
+      g.addColorStop(1, `rgba(${vr},${vg},${vb},1)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(-300, -300, 600, 600);
+    });
+    // A lamp's halo: a warm soft disc (additive).
+    make('daylight-halo', [64, 64], (ctx) => {
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,226,170,1)');
+      g.addColorStop(0.35, 'rgba(255,196,118,0.5)');
+      g.addColorStop(1, 'rgba(255,170,90,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 64, 64);
+    });
+    // A dust mote: a tiny golden speck (additive).
+    make('daylight-mote', [8, 8], (ctx) => {
+      const g = ctx.createRadialGradient(4, 4, 0, 4, 4, 4);
+      g.addColorStop(0, 'rgba(255,232,160,1)');
+      g.addColorStop(1, 'rgba(255,200,110,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 8, 8);
+    });
+  }
+
+  // Where the glowing tiles are on THIS map (src/daylight.js findLightSpots(): the street lamps' heads, the foyer chandeliers), read straight
+  // off the map data so a regenerated campus moves its halos with it.
+  daylightSpots() {
+    const names = this.tileInfo.tiles.map((tile) => tile.name);
+    let layers;
+    if (this.def.tiled) {
+      const json = this.cache.tilemap.get(`map-${this.def.tiled}`).data;
+      layers = json.layers.filter((layer) => layer.type === 'tilelayer').map((layer) => ({ data: layer.data, width: json.width, offset: 1 }));
+    } else {
+      layers = [{ data: this.tileData.flat(), width: this.tileData[0].length, offset: 0 }];
+    }
+    return findLightSpots(layers, names, TILE);
+  }
+
+  // Draws one parameter set (src/daylight.js: { tint, alpha, vignette, halo, motes }) right now. Only touches what changed.
+  applyDaylight(snap) {
+    const d = this.daylight;
+    if (!d) return;
+    if (snap.tint !== d.lastTint) { d.overlay.setFillStyle(snap.tint, 1); d.lastTint = snap.tint; }
+    d.overlay.setAlpha(snap.alpha).setVisible(snap.alpha > 0.002); // a neutral phase draws no overlay at all
+    d.vignette.setAlpha(snap.vignette).setVisible(snap.vignette > 0.002);
+    for (const halo of d.halos) halo.setAlpha(snap.halo).setVisible(snap.halo > 0.002);
+  }
+
+  // The day moved on? (a key was found, the box was handed over): ease from the light on screen to the new phase's over DAYLIGHT_FADE_MS.
+  // Idempotent and cheap: it runs on every 'state-changed' and does nothing unless the phase itself changed.
+  refreshDaylight() {
+    const d = this.daylight;
+    if (!d) return;
+    const phase = dayPhaseFromQuest(GameState.quest);
+    if (phase.index === d.phaseIndex) return;
+    d.phaseIndex = phase.index;
+    copyParams(d.cur, d.from);
+    d.to = daylightParams(phase, d.indoors);
+    d.t = 0;
+    d.startedAt = performance.now();
+  }
+
+  // Every frame, before update()'s early return (a key-room beat or a door walk must not freeze the light): advances a transition (a plain
+  // 0..1 number on a plain object, eased, and ended for sure by DAYLIGHT_FAILSAFE_MS of wall-clock time), then drifts the dust.
+  updateDaylight(delta) {
+    const d = this.daylight;
+    if (!d) return;
+    if (d.t < 1) {
+      d.t = performance.now() - d.startedAt > DAYLIGHT_FAILSAFE_MS ? 1 : Math.min(1, d.t + Math.min(delta, 250) / DAYLIGHT_FADE_MS);
+      if (d.t >= 1) copyParams(d.to, d.cur);
+      else lerpParams(d.from, d.to, daylightEase(d.t), d.cur);
+      this.applyDaylight(d.cur);
+    }
+    if (d.motes.length && (d.cur.motes > 0 || d.motesShown)) this.updateDaylightMotes(delta);
+  }
+
+  // The dust motes: drifting speck sprites in camera space (the visible part of the camera's own view), a cheap loop, no physics.
+  updateDaylightMotes(delta) {
+    const d = this.daylight;
+    const left = d.cx - d.w / 2;
+    const top = d.cy - d.h / 2;
+    let any = false;
+    for (let i = 0; i < d.motes.length; i++) {
+      const m = moteStep(d.moteState[i], delta);
+      const alpha = moteAlpha(m, i, d.cur.motes);
+      const sprite = d.motes[i];
+      if (alpha <= 0.01) { sprite.setVisible(false); continue; }
+      any = true;
+      sprite.setPosition(left + m.x * d.w, top + m.y * d.h).setScale(0.25 * m.scale).setAlpha(alpha).setVisible(true);
+    }
+    d.motesShown = any;
+  }
+
+  // Scene shutdown (a restart for a map change, quitting): the listener goes, every effect object is destroyed.
+  destroyDaylight() {
+    const d = this.daylight;
+    if (this.daylightListener) this.game.events.off('state-changed', this.daylightListener);
+    this.daylightListener = null;
+    this.daylight = null;
+    if (!d) return;
+    for (const object of [d.overlay, d.vignette, ...d.halos, ...d.motes]) object.destroy();
+  }
+
   update(time, delta) {
     // The play clock the moments' 90 s spacing runs on (GameState.playSeconds): seconds this scene has actually run, so a mini-game, the
     // title screen or a minute with the game closed never counts. Capped per frame so a stalled tab cannot fast-forward it.
     GameState.playSeconds += Math.min(delta, 250) / 1000;
+    this.updateDaylight(delta); // before the early return: the light keeps moving through a key-room beat or a door walk
     if (this.transitioning) return;
 
     const ui = this.scene.get('ui');
@@ -1385,6 +1554,7 @@ class WorldScene extends Phaser.Scene {
   collectKeyStation(ks) {
     if (ks.taken) return;
     ks.taken = true;
+    this.refreshDaylight(); // a key found: the day moves on (golden hour, dusk); the same check also runs on every state change
     ks.shadow.destroy();
     this.tweens.killTweensOf(ks.sprite);
     this.tweens.add({

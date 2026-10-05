@@ -23,13 +23,15 @@ const { FEEDBACK_DIR } = require('./paths');
 // Moments (src/moments.js: the unicorn and the prince, Mevin the drummer) default off too (`?moments=0`): they are unskippable scenes that
 // start when she walks the avenue or the forecourt, which would interrupt every spec that walks there. tests/e2e/moments.spec.js-style
 // specs pass `moments: true` (and `cutscene: true`, which `?cutscene=0` would otherwise also switch them off with).
+// Golden hour (src/daylight.js: the tint/vignette/halos/dust that follow the keys) defaults off too (`?daylight=0`): it changes nothing a spec
+// measures, but it must never colour a pixel check or add objects to a scene count. A spec about the light itself passes `daylight: true`.
 // Mini-games (docs/ROADMAP.md M4) default off (`?minigames=0`, src/maplogic.js minigamesEnabled()),
 // the same way cutscenes/title/intro do: a `minigame` dialog action resolves straight to 'won'
 // without ever launching the real Phaser scene, so most specs (the LUG-hunt playthrough, dialog and
 // save tests, ...) see a key change hands the instant she wins it, without having to actually play a
 // platformer/flyer/tower-climb session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
 // turn the real thing back on.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false, moments = false } = {}) {
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false, moments = false, daylight = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -44,6 +46,7 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (!intro) params.set('intro', '0');
   if (!minigames) params.set('minigames', '0');
   if (!moments) params.set('moments', '0');
+  if (!daylight) params.set('daylight', '0'); // src/daylight.js daylightEnabled()
   // `?audio=0` (src/maplogic.js audioEnabled()): skips decoding several MB of real music on every
   // single test's fresh page load (docs/ROADMAP.md M5) -- a pure performance switch, since every
   // AudioManager method already no-ops safely with nothing loaded. tests/e2e/audio.spec.js passes
@@ -190,7 +193,7 @@ function feedbackCli(args) {
 // do: most title-flow specs want Play to land straight on 'boot', same as before the M3a opening
 // (Mustafa's greeting/name entry/customisation/bus arrival) existed. tests/e2e/intro.spec.js passes
 // `intro: true` to exercise that chain of scenes itself.
-async function openTitle(page, { map, save = false, profile, intro = false, minigames = false, audio = false, moments = false } = {}) {
+async function openTitle(page, { map, save = false, profile, intro = false, minigames = false, audio = false, moments = false, daylight = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -203,6 +206,7 @@ async function openTitle(page, { map, save = false, profile, intro = false, mini
   if (!intro) params.set('intro', '0');
   if (!minigames) params.set('minigames', '0');
   if (!moments) params.set('moments', '0'); // src/moments.js, see openGame()'s own comment
+  if (!daylight) params.set('daylight', '0'); // src/daylight.js, see openGame()'s own comment
   if (!audio) params.set('audio', '0'); // src/maplogic.js audioEnabled(), see openGame()'s own comment
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));

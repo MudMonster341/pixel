@@ -353,6 +353,38 @@ rule set. What changed:
   slumps and says "Fine, fine. Take it." (1.8 s), the key drops, she walks to it. Z shoots (the shell's card keys stay Enter, Space, E,
   Up, Down, W, S), the cover picture sits behind the intro card, and nothing flashes faster than 2.5 Hz.
 
+## Daylight: the golden hour (wow idea W4, with W9's dust)
+
+The light on the campus moves from morning to dusk as the three keys are found, so the hunt feels like one long day. It is a mood, never a
+barrier: text, the UI, the mini-games, the ending and the cutscenes are untouched (the tint lives only in `WorldScene`, which is drawn under
+`UIScene`), and the world never drops below **85 % brightness** at any phase.
+
+| Keys held | Phase | Outdoors |
+|---|---|---|
+| 0 (stage arrival) | **morning** | a hair of warm, clear air: almost nothing |
+| 1 | **midday** | neutral and crisp: no overlay is drawn at all |
+| 2 | **golden hour** | warm amber, a soft vignette, a glow on the street lamps, 6 drifting dust motes |
+| 3, or the box handed over (stage `rewarded`) | **dusk** | pink-orange sliding to violet, a deeper vignette, stronger lamp glow, 8 motes |
+
+- **Pure part, `src/daylight.js`** (tested in `tests/unit/daylight.test.js`): `dayPhase(keys, stage)` / `dayPhaseFromQuest(quest)` (the phase is
+  derived from state, so Continue and old saves need no new save field), `daylightParams(phase, indoors)` (tint, alpha, vignette, halo, motes,
+  warm), `lerpParams`, the brightness floor (`daylightBrightness()`, `DAYLIGHT_MIN_BRIGHTNESS`), the lamp scan `findLightSpots()` and the dust
+  motes' drift. All the numbers live in `DAYLIGHT_TABLE`.
+- **Drawn by `WorldScene` (`createDaylight()`)**: one full-screen camera-fixed rectangle with the MULTIPLY blend mode (screen colour becomes
+  screen x (1 - alpha + alpha x tint), which WebGL and Canvas agree on), depth 2,000,000 so it covers even the tree canopies (1,000,000); a
+  vignette image (a cached radial-gradient canvas texture, normal blend); additive soft halos on the street lamps' heads (`lampPostTop`) and the
+  foyer chandeliers (`intChandelier`), found by scanning the map data; up to 10 additive dust motes (outdoors only, a cheap loop, no physics).
+  Textures are canvas-generated once and cached; nothing is interactive; nothing allocates per frame. The lab's cyan light bars are left alone
+  (they already glow).
+- **Indoors** it is a gentler version: the overlay at 40 % of the outdoor alpha (same warm tint), half the vignette, softer halos on the
+  chandeliers, no dust.
+- **Transitions**: on a new scene (a warp, Continue) it snaps to the phase of the quest; when the quest changes (a key found, the box handed
+  over: `state-changed`, and `collectKeyStation()`) the numbers ease (smoothstep) to the new phase over 2.5 s, advanced from `update()` before its
+  "transitioning" early return so a key-room beat does not freeze the light, with a wall-clock failsafe (4.5 s) that lands exactly on the target.
+- **Switch**: `?daylight=0` builds none of it (`daylightEnabled()`). `tests/e2e/helpers.js` sets it for every spec (`daylight: true` opts in).
+- **Looking at it without a browser**: `node tools/preview-daylight.js [out.png] [--map campus] [--crop x0,y0,w,h] [--scale 2] [--indoor]`
+  renders a real map crop four times (morning, midday, golden hour, dusk) with the game's own colour maths into one strip PNG.
+
 ## What to check before calling a new screen "done"
 
 Beyond `npm test` green and a look with `npm run qa:shots` (docs/TESTING.md, docs/QA_PLAN.md):

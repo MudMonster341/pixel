@@ -23,7 +23,7 @@ there yet"**, plus 33 feedback items. **Ratings stay paused.**
 ## State (2026-10-05, Day 3 evening)
 
 `main` is **ahead of origin by many commits, NOT pushed** (push only when the owner says; the pre-push hook runs the full suite, 9-17 min). Last full run today:
-**unit 970 green + 185/185 browser tests green** (182 on the first run, the 3 failures were stale specs, fixed and rerun). Nothing is running.
+**unit 1058 green + 186/186 browser tests green** (final run 2026-10-05 night; also qa:shots 103/103 and qa:offline Chromium + WebKit clean). Nothing is running.
 
 ### Done on Day 3 (feedback packages P1-P5, all committed, FB items marked fixed in the Inbox)
 - **P1 controls/UI:** E/Space/Enter advance messages (one handler); the player halts under any script/overlay (ERR-0016); panel frame right/bottom border restored (ERR-0017); Quit (title + pause) + goodbye scene; ending chain hardened; Main Block door glass solid, two-tile doorways.
@@ -32,6 +32,10 @@ there yet"**, plus 33 feedback items. **Ratings stay paused.**
 - **P4 Main Block:** black void, side-on doors/windows, Library lobby at the foyer back-centre (door still closed), stairs from the LimeZu pack, working lifts on 4 floors, every door/lift animates (closed/half/open).
 - **P5 mini-games:** Room 195 = **tower climb** (Tetris removed; match-3 dropped by the owner), Physics Lab = hero fight (kitten hero vs shadow bat, original stand-ins, Z shoots, themed cover), ICL = sealed spaceship lab: scanner + "ICL Fingerprint Hack" opens the door, Alice the robot gives the key.
 - The owner's "moments" (unicorn+prince, Mevin, Raja's chariot, Sana/Shraddha/Palak, ball pit, sumo vs Narda) are designed and the questions settled: **docs/plans/2026-10-04-moments-and-small-touches.md** (not built yet).
+
+### Also done on Day 3 evening (after P5)
+- **Moments M1 unicorn + prince, M2 Mevin (Treble)** with the pacing system (`src/moments.js`; once only; entrance pair chains: M2 about 6 s after M1; M1 waits 2.5 s of free control; `?moments=0` for tests); **W4 golden hour** (`src/daylight.js`, morning -> dusk with the keys, `?daylight=0`); **W3 finale** (box -> cake with 22 candles blown one by one -> fireworks over a Dubai skyline + chiptune "Happy Birthday" -> card -> credits -> title; ADR 0023).
+- Play copy `../2D_pixel_game-play` updated to `9969ccf` (ready for the owner's 2nd playtest, early).
 
 ### Owner's 33 items: FB-0044..FB-0076 all fixed except FB-0051 (in progress: chariot, the three girls, Mevin, Narda are moments) and FB-0075/0076 await their check. FB-0076 has a question to the owner in the thread.
 
@@ -42,8 +46,8 @@ wing doors closed + each says a line; no ruler portraits; **named friends allowe
 roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent at a time, monitored** (see Rules).
 
 ## What is LEFT (in order)
-1. **Cheap moments** (owner's Q1a: in the 10-08 playtest): M1 unicorn+prince, M2 Mevin (Treble drummer); spaced, unskippable, play once (docs/plans/2026-10-04-moments-and-small-touches.md). Cover (M5) is done.
-2. **Wow layer**, on the recommended answers (the owner did not answer round 3): W4 golden hour (outdoors + warm tint indoors, moves with the keys), W3 finale (cake with 22 candles blown out one by one, fireworks over a Dubai skyline, chiptune "Happy Birthday", THEN the card, credits, title), W9 Dubai flavour, juice pass; later W2 album + W6 selfie (placeholders, photos swapped in via `assets/card/`).
+1. **Wait for the owner's 2nd playtest** (feedback via the O overlay), fix what they find.
+2. **Remaining wow** (recommended answers, owner did not answer round 3): juice pass (key-pickup sparkle, emotes), W2 album + W6 selfie (placeholders; photos via `assets/card/`).
 3. **Later moments** (after the 10-08 playtest, by 10-09): Raja's chariot, Sana/Shraddha/Palak scene, TP-room ball pit + arcade with sumo vs Narda (the TP-room door opens from the start, owner's choice).
 4. **Before handover:** `npm run qa:shots` (LOOK at them), `npm run qa:offline`, the full `npm test`, update `../2D_pixel_game-play`, tell the owner it is ready for the 2nd playtest (~10-08).
 5. **Final (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + zip + `HOW_TO_OPEN.txt`.

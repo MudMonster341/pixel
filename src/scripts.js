@@ -158,7 +158,7 @@ function keyRoomSteps(keyStationId, line) {
 }
 
 // ---------- the moments (src/moments.js: the pacing; docs/plans/2026-10-04-moments-and-small-touches.md: the design) ----------
-// Three small unskippable scenes. They play through the same in-world runner as everything above, started by src/scenes/world.js
+// Four small unskippable scenes (M1 to M4). They play through the same in-world runner as everything above, started by src/scenes/world.js
 // checkMoment() with `unskippable`, and every line has `autoMs` so they always end by themselves (8-20 s, measured by
 // tests/unit/moments.test.js). Nobody is moved except the actors a moment spawns: she is never walked anywhere, so a moment can never
 // leave her in a wall. Every actor a moment spawns is despawned again before it ends.
@@ -383,6 +383,54 @@ const MOMENT_CHARIOT_STEPS = [
   { unlockInput: true },
 ];
 
+// M4, Sana, Shraddha and Palak (the owner, FB-0051: "all good friends of taru ... all three come up and say hi taru, come to the canteen with
+// us or spend some time with us, small scene like that"). Outside the Main Block door, once she holds the second key (src/moments.js): she has
+// just come back out and the three friends find her. They walk in together along the road verge from the east (the one lane open to
+// everyone, as Mevin does), up onto her row and stand in a line 2-4 tiles to her RIGHT, level with her (never lower than her own feet: the
+// dialog box covers the bottom ~40% of the screen, tests/unit/moments.test.js checks every `say`). Sana, Shraddha, Palak: "Taru!" / "There
+// you are!" / the canteen invitation; she says she has a hunt to finish; a kind tease; they wave (hearts and a note) and head off east to
+// the canteen the way they came. She is never moved. No line says anything about a birthday (the surprise stays for the end). About 15 s.
+const MOMENT_FRIENDS_STEPS = [
+  { lockInput: true },
+  { letterbox: 'in' },
+  // The three start off screen on the road verge, a tile apart, Sana in front.
+  { spawnActor: { id: 'sana', sprite: 'npc-friend-sana', at: doorTile(15, 9), facing: 'left' } },
+  { spawnActor: { id: 'shraddha', sprite: 'npc-friend-shraddha', at: doorTile(16, 9), facing: 'left' } },
+  { spawnActor: { id: 'palak', sprite: 'npc-friend-palak', at: doorTile(17, 9), facing: 'left' } },
+  // Along the verge, then up diagonally to their places beside her (the first leg ends on three separate tiles so they never stack).
+  { parallel: [
+    { move: { actor: 'sana', path: [doorTile(8, 9), playerTile(2, -0.5)], speed: 7.5 } },
+    { move: { actor: 'shraddha', path: [doorTile(9, 9), playerTile(3, -0.5)], speed: 7.5 } },
+    { move: { actor: 'palak', path: [doorTile(10, 9), playerTile(4, -0.5)], speed: 7.5 } },
+    { sequence: [{ wait: 500 }, { face: { actor: 'player', toward: 'sana' } }, { emote: { actor: 'player', kind: '!' } }] },
+  ] },
+  { face: { actor: 'sana', dir: 'left' } },
+  { face: { actor: 'shraddha', dir: 'left' } },
+  { face: { actor: 'palak', dir: 'left' } },
+  { say: { speaker: 'Sana', lines: ['{name}!'], autoMs: 1000 } },
+  { say: { speaker: 'Shraddha', lines: ['There you are! We have been looking everywhere.'], autoMs: 1000 } },
+  { say: { speaker: 'Palak', lines: ['Come to the canteen with us. We saved you a seat!'], autoMs: 1100 } },
+  { say: { speaker: '{name}', lines: ["Give me a few minutes, I still have a hunt to finish."], autoMs: 1200 } },
+  { say: { speaker: 'Sana', lines: ['Fine. But the chai will not wait forever.'], autoMs: 1000 } },
+  // They wave, delighted (a heart each, a note from Palak), and head back along the verge toward the canteen.
+  { parallel: [
+    { emote: { actor: 'sana', kind: 'heart' } },
+    { emote: { actor: 'shraddha', kind: 'heart' } },
+    { emote: { actor: 'palak', kind: 'note' } },
+  ] },
+  { parallel: [
+    { sequence: [{ face: { actor: 'sana', dir: 'right' } }, { move: { actor: 'sana', path: [doorTile(8, 9), doorTile(15, 9)], speed: 7.5 } }] },
+    { sequence: [{ wait: 150 }, { face: { actor: 'shraddha', dir: 'right' } }, { move: { actor: 'shraddha', path: [doorTile(9, 9), doorTile(16, 9)], speed: 7.5 } }] },
+    { sequence: [{ wait: 300 }, { face: { actor: 'palak', dir: 'right' } }, { move: { actor: 'palak', path: [doorTile(10, 9), doorTile(17, 9)], speed: 7.5 } }] },
+  ] },
+  { despawnActor: 'sana' },
+  { despawnActor: 'shraddha' },
+  { despawnActor: 'palak' },
+  { cameraFollow: 'player' },
+  { letterbox: 'out' },
+  { unlockInput: true },
+];
+
 const SCRIPTS = {
   // The fast path: `?intro=0`, an old save, or simply walking up to the same spot -- the existing
   // 'Gate 2 entrance' Tiled trigger (unchanged) fires this exactly like it always fired the old gate2
@@ -413,4 +461,5 @@ const SCRIPTS = {
   momentUnicorn: MOMENT_UNICORN_STEPS,
   momentMevin: MOMENT_MEVIN_STEPS,
   momentChariot: MOMENT_CHARIOT_STEPS,
+  momentFriends: MOMENT_FRIENDS_STEPS,
 };

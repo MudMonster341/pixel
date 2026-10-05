@@ -1161,3 +1161,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** moment `m3` in main-block-g (trigger around the stairs, x12..28 y22..29, needs >=1 key: new generic `after: { keys: N }`), script `momentChariot` (~16.4 s: Raja "A king never walks", gallop, gilded front-view chariot with two palomino CC0 horses arrives from the north with dust, horn, he boards, it leaves south; Taru "Okay. Never mind. This is definitely BITS."), `moment-chariot.png` via `tools/make-moments.js`, sounds `chariotRumble`/`chariotHorn`, `sparkles` kind 'dust', ambient Raja carries `unlessMoment: 'm3'` and is gone after the scene (`ambientEntriesFor`, `retireAmbientFor`). Docs/credits updated. Likely seen right after she first comes back down to the foyer holding a key.
 **Check in a browser:** camera pan to (22,21), depth sorting in the hall's 1-tile lanes, Raja gone after reload, gallop/horn timing; no qa-shots flow for M3 yet.
 **Next:** M4 Sana/Shraddha/Palak (`after: { keys: 2 }`), then W2/W6.
+
+## 2026-10-05 (Day 4) - M4 Sana, Shraddha and Palak: 1093 unit tests green; FB-0051 marked fixed
+
+**Did:** moment `m4` (campus, Main Block forecourt x219..228 y129..137, `after: { keys: 2 }`, default pacing): three new generated sheets `npc-friend-sana/shraddha/palak` (FRIEND_WOMEN in tools/make-assets.js: yellow top + flower clip / violet + magenta glasses / coral + teal tote), script `momentFriends` (~15-17 s, "Come to the canteen with us. We saved you a seat!", Taru "Give me a few minutes, I still have a hunt to finish.", hearts/note, they walk off east). FB-0051 -> fixed (owner checks).
+**Check in a browser:** walk-in diagonals vs the palm at (234,135), row placement beside her, facing/walk anim, emotes on the right heads, Sana's clip. No e2e/qa-shots for M3/M4 yet.
+**Next:** W2 memory album + W6 selfie (placeholders), qa-shots for M3/M4, then card assets -> final pack.

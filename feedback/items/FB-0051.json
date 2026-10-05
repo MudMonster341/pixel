@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Dialog & NPCs",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:19:57.489Z",
-  "updatedAt": "2026-10-04T18:52:42.985Z",
+  "updatedAt": "2026-10-05T16:44:09.065Z",
   "details": "the dialogiues can be changes and add in a bit more fun to it, for charcters use the names as follows so you find it good. \n\nsid, akshit, varun, mitul, karthik, mustafa which is me should be there near all the games and then have a dialogue which is fixed, i shoudl eb weaqring a black and orange hoodie which is like LUG. You can add in a few other people liek sivvaa., shamsuddin, najam, satvik( a bit dark colored and has a camera)\n\n\nfor [professorts : \n\ngoated prof, professor welakkiya, you can search her up, her quizzes are hard so add that character, then professor angel, an actual professor but give herf ewings cause angel, then professor raja and make his a sort of indian raja so give him a asudden randopm appearance of a chariiot that coems and takes him away, all in a fun interesting way. \n\nfemales : \nsana, shraddha, palak (all good friends of taru so add in a case where all three come up and say hi taru, come to the canteen with us or spend some time with us, small scene like that)",
   "context": {
     "map": "campus",
@@ -49,8 +49,18 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0051.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Everything from the list is in: funnier CS lines, the named friends, Mustafa near each game, Profs Elakkiya/Angel, Prof. Raja's chariot (after your first key, in the Main Block hall: he leaves for good), and Sana, Shraddha and Palak who come up outside the Main Block after your second key. Narda and the ball pit are parked. Lines are drafts in docs/research/campus-lines-review.md.",
+      "at": "2026-10-05T16:44:09.065Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/moments.test.js › FB-0051: M4 waits for the second key",
+    "commit": null,
+    "at": "2026-10-05T16:44:09.065Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:19:57.489Z",
@@ -61,6 +71,11 @@
       "at": "2026-10-04T18:52:42.985Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T16:44:09.065Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

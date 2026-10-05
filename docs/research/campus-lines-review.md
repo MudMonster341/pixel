@@ -54,7 +54,7 @@ FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and it
 - `{name}` in a line is the player's name (it is "Taru" unless the player typed another). No line mentions a birthday: that stays the surprise at the end.
 - **Mustafa** (black and orange LUG hoodie) stands near each mini-game with a different fixed line, and repeats only that line. The three tiles: Physics Lab (main-block-3, 9,4), ICL (main-block-1, 6,17: in the corridor outside the lab, since P5c the ICL is a sealed lab), Room 195 (main-block-1, 27,4).
 - **Professors** keep their tag as "Prof. <first name>" (names only, no surnames). After the jokes the sourced fact about that professor is said (Raja CF12, Angel CF22, Elakkiya CF23), nothing else.
-  Raja's last line hints at the chariot scene (M3, built: see "Moments" below); he is an ordinary talkable professor until that scene, then gone for good. The girls (Sana, Shraddha, Palak), Mevin and Narda are also a later package.
+  Raja's last line hints at the chariot scene (M3, built: see "Moments" below); he is an ordinary talkable professor until that scene, then gone for good. The girls (Sana, Shraddha, Palak: M4, built, see "Moments" below) and Mevin (M2) are script actors, not standing NPCs; Narda is a later package.
 - The other friends carry on with their role's facts after their own lines (e.g. Sid, a CS student, shares a CS fact).
 - Looks: Satvik has a camera and a slightly deeper skin tone, Prof. Angel has small white wings, Prof. Raja a gold-trimmed maroon jacket. The hair length is the pack body's own (three hair shapes), so people differ by hair colour, skin, shirt and body.
 - Risky lines to look at first: Prof. Raja ("I carry myself like royalty"), Prof. Elakkiya ("goated", "no mercy"), Prof. Angel ("the wings are real"), Najam ("Sleep is a feature I turned off").
@@ -141,6 +141,11 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | M3 Prof. Raja's chariot (once, the first time she is in the Main Block foyer holding at least the first key; Raja is the ambient professor standing at the right of the hall: the camera glides to him, a gallop swells, a gilded chariot with two horses, a parasol and pennants comes down the hall with dust puffs and a horn, he steps aboard, it thunders off down the hall; about 16 s) | the central hall in front of the staircase | Prof. Raja | Ah, {name}! Class is dismissed. A king never walks. |
 | | | Prof. Raja | My ride. Kindly mind the marks, {name}. |
 | | | {name} | Okay. Never mind. This is definitely BITS. |
+| M4 Sana, Shraddha and Palak (her good friends; once, after she holds the second key, when she comes back out of the Main Block: the three walk up together from the east along the road, stand in a line beside her, invite her to the canteen, she says she has a hunt to finish, they wave and head off to the canteen; about 15 s. Looks: Sana brown hair, yellow top, denim skirt, pink flower clip; Shraddha black hair, violet top, round glasses; Palak auburn hair, coral top, teal tote bag) | the steps and forecourt in front of the Main Block door | Sana | {name}! |
+| | | Shraddha | There you are! We have been looking everywhere. |
+| | | Palak | Come to the canteen with us. We saved you a seat! |
+| | | {name} | Give me a few minutes, I still have a hunt to finish. |
+| | | Sana | Fine. But the chai will not wait forever. |
 
 M1's first line is the owner's own inside joke, exactly as written (no softening). The prince is a generic crowned stand-in; the unicorn is a generic white horse with a horn (no protected character).
 

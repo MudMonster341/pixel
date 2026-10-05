@@ -56,8 +56,8 @@ const ctxFor = (id, over = {}) => ({ map: momentOf(id).map, ...inside(id), enabl
 
 // ---------- the table ----------
 
-test('FB-0051: MOMENTS lists M1, M2 then M3, each with a real script, a trigger rectangle that exists on its own map, and the right order', () => {
-  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2', 'm3']);
+test('FB-0051: MOMENTS lists M1, M2, M3 then M4, each with a real script, a trigger rectangle that exists on its own map, and the right order', () => {
+  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2', 'm3', 'm4']);
   for (const m of MOMENTS) {
     assert.ok(MAPS[m.map], `${m.id}: a real map`);
     assert.ok(Array.isArray(SCRIPTS[m.script]) && SCRIPTS[m.script].length > 0, `${m.id}: script "${m.script}" is in SCRIPTS`);
@@ -850,6 +850,7 @@ test('FB-0051: the review doc lists the moment lines (so the owner can edit them
     "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?", "Don't mind me. I'm always watching.", 'Huh... is this the actual BITS?',
     'WOAHHH, {name}! You da goat!', 'Come watch me perform at Jashn some day!', 'Mevin (Treble)',
     'Ah, {name}! Class is dismissed. A king never walks.', 'My ride. Kindly mind the marks, {name}.', 'Okay. Never mind. This is definitely BITS.',
+    '{name}!', 'There you are! We have been looking everywhere.', 'Come to the canteen with us. We saved you a seat!', 'Give me a few minutes, I still have a hunt to finish.', 'Fine. But the chai will not wait forever.',
   ]) assert.ok(doc.includes(text), `campus-lines-review.md lacks "${text}"`);
   const lines = [];
   for (const m of MOMENTS) walkSteps(SCRIPTS[m.script], (type, body) => { if (type === 'say') lines.push(...body.lines); }, m.script);
@@ -1040,7 +1041,7 @@ test('FB-0051: `after: { keys: N }` holds a moment back until she has N keys (co
   assert.equal(m3({}, fresh(keys(true, false, false)))?.id, 'm3', 'the first key (state)');
   assert.equal(m3({}, fresh(keys(false, true, false)))?.id, 'm3', 'any one key counts');
   assert.equal(m3({}, fresh(keys(true, true, true)))?.id, 'm3', 'all three keys: still due the first time');
-  // a generic condition: N = 2 holds back one key, passes two (the three friends, M4, will use this)
+  // a generic condition: N = 2 holds back one key, passes two (the three friends, M4, use this)
   const two = [{ id: 'mx', map: 'main-block-g', script: 'x', trigger: MOMENTS[2].trigger, after: { keys: 2 } }];
   assert.equal(momentDue(fresh(), 1000, ctxFor('m3', { moments: two, keys: 1 })), null);
   assert.equal(momentDue(fresh(), 1000, ctxFor('m3', { moments: two, keys: 2 }))?.id, 'mx');
@@ -1320,4 +1321,228 @@ test('FB-0051: runner: `sparkles` with kind "dust" puffs soft beige ellipses at 
   assert.ok(puffs.every((p) => p.y <= ground && p.y >= ground - 12), 'drawn at the hooves (and drifting up a few px as they fade)');
   assert.ok(puffs.every((p) => p.depth > a.sprite.depth), 'in front of the chariot');
   assert.match(runnerSource, /kind = 'stars'/);
+});
+
+
+// ---------- M4: Sana, Shraddha and Palak ----------
+
+const keyed = (n, over = {}) => fresh({ quest: { keys: { physicsLab: n >= 1, icl: n >= 2, room195: n >= 3 } }, ...over });
+
+test('FB-0051: M4 is in the table: the campus, the Main Block door, after the second key, default pacing, last in the order', () => {
+  const m = momentOf('m4');
+  assert.equal(MOMENTS.at(-1).id, 'm4');
+  assert.equal(m.map, 'campus');
+  assert.equal(m.script, 'momentFriends');
+  assert.deepEqual(plain(m.after), { keys: 2 });
+  assert.equal(m.minGapS, undefined);
+  assert.equal(m.sameVisitOk, undefined);
+  assert.equal(m.afterFreeS, undefined);
+  assert.equal(momentGapS(m), MOMENT_GAP_S, 'the default 90 s gap');
+  assert.equal(momentFitsVisit(m, 1), false, 'and one moment per map visit');
+  assert.equal(m.trigger.anchor, 'Main Block entrance');
+  assert.ok(Array.isArray(SCRIPTS.momentFriends));
+});
+
+test('FB-0051: M4 waits for the second key: no key or one key holds it back, two (any two) or three start it, once only, only inside its trigger on the campus, never while anything is up', () => {
+  const due = (n, over = {}, state = keyed(n)) => momentDue(state, 1000, ctxFor('m4', over));
+  assert.equal(due(0), null, 'no key');
+  assert.equal(due(1), null, 'one key is not enough');
+  assert.equal(due(2)?.id, 'm4', 'the second key');
+  assert.equal(due(3)?.id, 'm4', 'all three: still due the first time');
+  for (const quest of [{ physicsLab: false, icl: true, room195: true }, { physicsLab: true, icl: false, room195: true }]) {
+    assert.equal(momentDue(fresh({ quest: { keys: quest } }), 1000, ctxFor('m4'))?.id, 'm4', 'any two keys count');
+  }
+  assert.equal(due(1, { keys: 2 })?.id, 'm4', 'ctx.keys wins');
+  // once only, ever
+  assert.equal(momentDue(keyed(3, { seenMoments: new Set(['m4']) }), 1e9, ctxFor('m4')), null);
+  assert.equal(momentDue({ ...keyed(2), seenMoments: ['m4'] }, 1e9, ctxFor('m4')), null, 'an array works too');
+  // where and when
+  const r = rectOf('m4');
+  for (const [tileX, tileY] of [[r.x0 - 1, r.y0 + 1], [r.x1 + 1, r.y0 + 1], [r.x0 + 2, r.y0 - 1], [r.x0 + 2, r.y1 + 1]]) {
+    assert.equal(due(2, { tileX, tileY }), null, `outside the trigger at ${tileX},${tileY}`);
+  }
+  assert.equal(due(2, { map: 'main-block-g' }), null, 'never on another map');
+  assert.equal(due(2, { blocked: true }), null);
+  assert.equal(due(2, { enabled: false }), null, '?moments=0');
+  // the default pacing: 90 s after the last moment (any moment), and never two on one map visit
+  const after = (now, over) => momentDue(keyed(2, { seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 300 }), now, ctxFor('m4', over));
+  assert.equal(after(306, {}), null, 'not the 6 s of the entrance pair');
+  assert.equal(after(389.9, {}), null);
+  assert.equal(after(390, {})?.id, 'm4', '90 s after the last moment');
+  assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
+  // it needs neither M2 nor M3 to have played (an old save, or she skipped past them)
+  assert.equal(momentDue(keyed(2, { seenMoments: new Set() }), 1000, ctxFor('m4'))?.id, 'm4');
+});
+
+test('FB-0051: M4 and M2 share the Main Block forecourt but cannot block each other: with both due, M2 goes first (table order), M4 comes on a later visit after the 90 s', () => {
+  const state = keyed(2, { seenMoments: new Set(['m1']) });
+  const r2 = rectOf('m2');
+  const r4 = rectOf('m4');
+  assert.ok(r4.x0 >= r2.x0 && r4.x1 <= r2.x1 && r4.y0 === r2.y0 && r4.y1 === r2.y1, 'M4 is a part of the M2 forecourt');
+  const tile = { tileX: r4.x0 + 2, tileY: r4.y0 + 2 };
+  assert.equal(momentDue(state, 1000, ctxFor('m2', tile))?.id, 'm2');
+  markMomentStarted(state, 'm2', 1000);
+  markMomentEnded(state, 1015);
+  assert.equal(momentDue(state, 1020, ctxFor('m4', { ...tile, visitCount: 1 })), null, 'not on the same visit, not 5 s later');
+  assert.equal(momentDue(state, 1090, ctxFor('m4', { ...tile, visitCount: 0 })), null, 'under 90 s after M2 ended');
+  assert.equal(momentDue(state, 1105, ctxFor('m4', { ...tile, visitCount: 0 }))?.id, 'm4', 'a later visit, 90 s after M2 ended');
+});
+
+test('FB-0051: M4 plays in order: three friends walk in together, Sana, Shraddha, Palak, the canteen invitation, her answer, a kind tease, a wave, they leave; no line mentions a birthday', () => {
+  const steps = plain(SCRIPTS.momentFriends);
+  const flat = [];
+  walkSteps(steps, (type, body) => flat.push({ type, body }), 'm4');
+  const idx = (pred, from = 0) => flat.findIndex((s, i) => i >= from && pred(s));
+  const spawns = flat.filter((s) => s.type === 'spawnActor').map((s) => [s.body.id, s.body.sprite]);
+  assert.deepEqual(spawns, [['sana', 'npc-friend-sana'], ['shraddha', 'npc-friend-shraddha'], ['palak', 'npc-friend-palak']]);
+  const arrive = idx((s) => s.type === 'move' && s.body.actor === 'sana');
+  const first = idx((s) => s.type === 'say');
+  const wave = idx((s) => s.type === 'emote' && s.body.actor === 'sana' && s.body.kind === 'heart');
+  const leave = idx((s) => s.type === 'move' && s.body.actor === 'sana', wave);
+  const gone = idx((s) => s.type === 'despawnActor');
+  assert.ok(arrive >= 0 && arrive < first && first < wave && wave < leave && leave < gone, 'the beats are out of order');
+  const says = flat.filter((s) => s.type === 'say').map((s) => s.body);
+  assert.deepEqual(says.map((s) => s.speaker), ['Sana', 'Shraddha', 'Palak', '{name}', 'Sana']);
+  assert.deepEqual(says.map((s) => s.lines), [
+    ['{name}!'], ['There you are! We have been looking everywhere.'], ['Come to the canteen with us. We saved you a seat!'],
+    ['Give me a few minutes, I still have a hunt to finish.'], ['Fine. But the chai will not wait forever.'],
+  ]);
+  for (const s of says) for (const line of s.lines) assert.doesNotMatch(line.toLowerCase(), /birthday|bday|b-day|party|surprise|cake/);
+  // they wave: heart, heart, note
+  assert.deepEqual(flat.filter((s) => s.type === 'emote' && s.body.actor !== 'player').map((s) => [s.body.actor, s.body.kind]), [['sana', 'heart'], ['shraddha', 'heart'], ['palak', 'note']]);
+  // the three arrive together (one parallel step) and leave together, and every one is despawned
+  assert.equal(steps.filter((s) => s.parallel && s.parallel.filter((p) => p.move).length === 3).length, 1, 'they walk in together');
+  assert.equal(steps.filter((s) => s.parallel && s.parallel.filter((p) => p.sequence && JSON.stringify(p.sequence).includes('"move"')).length === 3).length, 1, 'and leave together');
+  assert.deepEqual(flat.filter((s) => s.type === 'despawnActor').map((s) => s.body).sort(), ['palak', 'sana', 'shraddha']);
+  // she is never moved
+  assert.ok(!flat.some((s) => s.type === 'move' && s.body.actor === 'player'));
+});
+
+test('FB-0051: M4 on the real campus: 8-20 s (about 15 s) from every trigger tile, ends without a key press, every actor ends despawned, and every spot they walk on is open ground', () => {
+  const here = mapOf('campus');
+  const rect = rectOf('m4');
+  let tiles = 0;
+  let min = Infinity;
+  let max = 0;
+  for (let ty = rect.y0; ty <= rect.y1; ty++) {
+    for (let tx = rect.x0; tx <= rect.x1; tx++) {
+      if (!here.walkable(tx, ty)) continue;
+      const tl = momentTimeline(SCRIPTS.momentFriends, { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      assert.deepEqual(plain(tl.unknownSteps), []);
+      assert.equal(tl.needsInput, false);
+      min = Math.min(min, tl.durationMs);
+      max = Math.max(max, tl.durationMs);
+      tiles++;
+      assert.deepEqual(Object.keys(tl.actors).sort(), ['palak', 'sana', 'shraddha']);
+      for (const [id, a] of Object.entries(tl.actors)) {
+        assert.equal(a.despawned, true, `${id} is gone at the end`);
+        for (const w of a.waypoints) assert.ok(here.walkable(Math.floor(w.x / 16), Math.floor((w.y + 7) / 16)), `${id} stands on a blocked tile (${w.x / 16},${w.y / 16}) with her at ${tx},${ty}`);
+      }
+      assert.equal(tl.player.waypoints.length, 1, 'she is never walked anywhere');
+    }
+  }
+  assert.ok(tiles >= 40, `${tiles} walkable trigger tiles`);
+  assert.ok(min >= 11000 && max <= 19500, `M4 lasts ${Math.round(min)}-${Math.round(max)} ms`);
+  assert.ok(min >= MOMENT_MIN_MS && max <= MOMENT_MAX_MS);
+});
+
+test('FB-0051: M4: during every line the three stand in a row to her right, level with her or above, never behind the dialog box, never on top of her or each other, never off the screen', () => {
+  const here = mapOf('campus');
+  const rect = rectOf('m4');
+  for (let ty = rect.y0; ty <= rect.y1; ty++) {
+    for (let tx = rect.x0; tx <= rect.x1; tx++) {
+      if (!here.walkable(tx, ty)) continue;
+      const tl = momentTimeline(SCRIPTS.momentFriends, { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      assert.equal(tl.says.length, 5);
+      for (const say of tl.says) {
+        assert.deepEqual(plain(say.actors.map((a) => a.id).sort()), ['palak', 'sana', 'shraddha'], 'all three are on screen for every line');
+        const xs = say.actors.map((a) => a.x).sort((a, b) => a - b);
+        for (const a of say.actors) {
+          assert.ok(a.y + 8 <= say.camY + 14, `${a.id} is behind the dialog box with her at ${tx},${ty}`);
+          assert.ok(a.x > tl.player.x + 16 && a.x - tl.player.x <= 4 * 16 + 1, `${a.id} is not 2-4 tiles to her right`);
+          assert.ok(Math.abs(a.x - say.camX) <= 160 - 16, `${a.id} is off the side of the screen`);
+        }
+        assert.ok(xs[1] - xs[0] >= 16 && xs[2] - xs[1] >= 16, 'a tile apart: nobody stands on anybody');
+      }
+    }
+  }
+  // Sana is the one beside her, then Shraddha, then Palak
+  const tl = momentTimeline(SCRIPTS.momentFriends, { anchor, player: { x: 225 * 16 + 8, y: 133 * 16 + 8 } });
+  const x = Object.fromEntries(tl.says[0].actors.map((a) => [a.id, a.x]));
+  assert.ok(x.sana < x.shraddha && x.shraddha < x.palak);
+});
+
+test('FB-0051: M4\'s trigger: everyone coming out of the Main Block door arrives inside it (the tile in front of each doorway cell), and the forecourt is only reachable from the campus through it', () => {
+  const rect = rectOf('m4');
+  const door = campusObjects.find((o) => o.name === 'Main Block entrance');
+  const cells = [Math.floor(door.x), Math.floor(door.x) + 1].map((x) => [x, Math.floor(door.y)]);
+  const inRect = (x, y) => x >= rect.x0 && x <= rect.x1 && y >= rect.y0 && y <= rect.y1;
+  for (const [cx, cy] of cells) assert.ok(inRect(cx, cy + 1), `the arrival tile ${cx},${cy + 1} in front of the door is inside the trigger`);
+  // flood from the spawn, never entering the trigger: the tile in front of the doorway is unreachable that way
+  const spawn = campusObjects.find((o) => o.type === 'spawn');
+  const start = [Math.floor(spawn.x), Math.floor(spawn.y)];
+  const seen = new Set([start.join(',')]);
+  const stack = [start];
+  let touched = false;
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const k = `${nx},${ny}`;
+      if (seen.has(k) || !walkable(nx, ny)) continue;
+      if (inRect(nx, ny)) { touched = true; continue; } // stop at the trigger
+      seen.add(k);
+      stack.push([nx, ny]);
+    }
+  }
+  assert.ok(touched, 'the walk from the spawn reaches the trigger');
+  for (const [cx, cy] of cells) assert.ok(!seen.has(`${cx},${cy + 1}`), `the tile in front of the door (${cx},${cy + 1}) is not reachable without entering the trigger`);
+  assert.ok((rect.x1 - rect.x0 + 1) * (rect.y1 - rect.y0 + 1) <= 150, 'a modest area');
+});
+
+test('FB-0051: the three friends\' sheets (Sana, Shraddha, Palak) exist as 16x24 4-row character sheets, are preloaded and in the offline bundle, differ from everyone else in hair, skin and top, and are made by the generator', () => {
+  const keys = ['npc-friend-sana', 'npc-friend-shraddha', 'npc-friend-palak'];
+  const preload = new Map(characterSheets(MAPS, AMBIENT, SCRIPTS).map((s) => [s.key, s.file]));
+  const have = new Set(require('../../tools/pack-offline').collectRuntimeAssets().assets.map((a) => a.path));
+  const colorsOf = (key) => { const img = png(`assets/${key}.png`); const set = new Set(); for (let i = 0; i < img.data.length; i += 4) if (img.data[i + 3]) set.add(`#${[0, 1, 2].map((k) => img.data[i + k].toString(16).padStart(2, '0')).join('')}`); return set; };
+  const sig = (key) => Buffer.from(png(`assets/${key}.png`).data).toString('base64');
+  const everyoneElse = fs.readdirSync(path.join(ROOT, 'assets')).filter((f) => /^npc-.*\.png$/.test(f) && !keys.includes(f.replace('.png', ''))).map((f) => f.replace('.png', ''));
+  for (const key of keys) {
+    assert.ok(preload.has(key), `${key} is not in the preload list`);
+    assert.ok(have.has(`assets/${key}.png`), `${key} is not in the offline manifest`);
+    const img = png(`assets/${key}.png`);
+    assert.equal(img.height, 4 * 24);
+    assert.equal(img.width, 8 * 16, 'idle, six walk frames, one idle-anim frame');
+    for (const other of everyoneElse) assert.notEqual(sig(key), sig(other), `${key} looks exactly like ${other}`);
+  }
+  // hair, top, skirt and accessory colours: each has its own and the others lack them
+  const own = {
+    'npc-friend-sana': { top: '#f2b92c', skirt: '#4f7fc0', hair: '#7a4a2a', clip: '#ff9ccf' },
+    'npc-friend-shraddha': { top: '#7a5ad9', skirt: '#2a2f4a', hair: '#2a2530', glasses: '#d9569a' },
+    'npc-friend-palak': { top: '#e8604c', skirt: '#3a4a6a', hair: '#9a3f22', tote: '#2fb3a6' },
+  };
+  for (const [key, want] of Object.entries(own)) {
+    const mine = colorsOf(key);
+    for (const [what, hex] of Object.entries(want)) {
+      assert.ok(mine.has(hex), `${key} lacks its ${what} (${hex})`);
+      for (const other of keys.filter((k) => k !== key)) assert.ok(!colorsOf(other).has(hex), `${other} shares ${key}'s ${what}`);
+    }
+  }
+  // distinct from the lead (a pink top) and from the women professors
+  for (const other of ['npc-prof-angel', 'npc-prof-elakkiya']) {
+    for (const key of keys) assert.ok(!colorsOf(other).has(own[key].top), `${key}'s top is also ${other}'s`);
+  }
+  // skin: Shraddha's is deeper than Sana's, which is deeper than Palak's pack default
+  assert.ok(colorsOf('npc-friend-shraddha').has('#c4885c') && colorsOf('npc-friend-sana').has('#dc9b78') && !colorsOf('npc-friend-palak').has('#dc9b78'));
+  // the accessories: the flower clip and the glasses facing us, the tote bag in her hand
+  const px = (key, x, y) => { const img = png(`assets/${key}.png`); const i = (y * img.width + x) * 4; return img.data[i + 3] ? `#${[0, 1, 2].map((k) => img.data[i + k].toString(16).padStart(2, '0')).join('')}` : null; };
+  assert.equal(px('npc-friend-sana', 3, 3), '#ff9ccf', 'the clip, facing us');
+  assert.equal(px('npc-friend-shraddha', 4, 11), '#d9569a', 'the glasses, facing us');
+  assert.equal(px('npc-friend-palak', 13, 20), '#2fb3a6', 'the tote bag in her hand, facing us');
+  const tool = read('tools', 'make-assets.js');
+  assert.match(tool, /for \(const \[id, look\] of Object\.entries\(FRIEND_WOMEN\)\) write\(`npc-\$\{id\}\.png`, buildProfWoman\(look\)\)/);
+  for (const name of ['sana', 'shraddha', 'palak']) assert.match(tool, new RegExp(`'friend-${name}': \\{ hair:`));
+  // they are script actors only: nobody stands on a map (the ambient roster still has no Sana, Shraddha or Palak)
+  for (const list of Object.values(AMBIENT)) for (const e of list) assert.ok(!/^(Sana|Shraddha|Palak)$/.test(e.name || ''), `${e.name} is an ambient NPC`);
 });

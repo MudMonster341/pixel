@@ -28,7 +28,7 @@ const MOMENT_MAX_MS = 20000;
 // (so a regenerated campus that moves the gate or the door moves the trigger with it, ADR 0016): tile (anchor + [dx, dy]), the
 // rectangle spans dx0..dx1 x dy0..dy1 inclusive. `after`: { moments: ['m1'] } must have played; { cutscene: 'gate2' } must have been
 // seen (the Gate 2 welcome / opening, src/scenes/world.js); { keys: N } she must hold at least N of the three keys (M3, the chariot, N = 1;
-// the three friends will use 2). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
+// M4, the three friends, N = 2). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
 // after another: `minGapS` REPLACES MOMENT_GAP_S (seconds of play since the last moment ENDED), `sameVisitOk: true` lets it start on a
 // map visit that already had a moment (MOMENT_PER_VISIT). `afterFreeS`: she must have had that many seconds of FREE control (not inside
 // a script, cutscene, dialog, door walk or any overlay: ctx.freeSeconds) since the last of those ended, so a moment never starts the
@@ -74,6 +74,17 @@ const MOMENTS = [
     trigger: { anchor: 'Main Block Stairs G (up)', dx0: -3, dx1: 13, dy0: -3, dy1: 4 },
     after: { keys: 1 }, // once she holds the first key; default pacing (90 s gap, one per map visit)
     // (the ambient Prof. Raja entry in src/ambient.js carries `unlessMoment: 'm3'`: once this has played he is gone for good)
+  },
+  {
+    id: 'm4',
+    name: 'Sana, Shraddha and Palak',
+    map: 'campus',
+    script: 'momentFriends',
+    // In front of the Main Block door again, on the way back out (x 219..228, y 129..137 on the real campus: the steps, the forecourt and
+    // the pavement beside the door; M2's area minus its east edge, so the three friends' places 2-4 tiles to her right stay clear of the
+    // palm at x234). Everyone leaving the Main Block arrives on the tile in front of the door, which lies inside it.
+    trigger: { anchor: 'Main Block entrance', dx0: -6, dx1: 3, dy0: 1, dy1: 9 },
+    after: { keys: 2 }, // once she holds the second key (the second mini-game); default pacing (90 s gap, one per map visit)
   },
 ];
 

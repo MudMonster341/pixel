@@ -4153,6 +4153,7 @@ const FRIEND_SKIN = {
 const AMELIA_SKIN = {
   fair: {},
   wheat: { '#bf8b78': '#f0b98f', '#a77a67': '#dc9b78', '#b57972': '#dc9b78', '#aa5e56': '#cf8566', '#b58472': '#dc9b78', '#b2736d': '#cf8566' },
+  tan: { '#bf8b78': '#d9a070', '#a77a67': '#c4885c', '#b57972': '#c4885c', '#aa5e56': '#b87550', '#b58472': '#c4885c', '#b2736d': '#b87550' }, // M4: Shraddha
 };
 
 function friendRecolor(body, hairId, skinId) {
@@ -4180,7 +4181,7 @@ function plainOutfit(shirt, pants, extra = {}) {
 const HOODIE_BLACK_ORANGE = { shirt: '#1e1e24', hi: '#f28c1e', shade: '#121216', jacket: '#1e1e24', inner: '#f28c1e', innerHi: '#ffbb55', pants: '#2f3b57', shoes: '#121216' };
 
 // ---- tiny prop overlays (text sprites, the way held items are drawn): Angel's wings and Satvik's camera ----
-const PROP_COLORS = { K: '#1a1c2c', W: '#ffffff', S: '#bfd0e8', D: '#4b4b5e', L: '#6fc3ff', G: '#e0b84f', Y: '#ffe27a', R: '#c0392b', r: '#8e2021' };
+const PROP_COLORS = { K: '#1a1c2c', W: '#ffffff', S: '#bfd0e8', D: '#4b4b5e', L: '#6fc3ff', G: '#e0b84f', Y: '#ffe27a', R: '#c0392b', r: '#8e2021', P: '#ff9ccf', p: '#d9569a', N: '#b5793a', n: '#6e4521', T: '#2fb3a6', t: '#17665f' };
 // `rows` maps a frame row (0-23) to a 16-character string of PROP_COLORS letters ('.' = nothing).
 function stampProp(img, fx, fy, rows) {
   for (const [row, text] of Object.entries(rows)) {
@@ -4275,6 +4276,39 @@ const HEADPHONES = {
   },
 };
 
+// M4, Sana, Shraddha and Palak (docs/plans/2026-10-04-moments-and-small-touches.md): three small accessories on the lead's body (16x24 frames,
+// face rows 10-14, eyes on rows 12-13). Sana: a pink flower hair clip. Shraddha: round glasses. Palak: a teal tote bag in her hand.
+const FLOWER_FRONT_VIEW = { 3: '...P............', 4: '..PYP...........', 5: '...P............' };
+const FLOWER_BACK_VIEW = { 3: '............P...', 4: '...........PYP..', 5: '............P...' };
+const FLOWER_SIDE_LEFT = { 4: '.....P..........', 5: '....PYP.........', 6: '.....P..........' };
+const SANA_FLOWER = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down') stampProp(img, fx, fy, FLOWER_FRONT_VIEW);
+    if (dir === 'up') stampProp(img, fx, fy, FLOWER_BACK_VIEW);
+    if (dir === 'left') stampProp(img, fx, fy, FLOWER_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(FLOWER_SIDE_LEFT));
+  },
+};
+const GLASSES_FRONT_VIEW = { 11: '....ppp..ppp....', 12: '....p.pppp.p....', 13: '....ppp..ppp....' }; // magenta frames: they read as glasses, not sunglasses
+const GLASSES_SIDE_LEFT = { 11: '...ppp..........', 12: '...p.ppppp......', 13: '...ppp..........' };
+const SHRADDHA_GLASSES = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down') stampProp(img, fx, fy, GLASSES_FRONT_VIEW);
+    if (dir === 'left') stampProp(img, fx, fy, GLASSES_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(GLASSES_SIDE_LEFT));
+  },
+};
+const TOTE_FRONT_VIEW = { 18: '..............t.', 19: '.............tt.', 20: '............tTTt', 21: '............tWWt', 22: '............tTTt', 23: '............tttt' };
+const TOTE_SIDE_LEFT = { 18: '.......t........', 19: '......tt........', 20: '.....tTTt.......', 21: '.....tWWt.......', 22: '.....tTTt.......', 23: '.....tttt.......' };
+const PALAK_TOTE = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down') stampProp(img, fx, fy, TOTE_FRONT_VIEW);
+    if (dir === 'up') stampProp(img, fx, fy, flipRows(TOTE_FRONT_VIEW));
+    if (dir === 'left') stampProp(img, fx, fy, TOTE_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(TOTE_SIDE_LEFT));
+  },
+};
+
 // body: the pack character; hair/skin: FRIEND_HAIR / FRIEND_SKIN ids; outfit: a CLUB_OUTFITS-shaped object.
 // `prop`: an overlay above. Key = sheet name without `npc-`. The three women/men of FB-0051 who are not here are a later package.
 const FRIEND_LOOKS = {
@@ -4304,6 +4338,13 @@ function buildFriendCharacter(look) {
 const PROF_WOMEN = {
   'prof-elakkiya': { hair: 'salt', skin: 'wheat', top: '#1f5f6b', topHi: '#4aa0ad', skirt: '#2b2b3a' }, // a teal blazer, dark skirt
   'prof-angel': { hair: 'black', skin: 'fair', top: '#8fb0dc', topHi: '#d6e4f7', skirt: '#5a6a8a', prop: WINGS }, // soft blue, with wings
+};
+// M4 (src/scripts.js SCRIPTS.momentFriends): Taru's friends Sana, Shraddha and Palak, the same body as the lead and the women professors with their
+// own hair, skin, top, skirt and one accessory each. Script actors only (they are not on any map). `top`/`topHi`/`skirt` as PROF_WOMEN.
+const FRIEND_WOMEN = {
+  'friend-sana': { hair: 'brown', skin: 'wheat', top: '#f2b92c', topHi: '#ffe08a', skirt: '#4f7fc0', prop: SANA_FLOWER }, // sunny yellow top, denim skirt, a pink flower clip
+  'friend-shraddha': { hair: 'black', skin: 'tan', top: '#7a5ad9', topHi: '#b9a6f2', skirt: '#2a2f4a', prop: SHRADDHA_GLASSES }, // violet top, navy skirt, round glasses
+  'friend-palak': { hair: 'auburn', skin: 'fair', top: '#e8604c', topHi: '#ffb09a', skirt: '#3a4a6a', prop: PALAK_TOTE }, // coral top, slate skirt, a tote bag
 };
 function buildProfWoman(look) {
   const recolor = {
@@ -4947,6 +4988,7 @@ for (const [id, look] of Object.entries(FRIEND_LOOKS)) {
   if (id !== 'friend-mustafa') write(`npc-${id}.png`, buildFriendCharacter(look));
 }
 for (const [id, look] of Object.entries(PROF_WOMEN)) write(`npc-${id}.png`, buildProfWoman(look));
+for (const [id, look] of Object.entries(FRIEND_WOMEN)) write(`npc-${id}.png`, buildProfWoman(look)); // M4: Sana, Shraddha, Palak (script actors)
 
 // Tomas (meadow/house test-map NPC): unchanged hand-drawn art, just bottom-aligned into the new
 // 16x24 canvas (ADR 0013) -- no walk cycle, same 3-frame (down/up/left) sheet as before.

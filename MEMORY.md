@@ -1144,3 +1144,8 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 
 **Did:** qa:shots (103, 0 skipped; looked at tower, hero fight, finale, ICL, foyer stairs, gate barrier, Physics Lab, parking, Library lobby, title, both moments). Found by looking: the unicorn would start the instant the welcome ends (fixed: M1 waits 2.5 s of free control, trigger widened to the avenue), Mevin and his kit were hidden behind the dialog box and an "E" prompt showed during scripts (fixed; test: speaking actors must be above the dialog row). qa:offline Chromium + WebKit: title -> credits incl. the finale, zero errors, zero external requests. Full run: unit 1058 + browser 186/186. `../2D_pixel_game-play` -> `9969ccf`. Not pushed (owner decides).
 **Next:** the owner's 2nd playtest (early) and their feedback; remaining: juice pass, W2/W6 placeholders, Raja's chariot, the three girls, TP-room ball pit + sumo (docs/plans/2026-10-04-moments-and-small-touches.md); card assets -> final zip + site by 10-09.
+
+## 2026-10-05 (late) - Handover written; TP room parked
+
+**Did:** The owner parked the TP room (ball pit + arcade + sumo vs Narda: "not a priority now"). Wrote HANDOVER.md (full Day 3 record), ADR 0024 (mini-game line-up + moments system), ERR-0018 (usage-limit stops, bad edit script), rewrote docs/NEXT_SESSION_PROMPT.md, refreshed HANDOFF/CONTEXT and the statuses of the moments plan and the Day 3 plan.
+**Next:** the owner's second playtest; then M3/M4 (close FB-0051), juice, W2/W6, card assets, final zip + site by 10-09.

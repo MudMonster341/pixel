@@ -2,7 +2,7 @@
 
 **New session? Read [HANDOFF.md](HANDOFF.md) first.**
 
-**Last updated:** 2026-10-04 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
+**Last updated:** 2026-10-05 · **Repo:** https://github.com/MudMonster341/pixel · **Local:** `C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game`
 
 ## What this is
 A top-down pixel-art exploration game in the browser, in a bright DS-era Pokémon style. It recreates
@@ -17,17 +17,16 @@ on a stable architecture that can grow. The campus map is the most important pie
 the design and technical choices. The owner plays each version, reports feedback in-game, and will
 explain the story once the base map is done.
 
-## Current state (2026-10-04, birthday sprint Day 2 done)
+## Current state (2026-10-05, birthday sprint Day 3 done)
 - **The game is a birthday gift for Taru, 22nd birthday on 2026-10-11**, played on a MacBook. Deliverables: the offline zip
   (`npm run pack:offline -- --zip`, [ADR 0017](decisions/0017-offline-bundle-for-mac.md)) and a backup hosted link
   (`npm run pack:site`, [ADR 0022](decisions/0022-hosted-link-as-backup-delivery.md), [docs/HOSTING.md](docs/HOSTING.md)). Target: handed over by 2026-10-09.
-- **Playable start to finish:** title -> name (prefilled "Taru") -> RTA bus -> campus -> Main Block (foyer + two wings rebuilt to the official 3D tour,
-  [ADR 0020](decisions/0020-main-block-ground-floor-follows-the-3d-tour.md)) -> the LUG volunteer -> three key rooms (mini-games, skip after 3 losses) ->
-  box -> animated card -> credits ("Happy Birthday, Taru / Happy 22 / wishes") -> title. Talkable students and cats/birds on campus.
-- **Tests:** 691 unit + 185 browser tests green and pushed (`2fad122`). A completeness test and a story-clearance test guard soft-locks and empty rooms.
-- **Owner's first playtest (2026-10-04):** "fine, but no wow yet" + **33 feedback items FB-0044..FB-0076** waiting. The plan (feedback packages P1-P5, the
-  wow ideas, the schedule to the birthday) is [docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md).
-- **Waiting on the owner:** feedback answers, the friends' lines/jokes, the card photos/video/wishes in `assets/card/` (~10-07), the Netlify upload.
+- **Playable start to finish:** title -> name (prefilled "Taru") -> RTA bus (Dubai RTA stop) -> campus (unicorn + Mevin moments, golden-hour light that moves with the keys) -> Main Block (foyer, working lifts, stairs,
+  animated doors) -> the LUG volunteer -> three key rooms (Physics Lab hero fight, ICL fingerprint lab with Alice, Room 195 tower climb; skip after 3 losses) -> box -> **birthday finale (cake, 22 candles, fireworks, chiptune song)** ->
+  animated card -> credits -> title. Named friends and professors, talkable students, cats and birds.
+- **Tests:** 1058 unit + 186 browser green (2026-10-05), qa:shots 103/103, qa:offline clean in Chromium and WebKit. 27 commits ahead of origin, not pushed.
+- **The full Day 3 record is [HANDOVER.md](HANDOVER.md).** The owner's 33 first-playtest items are all implemented (FB-0051 partly; Raja's chariot and the three-friends scene are next); the TP room (ball pit + sumo vs Narda) is parked.
+- **Waiting on the owner:** their second playtest feedback, approval of the new lines (docs/research/campus-lines-review.md), the card photos/video/wishes in `assets/card/` (~10-07), the Netlify upload.
 
 ## Where this is going (updated 2026-09-22)
 The finish line: a sendable **Windows .exe** of the LUG treasure hunt ending in an animated

@@ -1,6 +1,6 @@
 # Moments and small touches (the owner's scene ideas, 2026-10-04)
 
-Status: **designed, not built.** The owner: "not right now, but slowly and properly". These are small, personal, unskippable scenes
+Status (2026-10-05): **built: M1 unicorn+prince, M2 Mevin, M5 cover, the tower climb (M8, Room 195 key game). NOT built: M3 Raja's chariot, M4 Sana/Shraddha/Palak. PARKED by the owner (not a priority): M6 the TP-room ball pit and M7 sumo vs Narda.** The owner: "not right now, but slowly and properly". These are small, personal, unskippable scenes
 ("moments") that happen at spaced intervals while Taru walks around, each tied to a person or a joke she will recognise, plus two extra games and a ball pit.
 They are the core of the "wow" the owner asked for (see [the Day 3 plan, section B](2026-10-04-day3-feedback-and-wow.md)) and widen **W1**.
 Related decision: [ADR 0021](../../decisions/0021-friends-in-the-game-and-personal-touches.md) (named friends and professors as NPCs).

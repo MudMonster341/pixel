@@ -1,5 +1,7 @@
 # Handoff — read this first
 
+**Day 3 is fully written up in [HANDOVER.md](HANDOVER.md) (what was done, commits, switches, seen vs unseen, to-do); read it right after this page. Pickup prompt: [docs/NEXT_SESSION_PROMPT.md](docs/NEXT_SESSION_PROMPT.md).**
+
 **Updated 2026-10-05 (evening of Day 3: packages P1-P5 done).** Then read
 [docs/plans/2026-10-04-day3-feedback-and-wow.md](docs/plans/2026-10-04-day3-feedback-and-wow.md) (**the plan for what to do next**),
 [CLAUDE.md](CLAUDE.md), and the last entries of [MEMORY.md](MEMORY.md) and [ERRORS.md](ERRORS.md) (ERR-0010..0015).
@@ -48,11 +50,11 @@ roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent a
 ## What is LEFT (in order)
 1. **Wait for the owner's 2nd playtest** (feedback via the O overlay), fix what they find.
 2. **Remaining wow** (recommended answers, owner did not answer round 3): juice pass (key-pickup sparkle, emotes), W2 album + W6 selfie (placeholders; photos via `assets/card/`).
-3. **Later moments** (after the 10-08 playtest, by 10-09): Raja's chariot, Sana/Shraddha/Palak scene, TP-room ball pit + arcade with sumo vs Narda (the TP-room door opens from the start, owner's choice).
+3. **Later moments** (optional, by 10-09): Raja's chariot (M3), Sana/Shraddha/Palak scene (M4). **PARKED by the owner on 2026-10-05, not a priority: the TP room (ball pit + arcade + sumo vs Narda).**
 4. **Before handover:** `npm run qa:shots` (LOOK at them), `npm run qa:offline`, the full `npm test`, update `../2D_pixel_game-play`, tell the owner it is ready for the 2nd playtest (~10-08).
 5. **Final (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + zip + `HOW_TO_OPEN.txt`.
 
-**Cut line:** TP-room ball pit, then Raja's chariot, then sumo, then the three-girls scene, then W6/W2. Keep M1, M2, the finale, golden hour. **Never cut:** P1 (done), the bundle and hosted link, credits, soft-lock guards, completeness checklist, the full test before handover.
+**Cut line:** the TP room is already parked; then Raja's chariot, then the three-girls scene, then W6/W2. Keep M1, M2, the finale, golden hour. **Never cut:** P1 (done), the bundle and hosted link, credits, soft-lock guards, completeness checklist, the full test before handover.
 
 ## What the owner provides (and when)
 - **Card assets** (photos, closing video, final wishes, recipient/age) in `assets/card/` (gitignored; shape in `assets/card/card.example.json`):

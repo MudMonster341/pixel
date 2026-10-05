@@ -1,6 +1,6 @@
 # Day 3 plan: the owner's first playtest feedback + the "wow" layer
 
-Status: **active** (written 2026-10-04 evening, end of Day 2). Taru's birthday is **2026-10-11**; aim to hand over the final zip
+Status: **executed on 2026-10-05: P1-P5, W3, W4 and M1/M2 are done; see [HANDOVER.md](../../HANDOVER.md). Remaining: juice, W2, W6, M3, M4; the TP room is parked.** (Written 2026-10-04 evening, end of Day 2.) Taru's birthday is **2026-10-11**; aim to hand over the final zip
 and link by **2026-10-09**, with 10-10 as slack. Ratings stay paused ([QUALITY_LOOP.md](../QUALITY_LOOP.md)).
 Earlier plan: [2026-10-03-birthday-sprint.md](2026-10-03-birthday-sprint.md) (its Day 1-2 packages are done).
 

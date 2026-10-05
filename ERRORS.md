@@ -421,3 +421,9 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Cause:** tools/make-assets.js cropped the Kenney 9-slice frame to its top-left 45x45 pixels, but the pack frame is 48 wide (46 tall plus 2 shadow rows): the crop dropped the whole right border (source columns 45-47) and the outer bottom bevel line. The 9-slice's right and bottom 4 px were interior fill, so no panel had a right edge at any size. Nothing looked at the pixels: the unit tests checked the panel code, not the generated frame.
 **Fix:** the frame is rebuilt from the full 48x48 source (96x96 per frame), ring read from all four sides (`buildUiFrame()`); src/scenes/ui.js UI_FRAME_SIZE 96.
 **Tests:** tests/unit/ui-frame.test.js reads assets/ui-panel.png and simulates the 9-slice at the sizes the game uses.
+
+## ERR-0018 - Agent runs cut off by a usage limit, and one bad edit script (2026-10-05)
+**Symptom:** three build agents (P3b, P5a, the moments agent) ended with "session limit reached" mid-task; P3b's own edit script had also deleted most of `tools/make-assets.js` earlier in its run.
+**Cause:** the owner's usage limit resets on a clock, so a running agent simply dies; a scripted bulk edit without a backup can truncate a big file.
+**What worked:** (1) after any "agent failed" notice run `git status` and `npm run test:unit` first: the tree held every edit made so far and was either clean or green; (2) resume the SAME agent with `SendMessage` (its context survives; say what is already in the tree and to finish the brief); (3) after a bulk-edit incident rebuild from `git show HEAD:<file>` plus the agent's edits and review `git diff --stat` for surprises. Nothing was lost.
+**Rule:** never run two agents at once, and never run the browser suite while an agent edits (a half-written tree makes failures meaningless).

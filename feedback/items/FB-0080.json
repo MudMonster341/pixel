@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Dialog & NPCs",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-05T17:25:39.147Z",
-  "updatedAt": "2026-10-05T17:25:39.147Z",
+  "updatedAt": "2026-10-05T18:11:42.152Z",
   "details": "",
   "context": {
     "map": "main-block-g",
@@ -49,13 +49,33 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0080.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Mahin is the badminton player at the campus courts (red jersey, white sweatband, shuttlecock jokes). Note: your screenshot showed a CS student in the Main Block wing, and there is no sports player there, so I named the badminton one. Tell me if you meant someone else.",
+      "at": "2026-10-05T18:11:42.152Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0079-0080.test.js › FB-0080",
+    "commit": null,
+    "at": "2026-10-05T18:11:42.152Z"
+  },
   "history": [
     {
       "at": "2026-10-05T17:25:39.147Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-05T18:06:59.888Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T18:11:42.152Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

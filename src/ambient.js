@@ -154,7 +154,14 @@ const AMBIENT = {
         "I counted my deadlines. Then I stopped counting, for my own health.",
         "Hydration check, {name}! Water first. Then energy drink number seven.",
       ] },
-    { id: 'campus-amb-court-2', character: 'ambient-d', role: 'sports-player', kind: 'idle', x: 211, y: 64, facing: 'left' },
+    // FB-0080: Mahin, the badminton player (red jersey, white sweatband); only one of the two court players is named.
+    { id: 'campus-amb-court-2', character: 'ambient-d', role: 'sports-player', kind: 'idle', x: 211, y: 64, facing: 'left',
+      name: "Mahin", sheet: 'npc-friend-mahin',
+      lines: [
+        "Mahin here! Badminton is my sport. The shuttlecock is my rival. Smash!",
+        "It is all about the footwork. Mine mostly goes: one step forward, two steps to the canteen.",
+        "I am not sweating, my racket is just leaking.",
+      ] },
     { id: 'campus-amb-court-3', character: 'student-a', role: 'quiz-club-member', kind: 'patrol', speed: 55, pauseMs: 900,
       waypoints: [{ x: 178, y: 61 }, { x: 205, y: 61 }] },
     { id: 'campus-amb-tennis-1', character: 'ambient-e', role: 'sports-player', kind: 'idle', x: 94, y: 97, facing: 'right' },
@@ -208,8 +215,16 @@ const AMBIENT = {
         "My code review was one question mark. I'm still thinking about it.",
         "Wi-Fi is the one thing I can't compile, debug or fix. Good luck!",
       ] },
+    // FB-0079: the ACM member the owner talked to in the foyer (tile 18,34, he patrols row 33) is Aakar: sky-blue hoodie, a Dr. Evil style sci-fi villain about tech.
+    // No `factIds`: after his lines he shares the ACM facts (CF41-CF43) like any ACM member.
     { id: 'mbg-amb-walk-2', character: 'ambient-c', role: 'acm-member', kind: 'patrol', speed: 50, pauseMs: 700,
-      waypoints: [{ x: 13, y: 33 }, { x: 24, y: 33 }] },
+      waypoints: [{ x: 13, y: 33 }, { x: 24, y: 33 }],
+      name: "Aakar", sheet: 'npc-friend-aakar',
+      lines: [
+        "Ah, {name}... I have been expecting you. Join ACM. Resistance is... deprecated.",
+        "My evil plan? Total world domination... of the merge queue. Muahaha.",
+        "One MILLION lines of code! ...or so. Come to our meeting. There is pizza. That is not a trap.",
+      ] },
     // The wings: one in each wing-end lobby, one waiting in the right-hand office corridor.
     { id: 'mbg-amb-wing-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 45, pauseMs: 900,
       waypoints: [{ x: 6, y: 12 }, { x: 6, y: 9 }] },

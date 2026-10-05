@@ -1,0 +1,73 @@
+{
+  "id": "FB-0082",
+  "title": "room 195, give it the back story, that the price is stuck in rapunzels tower, you havce to save hium and then game start",
+  "type": "change",
+  "area": "UI",
+  "priority": "normal",
+  "status": "in-progress",
+  "createdAt": "2026-10-05T17:58:35.554Z",
+  "updatedAt": "2026-10-05T18:07:00.008Z",
+  "details": "",
+  "context": {
+    "map": "main-block-1",
+    "mapName": "Main Block · 1st Floor",
+    "tile": {
+      "x": 24,
+      "y": 4
+    },
+    "pixel": {
+      "x": 386,
+      "y": 72
+    },
+    "facing": "down",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      {
+        "item": "keyIcl",
+        "count": 1
+      },
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "iclDoorOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2226e24",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-05T17:58:09.131Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0082.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-05T17:58:35.554Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-05T18:07:00.008Z",
+      "by": "agent",
+      "status": "in-progress"
+    }
+  ]
+}

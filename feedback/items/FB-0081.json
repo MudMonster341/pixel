@@ -1,0 +1,69 @@
+{
+  "id": "FB-0081",
+  "title": "for the hello kitty game, game is okay but the button should be z to shoot, its right under the awsd",
+  "type": "change",
+  "area": "UI",
+  "priority": "normal",
+  "status": "in-progress",
+  "createdAt": "2026-10-05T17:55:42.502Z",
+  "updatedAt": "2026-10-05T18:06:59.948Z",
+  "details": "make the shoot button the mouse left click okay",
+  "context": {
+    "map": "main-block-1",
+    "mapName": "Main Block · 1st Floor",
+    "tile": {
+      "x": 11,
+      "y": 14
+    },
+    "pixel": {
+      "x": 187,
+      "y": 238
+    },
+    "facing": "up",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "2226e24",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-05T17:54:43.249Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0081.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-05T17:55:42.502Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-05T18:06:59.948Z",
+      "by": "agent",
+      "status": "in-progress"
+    }
+  ]
+}

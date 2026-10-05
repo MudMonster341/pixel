@@ -4401,6 +4401,17 @@ const PALAK_TOTE = {
   },
 };
 
+// Mahin's sweatband (FB-0080, the badminton player): a white band across the forehead (head rows 7-8, over the hair edge), all four views.
+const SWEATBAND_FRONT_VIEW = { 7: '.WWWWWWWWWWWWWW.', 8: '.SSSSSSSSSSSSSS.' };
+const SWEATBAND_SIDE_LEFT = { 7: '.WWWWWWWWWWWWWW.', 8: '.SSSSSSSSSSSSSSS' };
+const MAHIN_SWEATBAND = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down' || dir === 'up') stampProp(img, fx, fy, SWEATBAND_FRONT_VIEW);
+    if (dir === 'left') stampProp(img, fx, fy, SWEATBAND_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(SWEATBAND_SIDE_LEFT));
+  },
+};
+
 // body: the pack character; hair/skin: FRIEND_HAIR / FRIEND_SKIN ids; outfit: a CLUB_OUTFITS-shaped object.
 // `prop`: an overlay above. Key = sheet name without `npc-`. The three women/men of FB-0051 who are not here are a later package.
 const FRIEND_LOOKS = {
@@ -4417,6 +4428,10 @@ const FRIEND_LOOKS = {
   // Mevin (M2, the drummer for Treble, the music club): a sky-blue jacket over a light tee, headphones round his head. A script actor
   // only (src/scripts.js SCRIPTS.momentMevin): he is not on any map.
   'friend-mevin': { body: 'Bob', hair: 'darkbrown', skin: 'wheat', outfit: plainOutfit('#3fa0e6', '#2f2f3a', { inner: '#cfeaff', innerHi: '#ffffff', shoes: '#f4f4f6' }), prop: HEADPHONES },
+  // FB-0079 Aakar (the ACM member in the Main Block foyer, a sci-fi villain about tech): salt-and-silver black hair, a sky-blue hoodie (the owner: "make him wear sky blue").
+  'friend-aakar': { body: 'Adam', hair: 'salt', skin: 'wheat', outfit: plainOutfit('#4fb3f2', '#2c3550', { shirt: '#4fb3f2', hi: '#a9dcff', shade: '#2f86c4' }) },
+  // FB-0080 Mahin (the badminton player at the campus courts): a red sports jersey, white sweatband.
+  'friend-mahin': { body: 'Adam', hair: 'darkbrown', skin: 'tan', outfit: plainOutfit('#e0393a', '#27324a', { hi: '#ff8a80', shade: '#a82426', shoes: '#f4f4f6' }), prop: MAHIN_SWEATBAND },
   // Professors (adult look: grey or black hair, jacket/blazer). Raja: a gold-trimmed maroon jacket over a gold shirt.
   'prof-raja': { body: 'Bob', hair: 'grey', skin: 'wheat', outfit: { ...plainOutfit('#7a1530', '#e8dcc0'), jacket: '#7a1530', inner: '#e0b84f', innerHi: '#ffe27a', pants: '#e8dcc0', shoes: '#a8812a' } },
 };

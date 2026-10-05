@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Dialog & NPCs",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-05T17:23:49.362Z",
-  "updatedAt": "2026-10-05T17:23:49.362Z",
+  "updatedAt": "2026-10-05T18:11:42.090Z",
   "details": "make him sound thoda like a sci fi evil villan about like tech, so join acm, and then doemtihng like dr evil. make him wear sky blue",
   "context": {
     "map": "main-block-g",
@@ -49,13 +49,33 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0079.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The ACM member in the Main Block hall is now Aakar: sky-blue hoodie, a Dr. Evil style 'join ACM' villain voice, then the ACM facts.",
+      "at": "2026-10-05T18:11:42.090Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0079-0080.test.js › FB-0079",
+    "commit": null,
+    "at": "2026-10-05T18:11:42.090Z"
+  },
   "history": [
     {
       "at": "2026-10-05T17:23:49.362Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-05T18:06:59.827Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T18:11:42.090Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

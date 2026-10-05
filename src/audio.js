@@ -89,6 +89,8 @@ const SOUNDS = {
   fireworkPop: { file: 'assets/audio/generated/firework-pop.wav', volume: 0.4, loop: false, category: 'sfx' },
   fireworkCrackle: { file: 'assets/audio/generated/firework-crackle.wav', volume: 0.3, loop: false, category: 'sfx' },
   happyBirthday: { file: 'assets/audio/generated/happy-birthday.wav', volume: 0.55, loop: false, category: 'music', oneShot: true },
+  // W6 (selfie mode, src/selfie.js, tools/make-audio.js synthShutter()): the camera's "ka-chk" under the white flash (~0.2 s).
+  shutter: { file: 'assets/audio/generated/shutter.wav', volume: 0.5, loop: false, category: 'sfx' },
 };
 
 const AUDIO_CATEGORIES = ['music', 'sfx', 'ui'];

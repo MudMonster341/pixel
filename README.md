@@ -28,6 +28,7 @@ open.
 | M | Show/hide the minimap |
 | N, or click the minimap | Full-screen map |
 | J | Journal |
+| P | Take a selfie (flash, then a polaroid-style PNG is saved to your Downloads) |
 | Esc | Pause |
 | F11 | Toggle fullscreen |
 

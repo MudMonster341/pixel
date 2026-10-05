@@ -280,6 +280,16 @@ function synthFireworkCrackle() {
   return mix(new Float32Array(Math.round(dur * SAMPLE_RATE)), ...clicks).map((v) => v * 0.8);
 }
 
+// W6 (selfie mode, src/selfie.js): a camera shutter, "ka-chk" -- a bright noise click with a tiny high thunk, then a softer, lower second click
+// 70 ms later. About 0.2 s; fixed noise seeds keep the file byte-identical on every run (tests/unit/assets.test.js).
+function synthShutter() {
+  const click = (seed, gain, thunkHz) => mix(
+    brighten(tone(0.05, () => 0, { wave: 'noise', seed, ampFn: (t) => Math.min(1, t / 0.0008) * Math.exp(-t * 90) * gain })),
+    tone(0.05, () => thunkHz, { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.001) * Math.exp(-t * 70) * gain * 0.5 }),
+  );
+  return mix(click(121, 0.9, 1100), delayed(0.07, click(122, 0.6, 700))).map((v) => v * 0.8);
+}
+
 // "Happy Birthday to You" as a two-voice chiptune: a square-wave melody (a little vibrato on the long notes) over a triangle-wave
 // "oom-pah-pah" bass. The tune and the chords are data in tools/lib/happy-birthday.js. About 14.9 s (src/finale.js FINALE.songMs).
 function synthHappyBirthday() {
@@ -332,6 +342,7 @@ const GENERATED = [
   { to: 'generated/firework-pop.wav', build: synthFireworkPop },
   { to: 'generated/firework-crackle.wav', build: synthFireworkCrackle },
   { to: 'generated/happy-birthday.wav', build: synthHappyBirthday },
+  { to: 'generated/shutter.wav', build: synthShutter },
 ];
 
 // ---------- everything else: copied byte-for-byte from an already-credited CC0 pack ----------

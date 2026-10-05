@@ -1173,3 +1173,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** `src/album.js` (pure slots: locked / photo / placeholder per key), optional `album` (<=3 entries, photos in `assets/card/photos/`) in card.json, Journal "Album" page (Tab / Left-Right / A-D; code-drawn tilted polaroids, placeholder = pastel + heart + "A memory for you", locked = "?", unlock pop), card slideshow appends album photos after all 3 keys, packer embeds album files (pack:offline and pack:site). 24 `W2:` tests. card.example.json + docs updated.
 **Check in a browser:** J with 1/2/3 keys then Tab, cover-crop of real photos inside the rotated polaroid, missing file -> placeholder; one console 404 for card.json on a checkout without it (same as the card scene).
 **Next:** W6 selfie (P key), qa-shots for M3/M4/album, wait for card assets, final pack.
+
+## 2026-10-05 (Day 4) - W6 selfie (P): 1153 unit tests green
+
+**Did:** `src/selfie.js` (pure crop/filename/caption/gate + `createSelfie`): P in free control only (0.3 s free), HUD hidden for exactly one frame while `renderer.snapshotArea` grabs a 4:3 crop around her and nearby friends, saved as a PNG on a white polaroid frame via blob + `<a download>` (data-URL fallback, then preview only), flash + generated `shutter.wav`, preview card bottom-left, toast. `?selfie=0` (e2e default off). Controls list + README updated. 36 `W6:` tests.
+**Check in a browser:** HUD absent from the image, WebGL vs Canvas snapshot, P during dialog/pause/moments is a no-op, Safari download behaviour (unverifiable here).
+**Next:** qa-shots flows for M3/M4/album/selfie, then the one full test round (unit + browser + qa:shots + qa:offline), then update the play copy.

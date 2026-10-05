@@ -153,6 +153,7 @@ docs/plans/2026-09-26-premium-pass.md)
   `firework-whoosh.wav`, `firework-pop.wav`, `firework-crackle.wav`, and `happy-birthday.wav`, a two-voice chiptune (square-wave melody, triangle-wave bass) of the
   traditional "Happy Birthday to You" tune, which is in the **public domain** (the folk melody, first published 1893 as "Good Morning to All"; the notes are typed in
   `tools/lib/happy-birthday.js` from the tune itself: no recording, score or arrangement was used). No pack, no sample.
+  The selfie mode's camera shutter, W6 (`tools/make-audio.js` `synthShutter()`, original, generated): `assets/audio/generated/shutter.wav`, two short noise clicks. No pack, no sample.
   The finale's skyline, cake, flames and fireworks are drawn by code from generic shapes (no PNG, no logo, no real building copied): see `src/finale-art.js`.
 - **Kyrise's 16x16 RPG Icon Pack (V1.2)** by **Kyrise** (OpenGameArt,
   `assets/vendor/kyrise-16x16-rpg-icons/`) -- **CC BY 4.0, attribution required**:

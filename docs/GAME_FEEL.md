@@ -410,6 +410,17 @@ The ending's celebration, between the box and the card (docs/STORY.md "The box a
   (a throw-away script: the candle phase, a blowing frame and two firework frames). The real thing needs a look in a browser (`npm run qa:shots` has
   the finale frames `ending-03b..d`).
 
+## Selfie (wow idea W6)
+
+P takes a selfie, only in free control (the same "does anything own the screen?" test the moments use, plus 0.3 s of free control; anything else, including a
+second P while one is running, is a silent no-op). It never freezes her. The sequence is under 1.6 s: one white flash (a single fade, gentler with reduced motion)
+with a shutter click, a tilted polaroid card sliding up in the bottom-left corner ("Selfie, <map name>"), the toast "Selfie saved", and a PNG download named
+`selfie-<map>-<n>.png` (a 4:3 crop of the game view around her, pulled halfway towards the friends within about 6 tiles, magnified 2x, on a white polaroid frame).
+The renderer's snapshot includes every scene, so the UI scene is hidden for exactly the one frame that is captured and shown again on `postrender`: the HUD is
+not in the picture. If the browser refuses the download the card still shows and the toast says "Selfie taken (couldn't save a file here)". Everything it makes is
+destroyed when it ends or when the scene shuts down (with a scene-clock and a wall-clock failsafe). `?selfie=0` turns it off (e2e specs do). Code: `src/selfie.js`,
+tests: `tests/unit/selfie.test.js`.
+
 ## What to check before calling a new screen "done"
 
 Beyond `npm test` green and a look with `npm run qa:shots` (docs/TESTING.md, docs/QA_PLAN.md):

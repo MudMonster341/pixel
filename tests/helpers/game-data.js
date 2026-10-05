@@ -19,6 +19,8 @@ const SCRIPTS = [
   'src/daylight.js',
   // The juice pass (src/juice.js): the sparkle/shake/confetti/emote plans, pure; its drawing helpers only touch Phaser when called.
   'src/juice.js',
+  // Selfie mode (src/selfie.js): the crop rectangle, file name, caption, polaroid layout, timeline and the "may she take one now" rule, pure; the drawing/saving half only touches Phaser and the DOM when called.
+  'src/selfie.js',
   // M5 sound (docs/ROADMAP.md): the SOUNDS registry + AudioManager (src/audio.js) are pure data/logic
   // -- AudioManager.game stays null under this sandbox (nothing ever calls .init()), so every method
   // that touches Phaser is a guarded no-op, safe to load here the same as everything else in this list.

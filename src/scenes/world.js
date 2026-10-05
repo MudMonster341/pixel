@@ -251,6 +251,12 @@ class WorldScene extends Phaser.Scene {
       if (!event.repeat && this.scriptRunner.isRunning) this.scriptRunner.skip();
     });
 
+    // W6 (src/selfie.js): P frames her and the friends near her, flashes, shows a polaroid card and downloads the PNG. The controller ends whatever
+    // it is doing (the preview, the one hidden HUD frame, the timers) when this scene shuts down, e.g. a door was walked through mid-sequence.
+    this.selfie = createSelfie(this);
+    this.input.keyboard.on('keydown-P', (event) => this.onSelfieKey(event));
+    this.events.once('shutdown', () => this.selfie.destroy());
+
     // Silently note whichever area/zone/building the spawn point is already inside (P4's location
     // banner), so arriving there doesn't fire a second, redundant banner right after the map's own
     // "map-entered" one below announces the map by name.
@@ -1227,6 +1233,28 @@ class WorldScene extends Phaser.Scene {
     this.updateAmbient(time);
     this.updateAnimals(time, delta);
     this.syncGameState();
+  }
+
+  // P: a selfie (src/selfie.js), only while she is in free control: the same "does anything own the screen?" test the moments use (a dialog, any
+  // script or moment, a door/warp walk, the pause menu, the journal, the map, a mini-game/cutscene/ending scene that paused or stopped this one)
+  // plus a short spell of free control; otherwise a silent no-op. A second P during one is ignored. Typing into the dev feedback panel is not a selfie.
+  onSelfieKey(event) {
+    if (event.repeat) return;
+    const target = event.target;
+    if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || '') || target.isContentEditable)) return;
+    const ui = this.scene.get('ui');
+    const allowed = selfieAllowed({
+      enabled: selfieEnabled(),
+      sceneActive: this.sys.isActive(),
+      hasPlayer: Boolean(this.player && this.player.active && this.cameras.main),
+      uiReady: Boolean(ui && ui.tutorial && ui.dialog),
+      transitioning: this.transitioning,
+      scriptRunning: this.scriptRunner.isRunning,
+      uiBlocking: Boolean(ui && ui.isBlocking()),
+      selfieBusy: this.selfie.busy,
+      freeSeconds: this.freeSeconds,
+    });
+    if (allowed) this.selfie.take();
   }
 
   // Keeps GameState's map/position/facing current every frame, so a save taken at any moment (or

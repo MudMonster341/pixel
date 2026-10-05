@@ -31,7 +31,7 @@ const { FEEDBACK_DIR } = require('./paths');
 // save tests, ...) see a key change hands the instant she wins it, without having to actually play a
 // platformer/flyer/tower-climb session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
 // turn the real thing back on.
-async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false, moments = false, daylight = false, juice = false } = {}) {
+async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false, moments = false, daylight = false, juice = false, selfie = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -48,6 +48,7 @@ async function openGame(page, { dev = false, map = 'meadow', cutscene = false, s
   if (!moments) params.set('moments', '0');
   if (!daylight) params.set('daylight', '0'); // src/daylight.js daylightEnabled()
   if (!juice) params.set('juice', '0'); // src/juice.js juiceEnabled(): no key sparkle, shake, confetti or emotes (they add objects and move the camera)
+  if (!selfie) params.set('selfie', '0'); // src/selfie.js selfieEnabled(): P does nothing (it would flash, hide the HUD for a frame and start a download); a spec about selfies passes `selfie: true`
   // `?audio=0` (src/maplogic.js audioEnabled()): skips decoding several MB of real music on every
   // single test's fresh page load (docs/ROADMAP.md M5) -- a pure performance switch, since every
   // AudioManager method already no-ops safely with nothing loaded. tests/e2e/audio.spec.js passes
@@ -194,7 +195,7 @@ function feedbackCli(args) {
 // do: most title-flow specs want Play to land straight on 'boot', same as before the M3a opening
 // (Mustafa's greeting/name entry/customisation/bus arrival) existed. tests/e2e/intro.spec.js passes
 // `intro: true` to exercise that chain of scenes itself.
-async function openTitle(page, { map, save = false, profile, intro = false, minigames = false, audio = false, moments = false, daylight = false, juice = false } = {}) {
+async function openTitle(page, { map, save = false, profile, intro = false, minigames = false, audio = false, moments = false, daylight = false, juice = false, selfie = false } = {}) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -209,6 +210,7 @@ async function openTitle(page, { map, save = false, profile, intro = false, mini
   if (!moments) params.set('moments', '0'); // src/moments.js, see openGame()'s own comment
   if (!daylight) params.set('daylight', '0'); // src/daylight.js, see openGame()'s own comment
   if (!juice) params.set('juice', '0'); // src/juice.js, see openGame()'s own comment
+  if (!selfie) params.set('selfie', '0'); // src/selfie.js, see openGame()'s own comment
   if (!audio) params.set('audio', '0'); // src/maplogic.js audioEnabled(), see openGame()'s own comment
   await page.goto(`/?${params.toString()}`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));

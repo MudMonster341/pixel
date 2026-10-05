@@ -86,6 +86,13 @@ MP3 plays in Safari, Chrome, Firefox and Edge. So, **at bundle build time only**
   tag plays the Info frame as 26 ms of silence: the same small gap an untagged MP3 would have, never a failure.
   Not checked here: how Safari/Chrome themselves loop the result (no browser may run during the build phase).
 
+## Selfie download from file://
+
+P (selfie mode, `src/selfie.js`) saves a PNG through a hidden `<a download>` pointing at a `blob:` URL made from a canvas (`canvas.toBlob`, with a `data:` URL
+fallback). Both work from `file://` with no server, and the bundle's shim passes non-registry blobs through untouched. If a browser blocks the download the game
+shows the preview card and the toast "Selfie taken (couldn't save a file here)" instead of failing. Safari's exact behaviour (it may open the image in a new tab
+rather than save it) has not been checked on a real MacBook.
+
 ## Which assets are embedded
 
 Derived from what the game actually loads, never a hand-kept list:

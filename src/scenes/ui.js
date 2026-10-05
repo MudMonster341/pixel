@@ -1205,6 +1205,7 @@ const CONTROLS = [
   ['M', 'Show/hide minimap'],
   ['N / CLICK MAP', 'Full-screen map'],
   ['J', 'Journal'],
+  ['P', 'Take a selfie'], // W6 (src/selfie.js)
   ['ESC', 'Pause'],
 ];
 

@@ -73,7 +73,7 @@ SECRET DOOR
 | Deadline | 2 to 4 weeks from 2026-09-20 |
 | Art | Keep the 16 px tile grid, **redraw everything** to Pokémon standard: characters with faces and shading, classy UI boxes, animations |
 | Map | The OpenStreetMap-based campus stays. **Minor enhancements only** |
-| Mini-games | Three, one per key: platformer, flappy-style flyer, tower climb (Room 195, FB-0074), each with a score target |
+| Mini-games | Three, one per key: the hero fight (Physics Lab, FB-0066), flappy-style flyer, tower climb (Room 195, FB-0074), each with a score target |
 | Card media | The owner supplies **photos and a video** in `assets/card/` (never committed) |
 | Delivery | A Windows **.exe** with an icon ([ADR 0010](../decisions/0010-ship-as-windows-exe-and-web-build.md)), web build kept for dev |
 | How the work runs | A **scheduled loop** over [ROADMAP.md](ROADMAP.md) ([ADR 0011](../decisions/0011-autonomous-roadmap-loop.md)) |

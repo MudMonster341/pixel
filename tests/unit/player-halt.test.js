@@ -117,7 +117,7 @@ test('FB-0072: a door that triggers while she runs stops her before the walk-in 
 });
 
 test('FB-0072: starting a mini-game, a cutscene or the box opening halts her too (the world is paused under them)', () => {
-  for (const [method, args] of [['launchMinigame', ['platformer', () => {}]], ['playCutscene', ['gate2']], ['playBoxOpening', []]]) {
+  for (const [method, args] of [['launchMinigame', ['hero', () => {}]], ['playCutscene', ['gate2']], ['playBoxOpening', []]]) {
     const p = runningPlayer();
     const scene = sceneWith(p, 'left');
     const log = [];

@@ -5,7 +5,7 @@
 // Quality loop pass (Mini-games category, rated 4/10 -- "the hero is a speck"): she now draws at
 // HERO_SCALE (framework-scene.js, 3x, matching the main game's own pixel scale) via a plain
 // `sprite.setScale()`. FL_* below and flappy-logic.js's own gravity/flap constants were authored at a
-// smaller "compact" scale first and then uniformly multiplied by 3 (see platformer.js's own file
+// smaller "compact" scale first and then uniformly multiplied by 3 (the retired platformer.js's own file
 // header for why that preserves every fairness ratio) -- including FLAPPY_BIRD_RADIUS, which now
 // scales with HERO_SCALE too (the platformer keeps its own hitbox roughly matching HERO_SCALE the
 // same way). The backdrop is one richer, brighter, more layered image now (tools/make-minigame-art.js,

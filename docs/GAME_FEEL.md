@@ -283,7 +283,7 @@ read as *this* game's UI wrapped around it, not a different one bolted on. Rules
   content (rule 1 below, unchanged). A player shouldn't be able to tell a mini-game's cards were built
   by different code than the rest of the UI.
 - **A mini-game's own "hero" is the lead herself** (art pass, coordinator brief 2026-09-22):
-  the platformer and the flyer both draw a real `this.add.sprite(x, y, 'player', frame)`
+  the flyer (and the retired platformer) draw a real `this.add.sprite(x, y, 'player', frame)`
   (`ensurePlayerAnims()`, `src/minigames/framework-scene.js`) using the exact texture
   `src/scenes/world.js` does, walk/idle animations and all -- not a stand-in shape. Because that
   texture is loaded once, at boot, under whichever clothes-colour swatch she actually picked
@@ -323,9 +323,8 @@ rule set. What changed:
   tile across a scrolling level. `npm run assets` regenerates it; `tests/unit/assets.test.js` checks
   it's committed and up to date, the same rule every other generated-art file already follows.
 - **Foreground furniture is drawn to match its room**, not left as flat colored bars: the
-  platformer's platforms are metal lab-bench cases with a steel top edge and short legs
-  (`PlatformerScene.drawPlatform()`), its "coins" are cyan charge-cell orbs and its goal is a lab
-  door with a glowing lamp, not a flag; the flyer's obstacles are server racks with a cold highlight
+  hero fight's platforms are steel scaffold decks with legs, a grating and a hazard stripe, painted into its rooftop backdrop from the
+  rules (`tools/make-minigame-art.js` reads `HV_PLATFORMS`); the flyer's obstacles are server racks with a cold highlight
   edge and small LEDs that blink independently of each other (`applyBlink()`, each LED's own random
   `invert` flag, well under the 3Hz flash limit below) instead of a flat grey column.
 - **A mini-game card is sized from its *wrapped* content**, not just its paragraph count
@@ -338,7 +337,7 @@ rule set. What changed:
   (`MinigameBaseScene.setScore()`), a small camera shake on a loss (`lose()`, `shake(160, 0.006)` --
   felt, not jarring), a bounced-in real key icon (`ITEMS[def.item]`, the same Kyrise art a key
   station's own pickup uses) on the win card, and the card's own fade-and-ease-up entrance described
-  above. The platformer adds one effect only it needs -- a landing puff
+  above. The platformer-style games (the hero fight, the tower) add one effect only they need -- a landing puff
   (`spawnDustPuff()`, shared in `framework-scene.js` so a future game can reuse it too).
 - **The tower climb (Room 195, FB-0074) is gentle and telegraphed**: three hearts, slow hazards (about
   80 px/s), a jump that clears one comfortably (a window of about 200 ms), and a wobble plus a puff on
@@ -346,6 +345,13 @@ rule set. What changed:
   invulnerability with one light red pulse over the screen, never a knockback to the start. The win is a
   short closing beat (the prince leans out, the chameleon goes green, pink, green, a heart pops) before
   the shared win card; a round that runs past 150 s counts as a win, so nobody is stuck.
+- **The hero fight (Physics Lab, FB-0066) is intense but gentle and telegraphed**: three hearts and a 1.5 s blink after a hit, slow bolts
+  (190 to 230 px/s), the shadow bat takes 9 hits, and every volley (an aimed bolt, another, a 3-bolt fan, a slow sweep) starts with a 0.6 s
+  wind-up: he raises his arms, a ring swells round him once, and a shield bubble shows (the shield is also up for 1.8 s after a hit, so a
+  shot at a bubble does nothing: "bubble up: dodge, bubble down: shoot"). He hovers low for the aimed bolts and rises for the fan and the
+  sweep, so she has to hop onto a platform to hit him. The minion is one shot; it drops one heart per round. After the last hit he
+  slumps and says "Fine, fine. Take it." (1.8 s), the key drops, she walks to it. Z shoots (the shell's card keys stay Enter, Space, E,
+  Up, Down, W, S), the cover picture sits behind the intro card, and nothing flashes faster than 2.5 Hz.
 
 ## What to check before calling a new screen "done"
 

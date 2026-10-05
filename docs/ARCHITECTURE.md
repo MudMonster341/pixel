@@ -221,9 +221,14 @@ never needs to know about:
   winning) stops the list right there, the same as a full bag already did -- no key is ever handed
   over. `'lost'` never reaches the story at all: it's the shell's own internal retry state, since
   retrying is unlimited until one of those two terminal outcomes.
-- **Each game's own file** under `src/minigames/` (`platformer.js`, `flappy.js`, `tower.js`) only
+- **Each game's own file** under `src/minigames/` (`hero.js`, `flappy.js`, `tower.js`) only
   draws the level and forwards input; the actual rules are pure, Phaser-free modules
-  (`platformer-physics.js`, `flappy-logic.js`, `tower-logic.js`) unit-tested without a browser.
+  (`platformer-physics.js`, `hero-logic.js`, `flappy-logic.js`, `tower-logic.js`) unit-tested without a browser.
+  The Physics Lab's game is the hero fight (FB-0066): a masked kitten hero (a generic stand-in) against a bat-eared "shadow bat" who
+  shoots at her in telegraphed volleys, plus a roaming minion; `hero-logic.js` holds the whole round as a pure function of the inputs
+  (nothing random: the volley plan, the wind-up, hearts and the 1.5 s invulnerability, the shield, the minion and its one heart, the key,
+  the 150 s failsafe) on top of `platformer-physics.js`'s feel helpers; Z shoots. Its intro card sits on a cover picture (`def.cover`,
+  `hero-cover.png`) that the shell draws behind a card moved to the bottom of the screen.
   Room 195's game is the tower climb (a "reverse Rapunzel", FB-0074): `tower-logic.js` holds the whole
   round as a pure function of a seed and the inputs (ladders, the seeded gargoyle throws, rolling and
   dropping hazards, hearts, the win zone, the 150 s failsafe) on top of `platformer-physics.js`'s feel

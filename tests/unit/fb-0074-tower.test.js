@@ -52,7 +52,7 @@ test('FB-0074: the current docs say tower climb (the story table, the architectu
 test('FB-0074: the Room 195 game is the tower: id tower, registered with the framework and the scene list, no tetris id anywhere', () => {
   const { MINIGAMES, STORY } = loadGameData();
   assert.equal(MINIGAMES.tetris, undefined);
-  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['flappy', 'platformer', 'tower']);
+  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['flappy', 'hero', 'tower']);
   const def = MINIGAMES.tower;
   assert.equal(def.id, 'tower');
   assert.equal(def.sceneKey, 'minigame-tower');
@@ -62,7 +62,7 @@ test('FB-0074: the Room 195 game is the tower: id tower, registered with the fra
   assert.equal(def.scoreTarget, 5, 'the tower has five floors');
   assert.equal(STORY.keyStations.room195.minigame, 'tower');
   // the scene is created and the gameplay-scene list (HUD/hotbar gating) knows its key
-  assert.match(read('src', 'main.js'), /PlatformerScene, FlappyScene, TowerScene,/);
+  assert.match(read('src', 'main.js'), /HeroScene, FlappyScene, TowerScene,/);
   assert.match(read('src', 'scenes', 'ui.js'), /'minigame-flappy', 'minigame-tower'\]/);
   assert.match(read('src', 'minigames', 'tower.js'), /super\('minigame-tower'\)/);
 });

@@ -298,6 +298,17 @@ const AMBIENT = {
         "Welcome to the Physics Lab! Fair warning: gravity here is taken very seriously.",
         "Mind the jumps. I fell off three times. Okay, more.",
       ] },
+    // FB-0066: students working in the lab (so it is not empty while Taru fights the shadow bat for the key). Checked against the real map
+    // (tests/unit/fb-0066-hero.test.js, story-clearance.test.js): every spot is at least 3 tiles from the key bench (5,7), never on a door
+    // or a one-tile lane (the desk aisles at odd x in rows 9-15 are lanes, so everyone is in the open: the two-row strip along the top wall
+    // and the little three-wide nook on the right), and nobody seals anything (the top strip is also reachable by the x 4 aisle).
+    // One at the bench by the pillar at the top (11,5: not (12,4), the one-tile gap beside the pillar, where she would seal the strip), a pair
+    // chatting in the right-hand nook, one walking the top strip.
+    { id: 'mb3-amb-lab-bench', character: 'ambient-d', role: 'cs-student', kind: 'idle', x: 11, y: 5, facing: 'right' },
+    { id: 'mb3-amb-lab-chat-1', character: 'ambient-b', role: 'quiz-club-member', kind: 'chat', x: 17, y: 13, facing: 'right', pairId: 'mb3-lab-chat' },
+    { id: 'mb3-amb-lab-chat-2', character: 'ambient-f', role: 'cultural-club-member', kind: 'chat', x: 18, y: 13, facing: 'left', pairId: 'mb3-lab-chat' },
+    { id: 'mb3-amb-lab-walk', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 45, pauseMs: 900,
+      waypoints: [{ x: 14, y: 5 }, { x: 19, y: 5 }] },
     // P4b: moved from (33,14), which is the lift's front tile (the lift doors are on x 33..34 of the stairwell's top wall), to the open floor below.
     { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 34, y: 19, facing: 'down' },
   ],

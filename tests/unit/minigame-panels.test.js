@@ -1,5 +1,5 @@
 // Mini-game panel defects from the 2026-10-04 sweep: D09 (win card key icon over the message), D08 (Flappy's in-play
-// furniture behind the cards) and D02/D03 (platformer HUD/cards following the scrolled camera). The win card's spacing is
+// furniture behind the cards) and D02/D03 (the old platformer's HUD/cards following its scrolled camera). The win card's spacing is
 // pure data (src/minigames/framework-data.js winCardLayout) and is tested for real. The scenes themselves need Phaser and a
 // browser, so for D08/D02/D03 the checks below pin the source that implements the fix (the same approach
 // story-clearance.test.js uses to read a constant out of world.js); the visual result is for the coordinator to look at.
@@ -58,8 +58,6 @@ test('D02/D03: every shared mini-game UI object (HUD, cards, dim overlay, win ic
   assert.match(s, /const flash = [^\n]*setScrollFactor\(0\)/, 'win flash');
 });
 
-test('D02/D03: the platformer really does scroll its camera (so the pinning above is needed), while the tower and Flappy never do', () => {
-  assert.match(src('platformer.js'), /cameras\.main\.startFollow\(/);
-  assert.doesNotMatch(src('flappy.js'), /startFollow|scrollX\s*=/);
-  assert.doesNotMatch(src('tower.js'), /startFollow|scrollX\s*=/);
+test('D02/D03: no mini-game scrolls its camera any more (the hero fight, the tower and Flappy are single screens); the pinning above stays as the safe default', () => {
+  for (const file of ['hero.js', 'flappy.js', 'tower.js']) assert.doesNotMatch(src(file), /startFollow|scrollXs*=/, file);
 });

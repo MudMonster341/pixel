@@ -40,6 +40,8 @@ money.
 
 **Also in use (FB-0074, 2026-10-05): the tower climb's art.** `tools/make-minigame-art.js` crops the orange barrel (tile col 32, row 3, 8x12 px) and the fence-plank tile (374,238) from the Roguelike Modern City sheet (CC0): the barrel is turned on its side to roll, the plank pixels form the beams. The ladder, gargoyle, flower pot, chameleon, hearts and the backdrop are code-composed from the project palette; no new pack was needed (the CC0 "tile set pack 1" with a ladder is not vendored here).
 
+**Also in use (FB-0066, 2026-10-05): the Physics Lab hero fight's roof.** `tools/make-minigame-art.js` crops two grey roof-panel tiles (16x16 at sheet x 136 and 153, y 0) from the same Roguelike Modern City sheet (CC0) for the rooftop floor of the arena and of the cover picture. The kitten hero, the shadow bat, the minion, the bolts, the hearts, the skyline, the sunset and the title lettering are code-composed from the project palette (generic stand-ins, ADR 0021; nothing from the packs).
+
 I built three small mockups from the four downloaded packs, at the game's real render scale (16px
 tile × zoom 3 = 48px on screen), and looked at them next to the current game. They're saved at:
 

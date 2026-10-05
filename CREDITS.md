@@ -42,6 +42,8 @@ require. The raw packs are not in this repository; download them again if you ne
   table and docs/STYLE_GUIDE.md's "Campus kit" for exactly which tile uses which source rect.
   Also (FB-0074, `tools/make-minigame-art.js`): the orange barrel (turned on its side) rolling down Room 195's
   tower climb, and the fence-plank pixels the tower's wooden beams are drawn from.
+  Also (FB-0066, `tools/make-minigame-art.js`): two of its grey roof-panel tiles (sheet columns 8-9, row 0) as the rooftop floor of the Physics Lab's hero
+  fight and of its cover picture.
   **No longer used** for the road-facing `kerb*` tiles as of coordinator review round 3 (2026-09-27):
   they used to blit this pack's own brick paver-with-gutter-line tile (`PACK.kerbPaver`), recolored to
   a salmon-brick ramp, as the whole tile -- the actual reason the avenue still read as brick after

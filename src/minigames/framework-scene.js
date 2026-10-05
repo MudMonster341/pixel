@@ -1,7 +1,7 @@
 // The shared shell every mini-game scene is built on (docs/ROADMAP.md M4): an intro card (name, how
 // to play, the score target), a HUD while playing, a game-over card (score, Retry/Quit, and "skip
 // and take the key anyway" once 3 attempts have failed) and a win card that hands the key over -- the
-// same four states for all three games, so src/minigames/platformer.js / flappy.js / tower.js only
+// same four states for all three games, so src/minigames/hero.js / flappy.js / tower.js only
 // implement the actual gameplay (buildScene()/startAttempt()/playUpdate(), see the bottom of this
 // file) and never redraw a card or re-invent the pause/attempt/skip bookkeeping
 // (src/minigames/framework-data.js).
@@ -16,10 +16,10 @@
 
 const MG_FADE_MS = 250;
 
-// Pins UI objects to the screen instead of the world (defects D02/D03, 2026-10-04): the platformer's main camera
-// scrolls to follow the hero, so the HUD, the cards, the dim overlay and the win flash were drawn in world space and
-// slid off-screen with it. scrollFactor 0 keeps them where they are drawn. Harmless in the tower and Flappy, whose
-// camera never moves. Returns its argument so it can wrap an expression.
+// Pins UI objects to the screen instead of the world (defects D02/D03, 2026-10-04): the old platformer's main camera
+// scrolled to follow the hero, so the HUD, the cards, the dim overlay and the win flash were drawn in world space and
+// slid off-screen with it. scrollFactor 0 keeps them where they are drawn. Harmless in the hero fight, the tower and Flappy, whose
+// camera never moves (and a safe default for any future game that scrolls). Returns its argument so it can wrap an expression.
 function pinToScreen(parts) {
   (Array.isArray(parts) ? parts : [parts]).forEach((part) => part.setScrollFactor(0));
   return parts;
@@ -75,8 +75,8 @@ class MinigameBaseScene extends Phaser.Scene {
     this.hud.text.setText(`${label}: ${this.score} / ${this.def.scoreTarget}`);
   }
 
-  // FB-0042: a short, self-fading message shown inside the mini-game itself (e.g. the platformer's
-  // "collect all the charge cells first!" when she reaches the door too early) -- the game's own
+  // FB-0042: a short, self-fading message shown inside the mini-game itself (e.g. the hero fight's
+  // "bubble up: dodge" hint on the first try) -- the game's own
   // global 'toast' event goes to UIScene's Toast, which would be hidden behind this scene's own
   // opaque backdrop while a mini-game is on top (world.js launchMinigame() only pauses 'world', not
   // 'ui', but every mini-game scene renders above both), so a mini-game that needs a quick message
@@ -205,7 +205,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState === 'playing') this.playUpdate(time, delta);
   }
 
-  // ---------- subclass contract (src/minigames/platformer.js, flappy.js, tower.js) ----------
+  // ---------- subclass contract (src/minigames/hero.js, flappy.js, tower.js) ----------
   // buildScene(): build the persistent game objects, once, the first time the intro is dismissed.
   // startAttempt(): (re)set the game to its starting position -- called at the start of every
   //   attempt, including every retry, so it must fully reset anything buildScene() doesn't recreate.
@@ -261,7 +261,9 @@ class MinigameCard {
   // confirmed with ENTER/SPACE -- item 0 starts highlighted, so the card's own default action
   // (Start/Retry/Continue) is always exactly one keypress away, never a menu to first navigate into
   // (docs/ROADMAP.md M4 "retrying must be one keypress").
-  show({ title, paragraphs = [], items }) {
+  // cover (FB-0066, optional): a full-screen picture behind the card (def.cover = { key, file }, loaded by the game's own preload()); the card then
+  // sits at the bottom of the screen so the picture shows above it, and the dim backdrop is nearly clear so the picture keeps its colours.
+  show({ title, paragraphs = [], items, cover = null }) {
     this.hide();
     const scene = this.scene;
     const lineH = MG_CARD_LINE_H;
@@ -298,7 +300,7 @@ class MinigameCard {
     const footerH = 30;
     const h = headerH + paraH + itemH + footerH;
     const x = Math.round((GAME_WIDTH - w) / 2);
-    const y = Math.round((GAME_HEIGHT - h) / 2);
+    const y = cover ? GAME_HEIGHT - h - 16 : Math.round((GAME_HEIGHT - h) / 2);
     this.box = { x, y, w, h };
 
     // fillAlpha stays 1 here on purpose: the fade-in below tweens the *GameObject's* alpha (0 -> 0.6)
@@ -328,6 +330,10 @@ class MinigameCard {
       .setOrigin(0.5).setDepth(202);
 
     this.parts = pinToScreen([dim, panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer]);
+    const coverImage = cover && scene.textures.exists(cover.key)
+      ? scene.add.image(0, 0, cover.key).setOrigin(0, 0).setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(199).setAlpha(0)
+      : null;
+    if (coverImage) this.parts.push(...pinToScreen([coverImage]));
     this.refresh();
 
     // Eased card transition (docs/GAME_FEEL.md "nothing is a flat instant cut"): everything fades in
@@ -336,7 +342,8 @@ class MinigameCard {
     const content = [panel, titleText, ...paraTexts, ...this.itemCursors, ...this.itemTexts, footer];
     dim.setAlpha(0);
     content.forEach((part) => { part.setAlpha(0); part.y += 10; });
-    scene.tweens.add({ targets: dim, alpha: 0.6, duration: 160 });
+    scene.tweens.add({ targets: dim, alpha: coverImage ? 0.1 : 0.6, duration: 160 });
+    if (coverImage) scene.tweens.add({ targets: coverImage, alpha: 1, duration: 200 });
     scene.tweens.add({ targets: content, alpha: 1, y: '-=10', duration: 200, ease: 'Cubic.easeOut' });
 
     for (const key of ['UP', 'W']) this.on(`keydown-${key}`, (e) => { if (!e.repeat) this.move(-1); });
@@ -381,6 +388,7 @@ class MinigameCard {
       title: def.name.toUpperCase(),
       paragraphs: [...def.instructions],
       items: [{ label: 'START (ENTER)', onSelect: onStart }],
+      cover: def.cover,
     });
   }
 
@@ -405,9 +413,9 @@ class MinigameCard {
       // leaves room for (added after show() below, once the panel's real box (x/y/w) is known): the icon's position
       // and the message row come from winCardLayout() (src/minigames/framework-data.js), whose test checks the icon
       // never overlaps the message line under it (defect D09).
-      // `def.name` already reads as a challenge ("Physics Lab Trial", "ICL Server Dash", "Room 195
-      // Tower Rescue") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
-      // ("You beat the Physics Lab Trial trial!").
+      // `def.name` already reads as a challenge ("Physics Lab Showdown", "ICL Server Dash", "Room 195
+      // Tower Rescue") -- no trailing "showdown!" appended, or the Physics Lab's own name would double up
+      // ("You beat the Physics Lab Showdown showdown!").
       paragraphs: [...Array(MG_WIN_BLANK_LINES).fill(''), skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
       items: [{ label: 'CONTINUE (ENTER)', onSelect: onContinue }],
     });
@@ -434,8 +442,8 @@ class MinigameCard {
   }
 }
 
-// The hero in the platformer/flyer is the lead herself (coordinator brief, 2026-09-22: "the hero is
-// the lead, not a pink rectangle"), not a stand-in shape -- both src/minigames/platformer.js and
+// The hero in the flyer (and in the retired platformer) is the lead herself; the hero fight draws its own kitten (src/minigames/hero.js) (coordinator brief, 2026-09-22: "the hero is
+// the lead, not a pink rectangle"), not a stand-in shape -- both the old platformer.js and
 // flappy.js draw a real `this.add.sprite(x, y, 'player', frame)` using the exact same 'player'
 // texture src/scenes/world.js does. That texture is already the *right* one for whichever clothes
 // colour she picked on the customisation screen (src/main.js BootScene loads it as
@@ -452,7 +460,7 @@ class MinigameCard {
 const HERO_WALK_FRAMES = { left: [17, 18, 19, 20, 21, 22], right: [25, 26, 27, 28, 29, 30] };
 const HERO_IDLE_FRAMES = { left: [16, 23], right: [24, 31] };
 // A sensible still frame per direction for a subclass that wants to place its hero sprite before its
-// first anims.play() call (platformer.js/flappy.js).
+// first anims.play() call (flappy.js).
 const HERO_IDLE_FRAME = { left: 16, right: 24 };
 
 // A small landing puff (coordinator brief, "juice": "a small landing puff in the platformer") --
@@ -468,7 +476,7 @@ function spawnDustPuff(scene, x, y) {
   }
 }
 
-// Quality loop fix (Mini-games, rated 4/10 -- "the hero is a speck"): platformer.js and flappy.js
+// Quality loop fix (Mini-games, rated 4/10 -- "the hero is a speck"): the old platformer and flappy.js
 // draw the hero/bird at HERO_SCALE (3x, matching the main game's own `ZOOM`, src/state.js) via a
 // plain `sprite.setScale(HERO_SCALE)` -- camera zoom turned out to be unreliable for this scene setup
 // (traced through many qa:shots screenshots: the camera's own zoom/scroll properties always read back
@@ -478,7 +486,7 @@ function spawnDustPuff(scene, x, y) {
 const HERO_SCALE = 3;
 
 // Juice (coordinator brief: "a squash and stretch on jump and land... keep it subtle") -- a quick,
-// shared tween shape for the hero's own sprite so platformer.js's jump/land and flappy.js's flap can
+// shared tween shape for the hero's own sprite so a jump/land (hero.js, tower.js) and flappy.js's flap can
 // all reuse it instead of hand-rolling their own. `mode: 'stretch'` (a takeoff -- taller, thinner,
 // leaving the ground) or `'squash'` (an impact -- shorter, wider, landing/settling); both spring back
 // to `baseScale` (not bare 1 -- the hero draws at HERO_SCALE, so resetting to 1 would suddenly shrink

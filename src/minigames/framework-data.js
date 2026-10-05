@@ -33,17 +33,22 @@ const MG_INSTRUCTION_MAX_CHARS = 42;
 // win card's key-icon flourish (src/minigames/framework-scene.js `addWinKeyIcon()`) -- awarding the
 // key for real is still entirely src/dialog.js's `minigame` action's job, this is decoration.
 const MINIGAMES = {
-  platformer: {
-    id: 'platformer',
-    name: 'Physics Lab Trial',
-    sceneKey: 'minigame-platformer',
+  // FB-0066: the Physics Lab's game is the hero fight (src/minigames/hero.js + hero-logic.js): a masked kitten hero (a generic stand-in) against a
+  // dark bat-eared "shadow bat" who shoots at her, with a roaming minion; it replaced the old run-and-collect platformer. The score is the hits she
+  // has landed on him (he takes scoreTarget = HV_VILLAIN_HP of them); the win is beating him and taking the key he drops. `cover` is the picture
+  // behind the intro card (tools/make-minigame-art.js hero-cover.png): the card sits at the bottom of the screen so the cover shows above it.
+  hero: {
+    id: 'hero',
+    name: 'Physics Lab Showdown',
+    sceneKey: 'minigame-hero',
     item: 'keyPhysicsLab',
+    cover: { key: 'hero-cover', file: 'assets/minigames/hero-cover.png' },
     instructions: [
-      'ARROWS / WASD: MOVE   SPACE: JUMP',
-      'GRAB ALL 6 CELLS, THEN REACH THE DOOR',
+      'ARROWS: MOVE  SPACE: JUMP  Z: BOLT',
+      'BEAT THE SHADOW BAT: 9 HITS',
     ],
-    scoreTarget: 6,
-    scoreLabel: 'CELLS',
+    scoreTarget: 9,
+    scoreLabel: 'HITS',
   },
   flappy: {
     id: 'flappy',

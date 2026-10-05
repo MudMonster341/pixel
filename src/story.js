@@ -86,14 +86,14 @@ const STORY = {
 
   // The three key rooms (docs/STORY.md "Key rooms" table): a desk/bench interactable, not a floor
   // pickup -- pressing E starts the room's own moment. `minigame` names the real M4 mini-game this
-  // key is won from (platformer / flappy / tower, per the table, src/minigames/) -- the `take` entry
+  // key is won from (hero fight / flappy / tower, per the table, src/minigames/) -- the `take` entry
   // below runs it *before* `give`/`key` (src/dialog.js's `minigame` action suspends the rest of the
   // list until the mini-game reports an outcome), so the key/journal/toast lines only fire once she's
   // actually won it (or taken the after-3-losses skip gift, docs/STORY.md "nobody may be locked out").
   keyStations: {
     physicsLab: {
       name: 'Physics Lab',
-      minigame: 'platformer',
+      minigame: 'hero',
       item: 'keyPhysicsLab',
       takenLine: 'A small brass key sits on the lab bench, tagged "LUG hunt".',
       journal: 'Found a key on a bench in the Physics Lab.',

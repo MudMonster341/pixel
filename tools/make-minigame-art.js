@@ -3,29 +3,14 @@
 // of the art." Same technique as tools/make-cutscenes.js -- a tiny Img/PNG writer, no dependencies,
 // no photos copied -- just a second illustration set alongside the story cutscenes.
 //
-// Quality loop pass (Mini-games category, "the lab and the server room are dark and muddy... add
-// depth: a layered parallax backdrop"): the platformer scrolls a real camera across a level wider
-// than one screen (src/minigames/platformer.js), so it gets *true* two-layer parallax -- a static far
-// wall (canvas-sized, pinned like before) plus a mid shelving/equipment layer sized to the whole level
-// and scrolled at a fraction of camera speed (scrollFactor, set in platformer.js). Both layers are
-// generated here at a smaller "compact" scale (matching platformer.js's own compact level design, see
-// that file's header) and stretched 3x in-scene (setDisplaySize, crisp under pixelArt:true, src/
-// main.js) rather than authored at full canvas resolution. The flyer's own camera never scrolls (the
-// racks scroll past a fixed camera instead, flappy.js's own animation loop), so a second,
-// independently-moving layer wouldn't read as parallax there -- it gets one richer, brighter, more
-// layered backdrop instead (far sky/cable-tray band behind a dimmer distant rack row behind a
-// brighter nearer one), composed in one image the same way the old single-backdrop games did, just
-// brighter and busier, also generated compact and stretched 3x. Both games' own floor/foreground (the
-// actual near layer) stays code-drawn in their own scene file, tied 1:1 to real world position -- see
-// PF_* / FL_* constants there.
+// The ICL flyer's camera never scrolls (the racks scroll past a fixed camera instead, flappy.js's own
+// animation loop), so it gets one rich, layered backdrop (far sky/cable-tray band behind a dimmer distant
+// rack row behind a brighter nearer one), composed in one image, generated at a compact scale
+// (a 320x180-equivalent viewport, 1/3 of the real 960x540 canvas) and stretched 3x in-scene. Its own
+// floor/foreground stays code-drawn in the scene file (FL_* constants there).
 //
 // Run:  node tools/make-minigame-art.js   (also runs as part of `npm run assets`)
 // Output, in assets/minigames/:
-//   platformer-bg-far.png  320x180 (compact scale), pinned (scrollFactor 0): the Physics Lab's back
-//                           wall, warm lamp glow pools, a ceiling pipe run.
-//   platformer-bg-mid.png  PF_LEVEL_WIDTH x 180 (534 compact, = the real level width / 3),
-//                           scrollFactor ~0.4: shelving units and a specimen tank, spread across the
-//                           whole level so it has room to pan.
 //   flappy-bg.png           320x180 (compact scale), pinned: the ICL server room, brighter and more
 //                           layered than before -- cable tray, two depth-graded rack rows, a cool
 //                           ambient glow.
@@ -42,6 +27,21 @@
 //   tower-prince.png        64x24, four 16x24 frames: the prince (a short-haired student sheet from this project, so one
 //                           of our own recolours of the pack characters) with a gold crown: facing front (2 frames),
 //                           facing right (2 frames).
+//   hero-bg.png             480x270 (half scale, stretched 2x): the Physics Lab key's hero fight (FB-0066): a lab rooftop at
+//                           sunset. A pink-orange sky with a big pale sun and layered cloud bands, a dark city skyline, a
+//                           "PHYSICS LAB" sign, vents and a dish on the roof, the three scaffold platforms (read from
+//                           src/minigames/hero-logic.js HV_LEVEL, so art and rules cannot drift) and the roof itself (a crop
+//                           of the CC0 Kenney Roguelike Modern City roof tiles).
+//   hero-sprites.png        256x128, 32x32 cells (frame order = HVS_FRAME in src/minigames/hero.js): the kitten hero (idle x2,
+//                           run x4, jump, shoot, hurt, cheer), the shadow bat (idle x2, two wind-up poses, fire, hurt, down),
+//                           the robot-bat minion (two flaps, defeated), his bolt (2 frames), her star bolt (2), hearts, a spark,
+//                           a wind-up ring, a puff, a sparkle and his shield. GENERIC stand-ins (ADR 0021): a white kitten with
+//                           a pink bow, a purple mask and a teal cape; a dark bat-eared caped figure. Nothing is copied from any
+//                           real character. All code-composed from the project palette.
+//   hero-bar.png            80x10: the villain's health bar frame (its inside is transparent; the scene draws the fill behind it).
+//   hero-cover.png          480x270 (half scale, stretched 2x): the hero game's COVER (FB-0066 item M5), behind the intro card: a
+//                           sunset, a big pale sun, cloud bands, dark city skyline at the sides, a rooftop ledge in the foreground
+//                           with the two stand-ins posed close together (kitten left, shadow bat right) and a title banner.
 // `--out <dir>` writes elsewhere (tests check the files are up to date), matching the convention in
 // tools/make-assets.js / tools/make-cutscenes.js.
 const fs = require('fs');
@@ -50,15 +50,10 @@ const vm = require('vm');
 const { encodePNG } = require('./lib/png');
 const { decodePNG } = require('./lib/png-decode');
 
-// The compact scale the platformer/flyer backdrops are authored at (a 320x180-equivalent viewport,
-// 1/3 of the real 960x540 canvas -- src/state.js ZOOM=3) and the platformer's own compact level width
-// -- kept in sync with src/minigames/platformer.js's own compact-scale constants (both files' own
-// comments cross-reference this) by hand, the same trust the rest of this file already places in
-// matching constants across files (the tower is the exception: its level numbers are read straight from
-// src/minigames/tower-logic.js below).
+// The compact scale the flyer's backdrop is authored at (a 320x180-equivalent viewport, 1/3 of the real 960x540
+// canvas -- src/state.js ZOOM=3). The tower and the hero fight are authored at half scale instead (480x270).
 const VIEW_W = 320;
 const VIEW_H = 180;
-const PF_LEVEL_WIDTH = 534;
 
 class Img {
   constructor(w, h) {
@@ -158,93 +153,12 @@ class Img {
   }
 }
 
-// ---------- Physics Lab (platformer) ----------
-// Two layers now (see file header): a static far wall (viewport-sized) behind a scrolling mid layer
-// of shelving/a specimen tank (level-width sized). Both brightened well past the old single-image
-// version (owner: "dark and muddy") -- lighter wall tones, bigger/warmer lamp pools, and the shelving
-// itself uses a lit-tan tone instead of near-black silhouette so it actually reads as lab furniture
-// rather than a shadow. The floor is drawn by platformer.js itself now (a real, code-drawn near layer
-// tied to world position), not baked into either image.
-
-function buildPlatformerFar() {
-  const img = new Img(VIEW_W, VIEW_H);
-  const C = {
-    wallHi: '#5a4c3a', wallMid: '#463a2c', wallDeep: '#362c22',
-    lampGlow: '#ffe6b0', lampGlowDim: '#e0b25e',
-    pipe: '#4a3d2c', pipeHi: '#6b5a42',
-  };
-  // Brighter vertical gradient (was near-black at both ends) -- the wall now reads as lit stone/
-  // plaster, not a void, even between the lamp pools.
-  img.vGradient(0, VIEW_H - 1, [[0, C.wallMid], [0.45, C.wallHi], [1, C.wallDeep]]);
-
-  // Warm lamp fixtures along the ceiling, bigger and brighter glow pools than before.
-  const lamps = [55, 160, 265];
-  for (const lx of lamps) {
-    img.ellipse(lx, 0, 46, 90, C.lampGlow, 0.22);
-    img.ellipse(lx, 0, 26, 55, C.lampGlowDim, 0.28);
-    img.rect(lx - 7, 0, lx + 7, 4, C.pipe);
-    img.ellipse(lx, 5, 8, 3, C.lampGlow, 0.75);
-  }
-
-  // A ceiling pipe run, catching a highlight along its top edge (STYLE_GUIDE "one light source").
-  img.rect(0, 9, VIEW_W - 1, 12, C.pipe, 0.9);
-  img.rect(0, 9, VIEW_W - 1, 10, C.pipeHi, 0.5);
-  for (let x = 8; x < VIEW_W; x += 22) img.rect(x, 7, x + 2, 14, C.pipeHi);
-
-  return img;
-}
-
-function buildPlatformerMid() {
-  const img = new Img(PF_LEVEL_WIDTH, VIEW_H);
-  const C = {
-    shelf: '#7a6a4e', shelfHi: '#9c8862', shelfEdge: '#4a3f2e',
-    box: '#3a4a52', boxHi: '#5a7078',
-    tankGlass: '#4fa08c', tankLiquid: '#3f8f7c', tankBubble: '#d8f5ea', tankRim: '#5a4a34',
-  };
-
-  // Wall-mounted shelving units, evenly spaced across the whole level, each carrying a couple of
-  // equipment-box silhouettes -- a lit tan tone (not near-black) so it reads as furniture, with a
-  // highlight on each shelf's own top edge (the "clear top edge" the rubric asks platforms to have,
-  // echoed here in the set dressing too).
-  for (let sx = 20; sx < PF_LEVEL_WIDTH; sx += 78) {
-    const top = 24;
-    const bottom = 118;
-    img.rect(sx, top, sx + 46, top + 3, C.shelfHi);
-    img.rect(sx, top + 3, sx + 46, bottom, C.shelf);
-    for (let shelfY = top + 22; shelfY < bottom; shelfY += 30) {
-      img.rect(sx, shelfY, sx + 46, shelfY + 2, C.shelfEdge);
-      img.rect(sx, shelfY - 2, sx + 46, shelfY, C.shelfHi, 0.6);
-      for (let bx = sx + 4; bx < sx + 40; bx += 14) {
-        const bh = 8 + ((bx + shelfY) % 6);
-        img.rect(bx, shelfY - bh, bx + 9, shelfY - 1, C.box);
-        img.rect(bx, shelfY - bh, bx + 9, shelfY - bh + 2, C.boxHi);
-      }
-    }
-  }
-
-  // A glowing specimen tank every couple of shelf runs -- a lab centerpiece, repeated so it reads
-  // wherever the camera happens to be, not just once at a fixed spot.
-  for (let tx = 130; tx < PF_LEVEL_WIDTH; tx += 220) {
-    img.rect(tx - 16, 30, tx + 16, 118, C.tankGlass, 0.55);
-    img.rect(tx - 16, 30, tx + 16, 118, C.tankLiquid, 0.3);
-    img.outlineRect(tx - 16, 30, tx + 16, 118, C.tankRim);
-    for (let i = 0; i < 6; i++) {
-      const bx = tx - 10 + ((i * 13) % 20);
-      const by = 108 - ((i * 19) % 70);
-      img.ellipse(bx, by, 1, 1, C.tankBubble, 0.7);
-    }
-    img.rect(tx - 18, 27, tx + 18, 31, C.tankRim); // tank lid/rim
-  }
-
-  return img;
-}
-
 // ---------- ICL server room (flappy) ----------
 // Cold blue light, brightened and more layered than before (owner: "dark and muddy"): a lighter sky
 // gradient, a cable tray, two depth-graded rack rows (a dim far row, a brighter mid row) receding
 // toward the top of the frame, and a raised-floor tile band -- the actual obstacle racks are drawn by
 // src/minigames/flappy.js on top of this. Sized to the compact scale (the flyer's own camera never
-// scrolls, so unlike the platformer this stays one static image, just a richer one -- see the file
+// scrolls, so this stays one static image, just a richer one -- see the file
 // header) and stretched 3x in-scene.
 
 function buildFlappyBg() {
@@ -301,7 +215,7 @@ function buildFlappyBg() {
 
 function loadTowerLevel() {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'minigames', 'tower-logic.js'), 'utf8');
-  // tower-logic.js only needs the platformer's coyote constant while it loads (its helper calls happen later, in a scene).
+  // tower-logic.js only needs the platformer-physics coyote constant while it loads (its helper calls happen later, in a scene).
   const context = vm.createContext({ PLATFORMER_COYOTE_MS: 110, Math });
   vm.runInContext(`${source}\nthis.__tower = { TOWER_LEVEL, TOWER_W, TOWER_H, TOWER_SLAB_H, TOWER_LEFT, TOWER_RIGHT };`, context);
   return context.__tower;
@@ -813,21 +727,743 @@ function vignette(img) {
   }
 }
 
+// ---------- Physics Lab: the hero fight (FB-0066) ----------
+// A small white kitten hero (a pink bow, a purple mask, a teal cape, big eyes) against a dark bat-eared caped "shadow bat". Both are
+// GENERIC stand-ins (ADR 0021: Taru asked for her favourite characters, who are protected; nothing here copies their faces, colours or
+// logos): the kitten has big blue eyes in a mask, a tiny pink nose, no whiskers and no yellow nose; the villain has no emblem and no
+// yellow belt. Everything is composed from code and the project palette, and the roof is a crop of the CC0 Kenney Roguelike Modern City tiles.
+
+function loadHeroLevel() {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'minigames', 'hero-logic.js'), 'utf8');
+  // hero-logic.js only needs the platformer's coyote constant while it loads (its helper calls happen later, in a scene).
+  const context = vm.createContext({ PLATFORMER_COYOTE_MS: 110, Math });
+  vm.runInContext(`${source}\nthis.__hero = { HV_LEVEL, HV_W, HV_H, HV_FLOOR_Y, HV_PLATFORMS };`, context);
+  return context.__hero;
+}
+
+const HV_PAL = {
+  K: '#1a1c2c', // the project's outline
+  // the kitten
+  fur: '#f7f3ec', furShade: '#d9d2e0', furDark: '#b3aac8', earIn: '#ffb3d4',
+  pink: '#ff6fb1', pinkHi: '#ffb3d4', pinkDark: '#c2417f',
+  mask: '#6b4fa8', maskHi: '#8b6fc8',
+  eyeWhite: '#ffffff', iris: '#3a5fc8', irisHi: '#7fb0ff', nose: '#ff7d9c',
+  cape: '#2fb4d4', capeHi: '#7fe0f0', capeDark: '#1f7e9c',
+  boot: '#c2417f', glove: '#ffffff',
+  // her star bolt
+  star: '#ffd23f', starHi: '#fff3b0', starDark: '#d9961f',
+  // the shadow bat
+  cowl: '#2b2a45', cowlHi: '#46446b', suit: '#22223f', suitHi: '#3a3a64', gloveV: '#a39fc8',
+  capeV: '#7452a8', capeVHi: '#9a78cc', capeVDark: '#4d3382', belt: '#4a4868', buckle: '#9593b2',
+  skin: '#3a3664', skinDark: '#2b2850', slit: '#ff9cf0', slitGlow: '#ffffff',
+  orb: '#b05cff', orbHi: '#e8c4ff', orbDark: '#6d2fb5',
+  // the minion
+  mBody: '#3c3f5c', mHi: '#5a5e86', mWing: '#2a2c44', mWingHi: '#454968', mEye: '#ff4d5e', mEyeHi: '#ffc2c9', mFang: '#f4f1ea',
+};
+
+function fillTri(img, a, b, c, hex) {
+  const minX = Math.floor(Math.min(a[0], b[0], c[0]));
+  const maxX = Math.ceil(Math.max(a[0], b[0], c[0]));
+  const minY = Math.floor(Math.min(a[1], b[1], c[1]));
+  const maxY = Math.ceil(Math.max(a[1], b[1], c[1]));
+  const edge = (p, q, x, y) => (q[0] - p[0]) * (y - p[1]) - (q[1] - p[1]) * (x - p[0]);
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const w0 = edge(a, b, x, y);
+      const w1 = edge(b, c, x, y);
+      const w2 = edge(c, a, x, y);
+      if ((w0 >= 0 && w1 >= 0 && w2 >= 0) || (w0 <= 0 && w1 <= 0 && w2 <= 0)) img.px(x, y, hex);
+    }
+  }
+}
+
+// A polygon fill by scanlines (convex or not), pixel centres.
+function fillPoly(img, pts, hex) {
+  const ys = pts.map((p) => p[1]);
+  for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) {
+    const xs = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % pts.length];
+      if ((p[1] <= y && q[1] > y) || (q[1] <= y && p[1] > y)) xs.push(p[0] + ((y - p[1]) / (q[1] - p[1])) * (q[0] - p[0]));
+    }
+    xs.sort((m, n) => m - n);
+    for (let i = 0; i + 1 < xs.length; i += 2) for (let x = Math.round(xs[i]); x <= Math.round(xs[i + 1]) - 1; x++) img.px(x, y, hex);
+  }
+}
+
+// Nearest-neighbour scale (the cover draws the sprites 2x into a half-scale image).
+function scaleImg(src, k) {
+  const out = new Img(src.w * k, src.h * k);
+  for (let y = 0; y < out.h; y++) {
+    for (let x = 0; x < out.w; x++) {
+      const i = ((Math.floor(y / k)) * src.w + Math.floor(x / k)) * 4;
+      if (src.data[i + 3] > 0) out.pxA(x, y, src.data[i], src.data[i + 1], src.data[i + 2], src.data[i + 3]);
+    }
+  }
+  return out;
+}
+
+// Semi-transparent paint that keeps the transparency of what is under it (Img.px would make a faded pixel opaque black-blended).
+function glow(img, x, y, hex, alpha) {
+  x = Math.round(x); y = Math.round(y);
+  if (x < 0 || y < 0 || x >= img.w || y >= img.h) return;
+  const i = (y * img.w + x) * 4;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const a0 = img.data[i + 3] / 255;
+  const a = alpha + a0 * (1 - alpha);
+  if (a0 === 0) { img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = Math.round(alpha * 255); return; }
+  img.data[i] = Math.round((img.data[i] * a0 * (1 - alpha) + r * alpha) / a);
+  img.data[i + 1] = Math.round((img.data[i + 1] * a0 * (1 - alpha) + g * alpha) / a);
+  img.data[i + 2] = Math.round((img.data[i + 2] * a0 * (1 - alpha) + b * alpha) / a);
+  img.data[i + 3] = Math.round(a * 255);
+}
+
+// ----- the kitten hero (faces right; the scene flips her for left) -----
+// pose: bob (0|1: the head and torso dip), legs 'stand'|'runA'|'runB'|'runC'|'runD'|'tuck', arms 'down'|'shoot'|'up'|'cheer',
+// cape 'hang'|'stream'|'up', eyes 'open'|'hurt'|'happy'
+function drawKitten(pose) {
+  const P = HV_PAL;
+  const img = new Img(32, 32);
+  const bob = pose.bob || 0;
+  const hx = 16; // head centre x
+  const hy = 12 + bob;
+  const top = 19 + bob; // the shoulders
+
+  // cape, behind everything (a bell, two wings of teal either side of her, or streaming out behind her)
+  if (pose.cape === 'stream') {
+    fillPoly(img, [[12, top], [20, top], [15, 29], [1, 28], [3, 23]], P.cape);
+    fillPoly(img, [[12, top], [15, top], [7, 25], [3, 23]], P.capeHi);
+    for (const [x, y] of [[3, 28], [6, 28], [9, 29], [12, 29]]) img.px(x, y, P.capeDark);
+  } else if (pose.cape === 'up') {
+    fillPoly(img, [[12, top], [20, top], [15, 23], [4, 19], [5, 13]], P.cape);
+    fillPoly(img, [[12, top], [15, top], [8, 18], [5, 14]], P.capeHi);
+  } else {
+    fillPoly(img, [[11, top], [21, top], [27, 29], [5, 29]], P.cape);
+    fillPoly(img, [[11, top], [14, top], [9, 29], [5, 29]], P.capeHi);
+    for (const x of [6, 9, 12, 20, 23, 26]) img.px(x, 29, P.capeDark);
+  }
+
+  // tail (curling up behind her)
+  const tail = pose.cape === 'stream' ? [[11, 26], [8, 26], [5, 24]] : [[10, 26], [7, 25], [5, 22], [5, 18]];
+  for (let i = 0; i + 1 < tail.length; i++) img.line(tail[i][0], tail[i][1] + bob, tail[i + 1][0], tail[i + 1][1] + bob, 2, P.fur);
+  img.px(tail[tail.length - 1][0], tail[tail.length - 1][1] + bob, P.furShade);
+
+  // legs and boots
+  const legRows = { stand: [[12, 0], [17, 0]], runA: [[10, 0], [18, -2]], runB: [[12, -1], [16, 0]], runC: [[14, 0], [11, -2]], runD: [[16, -1], [12, 0]], tuck: [[12, -4], [17, -4]] }[pose.legs || 'stand'];
+  for (const [lx, up] of legRows) {
+    img.rect(lx, 27 + up, lx + 2, 28 + up, P.fur);
+    img.rect(lx, 29 + up, lx + 2, 29 + up, P.boot);
+    img.px(lx, 29 + up, P.pinkDark);
+  }
+
+  // body, a little pink bow at the neck, arms
+  img.ellipse(16, 24 + bob, 5, 5, P.fur);
+  img.ellipse(16, 26 + bob, 3, 2, P.furShade);
+  img.rect(13, 19 + bob, 19, 19 + bob, P.pink);
+  img.rect(15, 20 + bob, 17, 21 + bob, P.pinkDark);
+  img.px(12, 20 + bob, P.pink); img.px(20, 20 + bob, P.pink); img.px(15, 20 + bob, P.pinkHi);
+  const arm = (x0, y0, x1, y1) => { img.line(x0, y0, x1, y1, 2, P.fur); img.px(x1, y1, P.glove); };
+  if (pose.arms === 'shoot') { arm(20, 23 + bob, 26, 22 + bob); arm(12, 24 + bob, 11, 27 + bob); img.px(27, 22 + bob, P.star); img.px(28, 21 + bob, P.starHi); img.px(28, 23 + bob, P.starHi); }
+  else if (pose.arms === 'up') { arm(11, 23 + bob, 8, 18 + bob); arm(21, 23 + bob, 24, 18 + bob); }
+  else if (pose.arms === 'cheer') { arm(11, 23 + bob, 7, 16 + bob); arm(21, 23 + bob, 25, 16 + bob); }
+  else { arm(11, 23 + bob, 10, 26 + bob); arm(21, 23 + bob, 22, 26 + bob); }
+
+  // head: pointed ears, a round face, the mask, big eyes, a tiny pink nose and mouth, the pink bow between the ears
+  fillTri(img, [8, 1 + bob], [7, 9 + bob], [14, 6 + bob], P.fur);
+  fillTri(img, [24, 1 + bob], [25, 9 + bob], [18, 6 + bob], P.fur);
+  fillTri(img, [8.5, 3.5 + bob], [8.5, 8 + bob], [12, 6.5 + bob], P.earIn);
+  fillTri(img, [23.5, 3.5 + bob], [23.5, 8 + bob], [20, 6.5 + bob], P.earIn);
+  img.ellipse(hx, hy, 9, 6, P.fur);
+  img.ellipse(hx, hy + 2, 7, 4, P.fur);
+  img.ellipse(hx, hy + 5, 5, 1, P.furShade);
+  // the mask: two purple patches round the eyes joined over the nose, with a lit top edge
+  img.ellipse(12, hy, 3, 3, P.mask);
+  img.ellipse(20, hy, 3, 3, P.mask);
+  img.rect(14, hy - 1, 18, hy, P.mask);
+  img.rect(10, hy - 3, 14, hy - 3, P.maskHi); img.rect(18, hy - 3, 22, hy - 3, P.maskHi);
+  const eye = (ex) => {
+    if (pose.eyes === 'hurt') { img.line(ex - 1, hy - 1, ex + 1, hy + 1, 1, P.K); img.line(ex + 1, hy - 1, ex - 1, hy + 1, 1, P.K); return; }
+    if (pose.eyes === 'happy') { img.px(ex - 1, hy + 1, P.K); img.px(ex, hy, P.K); img.px(ex + 1, hy + 1, P.K); return; }
+    img.rect(ex - 1, hy - 2, ex + 1, hy + 2, P.eyeWhite);
+    for (const [cx, cy] of [[-1, -2], [1, -2], [-1, 2], [1, 2]]) img.px(ex + cx, hy + cy, P.mask); // rounded corners
+    img.rect(ex - 1, hy - 1, ex + 1, hy + 2, P.iris);
+    img.rect(ex, hy, ex, hy + 1, P.K);
+    img.px(ex - 1, hy - 1, P.eyeWhite); img.px(ex + 1, hy + 2, P.irisHi);
+  };
+  eye(12); eye(20);
+  img.rect(15, hy + 4, 16, hy + 4, P.nose);
+  img.px(14, hy + 5, P.K); img.px(15, hy + 6, P.K); img.px(16, hy + 6, P.K); img.px(17, hy + 5, P.K);
+  img.px(10, hy + 4, P.pinkHi); img.px(22, hy + 4, P.pinkHi);
+  img.rect(13, hy - 9, 15, hy - 6, P.pink); img.rect(18, hy - 9, 20, hy - 6, P.pink);
+  img.rect(16, hy - 8, 17, hy - 7, P.pinkDark);
+  img.px(13, hy - 9, P.pinkHi); img.px(18, hy - 9, P.pinkHi);
+  img.px(14, hy - 6, P.pinkDark); img.px(19, hy - 6, P.pinkDark);
+  outlineSprite(img);
+  return img;
+}
+
+// ----- the shadow bat (faces left; the scene flips him for right) -----
+// pose: arms 'cross'|'raise'|'fire'|'slump', orb 0|1|2 (a purple energy ball over his raised hand), eyes 'open'|'closed', tilt (px shift), down (kneeling)
+function drawVillain(pose) {
+  const P = HV_PAL;
+  const img = new Img(32, 32);
+  const dx = pose.tilt || 0;
+  const cx = 15 + dx;
+
+  if (pose.down) {
+    // slumped on one knee: a cape heap, the head bowed, the ears drooping
+    fillPoly(img, [[cx - 11, 30], [cx - 7, 21], [cx + 7, 21], [cx + 12, 30]], P.capeV);
+    fillPoly(img, [[cx - 11, 30], [cx - 9, 24], [cx - 6, 30]], P.capeVHi);
+    for (const x of [-10, -6, -2, 2, 6, 10]) img.px(cx + x, 30, P.capeVDark);
+    img.ellipse(cx - 3, 19, 6, 5, P.cowl);
+    fillTri(img, [cx - 9, 17], [cx - 9, 13], [cx - 5, 15], P.cowl);
+    fillTri(img, [cx + 3, 17], [cx + 3, 13], [cx - 1, 15], P.cowl);
+    img.rect(cx - 6, 20, cx - 1, 22, P.skin);
+    img.px(cx - 6, 19, P.slit); img.px(cx - 5, 19, P.slit); img.px(cx - 2, 19, P.slit); img.px(cx - 1, 19, P.slit);
+    img.rect(cx - 9, 24, cx - 5, 25, P.gloveV); // a hand on the roof
+    outlineSprite(img);
+    return img;
+  }
+
+  // the cape: a big scalloped shape behind him (wide at the hem)
+  fillPoly(img, [[cx - 7, 14], [cx + 7, 14], [cx + 14, 30], [cx - 14, 30]], P.capeV);
+  fillPoly(img, [[cx - 7, 14], [cx - 4, 14], [cx - 11, 30], [cx - 14, 30]], P.capeVHi);
+  fillPoly(img, [[cx + 4, 14], [cx + 7, 14], [cx + 14, 30], [cx + 10, 30]], P.capeVDark);
+  for (const x of [-12, -8, -4, 0, 4, 8, 12]) { img.px(cx + x, 30, P.capeVDark); img.px(cx + x + 1, 31, P.capeVDark); }
+  // a high pointed collar
+  fillTri(img, [cx - 8, 10], [cx - 8, 15], [cx - 4, 14], P.capeVDark);
+  fillTri(img, [cx + 8, 10], [cx + 8, 15], [cx + 4, 14], P.capeVDark);
+  // torso (a dark suit with a plain grey belt: no emblem, nothing yellow)
+  img.ellipse(cx, 19, 5, 6, P.suit);
+  img.rect(cx - 3, 15, cx - 2, 20, P.suitHi);
+  img.rect(cx - 5, 23, cx + 5, 24, P.belt);
+  img.rect(cx - 1, 23, cx + 1, 24, P.buckle);
+  // head: a cowl with tall bat ears and a shadowed muzzle, glowing pink slit eyes
+  fillTri(img, [cx - 6, 0], [cx - 7, 8], [cx - 2, 5], P.cowl);
+  fillTri(img, [cx + 6, 0], [cx + 7, 8], [cx + 2, 5], P.cowl);
+  img.px(cx - 6, 2, P.cowlHi); img.px(cx - 6, 3, P.cowlHi); img.px(cx + 6, 2, P.cowlHi);
+  img.ellipse(cx, 8, 6, 5, P.cowl);
+  img.rect(cx - 4, 4, cx + 3, 4, P.cowlHi);
+  img.rect(cx - 4, 9, cx + 4, 12, P.skin); // the lower face
+  img.rect(cx - 4, 12, cx + 4, 12, P.skinDark);
+  if (pose.eyes === 'closed') { img.line(cx - 4, 8, cx - 2, 8, 1, P.slit); img.line(cx + 2, 8, cx + 4, 8, 1, P.slit); }
+  else {
+    img.rect(cx - 4, 7, cx - 2, 8, P.slit); img.px(cx - 4, 6, P.cowl); img.px(cx - 3, 6, P.cowl); // angry slits slanting to the nose
+    img.rect(cx + 2, 7, cx + 4, 8, P.slit); img.px(cx + 3, 6, P.cowl); img.px(cx + 4, 6, P.cowl);
+    img.px(cx - 3, 8, P.slitGlow); img.px(cx + 3, 8, P.slitGlow);
+  }
+  for (const fx of [-3, 0, 3]) img.px(cx + fx, 11, '#e8e0ff'); // three tiny fangs in the shadow of the cowl
+
+  // arms
+  const glove = (x, y) => img.rect(x, y, x + 2, y + 2, P.gloveV);
+  if (pose.arms === 'raise') {
+    img.line(cx - 5, 17, cx - 9, 10, 2, P.suit); glove(cx - 11, 8);
+    img.line(cx + 5, 17, cx + 9, 10, 2, P.suit); glove(cx + 9, 8);
+    const r = pose.orb === 2 ? 4 : 2;
+    img.ellipse(cx - 10, 4, r, r, P.orbDark);
+    img.ellipse(cx - 10, 4, r - 1, r - 1, P.orb);
+    img.px(cx - 10, 3, P.orbHi); img.px(cx - 11, 3, P.orbHi);
+  } else if (pose.arms === 'fire') {
+    img.line(cx - 4, 17, cx - 13, 18, 2, P.suit); glove(cx - 15, 17);
+    img.px(cx - 16, 18, P.orbHi); img.px(cx - 17, 18, P.orb); img.px(cx - 16, 16, P.orb); img.px(cx - 16, 20, P.orb); // the muzzle flash
+    img.line(cx + 4, 18, cx + 6, 22, 2, P.suit); glove(cx + 5, 22);
+  } else if (pose.arms === 'slump') {
+    img.line(cx - 5, 18, cx - 7, 24, 2, P.suit); glove(cx - 8, 24);
+    img.line(cx + 5, 18, cx + 7, 24, 2, P.suit); glove(cx + 6, 24);
+  } else { // arms crossed over the chest
+    img.line(cx - 6, 18, cx + 4, 20, 2, P.suit); img.line(cx + 6, 18, cx - 4, 20, 2, P.suit);
+    glove(cx + 3, 19); glove(cx - 5, 19);
+  }
+  outlineSprite(img);
+  return img;
+}
+
+// ----- the minion: a round robot-bat with a red eye, flapping -----
+function drawMinion(frame) {
+  const P = HV_PAL;
+  const img = new Img(32, 32);
+  if (frame === 'down') { // defeated: a ring of sparks and a cracked eye
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      img.rect(Math.round(16 + Math.cos(ang) * 7), Math.round(22 + Math.sin(ang) * 5), Math.round(16 + Math.cos(ang) * 7) + 1, Math.round(22 + Math.sin(ang) * 5) + 1, a % 2 ? P.star : P.mEyeHi);
+    }
+    img.ellipse(16, 22, 4, 3, P.mBody);
+    img.px(15, 22, P.mEye); img.px(17, 21, P.mEye);
+    outlineSprite(img);
+    return img;
+  }
+  const up = frame === 'up';
+  // wings (up: raised, down: lowered), behind the body
+  const wingL = up ? [[9, 20], [1, 10], [4, 16], [3, 22]] : [[9, 20], [0, 26], [4, 22], [2, 20]];
+  const wingR = up ? [[23, 20], [31, 10], [28, 16], [29, 22]] : [[23, 20], [32, 26], [28, 22], [30, 20]];
+  fillPoly(img, wingL, P.mWing);
+  fillPoly(img, wingR, P.mWing);
+  img.line(wingL[0][0], wingL[0][1], wingL[1][0], wingL[1][1], 1, P.mWingHi);
+  img.line(wingR[0][0], wingR[0][1], wingR[1][0], wingR[1][1], 1, P.mWingHi);
+  // body: a round dark shell, a lit top, one big red eye, two little fangs, short legs, an antenna
+  img.ellipse(16, 22, 8, 7, P.mBody);
+  img.ellipse(16, 19, 6, 3, P.mHi);
+  img.ellipse(16, 22, 3, 3, P.mEye);
+  img.px(15, 21, P.mEyeHi); img.px(16, 21, P.mEyeHi);
+  img.px(14, 26, P.mFang); img.px(18, 26, P.mFang);
+  img.rect(12, 28, 13, 29, P.mWing); img.rect(19, 28, 20, 29, P.mWing);
+  fillTri(img, [11, 15], [9, 11], [13, 14], P.mBody); // bat ears
+  fillTri(img, [21, 15], [23, 11], [19, 14], P.mBody);
+  img.line(16, 15, 16, 12, 1, P.mWingHi);
+  img.px(16, 11, P.mEye);
+  outlineSprite(img);
+  return img;
+}
+
+// ----- bolts and small effects -----
+const HV_STAR = [
+  '....Y....',
+  '...YWY...',
+  '...YWY...',
+  'YYYYWYYYY',
+  '.YWWWWWY.',
+  '..YWWWY..',
+  '..YWYWY..',
+  '.YY...YY.',
+  '.Y.....Y.',
+];
+
+function drawVillainBolt(big) {
+  const P = HV_PAL;
+  const img = new Img(10, 10);
+  const r = big ? 4 : 3;
+  img.ellipse(5, 5, r, r, P.orbDark);
+  img.ellipse(5, 5, r - 1, r - 1, P.orb);
+  img.px(4, 4, P.orbHi); img.px(5, 4, P.orbHi); img.px(4, 5, P.orbHi);
+  outlineSprite(img);
+  return img;
+}
+
+function drawStar(frame) {
+  const img = new Img(11, 11);
+  drawRows(img, 1, 1, HV_STAR, { Y: HV_PAL.star, W: HV_PAL.starHi });
+  if (frame === 1) { // the second frame: a little rotated, a spark off the tail
+    img.px(0, 5, HV_PAL.starHi); img.px(10, 5, HV_PAL.starHi); img.px(5, 0, HV_PAL.starDark);
+  }
+  outlineSprite(img);
+  return img;
+}
+
+function drawSpark() { // a hit burst
+  const img = new Img(15, 15);
+  const pal = { Y: '#ffd23f', W: '#ffffff', O: '#ff8a1c' };
+  drawRows(img, 0, 0, [
+    '.......O.......',
+    '.......Y.......',
+    '..O....Y....O..',
+    '...Y...W...Y...',
+    '....Y..W..Y....',
+    '.....YYWYY.....',
+    'O.....YWY.....O',
+    'YYYYWWWWWWWYYYY',
+    'O.....YWY.....O',
+    '.....YYWYY.....',
+    '....Y..W..Y....',
+    '...Y...W...Y...',
+    '..O....Y....O..',
+    '.......Y.......',
+    '.......O.......',
+  ], pal);
+  return img;
+}
+
+function drawRing() { // the wind-up flash: a soft purple ring and a bright centre
+  const img = new Img(32, 32);
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      const d = Math.hypot(x - 15.5, y - 15.5);
+      if (d > 14.5) continue;
+      const edge = Math.abs(d - 12);
+      if (edge < 1.6) glow(img, x, y, HV_PAL.orbHi, 0.95);
+      else if (edge < 3) glow(img, x, y, HV_PAL.orb, 0.55);
+      else if (d < 9) glow(img, x, y, HV_PAL.orb, 0.22);
+    }
+  }
+  return img;
+}
+
+function drawShield() { // his shield: a pale bubble with a bright rim and a glint
+  const img = new Img(32, 32);
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      const d = Math.hypot(x - 15.5, y - 15.5);
+      if (d > 15) continue;
+      if (d > 13.4) glow(img, x, y, '#cfe9ff', 0.95);
+      else glow(img, x, y, '#9fd0ff', 0.2);
+    }
+  }
+  for (const [x, y] of [[8, 8], [9, 7], [7, 9], [10, 7]]) glow(img, x, y, '#ffffff', 0.95);
+  return img;
+}
+
+function heroUiHeart(full) {
+  const img = new Img(9, 9);
+  const pal = full
+    ? { K: HV_PAL.K, R: '#e8465a', r: '#b02a44', H: '#ffb3c0' }
+    : { K: HV_PAL.K, R: '#767b92', r: '#5a5f76', H: '#9a9fb4' };
+  drawRows(img, 0, 0, HEART, pal);
+  return img;
+}
+
+function buildHeroSprites() {
+  const sheet = new Img(256, 128);
+  const put = (col, row, sprite, footRow = null) => {
+    const x = Math.floor((32 - sprite.w) / 2);
+    const y = footRow !== null ? footRow - sprite.h : Math.floor((32 - sprite.h) / 2);
+    sheet.blit(sprite, col * 32 + x, row * 32 + y);
+  };
+  const cell = (col, row, sprite) => sheet.blit(sprite, col * 32, row * 32); // a sprite that is already a full 32x32 cell
+  // row 0: the kitten: idle, idle (breath), run x4, jump, shoot
+  cell(0, 0, drawKitten({ bob: 0, legs: 'stand', arms: 'down', cape: 'hang', eyes: 'open' }));
+  cell(1, 0, drawKitten({ bob: 1, legs: 'stand', arms: 'down', cape: 'hang', eyes: 'open' }));
+  cell(2, 0, drawKitten({ bob: 0, legs: 'runA', arms: 'down', cape: 'stream', eyes: 'open' }));
+  cell(3, 0, drawKitten({ bob: 1, legs: 'runB', arms: 'down', cape: 'stream', eyes: 'open' }));
+  cell(4, 0, drawKitten({ bob: 0, legs: 'runC', arms: 'down', cape: 'stream', eyes: 'open' }));
+  cell(5, 0, drawKitten({ bob: 1, legs: 'runD', arms: 'down', cape: 'stream', eyes: 'open' }));
+  cell(6, 0, drawKitten({ bob: 0, legs: 'tuck', arms: 'up', cape: 'up', eyes: 'open' }));
+  cell(7, 0, drawKitten({ bob: 0, legs: 'stand', arms: 'shoot', cape: 'hang', eyes: 'open' }));
+  // row 1: kitten hurt and cheering; the shadow bat idle x2, wind-up x2, fire, hurt
+  cell(0, 1, drawKitten({ bob: 1, legs: 'stand', arms: 'up', cape: 'up', eyes: 'hurt' }));
+  cell(1, 1, drawKitten({ bob: 0, legs: 'stand', arms: 'cheer', cape: 'hang', eyes: 'happy' }));
+  cell(2, 1, drawVillain({ arms: 'cross', eyes: 'open', tilt: 0 }));
+  cell(3, 1, drawVillain({ arms: 'cross', eyes: 'open', tilt: 1 }));
+  cell(4, 1, drawVillain({ arms: 'raise', orb: 1, eyes: 'open' }));
+  cell(5, 1, drawVillain({ arms: 'raise', orb: 2, eyes: 'open' }));
+  cell(6, 1, drawVillain({ arms: 'fire', eyes: 'open' }));
+  cell(7, 1, drawVillain({ arms: 'slump', eyes: 'closed', tilt: 2 }));
+  // row 2: the villain down; the minion x3; his bolt x2; her star x2
+  cell(0, 2, drawVillain({ down: true }));
+  cell(1, 2, drawMinion('up'));
+  cell(2, 2, drawMinion('flat'));
+  cell(3, 2, drawMinion('down'));
+  put(4, 2, drawVillainBolt(false));
+  put(5, 2, drawVillainBolt(true));
+  put(6, 2, drawStar(0));
+  put(7, 2, drawStar(1));
+  // row 3: hearts, spark, the wind-up ring, a puff, a sparkle, the shield
+  put(0, 3, heroUiHeart(true));
+  put(1, 3, heroUiHeart(false));
+  put(2, 3, drawSpark());
+  cell(3, 3, drawRing());
+  put(4, 3, drawPuff());
+  const sparkle = new Img(7, 7);
+  drawRows(sparkle, 0, 0, SPARKLE, { Y: '#ffd23f', W: '#ffffff' });
+  put(5, 3, sparkle);
+  cell(6, 3, drawShield());
+  return sheet;
+}
+
+// The villain's health bar frame: a dark rail with a pale lit edge and little bat-ear notches at both ends. The inside (x 2..77, y 2..7) is transparent.
+function buildHeroBar() {
+  const img = new Img(80, 10);
+  img.rect(0, 0, 79, 9, HV_PAL.K);
+  img.rect(1, 1, 78, 8, '#454a65');
+  img.rect(1, 1, 78, 1, '#8e96b8');
+  for (let y = 2; y <= 7; y++) for (let x = 2; x <= 77; x++) img.pxA(x, y, 0, 0, 0, 0); // the window
+  for (const x of [1, 78]) img.rect(x, 3, x, 6, '#8e96b8');
+  for (const [x, y] of [[0, 0], [79, 0], [0, 9], [79, 9]]) img.pxA(x, y, 0, 0, 0, 0); // rounded corners
+  return img;
+}
+
+// ----- shared bits of the two big pictures: the sunset sky, the skyline, the roof -----
+const SUNSET = {
+  sky: [[0, '#5a3d8f'], [0.2, '#8f58a8'], [0.4, '#d9689a'], [0.58, '#ff7f86'], [0.78, '#ffa878'], [1, '#ffd08a']],
+  sun: '#fff3c8', sunHalo: '#ffe0c0', cloudA: '#ffb7c8', cloudB: '#e089b8', cloudC: '#8a5aa8',
+  far: '#8a4f90', near: '#4a2f6e', nearer: '#2c1f4d', win: '#ffd98a', winPink: '#ff9ec0',
+};
+
+// A layered sky: the gradient, a big pale sun with a halo, and long cloud bands in three tones.
+function paintSunsetSky(img, w, h, sunX, sunY, sunR) {
+  const stops = SUNSET.sky;
+  for (let y = 0; y < h; y++) {
+    const t = y / (h - 1);
+    let hex = stops[0][1];
+    for (const [stopT, stopHex] of stops) if (t >= stopT) hex = stopHex;
+    img.rect(0, y, w - 1, y, hex);
+  }
+  for (let r = sunR + 26; r > sunR; r -= 2) img.ellipse(sunX, sunY, r, r, SUNSET.sunHalo, 0.05);
+  img.ellipse(sunX, sunY, sunR + 3, sunR + 3, SUNSET.sunHalo, 0.35);
+  img.ellipse(sunX, sunY, sunR, sunR, SUNSET.sun);
+  img.ellipse(sunX - 6, sunY - 8, Math.round(sunR * 0.45), Math.round(sunR * 0.35), '#ffffff', 0.55);
+  // cloud bands: flat ellipses in layers, lit from the sun
+  const band = (cy, tone, alpha, spans) => {
+    for (const [cx, rx, ry] of spans) img.ellipse(cx, cy, rx, ry, tone, alpha);
+  };
+  band(Math.round(h * 0.2), SUNSET.cloudC, 0.5, [[w * 0.12, 70, 3], [w * 0.6, 90, 3], [w * 0.95, 60, 3]]);
+  band(Math.round(h * 0.3), SUNSET.cloudB, 0.7, [[w * 0.22, 80, 4], [w * 0.5, 60, 3], [w * 0.82, 90, 4]]);
+  band(Math.round(h * 0.4), SUNSET.cloudA, 0.8, [[w * 0.05, 60, 3], [w * 0.38, 75, 3], [w * 0.72, 70, 3], [w * 0.98, 50, 3]]);
+  band(Math.round(h * 0.5), SUNSET.cloudA, 0.55, [[w * 0.3, 90, 2], [w * 0.64, 70, 2]]);
+  // the sun cuts through the lowest band: a lit streak either side of it
+  img.ellipse(sunX, Math.round(h * 0.4), 55, 2, '#fff3c8', 0.7);
+}
+
+// A skyline silhouette between x0 and x1 on a base line `base`: blocks of different heights, a few lit windows, a needle tower. `seed` varies it.
+function paintSkyline(img, x0, x1, base, tone, seed, litHex, maxH = 60, needleAt = null) {
+  const hash = (a, b) => { let n = Math.imul(a * 73856093 ^ b * 19349663, 2654435761) >>> 0; n ^= n >>> 13; return (n >>> 0) % 1000 / 1000; };
+  let x = x0;
+  let i = 0;
+  while (x < x1) {
+    const bw = 8 + Math.floor(hash(seed, i) * 14);
+    const bh = 14 + Math.floor(hash(i, seed + 5) * maxH);
+    const right = Math.min(x1, x + bw - 1);
+    img.rect(x, base - bh, right, base, tone);
+    if (hash(seed + 3, i) > 0.6) img.rect(x + 2, base - bh - 3, Math.min(right, x + 3), base - bh, tone); // a roof mast
+    for (let wy = base - bh + 3; wy < base - 2; wy += 4) {
+      for (let wx = x + 2; wx < right - 1; wx += 3) if (hash(wx * 3 + seed, wy) > 0.72) img.rect(wx, wy, wx, wy + 1, litHex);
+    }
+    x += bw;
+    i++;
+  }
+  if (needleAt !== null) { // a tall stepped needle tower (a generic skyline landmark)
+    const nx = needleAt;
+    img.rect(nx - 4, base - 70, nx + 4, base, tone);
+    img.rect(nx - 3, base - 90, nx + 3, base - 70, tone);
+    img.rect(nx - 2, base - 108, nx + 2, base - 90, tone);
+    img.rect(nx - 1, base - 124, nx + 1, base - 108, tone);
+    img.rect(nx, base - 134, nx, base - 124, tone);
+    for (let wy = base - 66; wy < base - 4; wy += 5) img.rect(nx - 1, wy, nx - 1, wy + 1, litHex);
+  }
+}
+
+// A tile of the Kenney roof (a grey concrete panel), used as the roof's top face; `variant` shifts which pack tile is used.
+function roofTile(variant = 0) {
+  return cropVendor(MODERN_CITY, 136 + (variant % 2) * 17, 0, 16, 16);
+}
+
+// ----- the arena backdrop -----
+function buildHeroBg() {
+  const { HV_LEVEL, HV_W, HV_H, HV_FLOOR_Y, HV_PLATFORMS } = loadHeroLevel();
+  const w = HV_W / 2;
+  const h = HV_H / 2;
+  const img = new Img(w, h);
+  const floorY = HV_FLOOR_Y / 2; // 235
+  paintSunsetSky(img, w, h, 330, 108, 36);
+  paintSkyline(img, 0, w - 1, floorY - 18, SUNSET.far, 7, SUNSET.winPink, 70, 90);
+  paintSkyline(img, 0, w - 1, floorY - 6, SUNSET.near, 23, SUNSET.win, 52, null);
+  // the roof of the lab building: a low parapet wall behind the roof deck
+  img.rect(0, floorY - 14, w - 1, floorY, '#3b3560');
+  img.rect(0, floorY - 14, w - 1, floorY - 13, '#6a6296');
+  for (let x = 0; x < w; x += 24) img.rect(x, floorY - 14, x, floorY, '#2b2648');
+  // rooftop dressing: an AC unit with a fan, a vent stack, a dish, an antenna mast with a red light
+  const ac = (x) => {
+    img.rect(x, floorY - 36, x + 28, floorY - 14, '#8d93a6'); img.rect(x, floorY - 36, x + 28, floorY - 35, '#cfd3e0');
+    img.rect(x, floorY - 14, x + 28, floorY - 13, '#454a65'); img.rect(x + 29, floorY - 35, x + 29, floorY - 14, '#5f647a');
+    img.ellipse(x + 14, floorY - 25, 8, 8, '#454a65'); img.ellipse(x + 14, floorY - 25, 6, 6, '#2b2e44');
+    img.line(x + 8, floorY - 25, x + 20, floorY - 25, 1, '#8d93a6'); img.line(x + 14, floorY - 31, x + 14, floorY - 19, 1, '#8d93a6');
+    for (let gy = floorY - 20; gy < floorY - 15; gy += 2) img.rect(x + 3, gy, x + 25, gy, '#5f647a');
+  };
+  ac(14); ac(176); ac(400);
+  img.rect(82, floorY - 44, 90, floorY - 14, '#7d839a'); img.rect(80, floorY - 47, 92, floorY - 44, '#a9aebf'); // a vent stack
+  img.rect(82, floorY - 44, 84, floorY - 14, '#a9aebf');
+  img.ellipse(226, floorY - 36, 15, 12, '#cfd3e0'); img.rect(211, floorY - 36, 241, floorY - 24, '#3b3560'); // a dish
+  img.ellipse(226, floorY - 36, 11, 8, '#a9aebf'); img.line(226, floorY - 36, 236, floorY - 48, 1, '#454a65'); img.px(236, floorY - 49, '#ff4d5e');
+  img.rect(300, floorY - 100, 301, floorY - 14, '#454a65'); // a mast
+  for (let y = floorY - 96; y < floorY - 20; y += 12) img.line(292, y + 8, 309, y, 1, '#454a65');
+  img.rect(299, floorY - 104, 302, floorY - 101, '#ff4d5e'); img.ellipse(300, floorY - 103, 6, 6, '#ff4d5e', 0.2);
+  // the "PHYSICS LAB" sign on two posts, right side: a lit board with pixel letters
+  const sx = 342;
+  const sy = floorY - 76;
+  img.rect(sx + 6, sy + 16, sx + 7, floorY - 14, '#454a65'); img.rect(sx + 70, sy + 16, sx + 71, floorY - 14, '#454a65');
+  img.rect(sx, sy, sx + 77, sy + 17, '#2b2648'); img.outlineRect(sx, sy, sx + 77, sy + 17, '#8e96b8');
+  img.rect(sx + 1, sy + 1, sx + 76, sy + 1, '#4a4478');
+  drawPixelText(img, 'PHYSICS LAB', sx + 5, sy + 5, '#7fe0ff', 1, '#1f7e9c');
+
+  // scaffold platforms (from the rules): a steel deck on two braced legs down to the roof
+  for (const plat of HV_PLATFORMS) {
+    const x0 = plat.x0 / 2;
+    const x1 = plat.x1 / 2;
+    const y = plat.y / 2;
+    for (const lx of [x0 + 5, x1 - 7]) { // legs with a cross brace
+      img.rect(lx, y + 5, lx + 2, floorY, '#5f647a');
+      img.rect(lx, y + 5, lx, floorY, '#8d93a6');
+    }
+    img.line(x0 + 7, y + 8, x1 - 6, floorY - 4, 1, '#454a65');
+    img.line(x1 - 6, y + 8, x0 + 7, floorY - 4, 1, '#454a65');
+    img.rect(x0, y, x1, y + 5, '#8d93a6'); // the deck
+    img.rect(x0, y, x1, y, '#e4e8f2');
+    img.rect(x0, y + 1, x1, y + 1, '#cfd3e0');
+    img.rect(x0, y + 4, x1, y + 5, '#454a65');
+    for (let x = x0 + 3; x < x1; x += 6) img.rect(x, y + 2, x + 1, y + 3, '#5f647a'); // grating
+    img.rect(x0, y, x0, y + 5, HV_PAL.K); img.rect(x1, y, x1, y + 5, HV_PAL.K);
+    // a hazard stripe on the front edge
+    for (let x = x0 + 1; x < x1; x += 6) img.rect(x, y + 4, Math.min(x + 2, x1 - 1), y + 4, '#ffd23f');
+  }
+
+  // the roof deck: Kenney concrete tiles across the top face, then a darker slab front
+  const tileA = roofTile(0);
+  const tileB = roofTile(1);
+  for (let x = 0; x < w; x += 16) {
+    const tile = (x / 16) % 2 === 0 ? tileA : tileB;
+    for (let ty = 0; ty < 16 && floorY + ty < h; ty++) {
+      for (let tx = 0; tx < 16 && x + tx < w; tx++) {
+        const i = (ty * 16 + tx) * 4;
+        img.px(x + tx, floorY + ty, `#${[tile.data[i], tile.data[i + 1], tile.data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`);
+      }
+    }
+  }
+  img.rect(0, floorY, w - 1, floorY, '#e4e8f2'); // the lit edge the characters stand on
+  img.rect(0, floorY + 1, w - 1, floorY + 1, '#b9bfd8');
+  img.rect(0, floorY + 16, w - 1, h - 1, '#2b2e44'); // the slab front
+  for (let x = 0; x < w; x += 20) img.rect(x, floorY + 16, x, h - 1, '#1a1c2c');
+  img.rect(0, floorY + 16, w - 1, floorY + 17, '#454a65');
+  for (let x = 4; x < w; x += 20) { img.rect(x, floorY + 24, x + 11, floorY + 25, '#3b3f58'); }
+  // a warm light cast from the low sun along the roof
+  for (let x = 0; x < w; x++) glow(img, x, floorY + 2, '#ffb27a', 0.12);
+  vignette(img);
+  return img;
+}
+
+// Pixel text, 5x7 glyphs (an original blocky face, like tools/make-cutscenes.js's): only the letters the hero art needs.
+const HV_GLYPHS = {
+  A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
+  C: ['.####', '#....', '#....', '#....', '#....', '#....', '.####'],
+  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'],
+  E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+  H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  I: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '#####'],
+  K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
+  L: ['#....', '#....', '#....', '#....', '#....', '#....', '#####'],
+  N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
+  O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
+  R: ['####.', '#...#', '#...#', '####.', '#.#..', '#..#.', '#...#'],
+  S: ['.####', '#....', '#....', '.###.', '....#', '....#', '####.'],
+  T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+  V: ['#...#', '#...#', '#...#', '#...#', '#...#', '.#.#.', '..#..'],
+  W: ['#...#', '#...#', '#...#', '#.#.#', '#.#.#', '##.##', '#...#'],
+  Y: ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'],
+  ' ': ['.....', '.....', '.....', '.....', '.....', '.....', '.....'],
+};
+
+function hvTextWidth(text, scale) {
+  return text.length * 6 * scale - scale;
+}
+
+// Draws `text` (capitals and spaces) with glyph pixels scaled `scale`, top-left (x, y); `shadowHex` adds a one-pixel-down-right shadow
+// (scaled with the text), `outlineHex` a one-pixel outline round the letters.
+function drawPixelText(img, text, x, y, hex, scale, shadowHex, outlineHex) {
+  const place = (px, py, color) => {
+    let cx = px;
+    for (const ch of text) {
+      const glyph = HV_GLYPHS[ch] || HV_GLYPHS[' '];
+      glyph.forEach((row, ry) => [...row].forEach((bit, rx) => {
+        if (bit === '#') img.rect(cx + rx * scale, py + ry * scale, cx + rx * scale + scale - 1, py + ry * scale + scale - 1, color);
+      }));
+      cx += 6 * scale;
+    }
+  };
+  if (outlineHex) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) place(x + ox, y + oy, outlineHex);
+  if (shadowHex) place(x + scale, y + scale, shadowHex);
+  place(x, y, hex);
+}
+
+// ----- the cover: the picture behind the intro card -----
+function buildHeroCover() {
+  const w = 480;
+  const h = 270;
+  const img = new Img(w, h);
+  const ledgeY = 176; // where the two stand: the top of the foreground ledge (the card covers screen y >= 350, cover y >= 175, and is only the dark ledge face)
+  paintSunsetSky(img, w, h, 240, 112, 46);
+  // far skyline, with the needle tower at the left; then the nearer, darker blocks at both sides only (the sun shines through the middle)
+  paintSkyline(img, 0, w - 1, ledgeY - 8, SUNSET.far, 31, SUNSET.winPink, 44, 70);
+  paintSkyline(img, 0, 130, ledgeY - 2, SUNSET.near, 5, SUNSET.win, 70, null);
+  paintSkyline(img, 350, w - 1, ledgeY - 2, SUNSET.near, 17, SUNSET.win, 78, 440);
+  paintSkyline(img, 0, 60, ledgeY, SUNSET.nearer, 41, SUNSET.win, 90, null);
+  paintSkyline(img, 410, w - 1, ledgeY, SUNSET.nearer, 53, SUNSET.win, 84, null);
+  // a few early stars and little sparkles near the title
+  for (const [x, y] of [[40, 14], [98, 40], [150, 18], [330, 20], [386, 44], [440, 16], [452, 66], [22, 70]]) { img.px(x, y, '#ffffff'); img.px(x + 1, y, '#ffe6ff'); }
+
+  // the rooftop ledge: a concrete slab (Kenney roof tiles) with a bright lip, a dark front face and a pink rim light from the sun
+  const tileA = roofTile(0);
+  const tileB = roofTile(1);
+  for (let x = 0; x < w; x += 16) {
+    const tile = (x / 16) % 2 === 0 ? tileA : tileB;
+    for (let ty = 0; ty < 16; ty++) {
+      for (let tx = 0; tx < 16 && x + tx < w; tx++) {
+        const i = (ty * 16 + tx) * 4;
+        const shade = ty < 3 ? 1 : 0.8;
+        const hex = `#${[0, 1, 2].map((c) => Math.round(tile.data[i + c] * shade).toString(16).padStart(2, '0')).join('')}`;
+        img.px(x + tx, ledgeY + ty, hex);
+      }
+    }
+  }
+  img.rect(0, ledgeY, w - 1, ledgeY, '#fff0f4'); // the lip
+  img.rect(0, ledgeY + 1, w - 1, ledgeY + 1, '#ffc2d8');
+  img.rect(0, ledgeY + 16, w - 1, h - 1, '#2b2e44'); // the dark front face, with block joints
+  img.rect(0, ledgeY + 16, w - 1, ledgeY + 17, '#454a65');
+  for (let row = 0; ledgeY + 20 + row * 14 < h; row++) {
+    const yy = ledgeY + 20 + row * 14;
+    img.rect(0, yy, w - 1, yy, '#1a1c2c');
+    for (let x = (row % 2) * 20; x < w; x += 40) img.rect(x, yy, x, yy + 13, '#1a1c2c');
+  }
+  for (let x = 0; x < w; x++) { glow(img, x, ledgeY + 2, '#ff9ec0', 0.18); glow(img, x, ledgeY + 3, '#ff9ec0', 0.08); }
+  // a soft dark gradient toward the bottom, so the card on top reads
+  for (let y = ledgeY + 18; y < h; y++) img.rect(0, y, w - 1, y, '#12131a', Math.min(0.55, (y - ledgeY - 18) / 160));
+
+  // the two stand-ins, close together on the ledge, drawn at 3x (a 6x pixel on screen: the same size as the title's big letters)
+  const kitten = scaleImg(drawKitten({ bob: 0, legs: 'stand', arms: 'cheer', cape: 'stream', eyes: 'open' }), 3);
+  const villain = scaleImg(drawVillain({ arms: 'cross', eyes: 'open', tilt: 0 }), 3);
+  // a shadow under each of them, then the kitten standing on the ledge (her boots end at sprite row 30, x3 = 93) and the villain hovering above it
+  img.ellipse(190, ledgeY + 2, 30, 4, '#1a1c2c', 0.45);
+  img.ellipse(292, ledgeY + 2, 36, 4, '#1a1c2c', 0.45);
+  img.blit(kitten, 142, ledgeY - 93);
+  img.blit(villain, 247, ledgeY - 96 - 8);
+  // warm sparks of light between them
+  const sparkle = new Img(7, 7);
+  drawRows(sparkle, 0, 0, SPARKLE, { Y: '#ffd23f', W: '#ffffff' });
+  img.blit(sparkle, 238, ledgeY - 100);
+
+  // the title banner: a dark ribbon with a pink and gold edge, two lines of pixel letters
+  const bx0 = 84;
+  const bx1 = 396;
+  const by0 = 10;
+  const by1 = 62;
+  fillTri(img, [bx0 - 20, by0 + 10], [bx0 - 20, by1 + 4], [bx0 + 2, by1 - 6], '#6d2fb5'); // the ribbon tails
+  fillTri(img, [bx1 + 20, by0 + 10], [bx1 + 20, by1 + 4], [bx1 - 2, by1 - 6], '#6d2fb5');
+  img.rect(bx0 - 20, by0 + 10, bx0 + 2, by1 + 4, '#6d2fb5');
+  img.rect(bx1 - 2, by0 + 10, bx1 + 20, by1 + 4, '#6d2fb5');
+  img.rect(bx0, by0, bx1, by1, '#241c45');
+  img.rect(bx0, by0, bx1, by0 + 1, '#ff7eb6'); img.rect(bx0, by1 - 1, bx1, by1, '#ff7eb6'); // pink edges
+  img.rect(bx0, by0 + 2, bx1, by0 + 2, '#ffd23f'); img.rect(bx0, by1 - 2, bx1, by1 - 2, '#ffd23f'); // gold lines
+  img.rect(bx0, by0, bx0 + 1, by1, '#ff7eb6'); img.rect(bx1 - 1, by0, bx1, by1, '#ff7eb6');
+  img.outlineRect(bx0 - 1, by0 - 1, bx1 + 1, by1 + 1, HV_PAL.K);
+  const line1 = 'SHADOW BAT';
+  const line2 = 'VS KITTEN HERO';
+  const l1x = Math.round((w - hvTextWidth(line1, 3)) / 2);
+  const l2x = Math.round((w - hvTextWidth(line2, 2)) / 2);
+  drawPixelText(img, line1, l1x, by0 + 6, '#f2eaff', 3, '#6d2fb5');
+  drawPixelText(img, line2, l2x, by0 + 33, '#ffb3d4', 2, '#6d2fb5');
+  vignette(img);
+  return img;
+}
+
 // ---------- write the files ----------
 
 const outFlag = process.argv.indexOf('--out');
 const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : path.join(__dirname, '..', 'assets', 'minigames');
 fs.mkdirSync(outDir, { recursive: true });
 const write = (name, built) => fs.writeFileSync(path.join(outDir, name), built.toPNG());
-write('platformer-bg-far.png', buildPlatformerFar());
-write('platformer-bg-mid.png', buildPlatformerMid());
 write('flappy-bg.png', buildFlappyBg());
 write('tower-bg.png', buildTowerBg());
 write('tower-sprites.png', buildTowerSprites());
 write('tower-prince.png', buildTowerPrince());
-// The old single platformer-bg.png is retired (replaced by the far/mid pair above) -- remove it if a
-// previous run left it behind, so assets.test.js's "every generated file is exactly what the tool
-// would write" check doesn't trip over a stale, no-longer-written file.
-const stale = path.join(outDir, 'platformer-bg.png');
-if (fs.existsSync(stale)) fs.unlinkSync(stale);
-console.log(`Wrote platformer-bg-far, platformer-bg-mid, flappy-bg, tower-bg, tower-sprites and tower-prince to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+write('hero-bg.png', buildHeroBg());
+write('hero-sprites.png', buildHeroSprites());
+write('hero-bar.png', buildHeroBar());
+write('hero-cover.png', buildHeroCover());
+// The old Physics Lab platformer's backdrops are retired (FB-0066: the Physics Lab is the hero fight now) -- remove them if a previous
+// run left them behind, so assets.test.js's "every generated file is exactly what the tool would write" check doesn't trip over stale files.
+for (const name of ['platformer-bg.png', 'platformer-bg-far.png', 'platformer-bg-mid.png']) {
+  const stale = path.join(outDir, name);
+  if (fs.existsSync(stale)) fs.unlinkSync(stale);
+}
+console.log(`Wrote flappy-bg, tower-bg, tower-sprites, tower-prince, hero-bg, hero-sprites, hero-bar and hero-cover to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

@@ -97,7 +97,7 @@ gift can never be blocked by a hard game.
 
 | Key | Room | Mini-game |
 |---|---|---|
-| 1 | Physics Lab (3rd floor) | Platformer jump-and-run (Mario-like) |
+| 1 | Physics Lab (3rd floor) | Hero fight: a masked kitten hero (a generic stand-in) shoots a bat-eared "shadow bat" who shoots back (3 hearts, 9 hits, a roaming minion, a themed cover), then takes the key he drops (FB-0066) |
 | 2 | ICL (1st floor) | Flappy-bird style flyer |
 | 3 | Room 195 | Tower climb: a "reverse Rapunzel" (climb to the prince, dodge what the gargoyle throws) |
 

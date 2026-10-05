@@ -7,7 +7,7 @@
 // framework-scene.js) via a plain sprite scale, so FLAPPY_BIRD_RADIUS scales up too (8 -> 24) to keep
 // her collision footprint matching her new, bigger silhouette. Gravity/flap velocity/gap height
 // (src/minigames/flappy.js FL_GAP_HEIGHT) were all authored at a smaller "compact" scale first and
-// then uniformly multiplied by 3 (see platformer.js's own file header for why that preserves every
+// then uniformly multiplied by 3 (the retired platformer.js's file header explained why that preserves every
 // fairness ratio exactly) rather than left at their old numbers, which were tuned for a radius-8 bird
 // and would have been a real difficulty regression squeezed against a radius-24 one.
 // tests/unit/flappy-logic.test.js "the retuned mini-game-scale constants stay fair" checks the margin.

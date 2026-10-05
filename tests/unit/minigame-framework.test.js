@@ -75,9 +75,9 @@ test('recordAttempt: attempts increase on "lost", and canSkip only turns true on
 
 test('recordAttempt: bestScore is the max across every attempt, win or lose', () => {
   const { GameState, recordAttempt } = loadGameData();
-  recordAttempt(GameState, 'platformer', 'lost', 2);
-  recordAttempt(GameState, 'platformer', 'lost', 5);
-  const { progress } = recordAttempt(GameState, 'platformer', 'lost', 3);
+  recordAttempt(GameState, 'hero', 'lost', 2);
+  recordAttempt(GameState, 'hero', 'lost', 5);
+  const { progress } = recordAttempt(GameState, 'hero', 'lost', 3);
   assert.equal(progress.bestScore, 5);
 });
 
@@ -122,13 +122,13 @@ test('resetMinigameProgress: puts one game back to a fresh record without touchi
 
 test('score/attempt progress round-trips through save/load like the rest of GameState', () => {
   const { GameState, recordAttempt, saveGame, loadGame } = loadGameData();
-  recordAttempt(GameState, 'platformer', 'lost', 3);
-  recordAttempt(GameState, 'platformer', 'won', 6);
+  recordAttempt(GameState, 'hero', 'lost', 3);
+  recordAttempt(GameState, 'hero', 'won', 6);
   assert.equal(saveGame('default', GameState), true);
 
-  GameState.minigames.platformer = { attempts: 0, bestScore: 0, won: false, skipped: false };
+  GameState.minigames.hero = { attempts: 0, bestScore: 0, won: false, skipped: false };
   assert.equal(loadGame('default', GameState), true);
-  assert.deepEqual(plain(GameState.minigames.platformer), { attempts: 1, bestScore: 6, won: true, skipped: false });
+  assert.deepEqual(plain(GameState.minigames.hero), { attempts: 1, bestScore: 6, won: true, skipped: false });
 });
 
 // ---------- outcome routing: how a `minigame` dialog action's result reaches the story ----------

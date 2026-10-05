@@ -757,16 +757,11 @@ scene's own `preload()` rather than `BootScene`.
 
 Quality-loop pass (Mini-games category, rated 4/10, "the hero is a speck"): the lead now draws
 `HERO_SCALE`-d (3x, `src/minigames/framework-scene.js`, matching the main game's own `ZOOM`) via a
-plain `sprite.setScale()` in the platformer and the flyer, so their level geometry and physics were
-retuned to match (see `src/minigames/platformer.js`'s own file header for the "compact scale,
-uniformly multiplied by 3" method) -- the backdrops follow the same method: generated at that smaller
+plain `sprite.setScale()` in the (since retired) platformer and the flyer, so their level geometry and physics were
+retuned to match (the "compact scale, uniformly multiplied by 3" method) -- the backdrops follow the same method: generated at that smaller
 compact scale, then stretched 3x in-scene (`setDisplaySize`, crisp under `pixelArt: true`, `src/
-main.js`) rather than authored at full canvas resolution. `assets/minigames/platformer-bg-far.png`
-(320x180, the Physics Lab's back wall, warm lamp glow pools, a ceiling pipe run, pinned -- scrollFactor
-0) and `platformer-bg-mid.png` (534x180, shelving units and a specimen tank spread across the whole
-level, scrollFactor ~0.4 for real parallax depth) replace the old single `platformer-bg.png`; the
-platformer's own floor is now code-drawn (tied 1:1 to real world position) rather than baked into the
-image. `flappy-bg.png` (320x180, the ICL server room: two depth-graded rack rows, a cable tray, cold
+main.js`) rather than authored at full canvas resolution. The Physics Lab's old platformer backdrops (`platformer-bg-far.png`, `platformer-bg-mid.png`) are gone: FB-0066 replaced that game with the hero
+fight (below). `flappy-bg.png` (320x180, the ICL server room: two depth-graded rack rows, a cable tray, cold
 blue light, a raised floor) stays one static image, stretched the same way (the flyer's own camera
 never scrolls, so a second parallax layer wouldn't read as motion there). `tower-bg.png` (480x270, stretched 2x -- Room 195's tower climb: stone walls, arrow slits, torches, five
 wooden beams with ladders, a round sunset window at the top) is Room 195's backdrop (FB-0074);
@@ -807,7 +802,7 @@ the committed files are up to date, same as every other generated asset.
 | `keyAwarded` | A `{ key: ... }` dialog action actually fires (`src/dialog.js`) -- one of the 3 treasure-hunt keys | `assets/audio/sfx/key-awarded.ogg` |
 | `doorOpen` / `warpStairs` | A warp is taken, picked by whether the Tiled object is a `door` or `stairs` (`src/scenes/world.js` `checkWarps()`) | `assets/audio/sfx/door-open.ogg` / `warp-stairs.ogg` |
 | `lockedDoorThud` | Walking into a story-locked door (`checkWarps()`, same toast throttle as the "Locked for the event" message) | `assets/audio/sfx/locked-door-thud.ogg` |
-| `minigameJump` / `minigameFlap` / `minigameLineClear` | The platformer's jump, the flyer's flap, the tower climb reaching a new floor (and its closing heart pop) | `assets/audio/generated/minigame-{jump,flap,line-clear}.wav` |
+| `minigameJump` / `minigameFlap` / `minigameLineClear` | The hero fight's jump (and, with the flap, her star bolt), the flyer's flap, the tower climb reaching a new floor (and its closing heart pop) | `assets/audio/generated/minigame-{jump,flap,line-clear}.wav` |
 | `minigameWin` / `minigameLose` | `MinigameBaseScene.win()` / `.lose()` (`src/minigames/framework-scene.js`, shared by all 3 games) | `assets/audio/sfx/minigame-win.ogg` / `minigame-lose.ogg` |
 | `boxOpen` | The reward box's lid actually lifts (`src/scenes/box-opening.js` `openLid()`) | `assets/audio/sfx/box-open.ogg` |
 | `cardWhoosh` | The card's interior reveals and the confetti starts (`src/scenes/card.js` `runInterior()`) -- once, not per confetti piece | `assets/audio/generated/card-whoosh.wav` |

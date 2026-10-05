@@ -3,11 +3,11 @@
 // key and hands control back to the world with the quest tracker updated, and Esc quits back cleanly
 // without the key. `minigames: true` (tests/e2e/helpers.js) turns the real Phaser scenes on -- every
 // other spec plays with `?minigames=0` (the default), which bypasses straight to 'won' so it can
-// focus on the *quest* reacting correctly, not on replaying a platformer/flyer/tower-climb session.
+// focus on the *quest* reacting correctly, not on replaying a hero-fight/flyer/tower-climb session.
 //
-// Forcing a loss/win uses the exact same internal calls real gameplay reaches (the platformer's own
-// `tryFinish()`/fall-through-the-floor check), teleporting the player the same way every other spec's
-// `teleport()` helper already does (`player.body.reset(...)`, tests/e2e/helpers.js) -- this proves the
+// Forcing a loss/win uses the exact same internal calls real gameplay reaches (the shell's own
+// `lose()` / `win()`, which the hero fight calls when her hearts run out or she takes the key), teleporting the
+// player the same way every other spec's `teleport()` helper already does (tests/e2e/helpers.js) -- this proves the
 // framework's own retry/skip/outcome wiring end to end without needing to script a perfect run of
 // each game's real controls (already covered per-game by the pure-logic unit tests).
 const { test, expect } = require('@playwright/test');
@@ -87,7 +87,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect((await state(page)).quest.keys.room195).toBe(false);
   });
 
-  test('the icl key station launches the flyer; the physicsLab station launches the platformer', async ({ page }) => {
+  test('the icl key station launches the flyer; the physicsLab station launches the hero fight (FB-0066)', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     await talkToStation(page, 'icl', 'minigame-flappy');
@@ -97,8 +97,8 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
 
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(true);
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).active).toBe(true);
   });
 
   // Art pass (coordinator brief, 2026-09-22): "the hero is the lead, not a pink rectangle... her
@@ -107,7 +107,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
   // own stand-in shape or a separately-loaded texture instead of reusing that one real, already-
   // colour-correct texture -- proven by checking the mini-game's hero is literally the same texture
   // object the world player uses, not just a same-named one.
-  test('the platformer and flyer heroes use the same real "player" texture as the world (her saved clothes colour)', async ({ page }) => {
+  test('the flyer hero uses the same real player texture as the world (her saved clothes colour); the hero fight draws its own kitten stand-in (FB-0066)', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     // Captured fresh per page load: a texture's blob URL isn't stable across navigations even for
@@ -115,16 +115,12 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     // the mini-game's hero against, not one captured before the later reload.
     let worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
 
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await waitCardReady(page, 'minigame-platformer');
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
-    const platformerHero = await page.evaluate(() => {
-      const hero = game.scene.getScene('minigame-platformer').hero;
-      return { key: hero.texture.key, src: hero.texture.source[0].image.src };
-    });
-    expect(platformerHero.key).toBe('player');
-    expect(platformerHero.src).toBe(worldTextureSource);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
+    const fightHero = await page.evaluate(() => game.scene.getScene('minigame-hero').hero.texture.key);
+    expect(fightHero).toBe('hero-sprites');
     await page.keyboard.press('Escape');
 
     await openGame(page, { map: 'main-block-1', minigames: true });
@@ -142,52 +138,52 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect(flappyHero.src).toBe(worldTextureSource);
   });
 
-  test('losing the platformer offers a one-keypress retry, and the skip gift appears on the 3rd loss', async ({ page }) => {
+  test('losing the hero fight offers a one-keypress retry, and the skip gift appears on the 3rd loss', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(true);
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).active).toBe(true);
 
     // Start (ENTER is the intro card's default, highlighted item -- one keypress).
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
 
     const fall = async () => {
-      await page.evaluate(() => game.scene.getScene('minigame-platformer').player.body.reset(60, 700));
-      await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('gameover');
+      await page.evaluate(() => game.scene.getScene('minigame-hero').lose());
+      await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('gameover');
     };
 
     // 1st loss: no skip offered yet, Retry is the default (one keypress) and returns to play.
     await fall();
-    let info = await mgInfo(page, 'minigame-platformer');
+    let info = await mgInfo(page, 'minigame-hero');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'QUIT']);
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
-    expect((await mgInfo(page, 'minigame-platformer')).score).toBe(0);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
+    expect((await mgInfo(page, 'minigame-hero')).score).toBe(0);
 
     // 2nd loss: still no skip.
     await fall();
-    info = await mgInfo(page, 'minigame-platformer');
+    info = await mgInfo(page, 'minigame-hero');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'QUIT']);
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
 
     // 3rd loss: the skip offer appears (docs/STORY.md "nobody may be locked out") -- select it and
     // take the key anyway.
     await fall();
-    info = await mgInfo(page, 'minigame-platformer');
+    info = await mgInfo(page, 'minigame-hero');
     expect(info.cardItems).toEqual(['RETRY (ENTER)', 'SKIP -- TAKE THE KEY ANYWAY', 'QUIT']);
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('win');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('win');
 
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter'); // "CONTINUE"
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(false);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).active).toBe(false);
     await expect.poll(async () => (await state(page)).quest.keys.physicsLab).toBe(true);
     const tracker = await questTrackerText(page);
     expect(tracker.keys).toBe('Keys: 1 / 3');
@@ -196,27 +192,25 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
   test('winning for real awards the key and hands control back to the world, tracker updated', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await waitCardReady(page, 'minigame-platformer');
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter'); // start
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
 
-    // Reach the flag with the score target already met -- the exact same win check the flag's own
-    // overlap callback runs in real gameplay (tryFinish()), just triggered directly instead of
-    // scripting a full run-and-jump playthrough of the level (covered by the platformer's own pure
-    // physics unit tests).
+    // Beat him and take the key -- the exact same win() the scene calls on its 'win' event in real gameplay, just
+    // triggered directly instead of scripting a whole fight (covered by tests/unit/hero-logic.test.js).
     await page.evaluate(() => {
-      const s = game.scene.getScene('minigame-platformer');
+      const s = game.scene.getScene('minigame-hero');
       s.setScore(s.def.scoreTarget);
-      s.tryFinish();
+      s.win();
     });
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('win');
-    expect((await mgInfo(page, 'minigame-platformer')).cardItems).toEqual(['CONTINUE (ENTER)']);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('win');
+    expect((await mgInfo(page, 'minigame-hero')).cardItems).toEqual(['CONTINUE (ENTER)']);
 
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).active).toBe(false);
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).worldActive).toBe(true);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).active).toBe(false);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).worldActive).toBe(true);
 
     const s = await state(page);
     expect(s.quest.keys.physicsLab).toBe(true);
@@ -258,39 +252,35 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
   test('FB-0042: confirming Retry with Space does not also make her jump on the first frame', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await waitCardReady(page, 'minigame-platformer');
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Space'); // Space also confirms the intro card's default "START"
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
 
-    await page.evaluate(() => game.scene.getScene('minigame-platformer').player.body.reset(60, 700));
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('gameover');
+    await page.evaluate(() => game.scene.getScene('minigame-hero').lose());
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('gameover');
 
-    await waitCardReady(page, 'minigame-platformer');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Space'); // confirms "RETRY (ENTER)" -- Space is also the jump key
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
 
     // The very next frame: she must not already be rising from a jump this same Space triggered.
-    const vy = await page.evaluate(() => game.scene.getScene('minigame-platformer').player.body.velocity.y);
+    const vy = await page.evaluate(() => game.scene.getScene('minigame-hero').hv.player.vy);
     expect(vy).toBeGreaterThanOrEqual(0);
   });
 
-  test('FB-0042: reaching the platformer\'s exit door without enough charge cells shows a message, not nothing', async ({ page }) => {
+  test('FB-0066: the hero fight shows its hint on the first try, and Z fires a star bolt (the card keys are untouched)', async ({ page }) => {
     await openGame(page, { map: 'main-block-3', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToStation(page, 'physicsLab', 'minigame-platformer');
-    await waitCardReady(page, 'minigame-platformer');
+    await talkToStation(page, 'physicsLab', 'minigame-hero');
+    await waitCardReady(page, 'minigame-hero');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
-
-    await page.evaluate(() => {
-      const s = game.scene.getScene('minigame-platformer');
-      s.tryFinish(); // score is still 0 -- reaching the door with nothing collected
-    });
-    // Still playing (not a loss, not a win) -- a message shown instead of silence.
-    expect((await mgInfo(page, 'minigame-platformer')).mgState).toBe('playing');
-    const message = await page.evaluate(() => game.scene.getScene('minigame-platformer').message?.label.text);
-    expect(message).toMatch(/charge cells/i);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-hero')).mgState).toBe('playing');
+    const message = await page.evaluate(() => game.scene.getScene('minigame-hero').message?.label.text);
+    expect(message).toMatch(/BUBBLE/);
+    await page.keyboard.down('z');
+    await expect.poll(async () => page.evaluate(() => game.scene.getScene('minigame-hero').hv.shots.length)).toBeGreaterThan(0);
+    await page.keyboard.up('z');
   });
 
   test('FB-0042: the flyer hovers with a "press space to flap" prompt, and gravity/scrolling wait for the first flap', async ({ page }) => {

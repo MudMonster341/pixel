@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:31:41.152Z",
-  "updatedAt": "2026-10-04T17:31:41.152Z",
+  "updatedAt": "2026-10-05T03:15:06.958Z",
   "details": "she will be batwoman and will ahve to figght the eneies and then she can leave after she ebats the enemies and collects the key, so making the mini agme a slight bit harder and a more inetnse version, can be sort of actuall she is hello kitty fighting batman and she beatrs batman who is shooting at her and then leaves.",
   "context": {
     "map": "main-block-3",
@@ -65,13 +65,28 @@
     }
   },
   "screenshot": "screenshots/FB-0066.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Physics Lab is now a harder hero fight: your kitten hero (original design) shoots with Z at a shadow-bat villain (9 hits, telegraphed volleys), a roaming robot-bat gives one heart, then the key drops; themed sunset cover; 4 students in the lab.",
+      "at": "2026-10-05T03:15:06.958Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/hero-logic.test.js › FB-0066",
+    "commit": null,
+    "at": "2026-10-05T03:15:06.958Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:31:41.152Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-05T03:15:06.958Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

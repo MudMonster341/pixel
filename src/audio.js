@@ -62,6 +62,7 @@ const SOUNDS = {
   // clean match, docs/ROADMAP.md M5 rule 6); win/lose reuse Kenney jingles ----------
   minigameJump: { file: 'assets/audio/generated/minigame-jump.wav', volume: 0.5, loop: false, category: 'sfx' },
   minigameFlap: { file: 'assets/audio/generated/minigame-flap.wav', volume: 0.45, loop: false, category: 'sfx' },
+  // (FB-0074: the old line-clear chime is now the tower climb's "new floor" ding and the closing heart pop; the file keeps its name.)
   minigameLineClear: { file: 'assets/audio/generated/minigame-line-clear.wav', volume: 0.5, loop: false, category: 'sfx' },
   minigameLose: { file: 'assets/audio/sfx/minigame-lose.ogg', volume: 0.5, loop: false, category: 'sfx' },
   minigameWin: { file: 'assets/audio/sfx/minigame-win.ogg', volume: 0.55, loop: false, category: 'sfx' },

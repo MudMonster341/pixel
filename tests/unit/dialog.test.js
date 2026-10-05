@@ -266,9 +266,9 @@ test('actions: minigame suspends the rest of the list until it resolves', () => 
   gameEvents.on('state-changed', () => changed++);
   let done;
 
-  applyDialogActions([{ minigame: 'tetris' }, { setFlag: 'afterMinigame' }], GameState, (r) => { done = r; });
+  applyDialogActions([{ minigame: 'tower' }, { setFlag: 'afterMinigame' }], GameState, (r) => { done = r; });
 
-  assert.equal(minigamePayload.id, 'tetris');
+  assert.equal(minigamePayload.id, 'tower');
   assert.equal(typeof minigamePayload.onResult, 'function');
   assert.equal(GameState.flags.afterMinigame, undefined, 'actions after `minigame` wait for its outcome');
   assert.equal(done, undefined, 'onDone has not fired yet');

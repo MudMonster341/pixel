@@ -513,7 +513,7 @@ async function waitCardAcceptsInput(page, sceneKey) {
 }
 
 async function shootMinigames(browser) {
-  for (const id of ['platformer', 'flappy', 'tetris']) {
+  for (const id of ['platformer', 'flappy', 'tower']) {
     const page = await browser.newPage({ viewport: VIEWPORT });
     // One tryStep per game: the 5 shots inside are a tight dependent chain (each depends on the
     // scene state the previous one left behind), so a failure partway skips the rest of *this*
@@ -581,21 +581,20 @@ async function shootMinigames(browser) {
         await page.waitForTimeout(150); // let playUpdate() apply this frame's anim/hero-sprite sync
         await page.keyboard.up('ArrowRight');
       } else {
-        // Tetris never bound SPACE to anything (rotate is UP/W, drop is DOWN/S) -- the old
-        // `keyboard.press('Space')` here did nothing at all, leaving the shot barely different from
-        // the empty board just after launch. Drop a few pieces for real, through the same engine
-        // functions playUpdate() itself calls every tick (movePiece/lockAndContinue), the same
-        // shortcut already used below to force game-over/win, instead of holding Down and waiting out
-        // the real fall timer (700ms/row at level 1) just for a screenshot.
+        // The tower climb starts on the ground floor and the gargoyle's first throw needs several seconds to come down
+        // that far, so the shot would show an empty tower. Fast-forward the pure state (the same stepTower() the scene
+        // calls every frame) for about 9 s with her invulnerable, then stand her on the middle beam: hazards in flight,
+        // her mid-tower, the HUD counting floor 3.
         await page.evaluate((key) => {
           const s = game.scene.getScene(key);
-          for (let n = 0; n < 3; n++) {
-            let moved = movePiece(s.board, s.piece, 0, 1);
-            while (moved !== s.piece) { s.piece = moved; moved = movePiece(s.board, s.piece, 0, 1); }
-            s.lockAndContinue();
-          }
+          s.tw.invulnMs = 60000;
+          for (let i = 0; i < 560; i++) stepTower(s.tw, {}, 16);
+          const p = s.tw.player;
+          p.mode = 'ground'; p.floor = 2; p.ladder = null; p.x = 480; p.y = TOWER_LEVEL.floors[2].y;
+          s.tw.best = 2;
+          s.setScore(3);
         }, sceneKey);
-        await page.waitForTimeout(150); // let the lock-flash/redraw settle before the shot
+        await page.waitForTimeout(150); // let playUpdate() sync the sprites before the shot
       }
       await shoot(page, `minigame-${id}-02-play`);
 

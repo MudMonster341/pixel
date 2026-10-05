@@ -164,7 +164,7 @@ function startGame() {
     // all a new one needs beyond its own file and a MINIGAMES entry.
     scene: [
       first, ...rest, GreetingScene, NameEntryScene, CustomizeScene, WorldScene, UIScene,
-      CutsceneScene, PlatformerScene, FlappyScene, TetrisScene,
+      CutsceneScene, PlatformerScene, FlappyScene, TowerScene,
       // The ending (docs/STORY.md "the box opens..."): BoxOpeningScene hands off straight to
       // CardScene, which ends on 'title' -- neither one ever resumes 'world'/'ui' (see
       // src/scenes/world.js playBoxOpening()).

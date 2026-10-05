@@ -1291,7 +1291,7 @@ class ControlsPanel {
 // Starting the title (or the goodbye screen) from ANY of them must leave none of these behind -- the
 // ending used to hand over to the title with the world still sitting paused under it (the player,
 // her foyer position and all), which is what the feedback overlay and a later "Continue" then saw.
-const GAMEPLAY_SCENES = ['world', 'ui', 'cutscene', 'box-opening', 'card', 'credits', 'minigame-platformer', 'minigame-flappy', 'minigame-tetris'];
+const GAMEPLAY_SCENES = ['world', 'ui', 'cutscene', 'box-opening', 'card', 'credits', 'minigame-platformer', 'minigame-flappy', 'minigame-tower'];
 
 // Stops every gameplay scene except `scene` itself (a scene's own start() below stops it), so what is
 // left running is exactly the one scene about to be started. Safe to call when nothing is alive.

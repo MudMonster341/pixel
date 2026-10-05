@@ -58,8 +58,8 @@ test('D02/D03: every shared mini-game UI object (HUD, cards, dim overlay, win ic
   assert.match(s, /const flash = [^\n]*setScrollFactor\(0\)/, 'win flash');
 });
 
-test('D02/D03: the platformer really does scroll its camera (so the pinning above is needed), while Tetris and Flappy never do', () => {
+test('D02/D03: the platformer really does scroll its camera (so the pinning above is needed), while the tower and Flappy never do', () => {
   assert.match(src('platformer.js'), /cameras\.main\.startFollow\(/);
   assert.doesNotMatch(src('flappy.js'), /startFollow|scrollX\s*=/);
-  assert.doesNotMatch(src('tetris.js'), /startFollow|scrollX\s*=/);
+  assert.doesNotMatch(src('tower.js'), /startFollow|scrollX\s*=/);
 });

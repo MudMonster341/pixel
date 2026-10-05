@@ -109,7 +109,7 @@ function hasNewDialog(npc, state) {
 //   { toast: 'The volunteer waves you over.' }   a short on-screen message
 //   { cutscene: 'gate2' }       asks to play a cutscene (src/cutscenes.js); src/scenes/ui.js listens
 //                                for the event and hands it to the current WorldScene
-//   { minigame: 'tetris' }      asks to launch a mini-game (docs/ROADMAP.md M4, src/minigames/) and
+//   { minigame: 'tower' }       asks to launch a mini-game (docs/ROADMAP.md M4, src/minigames/) and
 //                                *suspends* the rest of this action list until it's over -- a
 //                                key-station action list runs this before `give`/`key` (docs/STORY.md),
 //                                so `give`/`key`/`journal`/`toast` only fire once the mini-game

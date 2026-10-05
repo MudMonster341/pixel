@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:40:20.192Z",
-  "updatedAt": "2026-10-04T17:40:20.192Z",
+  "updatedAt": "2026-10-05T02:43:28.224Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -55,13 +55,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0074.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Tetris is removed. Room 195's key game is now a tower climb (you chose it over the candy-crush idea): climb 5 floors, dodge the gargoyle's barrels and pots, save the prince; 3 hearts, gentle, skip after 3 losses.",
+      "at": "2026-10-05T02:43:28.224Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0074-tower.test.js › FB-0074",
+    "commit": null,
+    "at": "2026-10-05T02:43:28.224Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:40:20.192Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-05T02:43:28.224Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

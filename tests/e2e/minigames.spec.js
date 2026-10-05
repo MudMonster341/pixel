@@ -3,7 +3,7 @@
 // key and hands control back to the world with the quest tracker updated, and Esc quits back cleanly
 // without the key. `minigames: true` (tests/e2e/helpers.js) turns the real Phaser scenes on -- every
 // other spec plays with `?minigames=0` (the default), which bypasses straight to 'won' so it can
-// focus on the *quest* reacting correctly, not on replaying a platformer/flyer/Tetris session.
+// focus on the *quest* reacting correctly, not on replaying a platformer/flyer/tower-climb session.
 //
 // Forcing a loss/win uses the exact same internal calls real gameplay reaches (the platformer's own
 // `tryFinish()`/fall-through-the-floor check), teleporting the player the same way every other spec's
@@ -71,19 +71,19 @@ async function talkToStation(page, id, sceneKey) {
 }
 
 test.describe('mini-games (docs/ROADMAP.md M4)', () => {
-  test('the room195 key station launches Tetris; Esc from its intro card quits cleanly, no key', async ({ page }) => {
+  test('the room195 key station launches the tower climb; Esc from its intro card quits cleanly, no key', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
 
-    await talkToStation(page, 'room195', 'minigame-tetris');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).active).toBe(true);
-    let info = await mgInfo(page, 'minigame-tetris');
+    await talkToStation(page, 'room195', 'minigame-tower');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).active).toBe(true);
+    let info = await mgInfo(page, 'minigame-tower');
     expect(info.mgState).toBe('intro');
     expect(info.worldActive).toBe(false, 'the world is paused underneath the mini-game');
 
     await page.keyboard.press('Escape');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).active).toBe(false);
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).worldActive).toBe(true);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).active).toBe(false);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).worldActive).toBe(true);
     expect((await state(page)).quest.keys.room195).toBe(false);
   });
 
@@ -238,21 +238,21 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     // actually tests the debounce instead of testing incidental Playwright/IPC timing.
     await page.evaluate(() => {
       GameState.quest.stage = 'hunting';
-      game.scene.getScene('world').launchMinigame('tetris', () => {});
+      game.scene.getScene('world').launchMinigame('tower', () => {});
     });
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).active).toBe(true);
-    expect((await mgInfo(page, 'minigame-tetris')).mgState).toBe('intro');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).active).toBe(true);
+    expect((await mgInfo(page, 'minigame-tower')).mgState).toBe('intro');
 
     // Mash Enter the instant the card appears: still on the intro card a beat later.
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
-    expect((await mgInfo(page, 'minigame-tetris')).mgState).toBe('intro');
+    expect((await mgInfo(page, 'minigame-tower')).mgState).toBe('intro');
 
     // Once the debounce has passed, a real Enter does start it.
-    await waitCardReady(page, 'minigame-tetris');
+    await waitCardReady(page, 'minigame-tower');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tetris')).mgState).toBe('playing');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).mgState).toBe('playing');
   });
 
   test('FB-0042: confirming Retry with Space does not also make her jump on the first frame', async ({ page }) => {

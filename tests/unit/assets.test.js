@@ -98,14 +98,14 @@ test('assets/cutscenes/ (card art) is up to date with tools/make-card-art.js (ru
 // platformer.js's own file header describes) and stretched 3x in-scene (setDisplaySize, crisp under
 // pixelArt:true) rather than authored at full canvas resolution -- the platformer's mid (shelving)
 // layer is level-width sized (534, = the compact PF_LEVEL_WIDTH) so it has room to pan under the
-// camera's own scroll (see tools/make-minigame-art.js's file header). Tetris keeps its own 960x540
-// backdrop unchanged.
+// camera's own scroll (see tools/make-minigame-art.js's file header). The tower's backdrop is generated at half
+// scale (480x270) and stretched 2x, like the others.
 test('every mini-game backdrop is sized to its own scene\'s viewport', () => {
   const sizes = {
     'platformer-bg-far.png': [320, 180],
     'platformer-bg-mid.png': [534, 180],
     'flappy-bg.png': [320, 180],
-    'tetris-bg.png': [960, 540],
+    'tower-bg.png': [480, 270],
   };
   for (const [name, [expectedW, expectedH]] of Object.entries(sizes)) {
     const png = path.join(ASSETS, 'minigames', name);

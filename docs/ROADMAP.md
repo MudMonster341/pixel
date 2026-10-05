@@ -93,7 +93,7 @@ source asset packages... change all the trees, pavements, everything."
 - [x] Mini-game framework: launched from a dialog action, score target, retry, skip after 3 losses (2026-09-22)
 - [x] Platformer (Physics Lab), lab backdrop, the lead as hero (2026-09-22)
 - [x] Flappy-style flyer (ICL), server-room backdrop (2026-09-22)
-- [x] Tetris (Room 195), night classroom, NEXT box and score panel (2026-09-22)
+- [x] Room 195's game: first Tetris (2026-09-22), replaced by the tower climb "reverse Rapunzel" (FB-0074, 2026-10-05: `src/minigames/tower.js`)
 - [x] Each one: its own art and Playwright tests that play it headlessly (2026-09-22)
 
 ## M5 — Feel and polish

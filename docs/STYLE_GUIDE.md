@@ -768,9 +768,10 @@ level, scrollFactor ~0.4 for real parallax depth) replace the old single `platfo
 platformer's own floor is now code-drawn (tied 1:1 to real world position) rather than baked into the
 image. `flappy-bg.png` (320x180, the ICL server room: two depth-graded rack rows, a cable tray, cold
 blue light, a raised floor) stays one static image, stretched the same way (the flyer's own camera
-never scrolls, so a second parallax layer wouldn't read as motion there). `tetris-bg.png` (960x540,
-unchanged -- Room 195 at night: a whiteboard, desks, a window onto a lit skyline) was rated fine and
-this pass left it alone. `npm run assets` (or `npm run minigame-art` alone) regenerates them;
+never scrolls, so a second parallax layer wouldn't read as motion there). `tower-bg.png` (480x270, stretched 2x -- Room 195's tower climb: stone walls, arrow slits, torches, five
+wooden beams with ladders, a round sunset window at the top) is Room 195's backdrop (FB-0074);
+its sprites are `tower-sprites.png` (32x32 cells: the stone gargoyle, a barrel, a flower pot, hearts, crown,
+chameleon in green and pink) and `tower-prince.png`, all drawn by `tools/make-minigame-art.js`. `npm run assets` (or `npm run minigame-art` alone) regenerates them;
 `tests/unit/assets.test.js` checks they're committed, up to date and sized to each scene's own scale.
 
 ## Audio (roadmap M5, 2026-09-22)
@@ -806,7 +807,7 @@ the committed files are up to date, same as every other generated asset.
 | `keyAwarded` | A `{ key: ... }` dialog action actually fires (`src/dialog.js`) -- one of the 3 treasure-hunt keys | `assets/audio/sfx/key-awarded.ogg` |
 | `doorOpen` / `warpStairs` | A warp is taken, picked by whether the Tiled object is a `door` or `stairs` (`src/scenes/world.js` `checkWarps()`) | `assets/audio/sfx/door-open.ogg` / `warp-stairs.ogg` |
 | `lockedDoorThud` | Walking into a story-locked door (`checkWarps()`, same toast throttle as the "Locked for the event" message) | `assets/audio/sfx/locked-door-thud.ogg` |
-| `minigameJump` / `minigameFlap` / `minigameLineClear` | The platformer's jump, the flyer's flap, Tetris clearing at least one row | `assets/audio/generated/minigame-{jump,flap,line-clear}.wav` |
+| `minigameJump` / `minigameFlap` / `minigameLineClear` | The platformer's jump, the flyer's flap, the tower climb reaching a new floor (and its closing heart pop) | `assets/audio/generated/minigame-{jump,flap,line-clear}.wav` |
 | `minigameWin` / `minigameLose` | `MinigameBaseScene.win()` / `.lose()` (`src/minigames/framework-scene.js`, shared by all 3 games) | `assets/audio/sfx/minigame-win.ogg` / `minigame-lose.ogg` |
 | `boxOpen` | The reward box's lid actually lifts (`src/scenes/box-opening.js` `openLid()`) | `assets/audio/sfx/box-open.ogg` |
 | `cardWhoosh` | The card's interior reveals and the confetti starts (`src/scenes/card.js` `runInterior()`) -- once, not per confetti piece | `assets/audio/generated/card-whoosh.wav` |

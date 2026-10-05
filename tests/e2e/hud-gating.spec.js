@@ -55,42 +55,42 @@ test('FB-0035: Esc skips a cutscene instead of also opening the pause menu under
 test('FB-0035: Esc quits a mini-game instead of also opening the pause menu underneath it', async ({ page }) => {
   await openGame(page, { map: 'main-block-1', minigames: true });
   await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-  await talkToStation(page, 'room195', 'minigame-tetris');
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(true);
+  await talkToStation(page, 'room195', 'minigame-tower');
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(true);
 
   await page.keyboard.press('Escape');
   expect((await state(page)).pause.visible).toBe(false);
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(false);
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(false);
   expect((await state(page)).pause.visible).toBe(false);
 });
 
 test('FB-0035: J does not open the journal while a mini-game owns the screen', async ({ page }) => {
   await openGame(page, { map: 'main-block-1', minigames: true });
   await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-  await talkToStation(page, 'room195', 'minigame-tetris');
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(true);
+  await talkToStation(page, 'room195', 'minigame-tower');
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(true);
 
   await page.keyboard.press('j');
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(false);
 
   await page.keyboard.press('Escape'); // clean up: back to the world
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(false);
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(false);
 });
 
 test('FB-0035: M does not toggle the minimap while a mini-game owns the screen', async ({ page }) => {
   await openGame(page, { map: 'main-block-1', minigames: true });
   await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
   const before = await page.evaluate(() => game.scene.getScene('ui').minimap.visible);
-  await talkToStation(page, 'room195', 'minigame-tetris');
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(true);
+  await talkToStation(page, 'room195', 'minigame-tower');
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(true);
 
   await page.keyboard.press('m');
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => game.scene.getScene('ui').minimap.visible)).toBe(before);
 
   await page.keyboard.press('Escape');
-  await expect.poll(async () => mgActive(page, 'minigame-tetris')).toBe(false);
+  await expect.poll(async () => mgActive(page, 'minigame-tower')).toBe(false);
 });
 
 test('FB-0035: a warp fade blocks HUD keys the same way a cutscene does', async ({ page }) => {

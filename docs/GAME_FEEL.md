@@ -340,12 +340,12 @@ rule set. What changed:
   station's own pickup uses) on the win card, and the card's own fade-and-ease-up entrance described
   above. The platformer adds one effect only it needs -- a landing puff
   (`spawnDustPuff()`, shared in `framework-scene.js` so a future game can reuse it too).
-- **Tetris got real furniture**: an opaque well (was 35%-alpha, letting the backdrop bleed through
-  the pieces) with faint internal grid lines, a side panel with a NEXT box, LEVEL and SCORE
-  (`TetrisScene.buildSidePanel()`, `drawPanel()` styling like every other panel), and every cell
-  drawn with a highlight face (top/left) and a shadow face (bottom/right) instead of a flat fill
-  (`drawShadedCell()`, STYLE_GUIDE.md "Ramps, not flat fills") -- plus a brief white flash on the
-  rows that are about to clear, held just long enough to read before the stack actually collapses.
+- **The tower climb (Room 195, FB-0074) is gentle and telegraphed**: three hearts, slow hazards (about
+  80 px/s), a jump that clears one comfortably (a window of about 200 ms), and a wobble plus a puff on
+  the gargoyle 0.7 s before every throw. A hit is a blink (2.5 Hz, under the 3 Hz limit) and a short
+  invulnerability with one light red pulse over the screen, never a knockback to the start. The win is a
+  short closing beat (the prince leans out, the chameleon goes green, pink, green, a heart pops) before
+  the shared win card; a round that runs past 150 s counts as a win, so nobody is stuck.
 
 ## What to check before calling a new screen "done"
 

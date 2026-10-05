@@ -54,7 +54,7 @@ test('MINIGAMES: each item matches the real key STORY.keyStations awards for the
 
 test('recordAttempt: a fresh mini-game starts at zero attempts, no skip offered', () => {
   const { GameState, minigameProgress } = loadGameData();
-  const progress = minigameProgress(GameState, 'tetris');
+  const progress = minigameProgress(GameState, 'tower');
   assert.deepEqual(plain(progress), { attempts: 0, bestScore: 0, won: false, skipped: false });
 });
 
@@ -83,10 +83,10 @@ test('recordAttempt: bestScore is the max across every attempt, win or lose', ()
 
 test('recordAttempt: "won" sets won=true and stops counting attempts; canSkip is false once won', () => {
   const { GameState, recordAttempt } = loadGameData();
-  recordAttempt(GameState, 'tetris', 'lost', 1);
-  recordAttempt(GameState, 'tetris', 'lost', 2);
-  recordAttempt(GameState, 'tetris', 'lost', 3);
-  const { progress, canSkip } = recordAttempt(GameState, 'tetris', 'won', 10);
+  recordAttempt(GameState, 'tower', 'lost', 1);
+  recordAttempt(GameState, 'tower', 'lost', 2);
+  recordAttempt(GameState, 'tower', 'lost', 3);
+  const { progress, canSkip } = recordAttempt(GameState, 'tower', 'won', 10);
   assert.equal(progress.won, true);
   assert.equal(progress.skipped, false);
   assert.equal(progress.attempts, 3, 'a win does not count as another failed attempt');
@@ -107,16 +107,16 @@ test('recordAttempt: notifies state-changed, so autosave (src/save.js) picks it 
   const { GameState, recordAttempt, gameEvents } = loadGameData();
   let changed = 0;
   gameEvents.on('state-changed', () => changed++);
-  recordAttempt(GameState, 'tetris', 'lost', 1);
+  recordAttempt(GameState, 'tower', 'lost', 1);
   assert.equal(changed, 1);
 });
 
 test('resetMinigameProgress: puts one game back to a fresh record without touching the others', () => {
   const { GameState, recordAttempt, resetMinigameProgress, minigameProgress, freshMinigameProgress } = loadGameData();
-  recordAttempt(GameState, 'tetris', 'lost', 5);
+  recordAttempt(GameState, 'tower', 'lost', 5);
   recordAttempt(GameState, 'flappy', 'won', 8);
-  resetMinigameProgress(GameState, 'tetris');
-  assert.deepEqual(minigameProgress(GameState, 'tetris'), freshMinigameProgress());
+  resetMinigameProgress(GameState, 'tower');
+  assert.deepEqual(minigameProgress(GameState, 'tower'), freshMinigameProgress());
   assert.equal(minigameProgress(GameState, 'flappy').won, true, 'untouched');
 });
 
@@ -144,7 +144,7 @@ test('outcome routing: quitting a key station\'s mini-game never awards the key'
   let done;
 
   applyDialogActions(take.actions, GameState, (result) => { done = result; });
-  assert.equal(payload.id, 'tetris');
+  assert.equal(payload.id, 'tower');
   assert.equal(GameState.quest.keys.room195, false, 'not given until the mini-game actually resolves');
 
   payload.onResult('quit');

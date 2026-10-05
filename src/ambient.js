@@ -236,8 +236,8 @@ const AMBIENT = {
     { id: 'mb1-amb-mustafa-195', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 27, y: 4, facing: 'left', factIds: [],
       name: "Mustafa", sheet: 'npc-mustafa',
       lines: [
-        "Room 195: stack things neatly, like my to-do list. Only one of those works.",
-        "Pieces fall, rows clear. If only deadlines did that too.",
+        "Room 195 is a climb. Bring good shoes. And a bit of patience.",
+        "Look up before you go up. Things come down faster than deadlines do.",
       ] },
     // 2 in the corridor.
     { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,

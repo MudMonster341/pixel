@@ -54,8 +54,8 @@ test('FB-0073: the shared card is only as wide as its content needs, clamped bet
   assert.match(source, /const panel = makePanel\(scene, x, y, w, h\)\.setDepth\(201\);/);
 });
 
-test('FB-0073: Tetris (being replaced) keeps working with the shorter text: its HUD target still comes from scoreTarget', () => {
-  assert.equal(MINIGAMES.tetris.scoreTarget, 10);
-  assert.match(MINIGAMES.tetris.instructions[1], /10/);
-  assert.equal(MINIGAMES.tetris.scoreLabel, 'LINES');
+test('FB-0073: the tower climb (Room 195) keeps the shorter text: its HUD target still comes from scoreTarget', () => {
+  assert.equal(MINIGAMES.tower.scoreTarget, 5);
+  assert.match(MINIGAMES.tower.instructions[1], /\b5\b/);
+  assert.equal(MINIGAMES.tower.scoreLabel, 'FLOOR');
 });

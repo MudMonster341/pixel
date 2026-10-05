@@ -20,8 +20,8 @@ const SCRIPTS = [
   // Mini-game pure data/logic (docs/ROADMAP.md M4): no Phaser scenes here, so these load fine into
   // this same sandbox -- src/minigames/framework-scene.js and the 3 game scenes need a real browser
   // and are never loaded by unit tests.
-  'src/minigames/framework-data.js', 'src/minigames/tetris-logic.js', 'src/minigames/flappy-logic.js',
-  'src/minigames/platformer-physics.js',
+  'src/minigames/framework-data.js', 'src/minigames/flappy-logic.js',
+  'src/minigames/platformer-physics.js', 'src/minigames/tower-logic.js',
   'src/dialog.js',
   // The ending's card content (docs/STORY.md "the ending"): pure data/validation, no Phaser -- see
   // src/card.js's own header comment for why this needs to tolerate a missing/malformed card.json.
@@ -206,19 +206,6 @@ function loadGameData() {
     minigameProgress: get('minigameProgress'),
     resetMinigameProgress: get('resetMinigameProgress'),
     freshMinigameProgress: get('freshMinigameProgress'),
-    // Tetris pure logic
-    TETRIS_COLS: get('TETRIS_COLS'),
-    TETRIS_ROWS: get('TETRIS_ROWS'),
-    TETRIS_ORDER: get('TETRIS_ORDER'),
-    createTetrisBoard: get('createTetrisBoard'),
-    randomBag: get('randomBag'),
-    spawnPiece: get('spawnPiece'),
-    absoluteCells: get('absoluteCells'),
-    fitsBoard: get('fitsBoard'),
-    movePiece: get('movePiece'),
-    rotatePiece: get('rotatePiece'),
-    lockPiece: get('lockPiece'),
-    fallIntervalMs: get('fallIntervalMs'),
     // Flappy pure logic
     flappyStep: get('flappyStep'),
     flappyFlap: get('flappyFlap'),

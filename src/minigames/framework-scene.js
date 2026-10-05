@@ -1,7 +1,7 @@
 // The shared shell every mini-game scene is built on (docs/ROADMAP.md M4): an intro card (name, how
 // to play, the score target), a HUD while playing, a game-over card (score, Retry/Quit, and "skip
 // and take the key anyway" once 3 attempts have failed) and a win card that hands the key over -- the
-// same four states for all three games, so src/minigames/platformer.js / flappy.js / tetris.js only
+// same four states for all three games, so src/minigames/platformer.js / flappy.js / tower.js only
 // implement the actual gameplay (buildScene()/startAttempt()/playUpdate(), see the bottom of this
 // file) and never redraw a card or re-invent the pause/attempt/skip bookkeeping
 // (src/minigames/framework-data.js).
@@ -18,7 +18,7 @@ const MG_FADE_MS = 250;
 
 // Pins UI objects to the screen instead of the world (defects D02/D03, 2026-10-04): the platformer's main camera
 // scrolls to follow the hero, so the HUD, the cards, the dim overlay and the win flash were drawn in world space and
-// slid off-screen with it. scrollFactor 0 keeps them where they are drawn. Harmless in Tetris and Flappy, whose
+// slid off-screen with it. scrollFactor 0 keeps them where they are drawn. Harmless in the tower and Flappy, whose
 // camera never moves. Returns its argument so it can wrap an expression.
 function pinToScreen(parts) {
   (Array.isArray(parts) ? parts : [parts]).forEach((part) => part.setScrollFactor(0));
@@ -205,7 +205,7 @@ class MinigameBaseScene extends Phaser.Scene {
     if (this.mgState === 'playing') this.playUpdate(time, delta);
   }
 
-  // ---------- subclass contract (src/minigames/platformer.js, flappy.js, tetris.js) ----------
+  // ---------- subclass contract (src/minigames/platformer.js, flappy.js, tower.js) ----------
   // buildScene(): build the persistent game objects, once, the first time the intro is dismissed.
   // startAttempt(): (re)set the game to its starting position -- called at the start of every
   //   attempt, including every retry, so it must fully reset anything buildScene() doesn't recreate.
@@ -406,7 +406,7 @@ class MinigameCard {
       // and the message row come from winCardLayout() (src/minigames/framework-data.js), whose test checks the icon
       // never overlaps the message line under it (defect D09).
       // `def.name` already reads as a challenge ("Physics Lab Trial", "ICL Server Dash", "Room 195
-      // Stack-Off") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
+      // Tower Rescue") -- no trailing "trial!" appended, or the Physics Lab's own name would double up
       // ("You beat the Physics Lab Trial trial!").
       paragraphs: [...Array(MG_WIN_BLANK_LINES).fill(''), skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
       items: [{ label: 'CONTINUE (ENTER)', onSelect: onContinue }],

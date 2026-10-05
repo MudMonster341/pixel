@@ -57,17 +57,20 @@ const MINIGAMES = {
     scoreTarget: 8,
     scoreLabel: 'GAPS',
   },
-  tetris: {
-    id: 'tetris',
-    name: 'Room 195 Stack-Off',
-    sceneKey: 'minigame-tetris',
+  // FB-0074: Room 195's game is the tower climb (a "reverse Rapunzel", src/minigames/tower.js + tower-logic.js); it replaced the
+  // old falling-blocks game.
+  // The score is the floor she has reached (the tower has scoreTarget floors); the win is reaching the prince at the top.
+  tower: {
+    id: 'tower',
+    name: 'Room 195 Tower Rescue',
+    sceneKey: 'minigame-tower',
     item: 'keyRoom195',
     instructions: [
-      'ARROWS: MOVE   UP: TURN   DOWN: DROP',
-      'CLEAR 10 LINES BEFORE THE STACK TOPS OUT',
+      'ARROWS: RUN / CLIMB   SPACE: JUMP',
+      'CLIMB TO FLOOR 5 AND SAVE THE PRINCE',
     ],
-    scoreTarget: 10,
-    scoreLabel: 'LINES',
+    scoreTarget: 5,
+    scoreLabel: 'FLOOR',
   },
 };
 

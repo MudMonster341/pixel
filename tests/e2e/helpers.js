@@ -24,7 +24,7 @@ const { FEEDBACK_DIR } = require('./paths');
 // the same way cutscenes/title/intro do: a `minigame` dialog action resolves straight to 'won'
 // without ever launching the real Phaser scene, so most specs (the LUG-hunt playthrough, dialog and
 // save tests, ...) see a key change hands the instant she wins it, without having to actually play a
-// platformer/flyer/Tetris session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
+// platformer/flyer/tower-climb session headlessly. tests/e2e/minigames.spec.js passes `minigames: true` to
 // turn the real thing back on.
 async function openGame(page, { dev = false, map = 'meadow', cutscene = false, save = false, profile, title = false, intro = false, minigames = false, audio = false } = {}) {
   const errors = [];

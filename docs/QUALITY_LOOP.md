@@ -54,7 +54,7 @@ Owner feedback (the in-game O overlay) always jumps the queue.
 | 4 | **UI and menus** | Title, HUD (minimap, tracker, hotbar, banners), dialog box, pause, journal, full map, credits, confirm panels, at 960x540 and 2 other sizes | Consistent panel style, nothing overflows or overlaps, readable at a glance, HUD doesn't cover the play area |
 | 5 | **Story flow and clarity** | Opening, bus arrival, Mustafa, gate, entrance, finding the stall, each key room, returning, the reward | Always obvious what to do next; no dead time; follows STORY.md |
 | 6 | **Cutscenes** | Opening, gate, entrance, key rooms, box opening | In-world, smooth camera and easing, no hard cuts, skippable, no soft-locks |
-| 7 | **Mini-games** | Platformer, flyer, Tetris | Clear goal, fair difficulty, good feel, themed art, retry/skip clean |
+| 7 | **Mini-games** | Platformer, flyer, tower climb | Clear goal, fair difficulty, good feel, themed art, retry/skip clean |
 | 8 | **Audio** | Music per area, SFX coverage, volume balance, settings | Every action has a fitting sound; nothing too loud or missing |
 | 9 | **Game feel and polish** | Transitions, camera, input response, juice, idle life | Nothing snaps or flashes; every action gives feedback |
 | 10 | **Card and ending** | Box opening, card (temporary content), the end, "watch again" | Emotional, smooth, finished-looking even on placeholders |

@@ -139,7 +139,7 @@ shows a selectable list and runs whichever option's own `actions` the player pic
                                            // Journal, opened with J), oldest first, never removed
 { toast: 'The volunteer waves you over.' }
 { cutscene: 'gate2' }                     // plays a cutscene (src/cutscenes.js)
-{ minigame: 'tetris' }                    // launches a mini-game (M4, see "Mini-games" below) and
+{ minigame: 'tower' }                     // launches a mini-game (M4, see "Mini-games" below) and
                                            // *suspends* the rest of this action list until it's over
 ```
 
@@ -221,9 +221,13 @@ never needs to know about:
   winning) stops the list right there, the same as a full bag already did -- no key is ever handed
   over. `'lost'` never reaches the story at all: it's the shell's own internal retry state, since
   retrying is unlimited until one of those two terminal outcomes.
-- **Each game's own file** under `src/minigames/` (`platformer.js`, `flappy.js`, `tetris.js`) only
+- **Each game's own file** under `src/minigames/` (`platformer.js`, `flappy.js`, `tower.js`) only
   draws the level and forwards input; the actual rules are pure, Phaser-free modules
-  (`platformer-physics.js`, `flappy-logic.js`, `tetris-logic.js`) unit-tested without a browser.
+  (`platformer-physics.js`, `flappy-logic.js`, `tower-logic.js`) unit-tested without a browser.
+  Room 195's game is the tower climb (a "reverse Rapunzel", FB-0074): `tower-logic.js` holds the whole
+  round as a pure function of a seed and the inputs (ladders, the seeded gargoyle throws, rolling and
+  dropping hazards, hearts, the win zone, the 150 s failsafe) on top of `platformer-physics.js`'s feel
+  helpers; `tools/make-minigame-art.js` reads its level numbers so the painted beams sit where the rules put them.
 - **`?minigames=0`** (`src/maplogic.js` `minigamesEnabled()`) bypasses the real mini-game scene
   entirely and resolves a `minigame` action straight to `'won'` -- the same idea as `?cutscene=0` for
   a cutscene trigger. `tests/e2e/helpers.js` defaults every spec to this except

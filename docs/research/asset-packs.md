@@ -38,6 +38,8 @@ money.
 
 ## The honest verdict on style fit
 
+**Also in use (FB-0074, 2026-10-05): the tower climb's art.** `tools/make-minigame-art.js` crops the orange barrel (tile col 32, row 3, 8x12 px) and the fence-plank tile (374,238) from the Roguelike Modern City sheet (CC0): the barrel is turned on its side to roll, the plank pixels form the beams. The ladder, gargoyle, flower pot, chameleon, hearts and the backdrop are code-composed from the project palette; no new pack was needed (the CC0 "tile set pack 1" with a ladder is not vendored here).
+
 I built three small mockups from the four downloaded packs, at the game's real render scale (16px
 tile × zoom 3 = 48px on screen), and looked at them next to the current game. They're saved at:
 

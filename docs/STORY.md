@@ -99,7 +99,7 @@ gift can never be blocked by a hard game.
 |---|---|---|
 | 1 | Physics Lab (3rd floor) | Platformer jump-and-run (Mario-like) |
 | 2 | ICL (1st floor) | Flappy-bird style flyer |
-| 3 | Room 195 | Tetris |
+| 3 | Room 195 | Tower climb: a "reverse Rapunzel" (climb to the prince, dodge what the gargoyle throws) |
 
 ## The box and the birthday card (the ending, built 2026-09-22)
 

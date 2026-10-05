@@ -114,7 +114,7 @@ function introEnabled(search) {
 // `?minigames=0` bypasses the real mini-game scenes (src/minigames/): a `minigame` dialog action
 // resolves straight to 'won', the same way `?cutscene=0` skips a cutscene trigger -- most specs (the
 // full LUG-hunt playthrough, dialog/save tests, ...) care about the *quest* reacting correctly to a
-// key being won, not about actually playing a platformer/flyer/Tetris session headlessly every time.
+// key being won, not about actually playing a platformer/flyer/tower-climb session headlessly every time.
 // tests/e2e/helpers.js defaults this off; tests/e2e/minigames.spec.js turns it back on to test the
 // mini-games themselves. `search` is injectable, same pattern as the helpers above.
 function minigamesEnabled(search) {

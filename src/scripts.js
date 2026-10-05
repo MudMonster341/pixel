@@ -157,6 +157,154 @@ function keyRoomSteps(keyStationId, line) {
   ];
 }
 
+// ---------- the moments (src/moments.js: the pacing; docs/plans/2026-10-04-moments-and-small-touches.md: the design) ----------
+// Two small unskippable scenes. They play through the same in-world runner as everything above, started by src/scenes/world.js
+// checkMoment() with `unskippable`, and every line has `autoMs` so they always end by themselves (8-20 s, measured by
+// tests/unit/moments.test.js). Nobody is moved except the actors a moment spawns: she is never walked anywhere, so a moment can never
+// leave her in a wall. Every actor a moment spawns is despawned again before it ends.
+//
+// The two prop sheets (drawn by tools/make-moments.js; layouts mirrored here and checked against the committed PNGs):
+const MOMENT_SHEETS = {
+  // 32x32 frames. The unicorn: a generic white horse with a horn and a pastel mane. 0 and 1 are the grazing head-bob.
+  unicorn: {
+    key: 'moment-unicorn',
+    file: 'assets/moment-unicorn.png',
+    frameWidth: 32,
+    frameHeight: 32,
+    frames: { grazeA: 0, grazeB: 1, headUp: 2, ridden: 3, flyRidden: 4, flyEmpty: 5 },
+    feet: 15, // px below the frame's centre where the hooves stand
+  },
+  // 28x22 frames. Mevin's drum kit: which part was just hit.
+  drums: {
+    key: 'moment-drums',
+    file: 'assets/moment-drums.png',
+    frameWidth: 28,
+    frameHeight: 22,
+    frames: { idle: 0, snare: 1, kick: 2, crash: 3, snareCrash: 4 },
+    feet: 11,
+  },
+};
+const UNICORN = MOMENT_SHEETS.unicorn.frames;
+const DRUMS = MOMENT_SHEETS.drums.frames;
+
+// Points. A named anchor's centre is tile + 0.5 and spawn/move add another half tile when they turn a point into pixels
+// (scripts-runtime.js toPixel), so these helpers take WHOLE-TILE offsets and compensate: gateTile(9, -6) is exactly the centre of the
+// tile 9 east and 6 north of Gate 2's own tile, and playerTile(-2, 0) the centre of the tile two to the left of the tile she stands on.
+const gateTile = (dx, dy) => ({ anchor: 'Gate 2 (Main Entrance)', offset: [dx - 0.5, dy - 0.5] });
+const doorTile = (dx, dy) => ({ anchor: 'Main Block entrance', offset: [dx - 0.5, dy - 0.5] });
+const playerTile = (dx, dy) => ({ actor: 'player', offset: [dx - 0.5, dy - 0.5] });
+
+// M1, the unicorn and the prince (the owner's own inside joke, her line EXACTLY as written). Just inside Gate 2: a unicorn grazes on the
+// east lawn (tile 9 east of the gate, hooves on the row 5 north of it); she stops and reacts; a crowned prince walks in from the right,
+// says his line, mounts, and the unicorn lifts off in a trail of sparkles (its shadow stays on the lawn) and leaves over the top of the
+// screen. She says her closing line and is free, exactly where she stood. About 16 s.
+const MOMENT_UNICORN_STEPS = [
+  { lockInput: true },
+  { letterbox: 'in' },
+  { spawnActor: { id: 'unicorn', sprite: MOMENT_SHEETS.unicorn.key, kind: 'image', frame: UNICORN.grazeA, feet: MOMENT_SHEETS.unicorn.feet, shadowSize: [22, 6], at: gateTile(9, -6), facing: 'right' } },
+  { loop: { actor: 'unicorn', frames: [UNICORN.grazeA, UNICORN.grazeB], frameMs: 450 } },
+  // She stops, turns to it, "!", and the camera glides over to the lawn (wherever along the avenue she was).
+  { parallel: [
+    { face: { actor: 'player', toward: 'unicorn' } },
+    { emote: { actor: 'player', kind: '!' } },
+    { cameraPan: { to: gateTile(11, -5), ms: 1000 } },
+  ] },
+  { say: { speaker: '{name}', lines: ["WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?"], autoMs: 1600 } },
+  // The prince comes in from the right (off screen), the unicorn lifts its head to watch him.
+  { spawnActor: { id: 'prince', sprite: 'npc-prince', at: gateTile(23, -5), facing: 'left' } },
+  { frame: { actor: 'unicorn', frame: UNICORN.headUp } },
+  { move: { actor: 'prince', path: [gateTile(13, -5)], speed: 5.5 } },
+  { say: { speaker: 'Prince', lines: ["Don't mind me. I'm always watching."], autoMs: 1400 } },
+  { move: { actor: 'prince', path: [gateTile(10, -5)], speed: 3 } },
+  // He mounts: he is gone from the lawn and sits on its back.
+  { despawnActor: 'prince' },
+  { sound: 'minigameLineClear' }, // the rising chime (the same one the tower climb uses for a new floor): magic
+  { frame: { actor: 'unicorn', frame: UNICORN.ridden } },
+  { wait: 450 },
+  { frame: { actor: 'unicorn', frame: UNICORN.flyRidden } },
+  { parallel: [
+    { lift: { actor: 'unicorn', to: 150, ms: 2400, ease: 'Quad.easeIn', fadeOut: true } },
+    { sparkles: { actor: 'unicorn', ms: 2400 } },
+    { move: { actor: 'unicorn', path: [gateTile(17, -12)], speed: 4.2, ease: 'Quad.easeIn' } },
+  ] },
+  { despawnActor: 'unicorn' },
+  { cameraPan: { to: { actor: 'player' }, ms: 900 } },
+  { say: { speaker: '{name}', lines: ['Huh... is this the actual BITS?'], autoMs: 1500 } },
+  { cameraFollow: 'player' },
+  { letterbox: 'out' },
+  { unlockInput: true },
+];
+
+// One hit of the kit: the sound and the matching frame, held a beat, then back to rest (280 ms a hit, so a bar of eight is 2.24 s).
+const drumHit = (sound, frame) => [
+  { sound },
+  { frame: { actor: 'kit', frame } },
+  { wait: 130 },
+  { frame: { actor: 'kit', frame: DRUMS.idle } },
+  { wait: 150 },
+];
+const DRUM_BAR = [
+  ...drumHit('drumKick', DRUMS.kick), ...drumHit('drumSnare', DRUMS.snare), ...drumHit('drumKick', DRUMS.kick), ...drumHit('drumKick', DRUMS.kick),
+  ...drumHit('drumSnare', DRUMS.snare), ...drumHit('drumKick', DRUMS.kick), ...drumHit('drumSnare', DRUMS.snare), ...drumHit('drumCrash', DRUMS.crash),
+];
+// A jump: up and back down (two altitude steps).
+const jump = (actor, px = 14) => [{ lift: { actor, to: px, ms: 180, ease: 'Quad.easeOut' } }, { lift: { actor, to: 0, ms: 180, ease: 'Quad.easeIn' } }];
+
+// M2, Mevin the drummer (a friend; he plays the drums for Treble, the music club; he is not in the Main Block). In front of the Main Block
+// (the trigger is x 219..232, y 129..137: the steps, the forecourt and the pavement): he runs in from the east along the road verge with a
+// little drum kit and a snare roll, jumps beside her, shouts, drums a bar while she grins (a note, a heart), ends on a rimshot and runs
+// off with the kit. Everything is placed relative to the tile she stands on (he stands one tile below and one to the right of her, the
+// kit in front of him, after a run along the road verge, the one row of tiles that is open from the east), so it is never on top of her and never inside the building wall north of the steps. About 14-17 s.
+const MOMENT_MEVIN_STEPS = [
+  { lockInput: true },
+  { letterbox: 'in' },
+  { spawnActor: { id: 'mevin', sprite: 'npc-friend-mevin', at: doorTile(20, 9), facing: 'left' } },
+  { spawnActor: { id: 'kit', sprite: MOMENT_SHEETS.drums.key, kind: 'image', frame: DRUMS.idle, feet: MOMENT_SHEETS.drums.feet, shadowSize: [24, 6], at: doorTile(22, 9), facing: 'left' } },
+  { sound: 'drumRoll' },
+  { parallel: [
+    { move: { actor: 'mevin', path: [doorTile(14, 9), playerTile(1, 1)], speed: 7 } },
+    { move: { actor: 'kit', path: [doorTile(16, 9), playerTile(1, 2)], speed: 7 } },
+  ] },
+  // He lands the roll on a crash and jumps.
+  { face: { actor: 'mevin', dir: 'down' } },
+  { face: { actor: 'player', toward: 'mevin' } },
+  { parallel: [
+    { sound: 'drumCrash' },
+    { frame: { actor: 'kit', frame: DRUMS.crash } },
+    { sequence: jump('mevin') },
+  ] },
+  { frame: { actor: 'kit', frame: DRUMS.idle } },
+  { say: { speaker: 'Mevin (Treble)', lines: ['WOAHHH, {name}! You da goat!', 'Come watch me perform at Jashn some day!'], autoMs: 1500 } },
+  // A bar of drums while she stands there, delighted.
+  { parallel: [
+    { sequence: DRUM_BAR },
+    { sequence: [{ emote: { actor: 'player', kind: 'note' } }, { emote: { actor: 'player', kind: 'heart' } }] },
+  ] },
+  // Ba-dum-tss.
+  { parallel: [
+    { sound: 'drumRimshot' },
+    { sequence: [
+      { frame: { actor: 'kit', frame: DRUMS.kick } }, { wait: 170 },
+      { frame: { actor: 'kit', frame: DRUMS.snare } }, { wait: 230 },
+      { frame: { actor: 'kit', frame: DRUMS.snareCrash } },
+      ...jump('mevin'), { wait: 120 },
+      { frame: { actor: 'kit', frame: DRUMS.idle } },
+    ] },
+  ] },
+  { wait: 300 },
+  // He grabs the kit and runs off the way he came.
+  { face: { actor: 'mevin', dir: 'right' } },
+  { parallel: [
+    { move: { actor: 'mevin', path: [doorTile(14, 9), doorTile(20, 9)], speed: 8 } },
+    { move: { actor: 'kit', path: [doorTile(16, 9), doorTile(22, 9)], speed: 8 } },
+  ] },
+  { despawnActor: 'mevin' },
+  { despawnActor: 'kit' },
+  { cameraFollow: 'player' },
+  { letterbox: 'out' },
+  { unlockInput: true },
+];
+
 const SCRIPTS = {
   // The fast path: `?intro=0`, an old save, or simply walking up to the same spot -- the existing
   // 'Gate 2 entrance' Tiled trigger (unchanged) fires this exactly like it always fired the old gate2
@@ -183,4 +331,7 @@ const SCRIPTS = {
   keyRoomPhysicsLab: keyRoomSteps('physicsLab', 'The Physics Lab.'),
   keyRoomIcl: keyRoomSteps('icl', 'The ICL — the computing lab.'),
   keyRoomRoom195: keyRoomSteps('room195', 'Room 195.'),
+  // The moments (src/moments.js MOMENTS names these keys; run unskippable by world.js checkMoment()).
+  momentUnicorn: MOMENT_UNICORN_STEPS,
+  momentMevin: MOMENT_MEVIN_STEPS,
 };

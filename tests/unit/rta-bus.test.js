@@ -25,6 +25,11 @@ function loadSheet() {
 }
 const SHEET = loadSheet();
 const FRAME_COUNT = Object.keys(SHEET.frames).length;
+// The moments' prop sheets (the unicorn, Mevin's drum kit) are image actors too (src/scripts.js MOMENT_SHEETS); every image actor in SCRIPTS is
+// the bus or one of them, and a frame/anim step must stay inside the frame count of the sheet its actor was spawned from.
+const MOMENT_SHEETS = (() => { const context = vm.createContext({ console }); vm.runInContext(read('src/scripts.js'), context, { filename: 'src/scripts.js' }); return plain(vm.runInContext('MOMENT_SHEETS', context)); })();
+const SHEET_FRAMES = { [SHEET.key]: FRAME_COUNT };
+for (const sheet of Object.values(MOMENT_SHEETS)) SHEET_FRAMES[sheet.key] = Object.keys(sheet.frames).length;
 
 // Generates the cutscene art into a temp dir (it needs no vendor art) and decodes the bus sheet.
 function generateBusSheet() {
@@ -131,19 +136,20 @@ test('SCRIPTS: every step type exists in the runner, and the bus steps only name
     const body = step[type];
     if (type === 'parallel') body.forEach((s, i) => check(s, `${where}.parallel[${i}]`));
     if (type === 'sound') assert.ok(soundIds.has(body), `${where}: unknown sound "${body}"`);
+    if (type === 'sequence') body.forEach((s, i) => check(s, `${where}.sequence[${i}]`));
     if (type === 'spawnActor' && body.kind === 'image') {
-      assert.equal(body.sprite, SHEET.key, `${where}: an image actor that is not the bus sheet`);
-      assert.ok(body.frame >= 0 && body.frame < FRAME_COUNT, `${where}: spawn frame ${body.frame} is outside the sheet`);
+      assert.ok(body.sprite in SHEET_FRAMES, `${where}: an image actor that is neither the bus sheet nor a moment sheet`);
+      assert.ok(body.frame >= 0 && body.frame < SHEET_FRAMES[body.sprite], `${where}: spawn frame ${body.frame} is outside the sheet`);
       actors.set(body.id, body.sprite);
     }
     if (type === 'frame') {
-      assert.equal(actors.get(body.actor), SHEET.key, `${where}: frame step on an actor that is not a spawned sheet actor`);
-      assert.ok(Number.isInteger(body.frame) && body.frame >= 0 && body.frame < FRAME_COUNT, `${where}: frame ${body.frame} outside the sheet`);
+      assert.ok(actors.get(body.actor) in SHEET_FRAMES, `${where}: frame step on an actor that is not a spawned sheet actor`);
+      assert.ok(Number.isInteger(body.frame) && body.frame >= 0 && body.frame < SHEET_FRAMES[actors.get(body.actor)], `${where}: frame ${body.frame} outside the sheet`);
     }
-    if (type === 'anim') {
-      assert.equal(actors.get(body.actor), SHEET.key, `${where}: anim step on an actor that is not a spawned sheet actor`);
-      assert.ok(body.frames.length > 0 && body.frameMs > 0, `${where}: empty anim`);
-      for (const f of body.frames) assert.ok(Number.isInteger(f) && f >= 0 && f < FRAME_COUNT, `${where}: anim frame ${f} outside the sheet`);
+    if (type === 'anim' || type === 'loop') {
+      assert.ok(actors.get(body.actor) in SHEET_FRAMES, `${where}: ${type} step on an actor that is not a spawned sheet actor`);
+      assert.ok(body.frames.length > 0 && body.frameMs > 0, `${where}: empty ${type}`);
+      for (const f of body.frames) assert.ok(Number.isInteger(f) && f >= 0 && f < SHEET_FRAMES[actors.get(body.actor)], `${where}: ${type} frame ${f} outside the sheet`);
     }
   };
   for (const [key, steps] of Object.entries(SCRIPTS)) {

@@ -156,6 +156,55 @@ function synthDoorClose() {
   return click.map((v, i) => v + thunk[i]);
 }
 
+// M2 (Mevin the drummer, docs/plans/2026-10-04-moments-and-small-touches.md): a tiny synth drum kit. Every hit is noise and/or a falling
+// sine with a fast exponential decay (the fixed noise seeds keep the files byte-identical on every run, tests/unit/assets.test.js).
+const mix = (...chunks) => {
+  const out = new Float32Array(Math.max(...chunks.map((c) => c.length)));
+  for (const c of chunks) for (let i = 0; i < c.length; i++) out[i] += c[i];
+  return out;
+};
+// `at` seconds of silence in front of a chunk, so hits can be laid out on a timeline with mix().
+const delayed = (at, chunk) => concat(new Float32Array(Math.round(at * SAMPLE_RATE)), chunk);
+// A bright noise (a difference filter: the noise minus its previous sample keeps the highs), for snare rattle and cymbals.
+const brighten = (samples) => samples.map((v, i) => (v - (i ? samples[i - 1] : 0)) * 0.7);
+
+function synthKick() {
+  const dur = 0.28;
+  return tone(dur, (t) => 48 + 120 * Math.exp(-t * 28), { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.002) * Math.exp(-t * 11) * 0.95 });
+}
+
+function synthSnare(seed = 3, dur = 0.2) {
+  const rattle = brighten(tone(dur, () => 0, { wave: 'noise', seed, ampFn: (t) => Math.exp(-t * 24) * 0.8 }));
+  const body = tone(dur, () => 190, { wave: 'triangle', ampFn: (t) => Math.exp(-t * 32) * 0.55 });
+  return mix(rattle, body).map((v) => v * 0.7); // headroom: the two layers add up
+}
+
+function synthCrash() {
+  const dur = 1.0;
+  return brighten(tone(dur, () => 0, { wave: 'noise', seed: 11, ampFn: (t) => Math.min(1, t / 0.002) * Math.exp(-t * 4.2) * 0.7 }));
+}
+
+// A snare roll: ~1.5 s of quick snare taps that speed up and swell, ending on the last tap (the crash follows in the script).
+function synthDrumRoll() {
+  const taps = [];
+  let t = 0;
+  let i = 0;
+  while (t < 1.45) {
+    const k = t / 1.45;
+    const gain = 0.35 + 0.65 * k; // crescendo
+    taps.push(delayed(t, synthSnare(20 + i, 0.09).map((v) => v * gain)));
+    t += 0.075 - 0.035 * k; // accelerating
+    i++;
+  }
+  return mix(...taps).map((v) => v * 0.85);
+}
+
+// "Ba-dum-tss": a tom thump, a snare crack and a crash, the classic rimshot sting (~1 s).
+function synthRimshot() {
+  const tom = tone(0.2, (t) => 120 + 60 * Math.exp(-t * 20), { wave: 'sine', ampFn: (t) => Math.exp(-t * 14) * 0.9 });
+  return mix(tom, delayed(0.17, synthSnare(31, 0.18)), delayed(0.4, synthCrash())).map((v) => v * 0.8);
+}
+
 const GENERATED = [
   { to: 'generated/minigame-jump.wav', build: synthJump },
   { to: 'generated/minigame-flap.wav', build: synthFlap },
@@ -163,6 +212,11 @@ const GENERATED = [
   { to: 'generated/card-whoosh.wav', build: synthCardWhoosh },
   { to: 'generated/lift-ding.wav', build: synthLiftDing },
   { to: 'generated/door-close.wav', build: synthDoorClose },
+  { to: 'generated/drum-kick.wav', build: synthKick },
+  { to: 'generated/drum-snare.wav', build: () => synthSnare() },
+  { to: 'generated/drum-crash.wav', build: synthCrash },
+  { to: 'generated/drum-roll.wav', build: synthDrumRoll },
+  { to: 'generated/drum-rimshot.wav', build: synthRimshot },
 ];
 
 // ---------- everything else: copied byte-for-byte from an already-credited CC0 pack ----------

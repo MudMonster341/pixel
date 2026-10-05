@@ -12,7 +12,9 @@ const SCRIPTS = [
   // src/scripts-runtime.js (the engine that runs them), which needs a real Phaser scene and is only
   // exercised by the e2e specs.
   'src/objective-routes.js', 'src/scripts.js',
-  'src/maplogic.js', 'src/state.js', 'src/save.js',
+  'src/maplogic.js', 'src/state.js',
+  // The moments' pacing table and pure rules (src/moments.js): data + logic, no Phaser.
+  'src/moments.js', 'src/save.js',
   // M5 sound (docs/ROADMAP.md): the SOUNDS registry + AudioManager (src/audio.js) are pure data/logic
   // -- AudioManager.game stays null under this sandbox (nothing ever calls .init()), so every method
   // that touches Phaser is a guarded no-op, safe to load here the same as everything else in this list.
@@ -194,6 +196,22 @@ function loadGameData() {
     objectiveTarget: get('objectiveTarget'),
     OBJECTIVE_ROUTES: get('OBJECTIVE_ROUTES'),
     SCRIPTS: get('SCRIPTS'),
+    // The small unskippable moments (src/moments.js): the table, the pure rules and the script measurer; the prop sheets are in src/scripts.js
+    MOMENTS: get('MOMENTS'),
+    MOMENT_SHEETS: get('MOMENT_SHEETS'),
+    MOMENT_GAP_S: get('MOMENT_GAP_S'),
+    MOMENT_PER_VISIT: get('MOMENT_PER_VISIT'),
+    MOMENT_MIN_MS: get('MOMENT_MIN_MS'),
+    MOMENT_MAX_MS: get('MOMENT_MAX_MS'),
+    MOMENT_TIMING: get('MOMENT_TIMING'),
+    momentsEnabled: get('momentsEnabled'),
+    momentFitsVisit: get('momentFitsVisit'),
+    momentDue: get('momentDue'),
+    momentGapS: get('momentGapS'),
+    momentTriggerRect: get('momentTriggerRect'),
+    markMomentStarted: get('markMomentStarted'),
+    markMomentEnded: get('markMomentEnded'),
+    momentTimeline: get('momentTimeline'),
     minigamesEnabled: get('minigamesEnabled'),
     audioEnabled: get('audioEnabled'),
     MINIGAMES: get('MINIGAMES'),

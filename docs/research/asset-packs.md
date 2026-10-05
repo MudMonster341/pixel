@@ -532,3 +532,7 @@ door with a scanner pad, and a hovering robot called Alice.
   2-pose idle bob; the sheet layout is every character's).
 - The flyer's art (`tools/make-minigame-art.js`): `flappy-bg.png` (dark cyan grid, circuit traces, a dim scanner ring) and `flappy-sprites.png` (the glowing data packet); the
   firewalls and the filling fingerprint ring are drawn in code by `src/minigames/flappy.js`. No pack.
+
+## Moments: the unicorn's horse (added 2026-10-05)
+
+The unicorn moment (M1, docs/plans/2026-10-04-moments-and-small-touches.md) needs a side-view horse. The owner's Animals Asset Pack has no horse (cat, bear, penguin, pig, all front-facing chibis), but the **Ninja Adventure** zip already in `assets/External Tilesets/` (CC0, already credited) has `Actor/Animal/Horse/` with a side-view brown horse (2 frames, 23x16, facing right). `tools/make-moments.js` recolours it white with a pink mane and tail and composes the horn, extra mane tufts, a lowered-head graze pose, tucked legs and a small rider in code. The extracted file lives in `assets/External Tilesets/Ninja-Adventure-Horse/` (git-ignored like the other raw packs).

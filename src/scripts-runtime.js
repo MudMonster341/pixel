@@ -19,8 +19,13 @@
 // `{ spawnActor: { id, sprite, at, facing, kind, frame, shadow, feet } }`, `{ despawnActor: actorId }`,
 // `{ frame: { actor, frame } }`, `{ anim: { actor, frames, frameMs } }` (the sheet-frame steps, below),
 // `{ move: { actor, path, speed, ease } }`, `{ face: { actor, dir } }`, `{ emote: { actor, kind } }`,
-// `{ say: { speaker, lines } }`, `{ wait: ms }`, `{ sound: id }`, `{ setFlag: 'name' | { name, value } }`,
-// `{ parallel: [step, ...] }`. `to`/`at`/a `move` path's points are each either a tile `{ x, y }`, a
+// `{ say: { speaker, lines, autoMs? } }`, `{ wait: ms }`, `{ sound: id }`, `{ setFlag: 'name' | { name, value } }`,
+// `{ parallel: [step, ...] }`, `{ sequence: [step, ...] }` (several steps as ONE branch of a `parallel`), and the moments' extras
+// (src/moments.js, docs/plans/2026-10-04-moments-and-small-touches.md): `{ lift: { actor, to, ms, ease?, fadeOut? } }` (altitude in
+// px: the sprite rises, its shadow and depth stay on the ground), `{ sparkles: { actor, ms, every? } }` (a trail of stars behind an
+// actor), `{ loop: { actor, frames, frameMs } }` (a frame loop that keeps running in the background until a `frame`/`anim`/
+// `despawnActor` stops it), `{ face: { actor, toward } }` (turn toward another actor or point), `autoMs` on a `say` (every line
+// advances by itself that many ms after it finished typing, so a moment always ends without a key press). `to`/`at`/a `move` path's points are each either a tile `{ x, y }`, a
 // named map-object anchor (a plain string, resolved at runtime by src/maplogic.js resolveAnchor() --
 // "spawn", "gate", a door object's own name, an area/zone's own name), or `{ anchor, offset: [dx, dy] }`
 // / `{ actor: id, offset: [dx, dy] }` for "a few tiles from X" without hard-coding an absolute campus
@@ -36,6 +41,7 @@ class ScriptRunner {
     this.actors = new Map(); // id -> { sprite, shadow, kind: 'character'|'image', textureKey, facing }
     this.running = false;
     this.skipping = false;
+    this.unskippable = false;
     this._skipHooks = new Set();
   }
 
@@ -49,9 +55,11 @@ class ScriptRunner {
   // near the gate; the bus despawns itself, its own last step) -- "run to the end" and "skip straight
   // to the end" have to agree on that same end state either way (never a half state), so the engine
   // can't unilaterally clean up after either path without breaking whichever script meant to keep one.
-  async run(steps) {
+  // `unskippable` (the moments, src/moments.js): Esc does nothing -- the scene is short and always ends by itself, never a trap.
+  async run(steps, { unskippable = false } = {}) {
     this.running = true;
     this.skipping = false;
+    this.unskippable = unskippable;
     this.scene.transitioning = true;
     try {
       await this.runSteps(steps);
@@ -59,6 +67,7 @@ class ScriptRunner {
       this.scene.transitioning = false;
       this.running = false;
       this.skipping = false;
+      this.unskippable = false;
     }
   }
 
@@ -83,7 +92,7 @@ class ScriptRunner {
   // snaps straight to its own end state and resolves; every step still to come (runSteps()'s loop
   // hasn't reached it yet) checks `this.skipping` itself and does the same, with no delay at all.
   skip() {
-    if (!this.running || this.skipping) return;
+    if (!this.running || this.skipping || this.unskippable) return;
     this.skipping = true;
     const hooks = [...this._skipHooks];
     this._skipHooks.clear();
@@ -246,10 +255,10 @@ class ScriptRunner {
   // `kind: 'image'` (the bus): a plain image, no walk cycle -- or one frame of a spritesheet (`frame`, an
   // index; the RTA bus, src/scripts.js RTA_BUS_SHEET), changed later by the `frame` / `anim` steps.
   // `shadow: false` skips the generated ground ellipse (art with its own shadow baked in); `feet` is the
-  // px below its centre where its ground line is (default: its bottom edge).
+  // px below its centre where its ground line is (default: its bottom edge); `shadowSize: [w, h]` sizes that ellipse.
   // `kind: 'character'` (default): a 16x24 sheet with the usual idle/walk anims (ensureActorAnims()),
   // the same art shape as any NPC.
-  step_spawnActor({ id, sprite, at, facing = 'down', kind = 'character', frame, shadow: wantShadow = true, feet } = {}) {
+  step_spawnActor({ id, sprite, at, facing = 'down', kind = 'character', frame, shadow: wantShadow = true, feet, shadowSize } = {}) {
     const point = this.resolvePoint(at);
     if (!point) { console.warn(`ScriptRunner: spawnActor "${id}" -- anchor/point for "at" not found`); return; }
     const px = toPixel(point.x);
@@ -264,8 +273,9 @@ class ScriptRunner {
       const feetOffset = typeof feet === 'number' ? feet : image.displayHeight / 2;
       let shadow = null;
       if (wantShadow) {
-        const shadowW = image.displayWidth + 2;
-        const shadowH = Math.max(6, image.displayWidth * 0.32);
+        // `shadowSize: [w, h]` for a sprite whose body is narrower than its frame (the unicorn's frame has room above it for a rider).
+        const shadowW = shadowSize ? shadowSize[0] : image.displayWidth + 2;
+        const shadowH = shadowSize ? shadowSize[1] : Math.max(6, image.displayWidth * 0.32);
         shadow = this.scene.add.ellipse(px, py + feetOffset, shadowW, shadowH, 0x000000, 0.22).setDepth(py + feetOffset - 1);
       }
       image.setDepth(py + feetOffset);
@@ -279,12 +289,33 @@ class ScriptRunner {
     this.actors.set(id, { sprite: actorSprite, shadow, kind: 'character', textureKey: sprite, facing });
   }
 
+  // Stops an actor's background frame loop (`loop` step), if it has one.
+  stopLoop(actorEntry) {
+    if (actorEntry && actorEntry.loopTimer) { actorEntry.loopTimer.remove(); actorEntry.loopTimer = null; }
+  }
+
   // Shows one frame of a spritesheet actor at once (the bus's brake lights coming on, its driving frame).
   step_frame({ actor: actorId, frame } = {}) {
     const actorEntry = this.getActor(actorId);
     if (!actorEntry || !actorEntry.sprite.setFrame) return;
+    this.stopLoop(actorEntry);
     if (actorEntry.sprite.anims) actorEntry.sprite.anims.stop();
     actorEntry.sprite.setFrame(frame);
+  }
+
+  // Loops sheet frames on an actor in the background (a unicorn's grazing head-bob): the step returns at once and the loop runs until
+  // a `frame`, `anim` or `despawnActor` step stops it. Starts on the first frame.
+  step_loop({ actor: actorId, frames, frameMs = 300 } = {}) {
+    const actorEntry = this.getActor(actorId);
+    if (!actorEntry || !actorEntry.sprite.setFrame || !Array.isArray(frames) || frames.length === 0) return;
+    this.stopLoop(actorEntry);
+    let i = 0;
+    actorEntry.sprite.setFrame(frames[0]);
+    actorEntry.loopTimer = this.scene.time.addEvent({
+      delay: frameMs,
+      loop: true,
+      callback: () => { i = (i + 1) % frames.length; actorEntry.sprite.setFrame(frames[i]); },
+    });
   }
 
   // Plays a sequence of sheet frames on an actor (the bus's doors): each frame in `frames` is shown for
@@ -294,6 +325,7 @@ class ScriptRunner {
     const actorEntry = this.getActor(actorId);
     if (!actorEntry || !actorEntry.sprite.setFrame || !Array.isArray(frames) || frames.length === 0) return undefined;
     const sprite = actorEntry.sprite;
+    this.stopLoop(actorEntry);
     if (sprite.anims) sprite.anims.stop();
     const last = frames[frames.length - 1];
     if (this.skipping) { sprite.setFrame(last); return undefined; }
@@ -312,6 +344,7 @@ class ScriptRunner {
   step_despawnActor(id) {
     const actor = this.actors.get(id);
     if (!actor) return;
+    this.stopLoop(actor);
     actor.sprite.destroy();
     if (actor.shadow) actor.shadow.destroy();
     this.actors.delete(id);
@@ -386,9 +419,17 @@ class ScriptRunner {
     }
   }
 
-  step_face({ actor: actorId, dir } = {}) {
+  step_face({ actor: actorId, dir, toward } = {}) {
     const actorEntry = this.getActor(actorId);
     if (!actorEntry) return;
+    // `toward` (an actor id, or a point): face whichever way that lies from here (a moment cannot know where she is standing).
+    if (toward !== undefined) {
+      const other = typeof toward === 'string' ? this.getActor(toward) : null;
+      const point = other ? null : this.resolvePoint(toward);
+      const tx = other ? other.sprite.x : (point ? toPixel(point.x) : null);
+      const ty = other ? other.sprite.y : (point ? toPixel(point.y) : null);
+      if (tx !== null) dir = this.directionOf(tx - actorEntry.sprite.x, ty - actorEntry.sprite.y) || dir || actorEntry.facing;
+    }
     actorEntry.facing = dir;
     if (actorEntry.kind === 'player') this.scene.facing = dir; // see tweenActorTo()'s own comment
     if (actorEntry.kind === 'image') {
@@ -453,6 +494,18 @@ class ScriptRunner {
     if (kind === 'sparkle') {
       const star = scene.add.star(0, 0, 4, 3, 7, COLORS.gold);
       container.add(star);
+    } else if (kind === 'heart') {
+      // Drawn, not typed: the pixel font has no heart glyph. Two lobes and a point, in the game's pink.
+      const heart = scene.add.graphics();
+      heart.fillStyle(0xff5f8f, 1).fillCircle(-4, -3, 5).fillCircle(4, -3, 5).fillTriangle(-8.6, 0, 8.6, 0, 0, 10);
+      heart.fillStyle(0xffffff, 0.7).fillCircle(-5.5, -4.5, 1.4);
+      container.add(heart);
+    } else if (kind === 'note') {
+      // A music note (the pixel font has no glyph for it): a head, a stem and a flag.
+      const note = scene.add.graphics();
+      note.fillStyle(0xffffff, 1).fillCircle(-3, 6, 4).fillRect(0, -9, 2.5, 15).fillTriangle(2.5, -9, 9, -4, 2.5, -3);
+      note.lineStyle(1, 0x1a1c2c, 1).strokeCircle(-3, 6, 4);
+      container.add(note);
     } else {
       const bg = scene.add.graphics();
       bg.fillStyle(0x1a1c2c, 0.85).fillRoundedRect(-12, -10, 24, 20, 4);
@@ -477,12 +530,33 @@ class ScriptRunner {
     return ks ? { sprite: ks.sprite, kind: 'keyStation' } : null;
   }
 
-  step_say({ speaker, lines } = {}) {
+  // `{name}` in the speaker or a line becomes the player's name (src/dialog.js renderLine(), "Taru" by default), the same as
+  // every other conversation. `autoMs` (the moments, src/moments.js): each line advances by itself that many ms after it
+  // finished typing, so the scene always ends without a key press (E/Space/Enter still move it along faster).
+  step_say({ speaker, lines, autoMs } = {}) {
     const dialog = this.scene.scene.get('ui').dialog;
     if (this.skipping) { if (dialog.isOpen) dialog.close(); return undefined; }
+    const shownSpeaker = speaker ? renderLine(speaker, GameState) : speaker;
+    const shownLines = renderLines(lines, GameState);
     return new Promise((resolve) => {
-      const off = this.onSkip(() => dialog.close());
-      dialog.open(speaker, lines, () => { off(); resolve(); });
+      let timer = null;
+      const stopTimer = () => { if (timer) { timer.remove(); timer = null; } };
+      const off = this.onSkip(() => { stopTimer(); dialog.close(); });
+      dialog.open(shownSpeaker, shownLines, () => { stopTimer(); off(); resolve(); });
+      if (typeof autoMs === 'number') {
+        const POLL_MS = 100;
+        let waited = 0;
+        timer = this.scene.time.addEvent({
+          delay: POLL_MS,
+          loop: true,
+          callback: () => {
+            if (!dialog.isOpen) return;
+            if (dialog.typing || dialog.choices) { waited = 0; return; } // still typing: the reading time starts when it is done
+            waited += POLL_MS;
+            if (waited >= autoMs) { waited = 0; dialog.advance(); }
+          },
+        });
+      }
     });
   }
 
@@ -506,5 +580,72 @@ class ScriptRunner {
 
   step_parallel(steps) {
     return Promise.all((steps || []).map((step) => this.runStep(step)));
+  }
+
+  // Several steps run one after another as a single branch (so a `parallel` can hold a short sequence next to a longer step).
+  step_sequence(steps) {
+    return this.runSteps(steps || []);
+  }
+
+  // Altitude: the actor rises to `to` px over `ms` (0 = back on the ground; a jump is two of these). Its `y` -- which depth sorting and
+  // the ground shadow are tied to -- never changes: only where the sprite is DRAWN does (its origin moves down, so it is drawn higher),
+  // and the shadow stays on the ground, shrinking and fading the higher it goes. `fadeOut` also fades the actor itself over the last
+  // part of the climb (it leaves the picture instead of ending hanging in the sky).
+  step_lift({ actor: actorId, to = 0, ms = 400, ease = 'Sine.easeInOut', fadeOut = false } = {}) {
+    const actorEntry = this.getActor(actorId);
+    if (!actorEntry) return undefined;
+    const sprite = actorEntry.sprite;
+    if (actorEntry.baseOriginY === undefined) actorEntry.baseOriginY = sprite.originY;
+    const shadow = actorEntry.shadow || null;
+    if (shadow && actorEntry.shadowAlpha === undefined) actorEntry.shadowAlpha = shadow.alpha;
+    const apply = (alt, progress) => {
+      actorEntry.alt = alt;
+      sprite.setOrigin(sprite.originX, actorEntry.baseOriginY + alt / sprite.height);
+      if (shadow) {
+        const k = Math.max(0.3, 1 - alt / 140);
+        shadow.setScale(k);
+        shadow.setAlpha(actorEntry.shadowAlpha * k);
+      }
+      if (fadeOut) sprite.setAlpha(progress >= 1 ? 0 : 1 - Math.min(1, Math.max(0, (progress - 0.55) / 0.45)));
+    };
+    if (this.skipping) { apply(to, 1); return undefined; }
+    const proxy = { alt: actorEntry.alt || 0 };
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (done) return; done = true; apply(to, 1); off(); resolve(); };
+      const off = this.onSkip(() => { this.scene.tweens.killTweensOf(proxy); finish(); });
+      this.scene.tweens.add({
+        targets: proxy,
+        alt: to,
+        duration: ms,
+        ease,
+        onUpdate: (tween) => apply(proxy.alt, tween.progress),
+        onComplete: finish,
+      });
+    });
+  }
+
+  // A trail of little stars behind an actor for `ms` (the unicorn's lift-off): one every `every` ms, drawn where the actor is drawn
+  // (altitude included), each drifting down and fading out. Purely decoration: nothing waits on them.
+  step_sparkles({ actor: actorId, ms = 1000, every = 70 } = {}) {
+    const actorEntry = this.getActor(actorId);
+    if (!actorEntry || this.skipping) return undefined;
+    const scene = this.scene;
+    const colors = [0xffffff, 0xffd23f, 0xff9ccc, 0x9fd3ff, 0xc9a6ff];
+    const emit = () => {
+      const sprite = actorEntry.sprite;
+      if (!sprite.active) return;
+      const x = sprite.x + (Math.random() - 0.5) * 14;
+      const y = sprite.y - (actorEntry.alt || 0) + (Math.random() - 0.5) * 10;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const star = scene.add.star(x, y, 4, 1, 3 + Math.random() * 2, color).setDepth(100000);
+      scene.tweens.add({ targets: star, y: y + 12, alpha: 0, scale: 0.3, duration: 520, onComplete: () => star.destroy() });
+    };
+    return new Promise((resolve) => {
+      const timer = scene.time.addEvent({ delay: every, loop: true, callback: emit });
+      const end = () => { timer.remove(); off(); resolve(); };
+      const off = this.onSkip(end);
+      scene.time.delayedCall(ms, end);
+    });
   }
 }

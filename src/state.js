@@ -103,6 +103,15 @@ const GameState = {
   inventory: new Inventory(5),
   collected: new Set(), // ids of pickups already taken, so they don't respawn
   seenCutscenes: new Set(), // keys of CUTSCENES already played this session, so they don't replay (P4)
+  // The small unskippable "moments" (src/moments.js, docs/plans/2026-10-04-moments-and-small-touches.md): which have played (each
+  // plays once only, ever, for this save), how many seconds the game has actually been played (the clock the 90 s spacing is
+  // measured on, advanced by WorldScene while it runs: not while a mini-game or the title owns the screen) and the play-clock time
+  // the last moment started/ended at (null = none yet). All three are saved (src/save.js); an old save simply has none of them.
+  seenMoments: new Set(),
+  playSeconds: 0,
+  lastMomentAt: null,
+  // Dev/test switch, never saved: true turns every moment off (the `?moments=0` URL switch, src/moments.js momentsEnabled()).
+  momentsDisabled: false,
   // Dialog entries already shown at least once, keyed "npcId:entryId" (src/dialog.js
   // dialogEntryKey()). Drives the "!" vs "E" interaction bubble and any `when: { seen }` condition.
   seenDialog: new Set(),
@@ -158,6 +167,9 @@ function resetGameState(state = GameState) {
   state.inventory.emit('changed');
   state.collected = new Set();
   state.seenCutscenes = new Set();
+  state.seenMoments = new Set(); // a brand-new game plays every moment again (the owner's rule)
+  state.playSeconds = 0;
+  state.lastMomentAt = null;
   state.seenDialog = new Set();
   state.seenHints = new Set();
   state.flags = { ...DEFAULT_FLAGS };

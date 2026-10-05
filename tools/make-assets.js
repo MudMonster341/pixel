@@ -4180,7 +4180,7 @@ function plainOutfit(shirt, pants, extra = {}) {
 const HOODIE_BLACK_ORANGE = { shirt: '#1e1e24', hi: '#f28c1e', shade: '#121216', jacket: '#1e1e24', inner: '#f28c1e', innerHi: '#ffbb55', pants: '#2f3b57', shoes: '#121216' };
 
 // ---- tiny prop overlays (text sprites, the way held items are drawn): Angel's wings and Satvik's camera ----
-const PROP_COLORS = { K: '#1a1c2c', W: '#ffffff', S: '#bfd0e8', D: '#4b4b5e', L: '#6fc3ff', G: '#e0b84f' };
+const PROP_COLORS = { K: '#1a1c2c', W: '#ffffff', S: '#bfd0e8', D: '#4b4b5e', L: '#6fc3ff', G: '#e0b84f', Y: '#ffe27a', R: '#c0392b', r: '#8e2021' };
 // `rows` maps a frame row (0-23) to a 16-character string of PROP_COLORS letters ('.' = nothing).
 function stampProp(img, fx, fy, rows) {
   for (const [row, text] of Object.entries(rows)) {
@@ -4226,6 +4226,55 @@ const CAMERA = {
   },
 };
 
+// The prince (M1, the unicorn moment, docs/plans/2026-10-04-moments-and-small-touches.md): a small gold crown over short hair and a red
+// cape with a gold hem. The crown replaces the top two rows of hair (it sits ON the head); the cape hangs behind him (side views, the hem
+// below the legs), a red mantle with a gold clasp lies over his shoulders from the front, and from behind it covers his back.
+const CROWN_FRONT_VIEW = {
+  0: '.....G.GG.G.....', 1: '....GYGGGGYG....', 2: '....GGGRRGGG....', 3: '...KGGGGGGGGK...',
+};
+const CROWN_BACK_VIEW = {
+  0: '.....G.GG.G.....', 1: '....GYGGGGYG....', 2: '....GGGGGGGG....', 3: '...KGGGGGGGGK...',
+};
+const CROWN_SIDE_LEFT = {
+  0: '.....G.G.G......', 1: '....GYGGGGG.....', 2: '....GGRGGGG.....', 3: '....GGGGGGGGK...',
+};
+const CAPE_FRONT_HEM = { 21: '..rrrrrrrrrrrr..', 22: '..rRRRRRRRRRRr..', 23: '..GGGGGGGGGGGG..' };
+const CAPE_MANTLE = { 15: '..rRRRRYYRRRRr..', 16: '..rRRRRRRRRRRr..' };
+const CAPE_BACK_VIEW = {
+  14: '...rRRRRRRRRr...', 15: '..rRRRRRRRRRRr..', 16: '..rRRrRRRRrRRr..', 17: '.rRRRrRRRRrRRRr.', 18: '.rRRRrRRRRrRRRr.',
+  19: '.rRRRrRRRRrRRRr.', 20: '.rRRRRrRRrRRRRr.', 21: '.rRRRRrRRrRRRRr.', 22: '.GGGGGGGGGGGGGG.',
+};
+const CAPE_SIDE_LEFT = { // facing left: the cape streams from the shoulders down the back (the right side)
+  14: '............rr..', 15: '...........rRRr.', 16: '...........rRRr.', 17: '..........rRRRr.', 18: '..........rRRRr.',
+  19: '..........rRRRr.', 20: '..........rRRRr.', 21: '..........rRRRr.', 22: '..........GGGGG.',
+};
+const PRINCE_PROPS = {
+  behind: (img, fx, fy, dir) => {
+    if (dir === 'down') stampProp(img, fx, fy, CAPE_FRONT_HEM);
+    if (dir === 'left') stampProp(img, fx, fy, CAPE_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(CAPE_SIDE_LEFT));
+  },
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down') { stampProp(img, fx, fy, CAPE_MANTLE); stampProp(img, fx, fy, CROWN_FRONT_VIEW); }
+    if (dir === 'up') { stampProp(img, fx, fy, CAPE_BACK_VIEW); stampProp(img, fx, fy, CROWN_BACK_VIEW); }
+    if (dir === 'left') stampProp(img, fx, fy, CROWN_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(CROWN_SIDE_LEFT));
+  },
+};
+// Mevin's headphones (M2): a dark band over the hair and a cup on each ear with a sky-blue pad (side views: the one ear).
+const HEADPHONES_FRONT_VIEW = {
+  2: '....DDDDDDDD....', 3: '...D........D...', 4: '..D..........D..', 5: '..D..........D..', 6: '..D..........D..',
+  7: '..D..........D..', 8: '.DDL........LDD.', 9: '.DKL........LKD.', 10: '.DKL........LKD.', 11: '.DDL........LDD.',
+};
+const HEADPHONES_SIDE_LEFT = { 2: '....DDDDDD......', 8: '.......DDD......', 9: '.......DLD......', 10: '.......DLD......', 11: '.......DDD......' };
+const HEADPHONES = {
+  front: (img, fx, fy, dir) => {
+    if (dir === 'down' || dir === 'up') stampProp(img, fx, fy, HEADPHONES_FRONT_VIEW);
+    if (dir === 'left') stampProp(img, fx, fy, HEADPHONES_SIDE_LEFT);
+    if (dir === 'right') stampProp(img, fx, fy, flipRows(HEADPHONES_SIDE_LEFT));
+  },
+};
+
 // body: the pack character; hair/skin: FRIEND_HAIR / FRIEND_SKIN ids; outfit: a CLUB_OUTFITS-shaped object.
 // `prop`: an overlay above. Key = sheet name without `npc-`. The three women/men of FB-0051 who are not here are a later package.
 const FRIEND_LOOKS = {
@@ -4239,9 +4288,14 @@ const FRIEND_LOOKS = {
   'friend-najam': { body: 'Adam', hair: 'ginger', skin: 'fair', outfit: plainOutfit('#d0558a', '#2c3550') },
   'friend-satvik': { body: 'Alex', hair: 'black', skin: 'brown', outfit: plainOutfit('#5f7a3a', '#3a3a4a'), prop: CAMERA },
   'friend-mustafa': { body: 'Adam', hair: 'black', skin: 'wheat', outfit: HOODIE_BLACK_ORANGE },
+  // Mevin (M2, the drummer for Treble, the music club): a sky-blue jacket over a light tee, headphones round his head. A script actor
+  // only (src/scripts.js SCRIPTS.momentMevin): he is not on any map.
+  'friend-mevin': { body: 'Bob', hair: 'darkbrown', skin: 'wheat', outfit: plainOutfit('#3fa0e6', '#2f2f3a', { inner: '#cfeaff', innerHi: '#ffffff', shoes: '#f4f4f6' }), prop: HEADPHONES },
   // Professors (adult look: grey or black hair, jacket/blazer). Raja: a gold-trimmed maroon jacket over a gold shirt.
   'prof-raja': { body: 'Bob', hair: 'grey', skin: 'wheat', outfit: { ...plainOutfit('#7a1530', '#e8dcc0'), jacket: '#7a1530', inner: '#e0b84f', innerHi: '#ffe27a', pants: '#e8dcc0', shoes: '#a8812a' } },
 };
+// The prince (M1): short dark hair, a royal-blue tunic, white trousers, the crown and cape above. A script actor only.
+const PRINCE_LOOK = { body: 'Alex', hair: 'darkbrown', skin: 'fair', outfit: plainOutfit('#2f5fb8', '#f2f2f6', { shoes: '#7a5a2a' }), prop: PRINCE_PROPS };
 function buildFriendCharacter(look) {
   const tables = clubOutfitTables(look.body, friendRecolor(look.body, look.hair, look.skin), look.outfit);
   return buildCharacter(look.body, tables.top, tables.legs, look.prop || null);
@@ -4874,6 +4928,7 @@ write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
 write('npc-alice.png', ICL_TECH.buildAlice()); // P5c (FB-0071): Alice, the ICL's hovering service robot (tools/lib/icl-tech-art.js)
 write('npc-mustafa.png', buildFriendCharacter(FRIEND_LOOKS['friend-mustafa'])); // ADR 0016: the opening's own script actor; FB-0051: black and orange LUG hoodie
+write('npc-prince.png', buildFriendCharacter(PRINCE_LOOK)); // M1 (src/scripts.js SCRIPTS.momentUnicorn): the crowned prince who rides off on the unicorn
 // Quality loop, Characters run 1: 6 more recolors (2 each of Adam/Alex/Bob) for ambient campus/Main
 // Block life -- src/maps.js `ambient` entries, src/scenes/world.js createAmbient().
 write('npc-ambient-a.png', buildCharacter('Adam', AMBIENT_A_RECOLOR));

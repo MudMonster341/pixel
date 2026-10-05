@@ -121,6 +121,9 @@ class WorldScene extends Phaser.Scene {
     // opening chain (not `?intro=0`, not "Continue" a save) actually ran. Consumed once, in create().
     this.playOpening = Boolean(data.playOpening);
     this.transitioning = false;
+    // The moments (src/moments.js): how many have started on THIS visit of this map. WorldScene restarts for every map change, so a
+    // new visit starts at 0; at most MOMENT_PER_VISIT may start per visit.
+    this.momentsThisVisit = 0;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
     // buildMap() only ever *assigns* this.overheadLayer when the new map's own Tiled data actually
     // has an 'overhead' layer (tree canopies, ADR 0008) -- it never clears it otherwise. Since
@@ -995,6 +998,9 @@ class WorldScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    // The play clock the moments' 90 s spacing runs on (GameState.playSeconds): seconds this scene has actually run, so a mini-game, the
+    // title screen or a minute with the game closed never counts. Capped per frame so a stalled tab cannot fast-forward it.
+    GameState.playSeconds += Math.min(delta, 250) / 1000;
     if (this.transitioning) return;
 
     const ui = this.scene.get('ui');
@@ -1007,6 +1013,7 @@ class WorldScene extends Phaser.Scene {
     this.checkAreas();
     this.checkCutscene();
     this.checkKeyRoomBeats();
+    this.checkMoment();
     this.updateAmbient(time);
     this.updateAnimals(time, delta);
     this.syncGameState();
@@ -1838,6 +1845,51 @@ class WorldScene extends Phaser.Scene {
     this.game.events.emit('cutscene-seen', 'gate2');
     this.setAmbientVisible(false);
     this.scriptRunner.run(SCRIPTS.opening).then(() => this.setAmbientVisible(true));
+  }
+
+  // The small unskippable moments (src/moments.js, docs/plans/2026-10-04-moments-and-small-touches.md): the unicorn and the prince, Mevin the
+  // drummer. momentDue() holds every rule (once only, 90 s of play apart, one per map visit, the order, the trigger rectangle, off with
+  // `?moments=0`); this only says whether anything owns the screen right now (any script, a door or warp walk, a dialog, the pause menu,
+  // the journal, the map: re-checked every frame, so a moment waits for the next free frame) and starts the one that is due.
+  checkMoment() {
+    if (!momentsEnabled()) return;
+    const ui = this.scene.get('ui');
+    const blocked = this.transitioning || this.scriptRunner.isRunning || !this.sys.isActive() || !ui.tutorial || ui.isBlocking();
+    const moment = momentDue(GameState, GameState.playSeconds, {
+      map: this.mapKey,
+      tileX: Math.floor(this.player.body.center.x / TILE),
+      tileY: Math.floor((this.player.body.bottom - 1) / TILE),
+      enabled: true,
+      blocked,
+      visitCount: this.momentsThisVisit,
+      anchor: (name) => resolveAnchor(this.mapObjects, name),
+    });
+    if (moment) this.playMoment(moment);
+  }
+
+  // Plays a moment's script (SCRIPTS[moment.script]) unskippable. It counts as played the instant it starts (a reload mid-scene never
+  // replays it) and the spacing clock is stamped again when it ends. Whatever happens in the script, the end puts the world back:
+  // the camera follows her again, the letterbox bars are gone, the ambient crowd is visible and every actor it spawned is removed.
+  playMoment(moment) {
+    const steps = SCRIPTS[moment.script];
+    if (!steps) { console.warn(`moments: "${moment.id}" names an unknown script "${moment.script}"`); return; }
+    this.momentsThisVisit++;
+    markMomentStarted(GameState, moment.id, GameState.playSeconds);
+    notifyStateChanged(); // src/save.js autosaves soon after
+    const before = new Set(this.scriptRunner.actors.keys());
+    this.setAmbientVisible(false);
+    const restore = () => {
+      for (const id of [...this.scriptRunner.actors.keys()]) if (!before.has(id)) this.scriptRunner.step_despawnActor(id);
+      this.scene.get('ui').letterbox.snap(false);
+      this.cameras.main.startFollow(this.player, true, 0.18, 0.18);
+      this.setAmbientVisible(true);
+      markMomentEnded(GameState, GameState.playSeconds);
+      notifyStateChanged();
+    };
+    this.scriptRunner.run(steps, { unskippable: true }).then(restore, (error) => {
+      console.warn(`moments: "${moment.id}" failed, putting the world back`, error);
+      restore();
+    });
   }
 
   // The 3 key-room beats (docs/STORY.md beat 8, ADR 0016): unlike the Gate 2/entrance triggers, no

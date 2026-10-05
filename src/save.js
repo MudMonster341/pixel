@@ -44,6 +44,11 @@ function snapshotState(state) {
     journal: [...state.journal],
     collected: [...state.collected],
     seenCutscenes: [...state.seenCutscenes],
+    // The small unskippable moments (src/moments.js): which have played (once only, ever), the play clock (seconds) and the
+    // play-clock time the last one ran at, so the 90 s spacing survives a reload.
+    seenMoments: [...state.seenMoments],
+    playSeconds: state.playSeconds,
+    lastMomentAt: state.lastMomentAt,
     seenDialog: [...state.seenDialog],
     seenHints: [...state.seenHints],
     // M3a: her chosen name and look (src/scenes/intro-name.js, intro-customize.js). A save from
@@ -93,6 +98,10 @@ function applyState(state, saved) {
   state.minigames = saved.minigames && typeof saved.minigames === 'object' ? { ...saved.minigames } : state.minigames;
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
+  // A save from before the moments existed has none of these: no moment has played, so each may play once (never "already seen").
+  state.seenMoments = new Set(Array.isArray(saved.seenMoments) ? saved.seenMoments : []);
+  state.playSeconds = Number.isFinite(saved.playSeconds) && saved.playSeconds > 0 ? saved.playSeconds : 0;
+  state.lastMomentAt = Number.isFinite(saved.lastMomentAt) ? saved.lastMomentAt : null;
   state.seenDialog = new Set(saved.seenDialog || []);
   state.seenHints = new Set(saved.seenHints || []);
   // M3a: falls back to whatever GameState already had (the just-booted defaults, see src/state.js)

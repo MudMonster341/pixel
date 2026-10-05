@@ -188,6 +188,7 @@ docs/plans/2026-09-26-premium-pass.md)
 Cats and birds only. The raw packs stay in `assets/External Tilesets/` (git-ignored, never committed);
 `tools/make-animals.js` crops and recolours them into `assets/animal-*.png`.
 
+- **Ninja Adventure -- Asset Pack** by **Pixel-boy and AAA** (CC0 1.0, see the entry above): its side-view brown **Horse** (`Actor/Animal/Horse/SpriteSheetBrownSide.png`, kept in `assets/External Tilesets/Ninja-Adventure-Horse/`) is the body of the white, horned **unicorn** in the unicorn-and-the-prince moment (M1, `tools/make-moments.js` -> `assets/moment-unicorn.png`), recoloured; the horn, the pastel mane and tail, the lowered grazing head and the little prince rider are drawn in code. A generic horse with a horn (no protected character). The drum kit of the Mevin moment (`assets/moment-drums.png`) is drawn in code too.
 - **Animals Asset Pack** (16x16 top-down animals, supplied by the owner; free licence: no resale, no NFTs;
   author not named in the pack, so none is claimed here). Use and modification are allowed, but the pack
   itself must not be resold or redistributed. Only the cat is used (the bear, penguin and pig are not),

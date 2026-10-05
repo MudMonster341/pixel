@@ -126,6 +126,20 @@ FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and it
 | CF42 | acm-member | The ACM-W chapter at BITS Dubai started in 2019, the first of its kind in the UAE. | F051 |
 | CF43 | acm-member | Dr. Sujala Deepak Shetty is a CS Professor and Associate Dean for Practice School and Industry Engagement. | F070 |
 
+## Moments (FB-0051 follow-up: the unskippable little scenes, `src/moments.js`, `src/scripts.js`)
+
+Short scenes that play ONCE only while she walks around (never again after Continue; a brand-new save plays them again), at least 90 s of play apart and never two on one map visit (EXCEPT the entrance pair: M2 follows M1 about 6 s after it ends, on the same visit), each ending by itself in about 14-16 s (every line advances on its own after a moment, and E still speeds it up). `{name}` is the player's name ("Taru" by default). **Owner: edit any line.**
+
+| Moment | Where | Speaker | Line |
+|---|---|---|---|
+| M1 the unicorn and the prince | just inside Gate 2 (first time only, after the welcome) | {name} | WOAH, WHAT? I'm not drunk yet, so why is a unicorn here? |
+| | | Prince | Don't mind me. I'm always watching. |
+| | | {name} | Huh... is this the actual BITS? |
+| M2 Mevin the drummer (plays for Treble, the music club; runs in with a drum kit, drums a bar, ends on a rimshot, runs off) | the brick forecourt in front of the Main Block, as she first walks up to the Main Block, about 6 s after M1 ends | Mevin (Treble) | WOAHHH, {name}! You da goat! |
+| | | Mevin (Treble) | Come watch me perform at Jashn some day! |
+
+M1's first line is the owner's own inside joke, exactly as written (no softening). The prince is a generic crowned stand-in; the unicorn is a generic white horse with a horn (no protected character).
+
 ## Where the people are
 
 Ambient students are listed in `src/ambient.js` (about 38 on the campus map, 3-6 per Main Block floor). A role is attached to each one; edit the `role` field to change who says what.

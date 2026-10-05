@@ -57,6 +57,13 @@ const SOUNDS = {
   liftDing: { file: 'assets/audio/generated/lift-ding.wav', volume: 0.5, loop: false, category: 'sfx' },
   // P4c (FB-0067): the soft click of a door or lift finishing its closing animation, synthesized (tools/make-audio.js synthDoorClose()).
   doorClose: { file: 'assets/audio/generated/door-close.wav', volume: 0.3, loop: false, category: 'sfx' },
+  // M2 (Mevin the drummer, tools/make-audio.js synthKick() ...): a tiny synth drum kit, played in time with the kit's frames by the
+  // moment's script (src/scripts.js SCRIPTS.momentMevin). The roll runs about 1.5 s, the rimshot about 1 s.
+  drumKick: { file: 'assets/audio/generated/drum-kick.wav', volume: 0.6, loop: false, category: 'sfx' },
+  drumSnare: { file: 'assets/audio/generated/drum-snare.wav', volume: 0.5, loop: false, category: 'sfx' },
+  drumCrash: { file: 'assets/audio/generated/drum-crash.wav', volume: 0.4, loop: false, category: 'sfx' },
+  drumRoll: { file: 'assets/audio/generated/drum-roll.wav', volume: 0.5, loop: false, category: 'sfx' },
+  drumRimshot: { file: 'assets/audio/generated/drum-rimshot.wav', volume: 0.5, loop: false, category: 'sfx' },
 
   // ---------- mini-games (src/minigames/): jump/flap/line-clear are synth-generated (no pack had a
   // clean match, docs/ROADMAP.md M5 rule 6); win/lose reuse Kenney jingles ----------

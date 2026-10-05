@@ -90,6 +90,9 @@ class BootScene extends Phaser.Scene {
     }
     // The RTA bus (SCRIPTS.opening): a door-animation spritesheet, layout in src/scripts.js RTA_BUS_SHEET.
     this.load.spritesheet(RTA_BUS_SHEET.key, RTA_BUS_SHEET.file, { frameWidth: RTA_BUS_SHEET.frameWidth, frameHeight: RTA_BUS_SHEET.frameHeight });
+    // The moments' prop sheets (src/scripts.js MOMENT_SHEETS: the unicorn, Mevin's drum kit); their characters (the prince, Mevin) come
+    // through characterSheets() above like every other script actor.
+    for (const sheet of Object.values(MOMENT_SHEETS)) this.load.spritesheet(sheet.key, sheet.file, { frameWidth: sheet.frameWidth, frameHeight: sheet.frameHeight });
     this.load.spritesheet('items', 'assets/items.png', sheet);
     // 2 frames: 0 = "E" (talk), 1 = "!" (something new to say, see src/dialog.js hasNewDialog()).
     this.load.spritesheet('prompt', 'assets/prompt.png', sheet);

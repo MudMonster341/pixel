@@ -832,6 +832,12 @@ async function shootMinigames(browser) {
       // race that gate (a fixed 150ms here used to lose the Enter press below more often than not,
       // leaving mgState stuck on 'intro' and every later shot in this game skipped).
       await waitFor(page, (key) => game.scene.getScene(key).card && game.scene.getScene(key).card.acceptInput, { arg: sceneKey, timeout: 5000 });
+      if (id === 'tower') {
+        // FB-0082: the tower opens with its backstory; shoot its first page, then skip to the usual intro card (the same call a SKIP STORY press makes)
+        await shoot(page, `minigame-${id}-00-story`);
+        await page.evaluate((key) => game.scene.getScene(key).skipStory(), sceneKey);
+        await waitCardAcceptsInput(page, sceneKey);
+      }
       await shoot(page, `minigame-${id}-01-intro`);
 
       await waitCardAcceptsInput(page, sceneKey);

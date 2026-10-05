@@ -1,6 +1,6 @@
 // The Physics Lab key's mini-game (docs/STORY.md, FB-0066, docs/plans/2026-10-04-moments-and-small-touches.md "hero vs villain"):
 // a small white kitten hero in a mask and cape fights a dark, bat-eared "shadow bat" on a lab rooftop. He shoots at her in readable
-// volleys (an aimed bolt, another, a 3-bolt fan, a slow sweep), a robot-bat minion patrols the roof, she shoots star bolts (Z), and when
+// volleys (an aimed bolt, another, a 3-bolt fan, a slow sweep), a robot-bat minion patrols the roof, she shoots star bolts (a mouse click or Z), and when
 // he is beaten he hands over the key ("Fine, fine. Take it.") and she walks to it. GENERIC stand-ins (ADR 0021): the owner asked for
 // two protected characters; nothing here is theirs. Every rule (the arena, her movement, the villain's plan with its wind-up telegraph,
 // hearts, the shield, the minion, the key and the 150 s failsafe) lives in src/minigames/hero-logic.js as pure, unit-tested functions; this
@@ -8,8 +8,11 @@
 // COVER picture, HUD "HITS: n / 9", game over with the skip after 3 losses, win card, Esc to quit) is MinigameBaseScene
 // (framework-scene.js): a round always ends, and nobody is ever locked out.
 //
-// Keys: ARROWS / A D move, SPACE / UP / W jump, Z fires. Z is not one of the shell's card keys (Enter / Space / E / Up / Down / W / S), and
-// the jump listeners only queue while `mgState === 'playing'`, so the press that confirms START or RETRY never jumps (FB-0042).
+// Controls: ARROWS / A D move, SPACE / UP / W jump, LEFT MOUSE CLICK (or a touch tap) fires, Z fires too (FB-0081: Z sits awkwardly under WASD, so
+// the click is the main shoot control and Z stays as an alternative). A click is one shot, holding the button keeps firing at the same cooldown
+// as holding Z; the pointer rules are the pure heroPointer*() helpers in hero-logic.js. Z is not one of the shell's card keys (Enter / Space / E /
+// Up / Down / W / S), and the jump listeners only queue while `mgState === 'playing'`, so the press that confirms START or RETRY never jumps
+// (FB-0042); the same click that confirms START / RETRY / CONTINUE never fires either (the pointer state starts unarmed in startAttempt()).
 //
 // Art (tools/make-minigame-art.js): hero-bg.png is generated at half scale (480x270) and stretched 2x; the sprites (hero-sprites.png, 32x32
 // cells) are drawn at HVS_SCALE (2x), like the tower's; hero-cover.png (480x270, stretched 2x) is the intro card's background.
@@ -77,6 +80,13 @@ class HeroScene extends MinigameBaseScene {
     this.hintShown = false;
     this.jumpQueued = false;
     this.shootKey = this.input.keyboard.addKey('Z');
+    // FB-0081: the left mouse button (or a tap) fires. Down/up events feed the pure pointer state; the shot itself is decided per frame in playUpdate().
+    this.pointerFire = heroPointerCreate();
+    this.input.on('pointerdown', (pointer) => { if (!pointer.button) heroPointerDown(this.pointerFire, this.mgState === 'playing'); });
+    const pointerReleased = (pointer) => { if (!pointer || !pointer.button) heroPointerUp(this.pointerFire); };
+    this.input.on('pointerup', pointerReleased);
+    this.input.on('pointerupoutside', pointerReleased);
+    this.input.on('gameout', () => heroPointerUp(this.pointerFire)); // the pointer left the canvas with the button down: stop firing
     // SPACE / UP / W jump. Gated on `playing` and cleared in startAttempt(): the same press that confirmed START / RETRY must not also
     // make her hop on the first frame (FB-0042). The shell's card handlers are registered later than these, so on a retry this
     // listener still sees mgState 'gameover' for that press.
@@ -87,6 +97,7 @@ class HeroScene extends MinigameBaseScene {
   startAttempt() {
     this.hv = createHeroFight();
     this.jumpQueued = false;
+    heroPointerReset(this.pointerFire); // FB-0081: the click that confirmed START / RETRY must not fire; it arms again once the pointer is up
     this.fireMs = 0; // > 0 while the villain shows his firing pose
     this.windupSpriteMs = 0;
     for (const sprite of [...this.boltSprites.values(), ...this.shotSprites.values()]) sprite.destroy();
@@ -115,11 +126,12 @@ class HeroScene extends MinigameBaseScene {
 
   playUpdate(time, delta) {
     const k = this.mgKeys;
+    const pointerShoot = heroPointerShoot(this.pointerFire, delta); // every frame (it arms the pointer), whether or not Z is down too
     const input = {
       left: k.LEFT.isDown || k.A.isDown,
       right: k.RIGHT.isDown || k.D.isDown,
       jumpPressed: this.jumpQueued,
-      shoot: this.shootKey.isDown,
+      shoot: this.shootKey.isDown || pointerShoot,
     };
     this.jumpQueued = false;
     const events = stepHeroFight(this.hv, input, delta);
@@ -140,6 +152,7 @@ class HeroScene extends MinigameBaseScene {
         squashStretch(this, this.hero, 'squash', HVS_SCALE);
         break;
       case 'shoot':
+        heroPointerShotFired(this.pointerFire);
         AudioManager.play('minigameFlap');
         break;
       case 'windup':

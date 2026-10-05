@@ -35,6 +35,8 @@ class MinigameBaseScene extends Phaser.Scene {
     this.score = 0;
     this.finished = false;
     this.builtScene = false;
+    this.story = null; // FB-0082: the backstory in progress (framework-data.js createStoryState()), null when there is none
+    this.storyParts = [];
   }
 
   create() {
@@ -101,11 +103,77 @@ class MinigameBaseScene extends Phaser.Scene {
   }
 
   // ---------- intro ----------
+  // Runs once per opening of the game (create()); a retry goes straight to beginAttempt(), so a game's backstory (def.story, FB-0082) is only ever
+  // shown before the first attempt of each opening, never after a game over.
   showIntro() {
     this.mgState = 'intro';
     this.setHudVisible(false);
+    const pages = minigameStoryPages(this.def, GameState.playerName);
+    if (pages.length) this.startStory(pages);
+    else this.showIntroCard();
+  }
+
+  showIntroCard() {
+    this.mgState = 'intro';
     this.card.showIntro(this.def, () => this.beginAttempt());
   }
+
+  // ---------- the backstory (FB-0082) ----------
+  // A few short pages in the card's own style over the game's backdrop (def.story.cover), one at a time. Enter / E / Space / a click on the page
+  // (or the NEXT button) turn it, UP / DOWN reach "SKIP STORY", it turns by itself after MG_STORY_AUTO_MS, and Esc quits like on every card
+  // (mgState stays 'intro' throughout, so onEsc() and the e2e helpers see the same state as before). Then the usual intro card follows.
+  startStory(pages) {
+    this.storyPages = pages;
+    this.story = createStoryState(pages.length);
+    // a click anywhere on the page turns it (a click on a button is that button's own business, so only clicks over nothing count)
+    this.storyClick = (pointer, over) => {
+      if (this.story && !this.story.done && this.card.acceptInput && !(over && over.length)) this.advanceStory();
+    };
+    this.input.on('pointerdown', this.storyClick);
+    this.showStoryPage();
+  }
+
+  showStoryPage() {
+    const index = this.story.index;
+    this.card.show({
+      title: this.def.name.toUpperCase(),
+      paragraphs: [this.storyPages[index]],
+      items: [
+        { label: 'NEXT (ENTER)', onSelect: () => this.advanceStory() },
+        { label: 'SKIP STORY', onSelect: () => this.endStory() },
+      ],
+      cover: this.def.story.cover || null,
+    });
+    this.storyParts.forEach((part) => part.destroy());
+    this.storyParts = [];
+    this.drawStoryArt(index);
+  }
+
+  advanceStory() {
+    if (!this.story || this.story.done) return;
+    storyAdvance(this.story);
+    if (this.story.done) this.endStory();
+    else this.showStoryPage();
+  }
+
+  endStory() {
+    if (!this.story) return;
+    this.story.done = true;
+    this.story = null;
+    this.input.off('pointerdown', this.storyClick);
+    this.storyParts.forEach((part) => part.destroy());
+    this.storyParts = [];
+    this.showIntroCard();
+  }
+
+  // For tools and tests: straight to the intro card.
+  skipStory() {
+    this.endStory();
+  }
+
+  // A game with a backstory draws its little picture for page `index` here (sprites added to this.storyParts, depth 199.5: above the cover
+  // picture, below the card); the framework destroys them when the page turns.
+  drawStoryArt() {}
 
   // Runs once ever (the first time the intro is dismissed) to build the persistent game objects,
   // then every time on top of that (including every retry) to reset them to a fresh start.
@@ -218,6 +286,13 @@ class MinigameBaseScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.mgState === 'playing') this.playUpdate(time, delta);
+    else if (this.story && !this.story.done && !this.finished) {
+      // FB-0082: a backstory page turns by itself after MG_STORY_AUTO_MS (nobody is ever stuck on one)
+      const before = this.story.index;
+      storyTick(this.story, delta);
+      if (this.story.done) this.endStory();
+      else if (this.story.index !== before) this.showStoryPage();
+    }
   }
 
   // ---------- subclass contract (src/minigames/hero.js, flappy.js, tower.js) ----------

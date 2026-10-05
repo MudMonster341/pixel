@@ -1198,3 +1198,8 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 
 Aakar = `mbg-amb-walk-2` (the only ACM member in main-block-g), sheet `npc-friend-aakar` (black hair, sky-blue hoodie), 3 Dr. Evil-style lines, then CF41-43. Mahin = `campus-amb-court-2` (211,64), sheet `npc-friend-mahin` (red jersey, white sweatband), 3 badminton lines, then CF13-15. The owner's FB-0080 screenshot was a CS student at main-block-g (5,11) with no sports player there: told them in the fix note. Rows added to campus-lines-review.md.
 **Next:** P8 FB-0081 (left click shoots in the hero fight) + FB-0082 (Room 195 Rapunzel backstory before the tower game), then the owner's moves: friends after the Physics Lab on the 3rd floor, a new scene after the ICL (content pending).
+
+## 2026-10-05 (Day 4, evening) - FB-0081 click-to-shoot, FB-0082 tower backstory: 1202 unit green
+
+Hero fight: left click = one shot, hold = Z cadence, Z kept, confirming click never fires (pointer starts unarmed in `startAttempt`), intro line `CLICK/Z: SHOOT`. Tower: `MINIGAMES.tower.story` (4 pages over the tower backdrop, Enter/E/Space/click/6 s auto, SKIP STORY button, once per opening, not after a retry). Coordinator ran tests/e2e/minigames.spec.js (10/10, incl. the new FB-0082 spec; the agent had no browser) and qa-shots (looked at tower-00-story and hero-01-intro). Note: the FB-0081 screenshot was taken after the Physics Lab key (ICL flyer card visible); the owner means the "Hello Kitty game" = hero fight.
+**Next:** the owner's moments reorder: M4 (Sana/Shraddha/Palak) moves to the 3rd floor after the Physics Lab key; a new scene after the ICL (content pending); Raja stays.

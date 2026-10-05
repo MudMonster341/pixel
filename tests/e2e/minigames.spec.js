@@ -243,21 +243,48 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     // actually tests the debounce instead of testing incidental Playwright/IPC timing.
     await page.evaluate(() => {
       GameState.quest.stage = 'hunting';
-      game.scene.getScene('world').launchMinigame('tower', () => {});
+      game.scene.getScene('world').launchMinigame('flappy', () => {}); // (the tower opens with its backstory first, FB-0082: tested below)
     });
-    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).active).toBe(true);
-    expect((await mgInfo(page, 'minigame-tower')).mgState).toBe('intro');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(true);
+    expect((await mgInfo(page, 'minigame-flappy')).mgState).toBe('intro');
 
     // Mash Enter the instant the card appears: still on the intro card a beat later.
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
     await page.keyboard.press('Enter');
-    expect((await mgInfo(page, 'minigame-tower')).mgState).toBe('intro');
+    expect((await mgInfo(page, 'minigame-flappy')).mgState).toBe('intro');
 
     // Once the debounce has passed, a real Enter does start it.
+    await waitCardReady(page, 'minigame-flappy');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
+  });
+
+  test('FB-0082: the tower opens with its backstory (Enter turns each page), then the intro card, then play; a retry skips the story', async ({ page }) => {
+    await openGame(page, { map: 'main-block-1', minigames: true });
+    await page.evaluate(() => {
+      GameState.quest.stage = 'hunting';
+      game.scene.getScene('world').launchMinigame('tower', () => {});
+    });
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).active).toBe(true);
+    const pageCount = await page.evaluate(() => game.scene.getScene('minigame-tower').storyPages.length);
+    expect(pageCount).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < pageCount; i++) {
+      await waitCardReady(page, 'minigame-tower');
+      expect((await mgInfo(page, 'minigame-tower')).cardItems[0]).toBe('NEXT (ENTER)');
+      await page.keyboard.press('Enter');
+    }
+    await waitCardReady(page, 'minigame-tower');
+    expect((await mgInfo(page, 'minigame-tower')).cardItems[0]).toBe('START (ENTER)'); // the usual intro card follows the story
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).mgState).toBe('playing');
+
+    // after a loss, RETRY goes straight back to play: no story again
+    await page.evaluate(() => game.scene.getScene('minigame-tower').lose());
     await waitCardReady(page, 'minigame-tower');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-tower')).mgState).toBe('playing');
+    expect(await page.evaluate(() => game.scene.getScene('minigame-tower').story)).toBe(null);
   });
 
   test('FB-0042: confirming Retry with Space does not also make her jump on the first frame', async ({ page }) => {

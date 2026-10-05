@@ -657,14 +657,14 @@ test('FB-0066 bots: every round ends, whatever she does (a rule-following random
 
 // ---------- the scene and its art (source assertions: Phaser is not available here) ----------
 
-test('FB-0066 hero scene: built on the shared shell, steps the pure state, Z shoots, jump keys are gated on playing, the camera never moves', () => {
+test('FB-0066 hero scene: built on the shared shell, steps the pure state, a click or Z shoots, jump keys are gated on playing, the camera never moves', () => {
   const src = fs.readFileSync(path.join(ROOT, 'src', 'minigames', 'hero.js'), 'utf8');
   assert.match(src, /class HeroScene extends MinigameBaseScene/);
   assert.match(src, /super\('minigame-hero'\)/);
   assert.match(src, /createHeroFight\(\)/);
   assert.match(src, /stepHeroFight\(this\.hv, input, delta\)/);
   assert.match(src, /addKey\('Z'\)/, 'the shoot key is Z: not one of the shell\'s card keys (Enter, Space, E, Up, Down, W, S)');
-  assert.match(src, /shoot: this\.shootKey\.isDown/);
+  assert.match(src, /shoot: this\.shootKey\.isDown \|\| pointerShoot/, 'Z or the mouse click (FB-0081)');
   assert.match(src, /!event\.repeat && this\.mgState === 'playing'\) this\.jumpQueued = true/, 'FB-0042: the press that confirms START or RETRY must not jump');
   assert.match(src, /case 'lose':[\s\S]*?this\.lose\(\);/);
   assert.match(src, /case 'win':[\s\S]*?this\.win\(\);/);

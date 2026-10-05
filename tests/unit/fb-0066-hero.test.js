@@ -74,7 +74,7 @@ test('FB-0066: the intro card is at most three lines (a title and two short line
   const [controls, goal] = def.instructions;
   assert.match(controls, /ARROWS: MOVE/);
   assert.match(controls, /SPACE: JUMP/);
-  assert.match(controls, /Z: BOLT/, 'the shoot key is shown on the card');
+  assert.match(controls, /CLICK\/Z: SHOOT/, 'the shoot controls are shown on the card (FB-0081: the click shoots, Z too)');
   assert.match(goal, /SHADOW BAT/);
   assert.match(goal, /\b9\b/);
   for (const line of def.instructions) assert.ok(line.length <= MG_INSTRUCTION_MAX_CHARS, `"${line}" fits the card`);

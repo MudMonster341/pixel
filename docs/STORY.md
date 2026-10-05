@@ -105,9 +105,9 @@ gift can never be blocked by a hard game.
 
 | Key | Room | Mini-game |
 |---|---|---|
-| 1 | Physics Lab (3rd floor) | Hero fight: a masked kitten hero (a generic stand-in) shoots a bat-eared "shadow bat" who shoots back (3 hearts, 9 hits, a roaming minion, a themed cover), then takes the key he drops (FB-0066) |
+| 1 | Physics Lab (3rd floor) | Hero fight: a masked kitten hero (a generic stand-in) shoots a bat-eared "shadow bat" who shoots back (3 hearts, 9 hits, a roaming minion, a themed cover), then takes the key he drops (FB-0066). Shoot with the left mouse click (or Z), FB-0081 |
 | 2 | ICL (1st floor) | Flappy-bird style flyer, now the **fingerprint hack** (FB-0071): the ICL is a sealed super-computing lab; the flyer (a data packet through neon firewalls) opens its door, then Alice hands over the key inside |
-| 3 | Room 195 | Tower climb: a "reverse Rapunzel" (climb to the prince, dodge what the gargoyle throws) |
+| 3 | Room 195 | Tower climb: a "reverse Rapunzel" (climb to the prince, dodge what the gargoyle throws). It opens with a short backstory (FB-0082): the prince is stuck at the top of Rapunzel's tower, so the princess does the rescuing |
 
 ## The box and the birthday card (the ending, built 2026-09-22)
 

@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-10-05T17:58:35.554Z",
-  "updatedAt": "2026-10-05T18:07:00.008Z",
+  "updatedAt": "2026-10-05T18:19:38.252Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -56,8 +56,18 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0082.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Room 195 now opens with a four-page backstory (the prince stuck in Rapunzel's tower, the chameleon and the grumpy gargoyle, you rescue him), then the controls card, then the game starts. Enter turns the page, it also turns by itself after 6 s, and SKIP STORY jumps ahead. It shows once per time you open the game, not after a retry.",
+      "at": "2026-10-05T18:19:38.252Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0082-tower-story.test.js",
+    "commit": null,
+    "at": "2026-10-05T18:19:38.252Z"
+  },
   "history": [
     {
       "at": "2026-10-05T17:58:35.554Z",
@@ -68,6 +78,11 @@
       "at": "2026-10-05T18:07:00.008Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T18:19:38.252Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

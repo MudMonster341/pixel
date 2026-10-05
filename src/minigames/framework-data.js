@@ -26,6 +26,8 @@ const MG_INSTRUCTION_MAX_CHARS = 42;
 // framework.test.js). The score target the HUD counts to is `scoreTarget`; the goal line may name it.
 // `cards` (optional): the win/skip/game-over card wording for a game that does not hand over a key (flappy opens a door): winTitle, winLine, skipTitle,
 // skipLine, skipLabel, skipHint. A game without it (hero, tower) says the key lines. `opens` (optional): the GameState flag its story entry sets.
+// `story` (optional, FB-0082): a short backstory shown before the intro card, once per opening of the game (never again after a retry): `pages` are
+// 3-4 short beats (`{name}` = the player's name), `cover` the picture behind them (a texture key the game's own preload() loads). See minigameStoryPages() below.
 // `item` names the real key item this mini-game's win hands over (src/items.js), the same id
 // src/story.js's own keyStations table gives that key station -- duplicated here (rather than one
 // file importing the other) because a mini-game is meant to be playable/testable on its own, without
@@ -46,7 +48,7 @@ const MINIGAMES = {
     item: 'keyPhysicsLab',
     cover: { key: 'hero-cover', file: 'assets/minigames/hero-cover.png' },
     instructions: [
-      'ARROWS: MOVE  SPACE: JUMP  Z: BOLT',
+      'ARROWS: MOVE  SPACE: JUMP  CLICK/Z: SHOOT', // FB-0081: the left mouse click shoots, Z still works
       'BEAT THE SHADOW BAT: 9 HITS',
     ],
     scoreTarget: 9,
@@ -89,6 +91,16 @@ const MINIGAMES = {
     ],
     scoreTarget: 5,
     scoreLabel: 'FLOOR',
+    // FB-0082: the prince is stuck in Rapunzel's tower; she is the one who rescues him. Drawn over the tower's own backdrop (tower.js drawStoryArt()).
+    story: {
+      cover: { key: 'tower-bg' },
+      pages: [
+        "Once upon a time, a prince got stuck at the top of Rapunzel's very tall tower.",
+        'His pet chameleon could not open the door, and the grumpy gargoyle guarding it throws barrels and flower pots at visitors.',
+        'So the princess ({name}) decided to do the rescuing, for once. Climb the ladders, dodge the barrels and pots, and reach the window!',
+        'Ready? The tower is waiting.',
+      ],
+    },
   },
 };
 
@@ -133,6 +145,42 @@ function recordAttempt(state, id, outcome, score) {
 function resetMinigameProgress(state, id) {
   if (!state.minigames) state.minigames = {};
   state.minigames[id] = freshMinigameProgress();
+}
+
+// ---------- the backstory before a game's intro card (FB-0082, pure so a unit test can drive it) ----------
+// Each page advances with Enter / E / Space / a click (the card's own keys), and also by itself after MG_STORY_AUTO_MS so nobody is ever stuck on one.
+// Esc quits as everywhere else; "SKIP STORY" is the second button on every page.
+const MG_STORY_AUTO_MS = 6000;
+
+// The pages of a game's backstory with `{name}` filled in ([] for a game without one). With no name the "({name})" aside is dropped.
+function minigameStoryPages(def, playerName) {
+  const pages = def && def.story && Array.isArray(def.story.pages) ? def.story.pages : [];
+  const name = typeof playerName === 'string' ? playerName.trim() : '';
+  return pages.map((page) => (name
+    ? page.replace(/\{name\}/g, name)
+    : page.replace(/ \(\{name\}\)/g, '').replace(/\{name\}/g, '')));
+}
+
+// { index, ms, count, done }: which page is up and for how long. done is true once the last page has been left (or there were none).
+function createStoryState(pageCount) {
+  return { index: 0, ms: 0, count: pageCount, done: pageCount <= 0 };
+}
+
+// A key or click: on to the next page (and done after the last one).
+function storyAdvance(story) {
+  if (story.done) return story;
+  story.index += 1;
+  story.ms = 0;
+  if (story.index >= story.count) story.done = true;
+  return story;
+}
+
+// Time passing on a page: after MG_STORY_AUTO_MS it turns by itself.
+function storyTick(story, dtMs) {
+  if (story.done) return story;
+  story.ms += Math.max(0, dtMs);
+  if (story.ms >= MG_STORY_AUTO_MS) storyAdvance(story);
+  return story;
 }
 
 // ---------- the win card's layout numbers (pure, so a unit test can check the spacing) ----------

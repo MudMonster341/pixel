@@ -4,9 +4,9 @@
   "type": "change",
   "area": "UI",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-10-05T17:55:42.502Z",
-  "updatedAt": "2026-10-05T18:06:59.948Z",
+  "updatedAt": "2026-10-05T18:19:38.198Z",
   "details": "make the shoot button the mouse left click okay",
   "context": {
     "map": "main-block-1",
@@ -52,8 +52,18 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0081.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "In the Physics Lab fight a left mouse click now shoots (hold to keep shooting). Z still works too, and the intro says CLICK/Z: SHOOT. The click that presses START never fires a shot by accident.",
+      "at": "2026-10-05T18:19:38.198Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0081-hero-click.test.js",
+    "commit": null,
+    "at": "2026-10-05T18:19:38.198Z"
+  },
   "history": [
     {
       "at": "2026-10-05T17:55:42.502Z",
@@ -64,6 +74,11 @@
       "at": "2026-10-05T18:06:59.948Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T18:19:38.198Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

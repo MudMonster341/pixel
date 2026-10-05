@@ -46,7 +46,8 @@ const HV_FAILSAFE_MS = 150000;
 
 // Her star bolts: straight, fast, short range (she has to come within reach of him, and he can hit back).
 const HV_SHOT_SPEED = 480; // px/s
-const HV_SHOT_COOLDOWN_MS = 260; // holding the key fires at this rate
+const HV_SHOT_COOLDOWN_MS = 260; // holding the key (or the mouse button) fires at this rate
+const HV_POINTER_BUFFER_MS = 120; // a click that lands during the cooldown still fires if the cooldown ends within this long (FB-0081)
 const HV_SHOT_RANGE = 520; // px
 const HV_SHOT_MAX = 4; // on screen at once
 const HV_SHOT_H = 20; // a bolt leaves her at this height above her feet
@@ -215,6 +216,51 @@ function heroShotBox(s) {
 
 function heroBoxesOverlap(a, b) {
   return a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+}
+
+// ---------- shooting with the mouse (FB-0081) ----------
+// Left click / a touch tap fires, exactly like holding Z does: a click is one shot, holding the button keeps firing at the cooldown rate
+// (HV_SHOT_COOLDOWN_MS, enforced by the step below, never here). The scene forwards its pointer events to these pure functions and sends
+// heroPointerShoot() as `input.shoot` every frame. The click that confirms START / RETRY / CONTINUE must not also fire a shot, so the state
+// starts "unarmed" (heroPointerReset(), called by startAttempt()) and only arms once the pointer has been up: on a frame where it is not
+// held, or on a release. A pointerdown that arrives while unarmed is ignored (it is still remembered as held, so the release arms it).
+function heroPointerCreate() {
+  return { armed: false, down: false, queuedMs: 0 };
+}
+
+function heroPointerReset(pf) {
+  pf.armed = false;
+  pf.down = false;
+  pf.queuedMs = 0;
+  return pf;
+}
+
+// A pointer went down (left button or a touch). `playing`: the scene is in its 'playing' state, as for the jump keys (FB-0042).
+function heroPointerDown(pf, playing) {
+  pf.down = true;
+  if (playing && pf.armed) pf.queuedMs = HV_POINTER_BUFFER_MS;
+}
+
+function heroPointerUp(pf) {
+  pf.down = false;
+  pf.armed = true;
+}
+
+// Once per frame, before stepHeroFight: is the pointer asking for a shot this frame? (held, or a click not yet answered)
+function heroPointerShoot(pf, dtMs) {
+  if (!pf.armed) {
+    if (!pf.down) pf.armed = true;
+    pf.queuedMs = 0;
+    return false;
+  }
+  const shoot = pf.down || pf.queuedMs > 0;
+  pf.queuedMs = Math.max(0, pf.queuedMs - Math.max(dtMs, 0));
+  return shoot;
+}
+
+// A shot actually left (the step's 'shoot' event): the click that asked for it is answered.
+function heroPointerShotFired(pf) {
+  pf.queuedMs = 0;
 }
 
 // ---------- one step ----------

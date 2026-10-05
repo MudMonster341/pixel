@@ -227,12 +227,16 @@ never needs to know about:
   The Physics Lab's game is the hero fight (FB-0066): a masked kitten hero (a generic stand-in) against a bat-eared "shadow bat" who
   shoots at her in telegraphed volleys, plus a roaming minion; `hero-logic.js` holds the whole round as a pure function of the inputs
   (nothing random: the volley plan, the wind-up, hearts and the 1.5 s invulnerability, the shield, the minion and its one heart, the key,
-  the 150 s failsafe) on top of `platformer-physics.js`'s feel helpers; Z shoots. Its intro card sits on a cover picture (`def.cover`,
+  the 150 s failsafe) on top of `platformer-physics.js`'s feel helpers; the left mouse click shoots (FB-0081; Z works too). Its intro card sits on a cover picture (`def.cover`,
   `hero-cover.png`) that the shell draws behind a card moved to the bottom of the screen.
   Room 195's game is the tower climb (a "reverse Rapunzel", FB-0074): `tower-logic.js` holds the whole
   round as a pure function of a seed and the inputs (ladders, the seeded gargoyle throws, rolling and
   dropping hazards, hearts, the win zone, the 150 s failsafe) on top of `platformer-physics.js`'s feel
   helpers; `tools/make-minigame-art.js` reads its level numbers so the painted beams sit where the rules put them.
+  FB-0082: a game can open with a short backstory (`def.story`: `pages` with `{name}`, and a `cover` texture key): the shell shows the pages as
+  cards (Enter / E / Space / click turns one, it also turns by itself after `MG_STORY_AUTO_MS`, a SKIP STORY button, Esc quits) once per opening,
+  before the intro card and never after a retry; the page logic is pure (`minigameStoryPages` / `storyAdvance` / `storyTick` in `framework-data.js`)
+  and a game draws its picture in `drawStoryArt(index)` (the tower: the prince, chameleon, gargoyle and the crowned princess on `tower-bg`).
 - **`?minigames=0`** (`src/maplogic.js` `minigamesEnabled()`) bypasses the real mini-game scene
   entirely and resolves a `minigame` action straight to `'won'` -- the same idea as `?cutscene=0` for
   a cutscene trigger. `tests/e2e/helpers.js` defaults every spec to this except

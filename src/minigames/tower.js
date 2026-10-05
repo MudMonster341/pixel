@@ -4,7 +4,9 @@
 // the seeded throws, hazards rolling and dropping, hearts, the win zone and the 150 s failsafe) lives in src/minigames/
 // tower-logic.js as pure, unit-tested functions; this file only draws that state and forwards the keys, the same split as
 // flappy.js / flappy-logic.js. The shared shell (intro card, HUD "FLOOR: n / 5", game over with the skip after 3 losses, win card,
-// Esc to quit) is MinigameBaseScene (framework-scene.js): a round always ends, and nobody is ever locked out.
+// Esc to quit) is MinigameBaseScene (framework-scene.js): a round always ends, and nobody is ever locked out. FB-0082: before the intro card, the
+// shell plays a short backstory (MINIGAMES.tower.story: the prince is stuck in Rapunzel's tower, she is the one who rescues him) over the tower's own
+// backdrop; drawStoryArt() below puts the prince, the chameleon, the gargoyle and the princess on it, page by page.
 //
 // Art (tools/make-minigame-art.js): tower-bg.png is generated at half scale (480x270) and stretched 2x like the other backdrops;
 // the sprites (tower-sprites.png, 32x32 cells; tower-prince.png, 16x24 frames) and the lead herself are drawn at TW_SCALE (2x).
@@ -92,6 +94,26 @@ class TowerScene extends MinigameBaseScene {
     this.input.keyboard.on('keydown-SPACE', (event) => {
       if (!event.repeat && this.mgState === 'playing' && !this.beat) this.jumpQueued = true;
     });
+  }
+
+  // The backstory's little picture for page `index` (framework-scene.js drawStoryArt()), the same sprites the game itself uses, standing where they
+  // stand in play on the tower-bg backdrop the shell draws behind the pages: the prince at his window from the first page, the chameleon and the
+  // gargoyle from the second, the crowned princess (with her own clothes colour) on a beam above the card from the third.
+  drawStoryArt(index) {
+    const top = TOWER_LEVEL.floors[TOWER_LEVEL.topFloor];
+    const add = (sprite) => { this.storyParts.push(sprite.setDepth(199.5)); return sprite; };
+    add(this.add.sprite(TOWER_LEVEL.princeX, top.y, 'tower-prince', 0).setOrigin(0.5, 1).setScale(TW_SCALE));
+    if (index >= 1) {
+      add(this.add.sprite(TOWER_LEVEL.sillX, TOWER_LEVEL.sillY, 'tower-sprites', TW_FRAME.chameleon[0]).setOrigin(0.5, TW_FOOT_ORIGIN).setScale(TW_SCALE));
+      const g = TOWER_LEVEL.gargoyle;
+      add(this.add.sprite(g.x, g.y, 'tower-sprites', TW_FRAME.gargoyle).setOrigin(0.5, TW_FOOT_ORIGIN).setScale(TW_SCALE));
+    }
+    if (index >= 2 && this.textures.exists('player')) {
+      const beam = TOWER_LEVEL.floors[TOWER_LEVEL.topFloor - 1]; // the floor under the top one: clear of the card at the bottom
+      const x = TOWER_RIGHT - 130;
+      add(this.add.sprite(x, beam.y, 'player', HERO_IDLE_FRAME.left).setOrigin(0.5, 1).setScale(TW_SCALE));
+      add(this.add.sprite(x, beam.y - TW_CROWN_DY, 'tower-sprites', TW_FRAME.crown).setScale(TW_SCALE));
+    }
   }
 
   startAttempt() {

@@ -350,7 +350,7 @@ rule set. What changed:
   wind-up: he raises his arms, a ring swells round him once, and a shield bubble shows (the shield is also up for 1.8 s after a hit, so a
   shot at a bubble does nothing: "bubble up: dodge, bubble down: shoot"). He hovers low for the aimed bolts and rises for the fan and the
   sweep, so she has to hop onto a platform to hit him. The minion is one shot; it drops one heart per round. After the last hit he
-  slumps and says "Fine, fine. Take it." (1.8 s), the key drops, she walks to it. Z shoots (the shell's card keys stay Enter, Space, E,
+  slumps and says "Fine, fine. Take it." (1.8 s), the key drops, she walks to it. The left mouse click shoots, Z too (FB-0081; the shell's card keys stay Enter, Space, E,
   Up, Down, W, S), the cover picture sits behind the intro card, and nothing flashes faster than 2.5 Hz.
 
 ## Daylight: the golden hour (wow idea W4, with W9's dust)

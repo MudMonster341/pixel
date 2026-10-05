@@ -393,22 +393,25 @@ class MinigameCard {
   }
 
   showGameOver(def, score, canSkip, { onRetry, onSkip, onQuit }) {
+    const cards = def.cards || {}; // P5c: a game that opens a door rather than hands over a key words its own skip offer
     const items = [{ label: 'RETRY (ENTER)', onSelect: onRetry }];
-    if (canSkip) items.push({ label: 'SKIP -- TAKE THE KEY ANYWAY', onSelect: onSkip });
+    if (canSkip) items.push({ label: cards.skipLabel || 'SKIP -- TAKE THE KEY ANYWAY', onSelect: onSkip });
     items.push({ label: 'QUIT', onSelect: onQuit });
     this.show({
       title: 'TRY AGAIN?',
       paragraphs: [
         `SCORE: ${score} / ${def.scoreTarget}`,
-        canSkip ? "You've tried 3 times -- take the key anyway if you'd rather move on." : '',
+        canSkip ? (cards.skipHint || "You've tried 3 times -- take the key anyway if you'd rather move on.") : '',
       ].filter(Boolean),
       items,
     });
   }
 
   showWin(def, skipped, onContinue) {
+    const cards = def.cards || {}; // P5c: wording for a door-opening game (no key, so no icon and only one blank line under the title)
+    const hasKey = Boolean(def.item && ITEMS[def.item]);
     this.show({
-      title: skipped ? 'KEY GIFTED!' : 'YOU GOT IT!',
+      title: skipped ? (cards.skipTitle || 'KEY GIFTED!') : (cards.winTitle || 'YOU GOT IT!'),
       // MG_WIN_BLANK_LINES blank lines reserve a clear gap under the title for the key icon flourish this.show()
       // leaves room for (added after show() below, once the panel's real box (x/y/w) is known): the icon's position
       // and the message row come from winCardLayout() (src/minigames/framework-data.js), whose test checks the icon
@@ -416,7 +419,10 @@ class MinigameCard {
       // `def.name` already reads as a challenge ("Physics Lab Showdown", "ICL Server Dash", "Room 195
       // Tower Rescue") -- no trailing "showdown!" appended, or the Physics Lab's own name would double up
       // ("You beat the Physics Lab Showdown showdown!").
-      paragraphs: [...Array(MG_WIN_BLANK_LINES).fill(''), skipped ? `Here's the ${def.name} key anyway -- nice try.` : `You beat the ${def.name}!`],
+      paragraphs: [
+        ...(hasKey ? [...Array(MG_WIN_BLANK_LINES).fill('')] : ['']),
+        skipped ? (cards.skipLine || `Here's the ${def.name} key anyway -- nice try.`) : (cards.winLine || `You beat the ${def.name}!`),
+      ],
       items: [{ label: 'CONTINUE (ENTER)', onSelect: onContinue }],
     });
     this.addWinKeyIcon(def);

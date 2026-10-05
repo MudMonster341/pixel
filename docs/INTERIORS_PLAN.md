@@ -285,7 +285,8 @@ placed the key station on a specific piece of furniture, not just "some tile in 
   benches (`intLabBenchWood`, the same wood-ramp tone as the rest of the kit, over the metal-topped
   `intLabBench` Mechanical Block's own labs still use) at both ends, a rack (`intLabRack`, its own
   `depthGroup`) and a sink. Key station: the first bench.
-- **ICL** (1st floor, `labIcl` type): royal-blue built-in cabinetry (`intIclBench`, distinct from
+- **ICL** (1st floor, `labIcl` type) -- REBUILT by P5c (FB-0071, below) as a sealed, spaceship-like super-computing lab; the paragraph that follows
+  describes the old royal-blue desk grid it replaced: royal-blue built-in cabinetry (`intIclBench`, distinct from
   the grey `intComputerBench` shared with Mechanical Block), a server rack (`intServerRack`, each
   instance its own `depthGroup`) and a poster-covered wall (`intNoticeboard` tiles along the front
   wall). Key station: the first bench. The room is the **ICL** (Intelligent Computing Lab), the name
@@ -431,6 +432,40 @@ bands alternate light/dark; the steps shrink and the flight darkens towards the 
   door: the object's own `facing`), and `create()` plays the ding (`liftDing`, synthesized in tools/make-audio.js). The lift never skips a
   lock: until the LUG volunteer has set the task (stage `arrival`) it only says it is switched off, exactly like the roped-off stairs; room
   doors keep their own locks. Tests: tests/unit/p4b-stairs-lift.test.js; the every-map completeness rules in tests/unit/completeness.test.js.
+
+**P5c (2026-10-05, FB-0071): the ICL is a fingerprint-locked, spaceship-like super-computing lab with Alice.** Owner: *"I have to play the game to
+enter the lab and then I get the key, so the mini game is to open the door to the lab... a super computing lab with a robot called Alice... modern and
+like a space ship"*. The story is unchanged (key 2 is the ICL, 1st floor, the flyer game); only how the room and the key work changed.
+- **The room** (`mainBlock1` in plans.js, `FURNISHERS.labIcl`): the same rect (x 3..16, y 3..14, interior x 4..15 y 4..13, 12 x 10) now in the `tech`
+  wall kit and a navy floor (`intTechFloor`). Back to front: a 4-wide wall display (graph) between two banks of 4 tall server racks (2 tiles each,
+  walk-behind depth groups) whose LEDs blink; a lane of cable trunking and a ceiling light bar (overhead layer); the holographic table (4 x 2, a
+  rotating globe over it) inside a glowing cyan floor-strip ring, with two strips running down the middle of the room to the door; three curved-console
+  workstations with chairs on each side wall, a front row of consoles, a coffee machine, planters and pylons; Alice's charging pad and, beside it, the
+  core console that holds the key (the `icl` key station, now at (6,10), Alice at (7,10)). The lab's front wall on the corridor is the navy bulkhead too.
+  Nothing blocks the door lane (x 9..10) or the lane along the rack fronts (y 6), and no 2-wide pocket between chairs is sealed (tested).
+- **The hatch** (`Floor.sealedDoor()`): the doorway's two cells (x 9..10, y 14) carry the door leaves `intDoorHatchL/R` (solid) and a Tiled
+  `sealedDoor` object `ICL door` (point on the first cell, `cells "2x1"`, `flag iclDoorOpen`, and the three door-animation properties of the new door
+  kind `iclHatch`, tools/lib/door-kinds.js). It never warps. WorldScene.createGates() keeps it sealed until the flag is set; then the P4c opening plays (closed, half,
+  open) and its two cells become the open frame (`putTileAt`, so they stop being solid) for good. Pushing at the sealed hatch toasts "Sealed. Fingerprint
+  scan required." and rattles it; E at it says the same and points at the scanner.
+- **The scanner** (`Floor.scannerPad()`): a wall fitting `intWallScanner` at (11,14) and a `scanner` object `ICL scanner`. A glow overlay pulses blue (a
+  3-frame cycle, 450 ms a frame) until the door opens, then flashes and stays green. E in front of it runs `STORY.iclGate.scannerDialog`: the `minigame`
+  action ("ICL Fingerprint Hack"), then `setFlag iclDoorOpen`. A win and the framework's skip after 3 losses both report 'won'; Esc leaves it sealed and she
+  can retry. The corridor props in front of the hatch and scanner are skipped (`dressCorridor` `skip`).
+- **Tile animations** (`Floor.tileAnim()`): `tileAnim` objects name overlay tiles the engine cycles over a cell (rack LEDs, the holo globe), one timer
+  for all of them (`WorldScene.createTileAnims()`, `tileAnimFrame()`); never a frame under 450 ms.
+- **The key** is no longer a mini-game prize: the core console's `take` entry (no `minigame`) and Alice's first talk give `keyIcl` / `icl` with the same actions
+  (whichever is used first; the other then says "done" / chats), and a key station whose key is already held drops its floating icon (`syncKeyStations()`).
+- **Soft-lock guard**: `isGateOpen()` (maplogic.js) opens the door for any save that already holds the ICL key or is past the hunt, and a save that was
+  standing inside the lab (`applyState()` in save.js sets the flag; `createGates()` re-checks the spawn). The objective route (`objective-routes.js`
+  `key-icl`) leads to the scanner while the flag is off (`whileFlagOff`), then to the key station inside.
+- **Alice** is a story NPC (`npcs` of `main-block-1`, `name: 'Alice'`, `hover: true`): a 16x24 sheet `npc-alice.png` built in tools/lib/icl-tech-art.js
+  (a white and teal hovering robot, one glowing visor bar), the two idle poses of each row bob at 2 fps (`playHoverAnim()`).
+- **Art**: tools/lib/icl-tech-art.js composes the kit (floor panels, light strips, bulkhead walls, racks, consoles, holo table, display, scanner, Alice)
+  in code from a small cool palette sampled from the Land of Pixels laboratory pack; the hatch is a crop of that pack's red-lit blast door (CC BY 4.0,
+  already credited; see docs/research/asset-packs.md "P5c addendum"). New tiles are appended after `intExitGlassOpenR`, so every earlier index is unchanged.
+- **Tests**: tests/unit/fb-0071-icl.test.js (everything above); the reachability tests (interiors, story-clearance) walk the map with the sealed door open
+  (`openSealedDoors()` in tests/helpers/game-data.js) and fb-0071 pins that the lab is unreachable while it is sealed.
 
 ## Rough spots and simplifications (read before the owner asks "why...")
 

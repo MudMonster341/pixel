@@ -11,6 +11,7 @@
 //   npc-volunteer.png, npc-student-a.png, npc-student-b.png
 //                           campus NPCs, recolored from the same vendor pack, same 16x24/8-col
 //                           layout as player.png (ADR 0013, FB-0025)
+//   npc-alice.png           P5c (FB-0071): Alice, the ICL's hovering robot (tools/lib/icl-tech-art.js), same 16x24/8-col layout
 //   items.png               item icons, in the order of src/items.js
 //   held-items.png          tiny 8x8 versions shown in the character's hand, same order/frames
 //   prompt.png              interaction bubble, 2 frames: "E" (talk) and "!" (something new to say)
@@ -1146,6 +1147,12 @@ const treeTiles = (name) => [
 
 // Order here = tile index. The game looks tiles up by name via assets/tiles.json,
 // so reordering is safe; `solid` tiles block the player.
+// P5c (FB-0071): the ICL's spaceship / super-computing lab kit and its robot Alice (tools/lib/icl-tech-art.js). Built here, before TILES, so
+// the tiles can be spread onto the end of the list; the helpers it takes are this file's own function declarations (hoisted) and constants.
+const ICL_TECH = require('./lib/icl-tech-art')({
+  Img, TILE, hexToRgb, loadAtlas, blitAtlas, copyTile, readTile, putImg, slideDoorPair, LAB_SHEET, DOOR_KINDS,
+});
+
 const TILES = [
   // outdoors
   // FB-0025: flat grass fill from the Modern City pack (assets/vendor/, CC0), recolored onto this
@@ -1713,6 +1720,11 @@ const TILES = [
     name: DOOR_KINDS.exitGlass[state][i],
     draw: (img, x, y) => doorFrameTile(img, x, y, 'exitGlass', i, state),
   }))),
+
+  // ---- P5c (FB-0071: the ICL is a fingerprint-locked, spaceship-like super-computing lab), appended at the end so no earlier index moves ----
+  // The lab's floor panels and light strips, bulkhead walls, the sealed hatch (closed / half / open) and its scanner pad, server racks and their
+  // blinking-LED overlays, consoles, the holo table and its globe, the wall display and the ceiling light bar: see tools/lib/icl-tech-art.js.
+  ...ICL_TECH.tiles,
 ];
 
 
@@ -4860,6 +4872,7 @@ for (const [id, swatch] of Object.entries(CLOTHES_SWATCHES)) {
 write('npc-volunteer.png', buildClubCharacter('Adam', ADAM_RECOLOR, 'lug')); // the LUG volunteer: orange and black (FB-0057)
 write('npc-student-a.png', buildCharacter('Alex', STUDENT_A_RECOLOR));
 write('npc-student-b.png', buildCharacter('Bob', STUDENT_B_RECOLOR));
+write('npc-alice.png', ICL_TECH.buildAlice()); // P5c (FB-0071): Alice, the ICL's hovering service robot (tools/lib/icl-tech-art.js)
 write('npc-mustafa.png', buildFriendCharacter(FRIEND_LOOKS['friend-mustafa'])); // ADR 0016: the opening's own script actor; FB-0051: black and orange LUG hoodie
 // Quality loop, Characters run 1: 6 more recolors (2 each of Adam/Alex/Bob) for ambient campus/Main
 // Block life -- src/maps.js `ambient` entries, src/scenes/world.js createAmbient().

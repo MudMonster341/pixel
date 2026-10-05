@@ -761,8 +761,8 @@ plain `sprite.setScale()` in the (since retired) platformer and the flyer, so th
 retuned to match (the "compact scale, uniformly multiplied by 3" method) -- the backdrops follow the same method: generated at that smaller
 compact scale, then stretched 3x in-scene (`setDisplaySize`, crisp under `pixelArt: true`, `src/
 main.js`) rather than authored at full canvas resolution. The Physics Lab's old platformer backdrops (`platformer-bg-far.png`, `platformer-bg-mid.png`) are gone: FB-0066 replaced that game with the hero
-fight (below). `flappy-bg.png` (320x180, the ICL server room: two depth-graded rack rows, a cable tray, cold
-blue light, a raised floor) stays one static image, stretched the same way (the flyer's own camera
+fight (below). `flappy-bg.png` (320x180; since P5c / FB-0071 the ICL fingerprint hack's dark cyan grid with circuit traces and a dim scanner ring, the glowing fingerprint
+and its progress ring drawn over it by `flappy.js`; `flappy-sprites.png` is the data packet you fly) stays one static image, stretched the same way (the flyer's own camera
 never scrolls, so a second parallax layer wouldn't read as motion there). `tower-bg.png` (480x270, stretched 2x -- Room 195's tower climb: stone walls, arrow slits, torches, five
 wooden beams with ladders, a round sunset window at the top) is Room 195's backdrop (FB-0074);
 its sprites are `tower-sprites.png` (32x32 cells: the stone gargoyle, a barrel, a flower pot, hearts, crown,

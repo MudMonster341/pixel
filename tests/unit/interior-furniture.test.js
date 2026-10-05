@@ -76,7 +76,8 @@ const EXPECTED_FURNITURE_BY_KIND = {
   service: ['intDesk'],
   // FB-0030/0031 (premium pass stage 5): the ICL/Physics Lab key rooms get their own dedicated
   // furniture, distinct from the shared 'lab'/'labHeavy' kinds above.
-  labIcl: ['intIclBench', 'intServerRack'],
+  // P5c (FB-0071): the ICL is the navy spaceship lab now: server racks, curved consoles, the holo table (the old blue benches are gone).
+  labIcl: ['intTechRackTopA', 'intTechConsoleS', 'intHoloTable00'],
   labPhysics: ['intLabBenchWood'],
 };
 
@@ -172,7 +173,8 @@ for (const key of KEYS) {
     // tools/lib/door-kinds.js), on exactly the cells of a `door` object that names it in `closedTiles`.
     const ownDoor = new Map();
     for (const layer of json.layers.filter((l) => l.type === 'objectgroup')) {
-      for (const o of layer.objects.filter((o) => o.type === 'door')) {
+      // P5c: a `sealedDoor` (the ICL's fingerprint-locked hatch) is a door too: its closed leaves stand on its own doorway cells
+      for (const o of layer.objects.filter((o) => o.type === 'door' || o.type === 'sealedDoor')) {
         const props = Object.fromEntries((o.properties || []).map((p) => [p.name, p.value]));
         if (!props.closedTiles) continue;
         props.closedTiles.split(',').forEach((name, i) => ownDoor.set(Math.floor(o.x / 16) + i + Math.floor(o.y / 16) * json.width, name));

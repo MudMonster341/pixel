@@ -52,7 +52,7 @@ One ambient student can have a `name` (the name tag) and fixed `lines` (said the
 
 FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and its addendum):
 - `{name}` in a line is the player's name (it is "Taru" unless the player typed another). No line mentions a birthday: that stays the surprise at the end.
-- **Mustafa** (black and orange LUG hoodie) stands near each mini-game with a different fixed line, and repeats only that line. The three tiles: Physics Lab (main-block-3, 9,4), ICL (main-block-1, 5,9), Room 195 (main-block-1, 27,4).
+- **Mustafa** (black and orange LUG hoodie) stands near each mini-game with a different fixed line, and repeats only that line. The three tiles: Physics Lab (main-block-3, 9,4), ICL (main-block-1, 6,17: in the corridor outside the lab, since P5c the ICL is a sealed lab), Room 195 (main-block-1, 27,4).
 - **Professors** keep their tag as "Prof. <first name>" (names only, no surnames). After the jokes the sourced fact about that professor is said (Raja CF12, Angel CF22, Elakkiya CF23), nothing else.
   Raja's last line hints at the chariot scene that comes in a later package. The girls (Sana, Shraddha, Palak), Mevin and Narda are also a later package.
 - The other friends carry on with their role's facts after their own lines (e.g. Sid, a CS student, shares a CS fact).
@@ -70,7 +70,7 @@ FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and it
 | Siva | campus, tile 150,115, sheet npc-friend-siva | Siva here! I use dark mode for everything. Even this conversation. / Why do programmers prefer dark mode? Because light attracts bugs. / If it works, don't touch it. If it doesn't, also don't touch it. Go get chai. |
 | Prof. Raja | main-block-g, tile 26,19, sheet npc-prof-raja | Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture. / I carry myself like royalty because my timetable demands it. Mostly the Monday ones. / I have a ride coming. Quite soon, actually. |
 | Shamsuddin | main-block-g, patrols 22,24 to 27,24, sheet npc-friend-shamsuddin | Shamsuddin! I name my files final, final2 and really_final. It's called version control. / My code review was one question mark. I'm still thinking about it. / Wi-Fi is the one thing I can't compile, debug or fix. Good luck! |
-| Mustafa | main-block-1, tile 5,9, sheet npc-mustafa | The ICL is basically one long exhale. Tap gently, don't mash. / My record there is embarrassing. I'm not telling. |
+| Mustafa | main-block-1, tile 6,17, sheet npc-mustafa | That door is a fingerprint scanner with an attitude. Tap gently, don't mash. / My record on that scan is embarrassing. I'm not telling. |
 | Mustafa | main-block-1, tile 27,4, sheet npc-mustafa | Room 195 is a climb. Bring good shoes. And a bit of patience. / Look up before you go up. Things come down faster than deadlines do. |
 | Prof. Elakkiya | main-block-1, patrols 8,20 to 20,20, sheet npc-prof-elakkiya | Ah, {name}! Ready for a pop quiz? They say my quizzes are hard. I say they build character. / Some students call me goated. I just call it a fair quiz with no mercy. / Remember: no panic, and read the question twice. Maybe three times. Good luck! |
 | Najam | main-block-2, tile 10,14, sheet npc-friend-najam | Najam here. I only open my laptop when it's charged and I'm brave. / I made a to-do list. Item one: stop making to-do lists. / Sleep is a feature I turned off this semester. Not recommended. |
@@ -133,3 +133,11 @@ Ambient students are listed in `src/ambient.js` (about 38 on the campus map, 3-6
 ## Animals
 
 The only animal line is "Meow." (the Gate 2 cat and the hostel cat are talkable and show a small heart). Cats are not named. See `src/animals.js`.
+
+## P5c (FB-0071): Alice, the ICL's robot (a story NPC, `src/story.js` STORY.alice; lines are placeholders for the owner to edit)
+
+Alice (name tag "Alice") hovers over a charging pad inside the fingerprint-locked ICL, beside the core console that holds the key. The first talk greets her and hands over the key (the same actions the console uses); later talks give one light line each, in order, then the last line on repeat. Tile 7,10 of main-block-1.
+- First talk: Welcome to the ICL, {name}! I'm Alice. I run 4,096 threads and still lose to the coffee machine. / Those racks crunch the numbers, the holo table draws them, and I try to look useful. / You cracked my front door, so this is yours: the LUG key from my core console. Take it!
+- Then: The key found a good home, I hope. Keys are my second favourite thing. Coffee is first, sadly. / Fun fact: the globe over the table is just the lab's Wi-Fi, drawn dramatically. / My battery says I'm at 100 percent. My mood says snack break.
+- Then, repeated: Good luck with the other keys, {name}. Come back whenever the Wi-Fi gets lonely.
+The door and scanner say: "Sealed. Fingerprint scan required." / "The scanner on the wall beside the door is the way in." / "A fingerprint scanner pulses blue. Time to crack it." / "Scan accepted. The ICL door opens."

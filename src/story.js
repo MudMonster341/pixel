@@ -99,13 +99,14 @@ const STORY = {
       journal: 'Found a key on a bench in the Physics Lab.',
       doneLine: 'The bench is empty now — you already took this key.',
     },
+    // P5c (FB-0071): the ICL is a fingerprint-locked lab. Its mini-game (flappy, "ICL Fingerprint Hack") now opens the DOOR (STORY.iclGate
+    // below), so this station has no `minigame` of its own: the key lies in the lab's core console, next to Alice, who hands it over too.
     icl: {
       name: 'ICL',
-      minigame: 'flappy',
       item: 'keyIcl',
-      takenLine: 'A key is taped under one of the computer benches, next to a sticky note: "LUG hunt".',
-      journal: 'Found a key taped under a bench in the ICL.',
-      doneLine: 'Just the empty sticky note is left here now.',
+      takenLine: "The lab's core console holds a small key, tagged \"LUG hunt\".",
+      journal: 'Found a key in the core console of the ICL.',
+      doneLine: "The console's key slot is empty now.",
     },
     room195: {
       name: 'Room 195',
@@ -117,6 +118,68 @@ const STORY = {
     },
   },
 };
+
+// P5c (FB-0071): the ICL's fingerprint-locked door, all content. src/maps.js points the `main-block-1` map def at it (`gates`), the generated map
+// (tools/interiors/plans.js mainBlock1) carries the `sealedDoor` and `scanner` objects it names. E at the scanner asks the mini-game to open the
+// door (a win, or the framework's skip after 3 losses, both report 'won'); Esc leaves it sealed, and she can come back any time. The flag it sets,
+// `iclDoorOpen`, is saved with everything else and keeps the door open for good. `openIfKey`/`openIfStage`/`room` are the soft-lock guards: a save
+// that already holds the ICL key, is past it, or was standing inside the lab never starts with the door shut (src/save.js, src/scenes/world.js).
+const STORY_ICL_FLAG = 'iclDoorOpen';
+STORY.iclGate = {
+  map: 'main-block-1',
+  door: 'ICL door',
+  scanner: 'ICL scanner',
+  flag: STORY_ICL_FLAG,
+  minigame: 'flappy',
+  openIfKey: 'icl',
+  openIfStage: ['rewarded'],
+  room: { x0: 4, y0: 4, x1: 15, y1: 13 },
+  lockedLine: 'Sealed. Fingerprint scan required.',
+  // E at the hatch itself (never starts the game; the scanner is the thing to use).
+  doorDialog: [
+    { id: 'sealed', when: { notFlag: STORY_ICL_FLAG }, lines: ['Sealed. Fingerprint scan required.', 'The scanner on the wall beside the door is the way in.'] },
+    { id: 'open', lines: ['The hatch is open. The lab hums quietly beyond it.'] },
+  ],
+  // E at the scanner: the fingerprint hack, then the door opens.
+  scannerDialog: [
+    {
+      id: 'scan',
+      when: { notFlag: STORY_ICL_FLAG },
+      lines: ['A fingerprint scanner pulses blue. Time to crack it.'],
+      actions: [
+        { minigame: 'flappy' },
+        { setFlag: STORY_ICL_FLAG },
+        { journal: 'Hacked the fingerprint scanner: the ICL door is open.' },
+        { toast: 'Scan accepted. The ICL door opens.' },
+      ],
+    },
+    { id: 'done', lines: ['Scan accepted. The door is open.'] },
+  ],
+};
+
+// P5c (FB-0071): Alice, the ICL's robot. Greets her the first time (explains the lab in two short lines and hands over the key, on the same
+// actions the core console uses, so whichever of the two she talks to first gives it), then a few light lines in order, then a last one on repeat.
+STORY.alice = [
+  {
+    id: 'welcome',
+    when: { notHasKey: 'icl' },
+    lines: [
+      "Welcome to the ICL, {name}! I'm Alice. I run 4,096 threads and still lose to the coffee machine.",
+      'Those racks crunch the numbers, the holo table draws them, and I try to look useful.',
+      'You cracked my front door, so this is yours: the LUG key from my core console. Take it!',
+    ],
+    actions: [
+      { key: 'icl' },
+      { give: 'keyIcl' },
+      { journal: 'Alice, the ICL robot, gave me the key after I cracked her door.' },
+      { toast: 'You got the ICL key!' },
+    ],
+  },
+  { id: 'chat-1', when: { hasKey: 'icl', seen: false }, lines: ['The key found a good home, I hope. Keys are my second favourite thing. Coffee is first, sadly.'] },
+  { id: 'chat-2', when: { hasKey: 'icl', seen: false }, lines: ["Fun fact: the globe over the table is just the lab's Wi-Fi, drawn dramatically."] },
+  { id: 'chat-3', when: { hasKey: 'icl', seen: false }, lines: ["My battery says I'm at 100 percent. My mood says snack break."] },
+  { id: 'chat-end', when: { hasKey: 'icl' }, lines: ['Good luck with the other keys, {name}. Come back whenever the Wi-Fi gets lonely.'] },
+];
 
 // Turns a STORY.keyStations[keyId] entry into the same { id, when, lines, actions } dialog-entry
 // shape src/dialog.js already knows how to run -- a key station is interacted with through the exact
@@ -136,7 +199,8 @@ function keyStationDialog(keyId) {
       // unreachable-today-but-still-worth-guarding-against case the bag were somehow full right at
       // that moment (a full bag only ever stops the *rest* of this list, src/dialog.js `give`).
       actions: [
-        { minigame: def.minigame },
+        // P5c: a station with no `minigame` (the ICL's, whose game opens the lab's door instead) just hands the key over.
+        ...(def.minigame ? [{ minigame: def.minigame }] : []),
         { key: keyId },
         { give: def.item },
         { journal: def.journal },

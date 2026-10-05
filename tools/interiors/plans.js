@@ -58,7 +58,7 @@ function stairwell(floor, name, { up, down, lift } = {}) {
 // plates beside them, and wall posters/notice boards") -- `intWallPoster` in the regular prop cycle
 // (a diagram/chart, distinct from `intNoticeboard`'s corkboard), and `doorNameplate()` below places
 // the actual nameplates next to each of the 3 key-room doors.
-function dressCorridor(floor, rect, { axis }) {
+function dressCorridor(floor, rect, { axis, skip = [] }) {
   const props = ['bench', 'intPottedPlant', 'intNoticeboard', 'intWallPoster', 'intBin'];
   const place = (x, y, name) => {
     floor.placeStructure(x, y, name);
@@ -67,7 +67,8 @@ function dressCorridor(floor, rect, { axis }) {
   if (axis === 'h') {
     const y = rect.y0 + 1;
     let i = 0;
-    for (let x = rect.x0 + 2; x <= rect.x1 - 2; x += 3) place(x, y, props[i++ % props.length]);
+    // `skip` (P5c): columns to leave clear (the ICL's hatch and scanner need the corridor floor in front of them free)
+    for (let x = rect.x0 + 2; x <= rect.x1 - 2; x += 3) { const name = props[i++ % props.length]; if (!skip.includes(x)) place(x, y, name); }
   } else {
     const x = rect.x0 + 1;
     let i = 0;
@@ -204,7 +205,9 @@ const mainBlock1 = {
     // docs/STORY.md key rooms (M3): ICL (a computing lab, `labIcl`) and Room 195 (a classroom),
     // both off one corridor -- see docs/INTERIORS_PLAN.md "Story rooms" for why they're here (no
     // sourced real floor plan for either).
-    floor.addRect('icl', { name: 'ICL', type: 'labIcl', wallKit: 'roomBuilder', x0: 3, y0: 3, x1: 16, y1: 14 });
+    // P5c (FB-0071): the ICL is a sealed, spaceship-like super-computing lab (the `tech` wall kit, FURNISHERS.labIcl): its door is a fingerprint-
+    // locked hatch with a scanner pad beside it (below) that the mini-game opens. Room interior x 4..15, y 4..13.
+    floor.addRect('icl', { name: 'ICL', type: 'labIcl', wallKit: 'tech', x0: 3, y0: 3, x1: 16, y1: 14 });
     floor.addRect('room195', { name: 'Room 195', type: 'classroom', wallKit: 'roomBuilder', x0: 18, y0: 3, x1: 29, y1: 14 });
 
     const corridor = floor.addRect('corridor', { name: 'Corridor', type: 'corridor', wallKit: 'roomBuilder', x0: 3, y0: 14, x1: 30, y1: 21, isCorridor: true });
@@ -212,11 +215,21 @@ const mainBlock1 = {
     floor.connect('room195', 'corridor');
     doorNameplate(floor, 'icl', 'corridor');
     doorNameplate(floor, 'room195', 'corridor');
+    // P5c: the ICL's doorway (connect() above carved it at x 9..10, y 14) is the sealed hatch, with the scanner pad on the wall right of it, a
+    // nameplate left of it (doorNameplate) and the navy bulkhead wall either side, so the lab's front reads as one module.
+    if (floor.ground[floor.idx(9, 14)] !== floor.tileIndex('intDoorway') || floor.ground[floor.idx(10, 14)] !== floor.tileIndex('intDoorway')) {
+      throw new Error('mainBlock1: the ICL doorway is not at x 9..10 any more: move the hatch and scanner with it');
+    }
+    floor.sealedDoor(9, 14, 'ICL door', 'iclDoorOpen');
+    floor.scannerPad(11, 14, 'ICL scanner', 'ICL door');
+    // the lab's whole front wall is the navy bulkhead with its cyan light band, except the nameplate (8), the hatch (9..10) and the scanner (11); the two
+    // corner tiles stay the corridor's own cream wall
+    for (let x = 4; x <= 15; x++) if (x < 8 || x > 11) floor.placeStructure(x, 14, 'intWallTech');
     // A couple of locked classroom doors further down the corridor -- visible, not walkable
     // (docs/STORY.md: only the route to the 3 key rooms stays open).
     floor.placeStructure(10, 21, 'intDoorClosed');
     floor.placeStructure(22, 21, 'intDoorClosed');
-    dressCorridor(floor, corridor, { axis: 'h' });
+    dressCorridor(floor, corridor, { axis: 'h', skip: [8, 11] }); // P5c: nothing standing in front of the ICL's hatch and scanner
 
     stairwell(floor, 'Main Block Stairs 1', {
       lift: 'Main Block Lift 1',

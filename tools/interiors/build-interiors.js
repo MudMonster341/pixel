@@ -70,6 +70,17 @@ const REQUIRED_TILES = [
   'intStairsFootM', 'intStairsFootWL', 'intStairsFootWR', 'intStairsLandL', 'intStairsLandM', 'intStairsLandR',
   ...['L', 'R'].flatMap((side) => [0, 1, 2].map((row) => `intStairsWall${side}${row}`)),
   'intStairsSignUp', 'intStairsSignDown', 'intLiftDoorL', 'intLiftDoorR', 'intLiftOpenL', 'intLiftOpenR', 'intLiftPanel',
+  // P5c (FB-0071): the ICL's spaceship / super-computing lab kit (tools/lib/icl-tech-art.js).
+  'intTechFloor', 'intTechFloorB', 'intTechFloorStripH', 'intTechFloorStripV', 'intTechFloorStripSE', 'intTechFloorStripSW',
+  'intTechFloorStripNE', 'intTechFloorStripNW', 'intTechFloorStripTS', 'intTechPad', 'intTechTrunkH', 'intTechTrunkV',
+  'intWallTech', 'intWallTechEndL', 'intWallTechEndR', 'intWallTechCap', 'intWallScanner',
+  ...[0, 1, 2, 3].flatMap((col) => [`intWallDisplay${col}`, `intTechDisplayBase${col}`]),
+  ...DOOR_KINDS.iclHatch.closed, ...DOOR_KINDS.iclHatch.half, ...DOOR_KINDS.iclHatch.open,
+  'intTechRackTopA', 'intTechRackBaseA', 'intTechRackTopB', 'intTechRackBaseB', 'intTechLedsTopA', 'intTechLedsTopB', 'intTechLedsBaseA', 'intTechLedsBaseB',
+  'intTechConsoleL', 'intTechConsoleM', 'intTechConsoleR', 'intTechConsoleS', 'intTechCoreConsole', 'intTechChair', 'intTechCoffee', 'intTechPlanter', 'intTechPylon',
+  ...[0, 1, 2, 3].flatMap((col) => [0, 1].map((row) => `intHoloTable${col}${row}`)),
+  ...[0, 1, 2].flatMap((frame) => [`intHoloGlobe${frame}L`, `intHoloGlobe${frame}R`]),
+  'intTechLightBarL', 'intTechLightBarM', 'intTechLightBarR', 'intScannerGlow0', 'intScannerGlow1', 'intScannerGlow2', 'intScannerOk',
 ];
 for (const name of REQUIRED_TILES) {
   if (!(name in TILE)) throw new Error(`assets/tiles.json has no tile "${name}". Run npm run assets first.`);
@@ -83,6 +94,9 @@ const WALL_KITS = {
   roomBuilder: { plain: 'intWallFace', endL: 'intWallFaceEndL', endR: 'intWallFaceEndR' },
   skirt: { plain: 'intWallFaceSkirt', endL: 'intWallFaceSkirtEndL', endR: 'intWallFaceSkirtEndR' },
   peach: { plain: 'intWallPeach', endL: 'intWallPeachEndL', endR: 'intWallPeachEndR' },
+  // P5c (FB-0071): the ICL's navy bulkhead with a glowing cyan light band; `cap` is the steel top face bled in one row above its top wall
+  // (the cream kits use `intWallCap`).
+  tech: { plain: 'intWallTech', endL: 'intWallTechEndL', endR: 'intWallTechEndR', cap: 'intWallTechCap' },
 };
 
 // P4a (FB-0058/0060/0065): the front-on door/window tiles each have a side-on twin for a wall that runs up and down the
@@ -105,6 +119,9 @@ const WALL_LINE_TILES = new Set([
   'intNameplate', 'intWallPoster', 'intWhiteboardWall', 'intProjectorScreen', 'intNoticeboard', 'intLift', 'intWallWindow',
   'intLiftDoorL', 'intLiftDoorR', 'intLiftPanel', 'intStairsSignUp', 'intStairsSignDown',
   'intWallFaceSkirt', 'intGlassPanel', 'intGlassPanelB',
+  // P5c: the scanner pad and the tech bulkhead pieces stand in a wall line too (a door beside them must still read as being in a wall)
+  'intWallScanner', 'intWallTech', 'intWallTechEndL', 'intWallTechEndR', ...[0, 1, 2, 3].map((col) => `intWallDisplay${col}`),
+  ...DOOR_KINDS.iclHatch.closed, ...DOOR_KINDS.iclHatch.open,
   ...Object.keys(SIDE_VARIANTS), ...Object.values(SIDE_VARIANTS).flatMap((v) => Object.values(v)),
   ...Array.from({ length: 9 }, (_, i) => `bitsSignSeg${i}`), 'libSignSeg0', 'libSignSeg1', 'libSignSeg2',
 ]);
@@ -126,7 +143,7 @@ const TYPE_FLOOR = {
   // FB-0030/0031: the ICL/Physics Lab key rooms get their own light floor (matches the ICL/lab
   // photos, docs/research/campus-visual-reference.md), distinct from the shared 'lab' type
   // Mechanical Block's own labs still use.
-  labIcl: 'intFloorLabLight', labPhysics: 'intFloorLabLight',
+  labIcl: 'intTechFloor', labPhysics: 'intFloorLabLight', // P5c: the ICL is the navy spaceship lab now
 };
 
 // A room type this small (walkable interior) skips furniture rather than risk blocking itself.
@@ -188,7 +205,7 @@ class Floor {
     const rect = { id, name, type, x0, y0, x1, y1, isCorridor };
     this.rects.set(id, rect);
     if (!isCorridor && name) this.areaRooms.push(rect);
-    if (wallKit) this.capTopWall(rect);
+    if (wallKit) this.capTopWall(rect, kit.cap || 'intWallCap');
     return rect;
   }
 
@@ -198,14 +215,20 @@ class Floor {
   // (ADR 0015) rather than reserving an extra row of canvas for every room. A room packed directly
   // against another room's own wall above it (no clearance) just doesn't get a cap there -- still a
   // correct, if slightly shorter, wall; never overwrites another room's own tiles.
-  capTopWall(rect) {
+  capTopWall(rect, capTile = 'intWallCap') {
     const y = rect.y0 - 1;
     if (y < 0) return;
     for (let x = rect.x0; x <= rect.x1; x++) {
       if (this.ground[this.idx(x, y)] === TILE.intVoid && this.structures[this.idx(x, y)] === -1) {
-        this.structures[this.idx(x, y)] = TILE.intWallCap;
+        this.structures[this.idx(x, y)] = TILE[capTile];
       }
     }
+  }
+
+  // The tile index of a tile name (plans use it to check the ground they are about to build on).
+  tileIndex(name) {
+    if (!(name in TILE)) throw new Error(`${this.key}: no tile named "${name}"`);
+    return TILE[name];
   }
 
   get(id) {
@@ -408,6 +431,29 @@ class Floor {
     this.placeStructure(x + 1, y, 'intLiftDoorR');
     this.placeStructure(x + 2, y, 'intLiftPanel');
     this.pointObject('lift', name, x, y, { facing: 'down', cells: '2x1', ...doorProps('lift') });
+  }
+
+  // P5c (FB-0071): the ICL's fingerprint-locked hatch. Two door-leaf tiles (solid while sealed) laid over the doorway the room's connect() carved
+  // in a horizontal wall, plus a `sealedDoor` object: a point on the first tile with `cells` "2x1", `flag` (the GameState flag that opens it)
+  // and the door-animation frames (the `iclHatch` kind of tools/lib/door-kinds.js, the same closed/half/open properties a door carries). It
+  // never warps. The engine (src/scenes/world.js createGates()) keeps it sealed until the flag is set, plays the opening, and leaves it open.
+  sealedDoor(x, y, name, flag) {
+    DOOR_KINDS.iclHatch.closed.forEach((tileName, i) => { this.structures[this.idx(x + i, y)] = TILE[tileName]; });
+    this.pointObject('sealedDoor', name, x, y, { cells: '2x1', facing: 'down', flag, ...doorProps('iclHatch') });
+  }
+
+  // P5c: a wall-mounted fingerprint scanner (a solid wall fitting) and its `scanner` object, which names the door it opens. The engine lays the
+  // pulsing glow over the pad (src/scenes/world.js createScanners()); E in front of it starts the hack.
+  scannerPad(x, y, name, door) {
+    this.structures[this.idx(x, y)] = TILE.intWallScanner;
+    this.pointObject('scanner', name, x, y, { door, glow: 'intScannerGlow0,intScannerGlow1,intScannerGlow2,intScannerGlow1', ok: 'intScannerOk', ms: '450' });
+  }
+
+  // P5c: a tile animation (a `tileAnim` object): the engine cycles the listed overlay tiles over the cell (blinking rack LEDs, the holo globe).
+  // `ms` is how long each frame shows (never under 450 ms for a blink: nothing flashes faster than about 3 times a second, STYLE_GUIDE.md), `phase`
+  // shifts where in the cycle it starts so a row of racks does not blink in step.
+  tileAnim(x, y, frames, { ms = 500, phase = 0 } = {}) {
+    this.pointObject('tileAnim', '', x, y, { frames: frames.join(','), ms: String(ms), phase: String(phase) });
   }
 
   // The atrium void + railing (mezzanine looking down into the foyer below): a rectangle of
@@ -771,47 +817,77 @@ const FURNISHERS = {
       if (mid + 3 <= r.x1 - 1) ctx.floor.placeStructure(mid + 3, r.y0, 'intProjectorScreen');
     }
   },
-  // ICL (docs/research/campus-visual-reference.md "5. Computer lab / ICL"): royal-blue built-in
-  // benches along both ends, a server rack, and a poster-covered wall -- distinct from the shared
-  // `lab` type Mechanical Block's own labs use, so that furniture never changes here.
-  // Quality loop (docs/quality/scorecard.md, Interior art run 1: "a big pale empty floor... no rows
-  // of desks with monitors, no blue cabinetry or poster wall") -- 3-4 full rows of benches (not just
-  // the top/bottom edge), a server-rack corner (2 tiles, its own depthGroup) and a poster wall
-  // covering most of the front wall.
-  // Quality loop run 2 (docs/quality/scorecard.md, 2026-09-28: "Over-corrected: a solid wall-to-wall
-  // grid of identical blue desks, no aisles, she stands among them... about 50% walkable floor").
-  // 4 desk rows (monitors + a chair alternating) with a 1-tile aisle between each, blue cabinets
-  // along the left wall, a 1-tile walkway along the right wall (plus the always-clear ring beyond
-  // it -- 2 tiles of walking space along that side), a teacher/instructor desk + whiteboard at the
-  // front, and server racks in the front-right corner.
+  // P5c (FB-0071): the ICL is a fingerprint-locked, spaceship-like super-computing lab ("a super computing lab with a robot called Alice...
+  // modern and like a space ship sort of interior"). It replaces the old royal-blue desk grid. Room interior x 4..15, y 4..13 of the 1st floor
+  // (local lx 0..11, ly 0..9); the doorway is on the bottom wall at x 9..10 (tools/interiors/plans.js mainBlock1), so the plan is mirrored about
+  // x 10.0. From the back wall forward:
+  //   - the wall display (4 tiles wide, the screen on the wall row and a console lip under it) between two banks of tall server racks
+  //     (4 racks a side, each two tiles tall, alternating chassis, their LEDs blinking: `tileAnim` objects);
+  //   - a lane of floor trunking along the rack fronts, and a ceiling light bar (overhead layer) over the display's lane;
+  //   - the holographic table in the middle (4 x 2, a rotating globe over it), ringed by a glowing cyan floor strip that also runs down the
+  //     middle of the room to the door (two strips, one per door cell: the way in is lit);
+  //   - three curved-console workstations with chairs along each side wall, a row of consoles/coffee/planters along the front wall;
+  //   - Alice's charging pad and, beside it, the core console where the key sits (the `icl` key station, src/maps.js).
+  // Everything is placed by absolute tile coordinates on the shared canvas (like the foyer), and kept off the door lane (x 9..10, y 10..13) and the
+  // lane along the rack fronts (y 6).
   labIcl: (put, ix0, iy0, ix1, iy1, ctx) => {
-    const mid = Math.round((ix0 + ix1) / 2);
-    put(mid, iy0, 'intTeacherDesk');
-    // Cabinets along the rest of the front wall too, either side of the teacher's desk.
-    for (let x = ix0; x <= ix1 - 2; x++) if (x !== mid) put(x, iy0, 'intIclCabinet');
-    const deskRows = [iy0 + 1, iy0 + 3, iy0 + 5, iy0 + 7].filter((y) => y <= iy1);
-    const aisleRows = [iy0 + 2, iy0 + 4, iy0 + 6].filter((y) => y <= iy1);
-    for (const y of deskRows) {
-      put(ix0, y, 'intIclCabinet'); // blue cabinets along the left wall
-      for (let x = ix0 + 1; x <= ix1 - 1; x++) put(x, y, (x - ix0) % 2 === 1 ? 'intIclBench' : 'intChair');
-      // ix1 itself stays clear: a walkway down the right side, alongside the ring furnish() always
-      // leaves just beyond it.
+    if (!ctx || !ctx.floor) return;
+    const { floor, id } = ctx;
+    const r = floor.get(id);
+    const ox = r.x0 + 1;
+    const oy = r.y0 + 1;
+    const S = (lx, ly, name) => floor.placeStructure(ox + lx, oy + ly, name);
+    const G = (lx, ly, name) => floor.paintFloor(ox + lx, oy + ly, ox + lx, oy + ly, name);
+
+    // the floor: panels, a few brushed ones, then the light strips, trunking and Alice's pad on top
+    for (let ly = 0; ly < 10; ly++) for (let lx = 0; lx < 12; lx++) if ((lx * 7 + ly * 3) % 5 === 0) G(lx, ly, 'intTechFloorB');
+    // the ring round the holo table: local x 3..8, y 2..5 (the table is x 4..7, y 3..4 inside it); the way in comes up the middle at x 5..6
+    for (const [lx, ly, arms] of [[3, 2, 'SE'], [8, 2, 'SW'], [3, 5, 'NE'], [8, 5, 'NW']]) G(lx, ly, `intTechFloorStrip${arms}`);
+    for (let lx = 4; lx <= 7; lx++) { G(lx, 2, 'intTechFloorStripH'); G(lx, 5, lx === 5 || lx === 6 ? 'intTechFloorStripTS' : 'intTechFloorStripH'); }
+    for (const ly of [3, 4]) { G(3, ly, 'intTechFloorStripV'); G(8, ly, 'intTechFloorStripV'); }
+    for (let ly = 6; ly <= 9; ly++) { G(5, ly, 'intTechFloorStripV'); G(6, ly, 'intTechFloorStripV'); }
+    for (let lx = 0; lx <= 2; lx++) { G(lx, 2, 'intTechTrunkH'); G(9 + lx, 2, 'intTechTrunkH'); } // cables from the rack bases to the ring
+    G(3, 6, 'intTechPad'); // Alice's charging pad
+
+    // the wall display, with its console lip under it
+    for (let i = 0; i < 4; i++) {
+      floor.placeStructure(ox + 4 + i, r.y0, `intWallDisplay${i}`);
+      S(4 + i, 0, `intTechDisplayBase${i}`);
     }
-    for (const y of aisleRows) {
-      // Quality loop run 3 ("plants sit on brick-tile pedestals"): `intPottedPlant`, not `plant`.
-      put(ix0 + 3, y, 'intPottedPlant');
-      put(ix0 + 6, y, 'intPottedPlant');
-      put(ix0 + 8, y, 'intBin');
+
+    // two banks of server racks, 4 each side, 2 tiles tall, walk-behind (ADR 0015); the LEDs blink out of step
+    for (const bankX of [0, 8]) {
+      for (let i = 0; i < 4; i++) {
+        const lx = bankX + i;
+        const v = (lx + (bankX ? 1 : 0)) % 2 === 0 ? 'A' : 'B';
+        S(lx, 0, `intTechRackTop${v}`);
+        S(lx, 1, `intTechRackBase${v}`);
+        floor.tileAnim(ox + lx, oy, ['intTechLedsTopA', 'intTechLedsTopB'], { ms: 640, phase: lx * 7 });
+        floor.tileAnim(ox + lx, oy + 1, ['intTechLedsBaseB', 'intTechLedsBaseA'], { ms: 760, phase: lx * 5 });
+      }
+      floor.depthGroupRect(ox + bankX, oy, ox + bankX + 3, oy + 1);
     }
-    if (ctx && ctx.floor) {
-      const rackX0 = ix1 - 1, rackX1 = ix1;
-      put(rackX0, iy0, 'intServerRack');
-      put(rackX1, iy0, 'intServerRack');
-      ctx.floor.depthGroupRect(rackX0, iy0, rackX1, iy0);
-      ctx.floor.wallFeature(ctx.id, 'top', 'intWhiteboardWall');
-      const r = ctx.floor.get(ctx.id);
-      for (let x = r.x0 + 1; x <= r.x1 - 1; x += 3) ctx.floor.placeStructure(x, r.y0, 'intNoticeboard');
+
+    // the holographic table (4 x 2) and its globe (an overlay over the two middle tiles of its top row)
+    for (let col = 0; col < 4; col++) for (let row = 0; row < 2; row++) S(4 + col, 3 + row, `intHoloTable${col}${row}`);
+    floor.depthGroupRect(ox + 4, oy + 3, ox + 7, oy + 4);
+    floor.tileAnim(ox + 5, oy + 3, ['intHoloGlobe0L', 'intHoloGlobe1L', 'intHoloGlobe2L', 'intHoloGlobe1L'], { ms: 450 });
+    floor.tileAnim(ox + 6, oy + 3, ['intHoloGlobe0R', 'intHoloGlobe1R', 'intHoloGlobe2R', 'intHoloGlobe1R'], { ms: 450 });
+
+    // workstations: a curved console against each side wall with its chair beside it
+    for (const ly of [4, 6, 8]) {
+      S(0, ly, 'intTechConsoleS'); S(1, ly, 'intTechChair');
+      S(11, ly, 'intTechConsoleS'); S(10, ly, 'intTechChair');
     }
+    // the core console (the key station sits on it, next to Alice) and the front wall's row
+    S(2, 6, 'intTechCoreConsole');
+    S(0, 9, 'intTechPlanter'); S(11, 9, 'intTechPlanter');
+    S(1, 9, 'intTechConsoleS'); S(2, 9, 'intTechConsoleS'); S(3, 9, 'intTechCoffee');
+    S(8, 9, 'intTechPylon'); S(9, 9, 'intTechConsoleS'); S(10, 9, 'intTechConsoleS');
+    S(8, 6, 'intTechPylon'); // (kept off the right workstations' lane: x 13, rows 9/11/7 are the only ways into the 2-wide pockets between their chairs)
+
+    // the ceiling light bar over the lane in front of the display (the overhead layer, drawn over everything)
+    ['L', 'M', 'M', 'R'].forEach((end, i) => floor.placeOverhead(ox + 4 + i, oy + 1, `intTechLightBar${end}`));
   },
   // The Physics Lab (docs/research/campus-visual-reference.md "6. Physics/science lab") -- quality
   // loop run 2 ("[was] uniform rows of identical benches, like a warehouse"): exactly 3 long bench

@@ -409,8 +409,13 @@ test('ADR 0020: the foyer and wing students stand on real floor, 3+ tiles from t
 // 2026-10-05 (P4c, FB-0067), a deliberate property change only: all three were re-pinned because each floor's `lift` object gained the two
 //   animation-frame properties `closedTiles` and `halfTiles` beside its `openTiles` (tools/lib/door-kinds.js, the `lift` kind). Same
 //   tiles, rooms, objects, names and positions (previous hashes: b7f76ca3..., d56d0152..., 16da40cf...).
+// 2026-10-05 (P5c, FB-0071), a deliberate rebuild of the ICL only: main-block-1 was re-pinned because the ICL (x 3..16, y 3..14) is now the sealed, spaceship-like
+//   super-computing lab: navy `tech` wall kit and floor, racks, holo table, consoles, a sealed hatch (`sealedDoor` object) and scanner (`scanner` object) on its corridor
+//   wall, `tileAnim` objects for the blinking racks, an overhead light bar, and the corridor's props skip the columns in front of the hatch and scanner
+//   (tools/interiors/plans.js mainBlock1, build-interiors.js FURNISHERS.labIcl). Room 195, the corridor, the stairwell, the lift and every other object are unchanged;
+//   main-block-2 and main-block-3 did not move (previous main-block-1 hash: 9df44427...).
 const UPPER_FLOOR_CONTENT_HASHES = {
-  'main-block-1': '9df44427b6456c9cc1b1ea2095659a5062faaae1ba1d88fa2344d6507bc07d70',
+  'main-block-1': 'ebd70e612af0c20f2e60630ada5f78acf48df8490e7a59fee22f72bca267c9e1',
   'main-block-2': '959af792c52cc727f95a4b9feaf2d34d7b26da086533c7daaf77b270e1114137',
   'main-block-3': '053530d9b908df35f53a9d5c1c55596bef836d14afd7ca4197ad8c587bd0f21d',
 };

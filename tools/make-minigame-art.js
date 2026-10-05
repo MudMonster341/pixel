@@ -11,9 +11,11 @@
 //
 // Run:  node tools/make-minigame-art.js   (also runs as part of `npm run assets`)
 // Output, in assets/minigames/:
-//   flappy-bg.png           320x180 (compact scale), pinned: the ICL server room, brighter and more
-//                           layered than before -- cable tray, two depth-graded rack rows, a cool
-//                           ambient glow.
+//   flappy-bg.png           320x180 (compact scale), pinned: the ICL fingerprint hack's backdrop (P5c, FB-0071): a dark cyan
+//                           grid receding to a horizon, circuit traces, glowing scan-line bands and a dim outer ring. The big
+//                           fingerprint scanner ring and its fill (the scan progress) are drawn on top by src/minigames/flappy.js.
+//   flappy-sprites.png      64x16, four 16x16 frames (P5c): the glowing data packet the player flies (a diamond core, a trailing
+//                           spark; frames 0-3 are its glow pulse). Code-composed from a small cyan palette, like the ICL lab kit.
 //   tower-bg.png            480x270 (half scale, stretched 2x in-scene like the others): Room 195's tower climb (FB-0074,
 //                           docs/plans/2026-10-04-moments-and-small-touches.md M8): stone walls with arrow slits, torch
 //                           brackets, the five wooden beams and their ladders (positions read from src/minigames/
@@ -153,57 +155,85 @@ class Img {
   }
 }
 
-// ---------- ICL server room (flappy) ----------
-// Cold blue light, brightened and more layered than before (owner: "dark and muddy"): a lighter sky
-// gradient, a cable tray, two depth-graded rack rows (a dim far row, a brighter mid row) receding
-// toward the top of the frame, and a raised-floor tile band -- the actual obstacle racks are drawn by
-// src/minigames/flappy.js on top of this. Sized to the compact scale (the flyer's own camera never
-// scrolls, so this stays one static image, just a richer one -- see the file
-// header) and stretched 3x in-scene.
+// ---------- ICL fingerprint hack (flappy, P5c FB-0071) ----------
+// "dark cyan grid background with a big glowing fingerprint scanner ring behind the play field": the backdrop here is the dark cyan
+// grid (a vertical gradient, a perspective floor grid, a faint vertical grid, circuit traces and thin glowing scan-line bands) with a dim
+// outer ring; the scanner ring and the fingerprint inside it are vector arcs that src/minigames/flappy.js draws over it, because they
+// FILL as the score rises. Sized to the compact scale (the flyer's camera never scrolls) and stretched 3x in-scene.
 
 function buildFlappyBg() {
   const img = new Img(VIEW_W, VIEW_H);
   const C = {
-    skyDeep: '#1c2c48', skyMid: '#28405f', skyLight: '#3a5878',
-    rackFar: '#2a3c54', rackFarLit: '#3a5068',
-    rackMid: '#33495f', rackMidLit: '#456082',
-    cableTray: '#141f2e', cableRung: '#28394e',
-    floorLight: '#33465c', floorDark: '#283850', floorGrid: '#4a6480',
-    ledGreen: '#8fd46a', ledAmber: '#ffd23f',
+    top: '#050d18', mid: '#081c2c', low: '#0c2e40',
+    grid: '#16506a', gridHi: '#1f7a99', trace: '#12435a', node: '#2fc9e8', band: '#4de3ff',
   };
+  img.vGradient(0, VIEW_H - 1, [[0, C.top], [0.55, C.mid], [1, C.low]]);
 
-  img.vGradient(0, VIEW_H - 1, [[0, C.skyDeep], [0.6, C.skyMid], [1, C.skyLight]]);
+  // A faint square grid over the whole frame (every 10 px), brighter every 5th line.
+  for (let x = 0; x < VIEW_W; x += 10) img.rect(x, 0, x, VIEW_H - 1, x % 50 === 0 ? C.gridHi : C.grid, x % 50 === 0 ? 0.28 : 0.16);
+  for (let y = 0; y < VIEW_H; y += 10) img.rect(0, y, VIEW_W - 1, y, y % 50 === 0 ? C.gridHi : C.grid, y % 50 === 0 ? 0.28 : 0.16);
 
-  // Cable tray along the ceiling.
-  img.rect(0, 0, VIEW_W - 1, 7, C.cableTray);
-  for (let x = 2; x < VIEW_W; x += 6) img.rect(x, 0, x + 1, 7, C.cableRung);
-
-  // A dim, distant rack row, then a brighter, closer one just below it -- a cheap two-step depth cue
-  // (STYLE_GUIDE "Layering") that reads clearly even at this small scale.
-  const rows = [
-    { y: 13, scale: 0.55, fill: C.rackFar, lit: C.rackFarLit, alpha: 0.75 },
-    { y: 28, scale: 0.8, fill: C.rackMid, lit: C.rackMidLit, alpha: 0.9 },
+  // Circuit traces: a few right-angled lines with a lit node at each corner, hugging the top and bottom edges (clear of the play field).
+  const traces = [
+    [[12, 18], [12, 8], [64, 8], [64, 14]],
+    [[250, 10], [300, 10], [300, 24]],
+    [[30, 150], [30, 163], [110, 163]],
+    [[210, 165], [262, 165], [262, 150], [306, 150]],
+    [[120, 20], [150, 20], [150, 12], [190, 12]],
   ];
-  for (const row of rows) {
-    const rh = 15 * row.scale;
-    const rw = 14 * row.scale;
-    for (let x = 4; x < VIEW_W; x += 24) {
-      img.rect(x, row.y, x + rw, row.y + rh, row.fill, row.alpha);
-      img.rect(x + 1, row.y + 1, x + rw - 1, row.y + 2, row.lit, row.alpha);
-      img.px(x + 2, row.y + 4, ((x / 24) | 0) % 2 === 0 ? C.ledGreen : C.ledAmber, 0.85);
-    }
+  for (const path of traces) {
+    for (let i = 0; i < path.length - 1; i++) img.line(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1], 1, C.trace);
+    for (const [x, y] of path) { img.rect(x - 1, y - 1, x + 1, y + 1, C.trace); img.px(x, y, C.node, 0.8); }
   }
 
-  // Floor: raised server-room floor tiles, cool and grid-lined, brighter than before.
-  const floorY = 160;
-  img.rect(0, floorY, VIEW_W - 1, VIEW_H - 1, C.floorLight);
-  for (let x = 0; x < VIEW_W; x += 10) img.rect(x, floorY, x, VIEW_H - 1, C.floorGrid, 0.55);
-  for (let y = floorY; y < VIEW_H; y += 10) img.rect(0, y, VIEW_W - 1, y, C.floorGrid, 0.55);
+  // Thin glowing scan-line bands drifting across the room (static here; the glow is a soft cyan, never white).
+  for (const y of [42, 96, 138]) {
+    img.rect(0, y, VIEW_W - 1, y, C.band, 0.07);
+    img.rect(0, y + 1, VIEW_W - 1, y + 1, C.band, 0.03);
+  }
 
-  // A soft cold ambient glow low across the room (cable-tray-to-floor light falloff) -- lighter than
-  // the old near-black wash so the middle of the room doesn't read as murky.
-  img.rect(0, 7, VIEW_W - 1, floorY, C.skyLight, 0.06);
+  // The dim outer ring of the scanner, centred where flappy.js draws its own (a 3x stretch puts it at the middle of the canvas).
+  const cx = VIEW_W / 2;
+  const cy = VIEW_H / 2 - 4;
+  for (let a = 0; a < 720; a++) {
+    const t = (a / 720) * Math.PI * 2;
+    for (const [r, alpha] of [[78, 0.35], [79, 0.22], [77, 0.12]]) img.px(cx + Math.cos(t) * r, cy + Math.sin(t) * r, C.gridHi, alpha);
+  }
+  // Tick marks round it, like a dial.
+  for (let k = 0; k < 48; k++) {
+    const t = (k / 48) * Math.PI * 2;
+    const r0 = 81;
+    const r1 = k % 4 === 0 ? 87 : 84;
+    img.line(cx + Math.cos(t) * r0, cy + Math.sin(t) * r0, cx + Math.cos(t) * r1, cy + Math.sin(t) * r1, 1, C.gridHi, 0.3);
+  }
+  return img;
+}
 
+// The data packet the player flies (flappy.js): a glowing diamond with a bright core and a trailing spark, four glow-pulse frames (16x16).
+function buildFlappySprites() {
+  const img = new Img(64, 16);
+  const P = { core: '#f2fdff', hot: '#b9f6ff', mid: '#4de3ff', rim: '#1e9ec4', deep: '#0e5a78', glow: '#4de3ff' };
+  for (let f = 0; f < 4; f++) {
+    const ox = f * 16;
+    const pulse = [0, 1, 2, 1][f];
+    // a soft glow round the diamond
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.abs(x - 9.5) + Math.abs(y - 7.5);
+      if (d > 6 && d <= 7 + pulse) img.px(ox + x, y, P.glow, 0.22 + 0.06 * pulse);
+    }
+    // the diamond (a rotated square, 11 px across), outlined, with a lit top-left facet
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x - 9.5, dy = y - 7.5;
+      const d = Math.abs(dx) + Math.abs(dy);
+      if (d <= 5.5) img.px(ox + x, y, d > 4.5 ? P.rim : d > 2.5 ? P.mid : P.hot);
+    }
+    img.px(ox + 9, 7, P.core); img.px(ox + 10, 7, P.core); img.px(ox + 9, 8, P.core);
+    img.px(ox + 8, 5, P.hot); img.px(ox + 7, 6, P.hot);
+    // the trailing spark: a short tail behind it (to the left) that twinkles
+    img.px(ox + 3, 7, P.mid); img.px(ox + 2, 8, P.rim);
+    img.px(ox + 4 + (f % 2), 5 - (f > 1 ? 1 : 0), P.hot, 0.8);
+    img.px(ox + 1 + f % 3, 7 + (f % 2), P.deep);
+  }
   return img;
 }
 
@@ -1453,6 +1483,7 @@ const outDir = outFlag !== -1 ? path.resolve(process.argv[outFlag + 1]) : path.j
 fs.mkdirSync(outDir, { recursive: true });
 const write = (name, built) => fs.writeFileSync(path.join(outDir, name), built.toPNG());
 write('flappy-bg.png', buildFlappyBg());
+write('flappy-sprites.png', buildFlappySprites());
 write('tower-bg.png', buildTowerBg());
 write('tower-sprites.png', buildTowerSprites());
 write('tower-prince.png', buildTowerPrince());
@@ -1466,4 +1497,4 @@ for (const name of ['platformer-bg.png', 'platformer-bg-far.png', 'platformer-bg
   const stale = path.join(outDir, name);
   if (fs.existsSync(stale)) fs.unlinkSync(stale);
 }
-console.log(`Wrote flappy-bg, tower-bg, tower-sprites, tower-prince, hero-bg, hero-sprites, hero-bar and hero-cover to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+console.log(`Wrote flappy-bg, flappy-sprites, tower-bg, tower-sprites, tower-prince, hero-bg, hero-sprites, hero-bar and hero-cover to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

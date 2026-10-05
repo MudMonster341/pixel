@@ -97,7 +97,8 @@ test('story clearance: no talkable cat can get within reach of a story NPC or ke
 function routeRects(mapKey) {
   const objects = loadObjects(mapKey);
   const named = new Set(Object.values(OBJECTIVE_ROUTES).flat().filter((stop) => stop.map === mapKey && stop.anchor).map((stop) => stop.anchor));
-  return objects.filter((o) => ['door', 'stairs', 'gate', 'lift'].includes(o.type) || named.has(o.name)); // P4b: a lift's doors count like a door
+  // P4b: a lift's doors count like a door. P5c (FB-0071): so do the ICL's sealed hatch and its scanner (nobody stands in front of the way into the lab).
+  return objects.filter((o) => ['door', 'stairs', 'gate', 'lift', 'sealedDoor', 'scanner'].includes(o.type) || named.has(o.name));
 }
 
 function nearRect(rect, spot, margin) {
@@ -139,11 +140,14 @@ test('story clearance: animal homes keep a tile off every door, stairs, gate and
 // (4-neighbour steps, so a student in a 1-wide corridor counts as a wall, never "squeezed past"), and so
 // must every door, stairs and gate. (Patrolling students stop and yield when she walks up, so they don't count.)
 const { gridFromTiled, isWalkableTile, tileInfo } = loadGameData();
+const { openSealedDoors } = require('../helpers/game-data');
 
 function reachableWith(mapKey, blocked) {
   const json = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'maps', `${MAPS[mapKey].tiled}.json`), 'utf8'));
-  const grid = gridFromTiled(json);
   const objects = tiledObjects(json);
+  // P5c (FB-0071): "reachable" means once the ICL's fingerprint-locked door is open (it is solid until the scanner's mini-game has run):
+  // tests/unit/fb-0071-icl.test.js pins that the lab and its key are NOT reachable while it is sealed.
+  const grid = openSealedDoors(gridFromTiled(json), objects, tileInfo);
   const spawn = objects.find((o) => o.type === 'spawn');
   const seen = new Uint8Array(json.width * json.height);
   const isBlocked = (x, y) => blocked.some((b) => b.x === x && b.y === y);
@@ -181,14 +185,15 @@ test('story clearance: with every idle/chat student in place, each key station, 
     for (const s of storyPoints(mapKey)) {
       assert.ok(canInteractWith(s.x, s.y), `${mapKey}: ${s.id} cannot be reached once the idle/chat students stand where they are`);
     }
-    for (const o of objects.filter((obj) => ['door', 'stairs', 'gate', 'lift'].includes(obj.type))) {
+    for (const o of objects.filter((obj) => ['door', 'stairs', 'gate', 'lift', 'sealedDoor', 'scanner'].includes(obj.type))) {
       let ok = false;
       for (let y = Math.floor(o.y); y < Math.floor(o.y) + Math.max(1, Math.ceil(o.height)); y++) {
         for (let x = Math.floor(o.x); x < Math.floor(o.x) + Math.max(1, Math.ceil(o.width)); x++) if (at(x, y)) ok = true;
       }
       // Doors/stairs are warps: the tile in front of them also counts.
       // P4b: a lift's doors are solid wall tiles you press E in front of, so its front tile (one row down, both cells of the doorway) counts.
-      const frontRows = o.type === 'lift' ? 1 : 0;
+      // P5c: a scanner is a solid wall pad too: the tile in front of it counts.
+      const frontRows = o.type === 'lift' || o.type === 'scanner' ? 1 : 0;
       for (let dy = -1; dy <= Math.ceil(o.height) + frontRows; dy++) for (let dx = -1; dx <= Math.ceil(o.width) + frontRows; dx++) if (at(Math.floor(o.x) + dx, Math.floor(o.y) + dy)) ok = true;
       assert.ok(ok, `${mapKey}: ${o.type} "${o.name}" at (${o.x},${o.y}) is sealed off by a standing student`);
     }

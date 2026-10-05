@@ -117,7 +117,10 @@ docs/plans/2026-09-26-premium-pass.md)
 - **Laboratory Tileset PixelArt 16px** ("Land of Pixels") by **marceles** (OpenGameArt,
   `assets/vendor/landofpixels-laboratory-tileset/`) -- **CC BY 4.0**: *"Attribution 4.0 International
   (CC BY 4.0)"*. A lab bench, a chemistry/bio apparatus tank, and an equipment rack furnish the
-  science/engineering labs (`intLabBench`, `intLabTank`, `intLabRack`).
+  science/engineering labs (`intLabBench`, `intLabTank`, `intLabRack`). **P5c (FB-0071, 2026-10-05):** its red-lit blast door (`16px/tilesStuff.png`, the middle band of
+  the door at x 157-243, y 66-110: the hex lock, the light strips and plate seams) is the ICL's fingerprint-locked hatch (`intDoorHatch*`, the door-animation frames are
+  its own pixels slid apart), and the steel/navy/cyan values of the ICL's spaceship lab kit (`tools/lib/icl-tech-art.js`: floor panels, light strips, bulkhead walls, racks,
+  consoles, the holo table, the wall display, Alice the robot) are sampled from the same sheet; the arrangement is ours.
 - Not used: Antea's "Free Furniture Office Equipment Set" (itch.io, CC-BY) -- on-brief content
   (cabinets/printer/vending machines) but itch.io's free-tier download needs an interactive browser
   session rather than a scriptable URL; see docs/research/asset-packs.md's 2026-09-22 addendum for why

@@ -79,6 +79,14 @@ function applyState(state, saved) {
     stage: saved.quest?.stage || state.quest.stage,
     keys: { ...state.quest.keys, ...(saved.quest?.keys || {}) },
   };
+  // P5c (FB-0071): the ICL's door starts open for any save that predates it and has already got past it -- one holding the ICL key, one past the
+  // hunt's key stage, or one that was standing inside the lab -- so nothing a player had earned is ever locked (maplogic.js isGateOpen()).
+  const gate = typeof STORY !== 'undefined' ? STORY.iclGate : null;
+  if (gate && !state.flags[gate.flag]) {
+    const at = saved.position;
+    const inside = saved.map === gate.map && at && tileInGateRoom(gate, at.x, at.y);
+    if (inside || isGateOpen(gate, state)) state.flags[gate.flag] = true;
+  }
   state.journal = Array.isArray(saved.journal) ? [...saved.journal] : state.journal;
   // A save from before M4 simply has no `minigames` field -- falls back to whatever GameState already
   // had (an empty object, fresh from resetGameState()/the initial literal), same as playerName above.

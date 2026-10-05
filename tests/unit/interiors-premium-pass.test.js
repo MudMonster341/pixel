@@ -38,7 +38,7 @@ function structureNameAt(json, x, y) {
 // ---------- FB-0030: every key station sits on its own room's specific furniture ----------
 
 const KEY_STATION_FURNITURE = {
-  'main-block-1': { icl: 'intIclBench', room195: 'intTeacherDesk' },
+  'main-block-1': { icl: 'intTechCoreConsole', room195: 'intTeacherDesk' }, // P5c: the ICL's key sits on the lab's core console
   'main-block-3': { physicsLab: 'intLabBenchWood' },
 };
 
@@ -74,7 +74,7 @@ const TALL_TILES_BY_MAP = {
     ...['L', 'R'].flatMap((side) => [0, 1, 2].map((row) => `intStairsWall${side}${row}`)),
     'intPottedPlant',
   ],
-  'main-block-1': ['intServerRack'],
+  'main-block-1': ['intTechRackTopA', 'intTechRackBaseA', 'intTechRackTopB', 'intTechRackBaseB', ...[0, 1, 2, 3].flatMap((c) => [0, 1].map((r) => `intHoloTable${c}${r}`))], // P5c: the ICL's racks and holo table
   'main-block-3': ['intLabRack'],
 };
 

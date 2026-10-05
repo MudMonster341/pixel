@@ -510,3 +510,25 @@ How it is used (`tools/make-assets.js` "P4b" section): the three band colours ar
 (with the newel caps) are cropped from the sheet; the step sizes (shrinking into the distance) and the darkening towards the far end
 are the only things we add, as the "this goes UP" cue the tour photo shows. The foyer stair and the stairwell flights share the same tiles
 `intStairs<kind><row>`. The lift doors are cropped as they are with an indicator-lamp band (the one drawn part) over them.
+
+## P5c addendum (2026-10-05): the ICL's spaceship lab (FB-0071)
+
+Brief: a modern, spaceship-like super-computing lab: dark navy and brushed-steel floor panels with glowing cyan light strips, bulkhead walls with light bands, tall
+server racks with blinking lights, a holographic table, a wall display with a graph, curved consoles, cable trunking, a ceiling light bar, a fingerprint-locked sliding
+door with a scanner pad, and a hovering robot called Alice.
+
+- **Land of Pixels laboratory tileset** (already vendored and credited, CC BY 4.0): `16px/tilesStuff.png` is the one pack with a sci-fi look. Its **red-lit blast
+  door** (an 86 x 44 steel door with a hex lock, red/white light strips, hazard stripes, x 157-243 y 66-110) is cropped to its middle band, 32 x 16 px (x 184-215, y 83-98),
+  as the sealed hatch; its slid-apart and open frames are that crop's own pixels (the same sliding technique as the lift, `slideDoorPair()`), over a dark, cyan-lit opening.
+  The same sheet's blue server rack (x 527-559, y 141-191), teal console strips (x 290-367, y 40-89), graph monitors (x 419-575, y 177-255) and cyan-on-dark-teal
+  screens were studied for colour and proportion; the steel (#4a5878-#c9d4ea), navy (#090e1a-#2d4272) and cyan (#4de3ff, #1e7a9e, #b9f6ff) values of the lab kit are sampled
+  from them. The sheet has no floor panels, light strips, bulkhead walls, rotating hologram or small robot, so those are composed in code (below). **Used.**
+- Nothing else was added: no new pack. Searched again: Kenney's sci-fi sets are side-on or top-down space ships, not interiors in this 3/4 view; LimeZu's free sheets
+  have no sci-fi pieces; Ninja Adventure has none.
+- **Code-composed** (`tools/lib/icl-tech-art.js`, from the small cool palette above, no freehand PNG): `intTechFloor*` (navy panels with steel seams, and the cyan light strips),
+  `intWallTech*` (bulkhead with a cyan band, rounded end ribs, steel cap), the wall display (`intWallDisplay*`/`intTechDisplayBase*`: a graph in the pack monitors' cyan-on-teal),
+  racks (+ blinking LED overlays), curved consoles, the holo table and its 3-frame globe, chair, coffee machine, planter, pylon, the fingerprint scanner pad (+ pulse and
+  "accepted" overlays), cable trunking, charging pad, ceiling light bar, and **Alice** (`npc-alice.png`: a white and teal hovering service robot with one glowing visor bar, a
+  2-pose idle bob; the sheet layout is every character's).
+- The flyer's art (`tools/make-minigame-art.js`): `flappy-bg.png` (dark cyan grid, circuit traces, a dim scanner ring) and `flappy-sprites.png` (the glowing data packet); the
+  firewalls and the filling fingerprint ring are drawn in code by `src/minigames/flappy.js`. No pack.

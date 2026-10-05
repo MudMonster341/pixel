@@ -11,6 +11,7 @@ const { execFileSync } = require('child_process');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 
 const { tileInfo, gridFromTiled, tiledObjects, isWalkableTile } = loadGameData();
+const { openSealedDoors } = require('../helpers/game-data');
 
 const KEYS = [
   'main-block-g', 'main-block-1', 'main-block-2', 'main-block-3',
@@ -20,7 +21,9 @@ const KEYS = [
 const maps = {};
 for (const key of KEYS) {
   const json = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'maps', `${key}.json`), 'utf8'));
-  maps[key] = { json, grid: gridFromTiled(json), objects: tiledObjects(json) };
+  const objects = tiledObjects(json);
+  // P5c (FB-0071): the reachability rules below mean "once the ICL's fingerprint-locked door is open" (tests/unit/fb-0071-icl.test.js pins that it is sealed until then)
+  maps[key] = { json, grid: openSealedDoors(gridFromTiled(json), objects, tileInfo), objects };
 }
 const campusJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'maps', 'campus.json'), 'utf8'));
 const campusObjects = tiledObjects(campusJson);

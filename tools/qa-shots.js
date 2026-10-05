@@ -544,7 +544,7 @@ async function shootMinigames(browser) {
         // FB-0042: she now hovers (no gravity/scrolling/collision, framework "get ready" beat) until
         // the first real flap -- `flying` flips true synchronously inside flap(), so waiting on it
         // confirms the very first Space actually registered before spending real time on the rest of
-        // the steadying flaps, rather than assuming it landed. The first server rack spawns just off
+        // the steadying flaps, rather than assuming it landed. The first firewall spawns just off
         // the right edge and scrolls in at 150px/s -- a few more flaps and about a second of flight
         // brings it on screen for the shot, instead of catching an empty room right after liftoff.
         await page.keyboard.press('Space');

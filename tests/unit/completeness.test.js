@@ -271,6 +271,51 @@ test('no two different closed doors (no `to`) in one map share the exact same li
 });
 
 // ======================================================================================================
+// 3b. Every sealed door (P5c, FB-0071: the ICL's fingerprint-locked hatch) is a complete mechanism
+// ======================================================================================================
+// A `sealedDoor` object is solid until a GameState flag opens it, and a `scanner` object is what opens it. Every one needs its map def's `gates`
+// data (names, flag, a locked line that says something, dialog for the door and the scanner, the room it seals), the matching partner object, closed
+// leaves that are SOLID, an open frame that is walkable, and a room rect that is a real named room of its map (so nobody can be sealed inside nothing).
+test('every sealedDoor has gate data with its own locked line and dialog, a scanner beside it, solid closed leaves, a walkable open frame, and a real room behind it; every scanner opens a door', () => {
+  const problems = [];
+  const solid = (name) => tileInfo.tiles[TILE_NAMES.indexOf(name)].solid;
+  for (const m of Object.values(maps).filter((x) => x.tiled)) {
+    const doors = m.objects.filter((o) => o.type === 'sealedDoor');
+    const scanners = m.objects.filter((o) => o.type === 'scanner');
+    const gates = m.def.gates || [];
+    for (const g of gates) {
+      if (!doors.some((o) => o.name === g.door)) problems.push(`${m.key}: gate names door "${g.door}", which is not a sealedDoor object here`);
+      if (!scanners.some((o) => o.name === g.scanner)) problems.push(`${m.key}: gate names scanner "${g.scanner}", which is not a scanner object here`);
+    }
+    for (const o of doors) {
+      const g = gates.find((x) => x.door === o.name);
+      if (!g) { problems.push(`${m.key}: sealedDoor "${o.name}" has no gate data in its map def`); continue; }
+      if (typeof g.lockedLine !== 'string' || g.lockedLine.trim().length < 8) problems.push(`${m.key}: "${o.name}" has no locked line of its own`);
+      if (!g.flag || o.props.flag !== g.flag) problems.push(`${m.key}: "${o.name}" opens on flag "${o.props.flag}" but its gate data says "${g.flag}"`);
+      if (!Array.isArray(g.doorDialog) || !g.doorDialog.length || !Array.isArray(g.scannerDialog) || !g.scannerDialog.length) problems.push(`${m.key}: "${o.name}" has no door/scanner dialog`);
+      if (!scanners.some((s) => s.props.door === o.name)) problems.push(`${m.key}: sealedDoor "${o.name}" has no scanner object that opens it`);
+      const cells = Number(String(o.props.cells || '1x1').split('x')[0]);
+      const open = String(o.props.openTiles || '').split(',').filter(Boolean);
+      const closed = String(o.props.closedTiles || '').split(',').filter(Boolean);
+      if (open.length !== cells || closed.length !== cells) problems.push(`${m.key}: "${o.name}" needs one closed and one open tile per cell (${cells})`);
+      const structures = m.json.layers.find((l) => l.name === 'structures').data;
+      for (let i = 0; i < cells; i++) {
+        const name = TILE_NAMES[structures[Math.floor(o.y) * m.width + Math.floor(o.x) + i] - 1];
+        if (name !== closed[i]) problems.push(`${m.key}: "${o.name}" cell ${i} shows ${name}, its closed frame is ${closed[i]}`);
+        if (!solid(closed[i])) problems.push(`${m.key}: "${o.name}" closed leaf ${closed[i]} is not solid: she could walk through the sealed door`);
+        if (solid(open[i])) problems.push(`${m.key}: "${o.name}" open frame ${open[i]} is solid: it would stay shut after it opens`);
+      }
+      const room = m.objects.find((a) => a.type === 'area' && Math.floor(a.x) === g.room.x0 && Math.floor(a.y) === g.room.y0 && Math.floor(a.x + a.width) - 1 === g.room.x1 && Math.floor(a.y + a.height) - 1 === g.room.y1);
+      if (!room) problems.push(`${m.key}: "${o.name}" seals a room rect that is not a named area of the map`);
+    }
+    for (const s of scanners) {
+      if (!doors.some((o) => o.name === s.props.door)) problems.push(`${m.key}: scanner "${s.name}" opens "${s.props.door}", which is not a sealedDoor here`);
+    }
+  }
+  assert.deepEqual(problems, [], problems.join(' | '));
+});
+
+// ======================================================================================================
 // 4. Nothing empty: furniture in every room, and someone to meet on every walkable interior map
 // ======================================================================================================
 

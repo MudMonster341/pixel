@@ -216,21 +216,20 @@ const AMBIENT = {
   ],
 
   'main-block-1': [
-    // Working at the ICL's neighbouring classroom row (docs/STORY.md beat 7), NOT at the ICL room's
-    // own door. First full browser run (2026-10-03, tests/unit/story-clearance.test.js): the ICL is a
-    // closet reached only through the one-tile corridor tile (4,7), and a student standing there (an
-    // immovable collider) sealed the key station off; earlier fixes had only nudged this student around
-    // the station to settle an E-tie. The rule now is geometric: idle/chat students keep at least two
-    // interact ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile
-    // corridor or a room's only doorway.
-    { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 6, y: 11, facing: 'left' },
+    // P5c (FB-0071): the ICL is a sealed, spaceship-like lab now (its door is a fingerprint-locked hatch at (9..10,14) with the scanner at (11,14); inside it
+    // are only Alice (7,10) and the core console's key (6,10), reachable only through that door). So nobody stands in the lab, and the students who wait
+    // for it stand in the CORRIDOR in front of it, clear of the hatch/scanner lane: at least 3 tiles from the hatch, the scanner and the stairwell door, and
+    // never in front of them (tests/unit/story-clearance.test.js geometry, plus the sealed-door cases in tests/unit/fb-0071-icl.test.js). History: the old closet's
+    // first full browser run (2026-10-03) had a student sealing its one-tile door; the rule since is geometric: idle/chat students keep at least two interact
+    // ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile corridor or a room's only doorway.
+    { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 15, y: 16, facing: 'left' },
     // FB-0051 (P2b): Mustafa, in his black and orange LUG hoodie, stands near each of the three mini-game key stations with his own
-    // FIXED line (`factIds: []`: he says only these, every time). Here: the ICL (this tile is 3.2 tiles from it).
-    { id: 'mb1-amb-icl-2', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 5, y: 9, facing: 'right', factIds: [],
+    // FIXED line (`factIds: []`: he says only these, every time). Here: the ICL (6 tiles from its key station, in the corridor outside the lab).
+    { id: 'mb1-amb-icl-2', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 6, y: 17, facing: 'up', factIds: [],
       name: "Mustafa", sheet: 'npc-mustafa',
       lines: [
-        "The ICL is basically one long exhale. Tap gently, don't mash.",
-        "My record there is embarrassing. I'm not telling.",
+        "That door is a fingerprint scanner with an attitude. Tap gently, don't mash.",
+        "My record on that scan is embarrassing. I'm not telling.",
       ] },
     // Room 195: at the far end of the two-row room, 3.2 tiles from the teacher's desk, so the desk stays clear.
     { id: 'mb1-amb-mustafa-195', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 27, y: 4, facing: 'left', factIds: [],

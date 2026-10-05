@@ -82,6 +82,13 @@ perspective in the cutscene art, and movement that eases rather than snaps.
 - **Ground floor:** the foyer, reception and wings follow the official 3D tour (ADR 0020), which supersedes the older owner photo.
 - **Delivery:** an offline `index.html` bundle she double-clicks on her MacBook; no .exe.
 
+## Amendment from owner feedback FB-0071 (2026-10-05): the ICL is a fingerprint-locked lab
+
+The ICL (key 2) is a modern, spaceship-like super-computing lab with a robot called Alice. Its door is sealed with a fingerprint scanner: the mini-game
+("ICL Fingerprint Hack", the same flyer) is how she gets in; the key is then collected inside (Alice hands it over, the core console holds it). Nothing else of the
+story changes: the key, its quest id (`icl`), item (`keyIcl`) and the hunt's order are as before; losing three times still offers a skip (it opens the door), Esc leaves
+it sealed and she can retry any time. See docs/INTERIORS_PLAN.md "P5c".
+
 ## Rules for the world
 
 - Only the route the story uses is open. Other doors, floors and rooms are politely blocked
@@ -98,7 +105,7 @@ gift can never be blocked by a hard game.
 | Key | Room | Mini-game |
 |---|---|---|
 | 1 | Physics Lab (3rd floor) | Hero fight: a masked kitten hero (a generic stand-in) shoots a bat-eared "shadow bat" who shoots back (3 hearts, 9 hits, a roaming minion, a themed cover), then takes the key he drops (FB-0066) |
-| 2 | ICL (1st floor) | Flappy-bird style flyer |
+| 2 | ICL (1st floor) | Flappy-bird style flyer, now the **fingerprint hack** (FB-0071): the ICL is a sealed super-computing lab; the flyer (a data packet through neon firewalls) opens its door, then Alice hands over the key inside |
 | 3 | Room 195 | Tower climb: a "reverse Rapunzel" (climb to the prince, dodge what the gargoyle throws) |
 
 ## The box and the birthday card (the ending, built 2026-09-22)

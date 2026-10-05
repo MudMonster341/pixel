@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-04T17:37:50.960Z",
-  "updatedAt": "2026-10-04T17:37:50.960Z",
+  "updatedAt": "2026-10-05T03:54:14.846Z",
   "details": "I have to playthe game to enter the lab and then i get the key, so the mini game it to open the door to the laba nd its sort fo a super computing lab with a roboit called alice there as well so make it modern and lieka  space ship sort of inetyrior, liek a bit more modern fitting a super comuting lab",
   "context": {
     "map": "main-block-1",
@@ -55,13 +55,28 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0071.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The ICL is now a sealed, spaceship-style super-computing lab: use the fingerprint scanner at the door to play the hack mini-game (ICL Fingerprint Hack), the door opens, and Alice the robot (or the core console) gives the key inside.",
+      "at": "2026-10-05T03:54:14.846Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0071-icl.test.js › FB-0071",
+    "commit": null,
+    "at": "2026-10-05T03:54:14.846Z"
+  },
   "history": [
     {
       "at": "2026-10-04T17:37:50.960Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-05T03:54:14.846Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

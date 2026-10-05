@@ -197,7 +197,12 @@ for (const keyId of KEY_IDS) {
     // in the real mini-game later must not need a rewrite of this ordering).
     const minigameIndex = take.actions.findIndex((a) => 'minigame' in a);
     const giveIndex = take.actions.indexOf(giveAction);
-    assert.ok(minigameIndex !== -1 && minigameIndex < giveIndex, `${keyId}: minigame action should come before give`);
+    if (STORY.keyStations[keyId].minigame) {
+      assert.ok(minigameIndex !== -1 && minigameIndex < giveIndex, `${keyId}: minigame action should come before give`);
+    } else {
+      // P5c (FB-0071): the ICL's mini-game opens its DOOR (STORY.iclGate), so its key station just hands the key over
+      assert.equal(minigameIndex, -1, `${keyId}: a station with no minigame must not run one`);
+    }
   });
 }
 

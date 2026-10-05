@@ -158,6 +158,11 @@ function loadGameData() {
     doorTileFromSpawn: get('doorTileFromSpawn'),
     depthGroupAt: get('depthGroupAt'),
     parseOpenTiles: get('parseOpenTiles'),
+    // P5c (FB-0071): the ICL's sealed door, its tile animations and the objective route's flag condition (src/maplogic.js)
+    isGateOpen: get('isGateOpen'),
+    tileInGateRoom: get('tileInGateRoom'),
+    gateBumped: get('gateBumped'),
+    tileAnimFrame: get('tileAnimFrame'),
     // P4c (FB-0067): the door animation's pure parts (src/maplogic.js)
     doorFrames: get('doorFrames'),
     doorFrameAt: get('doorFrameAt'),
@@ -273,7 +278,20 @@ function loadGameData() {
   };
 }
 
+// P5c (FB-0071): the ICL's hatch is a `sealedDoor` object over two SOLID door-leaf tiles until the scanner's mini-game opens it. A reachability test that
+// asks "can she get to the room, the key, Alice" means "once the door is open", so it walks a copy of the grid in which every sealed door's cells are
+// its open frame (a walkable tile). Pass the grid from gridFromTiled(), the map's tiledObjects() and the map's own tile table; the input is not changed.
+function openSealedDoors(grid, objects, tileInfo) {
+  const copy = grid.map((row) => row.slice());
+  const indexOf = new Map(tileInfo.tiles.map((t, i) => [t.name, i]));
+  for (const o of objects.filter((obj) => obj.type === 'sealedDoor')) {
+    const open = String(o.props.openTiles || '').split(',').map((n) => n.trim()).filter(Boolean);
+    open.forEach((name, i) => { copy[Math.floor(o.y)][Math.floor(o.x) + i] = indexOf.get(name); });
+  }
+  return copy;
+}
+
 // Objects from the sandbox have different prototypes; this makes them comparable with deepEqual.
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-module.exports = { ROOT, loadGameData, plain };
+module.exports = { ROOT, loadGameData, plain, openSealedDoors };

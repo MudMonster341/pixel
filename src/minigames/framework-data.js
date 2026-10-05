@@ -24,6 +24,8 @@ const MG_INSTRUCTION_MAX_CHARS = 42;
 // `instructions` (FB-0073): exactly the intro card's two body lines under its title -- a controls line and a goal
 // line, short enough to read at a glance, never a paragraph (MG_INSTRUCTION_MAX_CHARS, tests/unit/minigame-
 // framework.test.js). The score target the HUD counts to is `scoreTarget`; the goal line may name it.
+// `cards` (optional): the win/skip/game-over card wording for a game that does not hand over a key (flappy opens a door): winTitle, winLine, skipTitle,
+// skipLine, skipLabel, skipHint. A game without it (hero, tower) says the key lines. `opens` (optional): the GameState flag its story entry sets.
 // `item` names the real key item this mini-game's win hands over (src/items.js), the same id
 // src/story.js's own keyStations table gives that key station -- duplicated here (rather than one
 // file importing the other) because a mini-game is meant to be playable/testable on its own, without
@@ -50,17 +52,28 @@ const MINIGAMES = {
     scoreTarget: 9,
     scoreLabel: 'HITS',
   },
+  // P5c (FB-0071): the ICL is a fingerprint-locked lab, and this flyer is the hack that opens its DOOR (src/story.js STORY.iclGate: the scanner's `minigame`
+  // action, then the `iclDoorOpen` flag). It no longer awards a key, so it has no `item` (no key icon on its win card); `opens` names the flag it sets, and
+  // `cards` words its win, skip and game-over cards for a door instead of a key (framework-scene.js MinigameCard). It was "ICL Server Dash".
   flappy: {
     id: 'flappy',
-    name: 'ICL Server Dash',
+    name: 'ICL Fingerprint Hack',
     sceneKey: 'minigame-flappy',
-    item: 'keyIcl',
+    opens: 'iclDoorOpen',
     instructions: [
-      'SPACE / UP / W: FLAP',
-      'FLY THROUGH 8 GAPS IN THE SERVER RACKS',
+      'SPACE: FLAP',
+      'SLIP THROUGH 8 FIREWALLS TO CRACK THE SCAN',
     ],
     scoreTarget: 8,
-    scoreLabel: 'GAPS',
+    scoreLabel: 'HACK',
+    cards: {
+      winTitle: 'SCAN CRACKED!',
+      winLine: 'Scan cracked. Access granted!',
+      skipTitle: 'DOOR UNLOCKED!',
+      skipLine: 'The lab door opens anyway -- nice try.',
+      skipLabel: 'SKIP -- OPEN THE DOOR ANYWAY',
+      skipHint: "You've tried 3 times -- open the door anyway if you'd rather move on.",
+    },
   },
   // FB-0074: Room 195's game is the tower climb (a "reverse Rapunzel", src/minigames/tower.js + tower-logic.js); it replaced the
   // old falling-blocks game.

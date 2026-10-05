@@ -25,6 +25,9 @@ const PICKUP_RANGE = 10;
 const ROOM_BEAT_RANGE = 90;
 const KEY_ROOM_SCRIPT = { physicsLab: 'keyRoomPhysicsLab', icl: 'keyRoomIcl', room195: 'keyRoomRoom195' };
 const DOOR_ASSIST_RANGE = 12; // how far off-center you can walk at a door and still slide in
+// P5c (FB-0071): tile animations (blinking rack LEDs, the holo globe, the scanner's pulse) are re-read this often; each one still changes frame
+// on its own `ms` (never faster than about 3 times a second).
+const TILE_ANIM_TICK_MS = 120;
 // Quality loop, Characters and depth run 1 (2026-09-29): ambient campus/Main Block life
 // (src/ambient.js, createAmbient()/updateAmbient() below). A patrol NPC pauses (holds still, doesn't
 // "push through") while she's this close, rather than colliding into her -- "if she walks into one,
@@ -138,6 +141,9 @@ class WorldScene extends Phaser.Scene {
     // P4c (FB-0067): every door-animation overlay alive right now (showDoorOverlay()), by door, so a second animation on the same door
     // replaces the first and the scene's shutdown (a restart mid-animation) can sweep up whatever is left.
     this.doorAnims = new Map();
+    this.tileAnims = []; // P5c: the tile animations of THIS map (createScanners()/createTileAnims()); a restart starts from none
+    this.scanners = [];
+    this.gates = [];
   }
 
   // FB-0072 (the one choke point): `transitioning` is the flag every "the player does not have the
@@ -194,6 +200,10 @@ class WorldScene extends Phaser.Scene {
     this.createPickups();
     this.createKeyStations();
     this.createLifts();
+    // P5c (FB-0071): the ICL's fingerprint-locked door, its scanner, and the lab's blinking lights.
+    this.createScanners();
+    this.createGates();
+    this.createTileAnims();
     // P4c: a restart mid-animation (a warp's fade ending, the player quitting) must never leave a door overlay or its timers behind.
     this.events.once('shutdown', () => this.destroyDoorAnims());
 
@@ -463,6 +473,8 @@ class WorldScene extends Phaser.Scene {
       npc.setDepth(npc.body.bottom);
       npc.def = def;
       npc.idleFrames = idleFrames;
+      // P5c (FB-0071): a hovering NPC (Alice) bobs gently instead of standing in a still pose: the two idle poses of her sheet's row, 2 fps, yoyo.
+      if (def.hover && def.character) this.playHoverAnim(npc, textureKey, def.facing || 'down');
       this.physics.add.collider(this.player, npc);
       // Same ground shadow as the player (see createPlayer()); NPCs don't move yet, so a static
       // shadow needs no per-frame update.
@@ -473,6 +485,17 @@ class WorldScene extends Phaser.Scene {
     // frame 1 = "!" (something *new* to say, see dialog.js hasNewDialog()). Only the nearest NPC in
     // range gets one, same as before (updatePrompt()).
     this.prompt = this.add.image(0, 0, 'prompt', 0).setVisible(false).setDepth(100000);
+  }
+
+  // P5c: the idle bob of a hovering NPC (`hover: true` on its def, src/maps.js): frames 0/7 of its facing's row (the sheet layout every
+  // character shares, CHAR_COLS), one animation per sheet and direction, shared by every NPC that uses the sheet.
+  playHoverAnim(npc, textureKey, dir) {
+    const rows = { down: [0, 7], up: [8, 15], left: [16, 23], right: [24, 31] };
+    const key = `${textureKey}-hover-${dir}`;
+    if (!this.anims.exists(key)) {
+      this.anims.create({ key, frames: this.anims.generateFrameNumbers(textureKey, { frames: rows[dir] || rows.down }), frameRate: 2, yoyo: true, repeat: -1 });
+    }
+    npc.anims.play(key, true);
   }
 
   // Ambient campus/Main Block life (quality loop, Characters and depth run 1: "the world is empty").
@@ -812,6 +835,152 @@ class WorldScene extends Phaser.Scene {
       });
   }
 
+  // P5c (FB-0071): the ICL's fingerprint-locked hatch. Every Tiled `sealedDoor` object (tools/interiors/plans.js: two solid door-leaf tiles in the corridor
+  // wall) is a door that stays shut until its flag is set (maps.js `gates`, src/story.js STORY.iclGate): a sealed one rattles and says its locked line when she
+  // pushes at it, E at it says it is sealed, and once the flag is set (the scanner's mini-game won or skipped) it plays the P4c opening animation, its tiles
+  // become the open frame (walkable) and it stays open. A save that already has the ICL key, is past it, or stands inside the lab starts with it open
+  // (maplogic.js isGateOpen(), the soft-lock guard). Pure rules: src/maplogic.js; this is only the scene side.
+  createGates() {
+    const defs = this.def.gates || [];
+    this.gates = (this.mapObjects || []).filter((o) => o.type === 'sealedDoor').map((o) => {
+      const def = defs.find((d) => d.door === o.name) || null;
+      const cells = parseDoorCells(o.props.cells);
+      const gate = {
+        name: o.name, def, x: Math.floor(o.x), y: Math.floor(o.y), cellsW: cells.w, cellsH: cells.h, frames: doorFrames(o.props), open: false,
+        doorDef: def ? { id: `gate:${o.name}`, name: 'Hatch', dialog: def.doorDialog } : null,
+      };
+      if (!def) { console.warn(`sealed door "${o.name}" has no gate data in this map's def: leaving it open`); this.setGateOpen(gate, false); return gate; }
+      // never shut inside: a spawn already within the room it seals (an old save standing in the lab) opens it for good
+      if (!GameState.flags[def.flag] && tileInGateRoom(def, Math.floor(this.player.x / TILE), Math.floor(this.player.y / TILE))) {
+        GameState.flags[def.flag] = true;
+        notifyStateChanged();
+      }
+      if (isGateOpen(def, GameState)) {
+        if (!GameState.flags[def.flag]) { GameState.flags[def.flag] = true; notifyStateChanged(); }
+        this.setGateOpen(gate, false);
+      }
+      return gate;
+    });
+  }
+
+  // Opens one gate: with `animate` the door's opening plays first (closed -> half -> open, 160 ms, the P4c overlay), then its tiles become the open frame.
+  setGateOpen(gate, animate) {
+    if (gate.open) return;
+    gate.open = true;
+    const layer = this.solidLayers.find((l) => l.layer.name === 'structures');
+    const openNames = gate.frames && gate.frames[gate.frames.length - 1];
+    const apply = () => {
+      if (!layer || !openNames) return;
+      openNames.forEach((name, i) => {
+        const index = this.tileInfo.tiles.findIndex((t) => t.name === name);
+        if (index >= 0 && i < gate.cellsW) layer.putTileAt(index + 1, gate.x + i, gate.y); // solid -> walkable: Phaser re-reads collision from the new index
+      });
+    };
+    this.showScannerAccepted(gate.name, animate);
+    const overlay = animate && gate.frames ? this.showDoorOverlay({ name: gate.name, x: gate.x, y: gate.y, cellsW: gate.cellsW, cellsH: gate.cellsH, frames: gate.frames }) : null;
+    if (overlay && overlay.open) {
+      AudioManager.play('doorOpen');
+      overlay.open(() => { apply(); overlay.destroy(); });
+    } else {
+      apply();
+    }
+  }
+
+  // Door flags set since the scene began (the scanner's hack, a key from elsewhere): open whichever gate its rules now say is open.
+  syncGates() {
+    for (const gate of this.gates || []) {
+      if (!gate.open && gate.def && isGateOpen(gate.def, GameState)) this.setGateOpen(gate, true);
+    }
+  }
+
+  // A key station whose key is now held (Alice handed it over, or another station did) fades its floating icon, as taking it from the station does.
+  syncKeyStations() {
+    for (const ks of this.keyStations || []) {
+      if (!ks.taken && GameState.quest.keys[ks.def.id]) this.collectKeyStation(ks);
+    }
+  }
+
+  // Pushing against a sealed door from the front (heading up, in front of its cells): its locked line, the latch thud and the rattle, once per approach.
+  checkGateBump(blocked) {
+    if (blocked || !this.gates || !this.gates.length) { this.gateWarned = null; return; }
+    const body = this.player.body;
+    const tx = Math.floor(body.center.x / TILE);
+    const ty = Math.floor((body.bottom - 1) / TILE);
+    const up = this.keys.UP.isDown || this.keys.W.isDown;
+    const gate = this.gates.find((g) => !g.open && g.def && gateBumped(g, tx, ty, up));
+    if (!gate) { this.gateWarned = null; return; }
+    if (this.gateWarned === gate.name) return;
+    this.gateWarned = gate.name;
+    this.game.events.emit('toast', gate.def.lockedLine);
+    AudioManager.play('lockedDoorThud');
+    this.rattleDoor(gate);
+  }
+
+  // The fingerprint scanners (Tiled `scanner` objects: a solid pad in the wall, tools/interiors/plans.js scannerPad()). Each is an interactable (E starts the
+  // hack: the gate data's `scannerDialog`) with a glow overlay that pulses blue (a tile animation) until its door is open, then stays green.
+  createScanners() {
+    const defs = this.def.gates || [];
+    const indexOf = (name) => this.tileInfo.tiles.findIndex((t) => t.name === name);
+    this.scanners = (this.mapObjects || []).filter((o) => o.type === 'scanner').map((o) => {
+      const gateDef = defs.find((d) => d.scanner === o.name) || null;
+      const x = Math.floor(o.x);
+      const y = Math.floor(o.y);
+      const glow = (parseOpenTiles(o.props.glow) || []).map(indexOf).filter((i) => i >= 0);
+      const okIndex = indexOf(o.props.ok || 'intScannerOk');
+      const scanner = {
+        x: toPixel(x), y: toPixel(y), name: o.name, door: o.props.door, accepted: false,
+        def: { id: `scanner:${o.name}`, name: 'Fingerprint scanner', dialog: gateDef ? gateDef.scannerDialog : [] },
+      };
+      if (glow.length) {
+        const image = this.tileImage(x * TILE, y * TILE, glow[0]).setDepth(this.doorOverlayDepth({ x, y }));
+        scanner.anim = { image, indexes: glow, ms: Number(o.props.ms) || 450, phase: 0, frozen: null, shown: null, okIndex };
+        this.tileAnims = (this.tileAnims || []).concat(scanner.anim);
+      }
+      return scanner;
+    });
+  }
+
+  // The scanner beside a door that has just opened (or was open from the start): a bright flash, then steady green.
+  showScannerAccepted(doorName, animate) {
+    for (const scanner of this.scanners || []) {
+      if (scanner.door !== doorName || scanner.accepted) continue;
+      scanner.accepted = true;
+      const a = scanner.anim;
+      if (!a || a.okIndex < 0) continue;
+      a.frozen = a.okIndex;
+      a.image.setFrame(a.okIndex);
+      if (animate) this.tweens.add({ targets: a.image, alpha: { from: 0.2, to: 1 }, duration: 160, yoyo: true, repeat: 2 });
+    }
+  }
+
+  // Tile animations (Tiled `tileAnim` objects, tools/interiors/build-interiors.js tileAnim()): an overlay image over a cell cycles the listed tiles on
+  // top of the baked furniture (blinking rack LEDs, the holo globe). One timer steps them all.
+  createTileAnims() {
+    const indexOf = (name) => this.tileInfo.tiles.findIndex((t) => t.name === name);
+    const fromMap = (this.mapObjects || []).filter((o) => o.type === 'tileAnim').map((o) => {
+      const indexes = (parseOpenTiles(o.props.frames) || []).map(indexOf).filter((i) => i >= 0);
+      if (!indexes.length) return null;
+      const x = Math.floor(o.x);
+      const y = Math.floor(o.y);
+      const image = this.tileImage(x * TILE, y * TILE, indexes[0]).setDepth(this.doorOverlayDepth({ x, y }));
+      return { image, indexes, ms: Math.max(Number(o.props.ms) || 500, 300), phase: Number(o.props.phase) || 0, frozen: null, shown: null };
+    }).filter(Boolean);
+    this.tileAnims = (this.tileAnims || []).concat(fromMap);
+    if (!this.tileAnims.length) return;
+    this.stepTileAnims();
+    this.time.addEvent({ delay: TILE_ANIM_TICK_MS, loop: true, callback: () => this.stepTileAnims() });
+  }
+
+  stepTileAnims() {
+    const now = this.time.now;
+    for (const a of this.tileAnims) {
+      const i = a.frozen != null ? -1 : tileAnimFrame(now, a.indexes.length, a.ms, a.phase);
+      if (a.shown === i) continue;
+      a.shown = i;
+      if (i >= 0) a.image.setFrame(a.indexes[i]);
+    }
+  }
+
   createKeyStations() {
     this.keyStations = (this.def.keyStations || [])
       .filter((def) => !GameState.quest.keys[def.id])
@@ -834,6 +1003,7 @@ class WorldScene extends Phaser.Scene {
     this.updatePickups();
     this.updatePrompt(blocked, time);
     this.checkWarps();
+    this.checkGateBump(blocked);
     this.checkAreas();
     this.checkCutscene();
     this.checkKeyRoomBeats();
@@ -1089,6 +1259,9 @@ class WorldScene extends Phaser.Scene {
     for (const ambient of this.ambientNpcs || []) consider('ambientNpc', 'npc', ambient.sprite, ambient.sprite.def);
     for (const ks of this.keyStations || []) consider('keyStation', 'keyStation', ks, ks.def);
     for (const lift of this.lifts || []) consider('lift', 'lift', lift, lift.def); // P4b: E at a lift's doors
+    // P5c (FB-0071): E at the ICL's fingerprint scanner (starts the hack) or at its sealed hatch (says it is sealed); a door that is open is not a thing to use.
+    for (const scanner of this.scanners || []) consider('scanner', 'scanner', scanner, scanner.def);
+    for (const gate of this.gates || []) if (!gate.open && gate.def) consider('scanner', 'gate', doorCenterPx(gate), gate.doorDef);
     // A tame, talkable cat (ADR 0018; lowest priority like an ambient student). Its tile centre is the
     // target, not its feet-anchored sprite, so the range matches the player's own centre.
     for (const animal of this.animals || []) {
@@ -1129,7 +1302,10 @@ class WorldScene extends Phaser.Scene {
       // trick -- that sheet is unchanged on purpose (see tools/make-assets.js's own comment on it).
       const dx = this.player.x - npc.x;
       const dy = this.player.y - npc.y;
-      if (Math.abs(dx) > Math.abs(dy)) {
+      if (npc.def.hover) {
+        // P5c: a hovering NPC keeps bobbing and simply swaps to the idle bob of the direction she faces her in.
+        this.playHoverAnim(npc, npc.texture.key, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy < 0 ? 'up' : 'down'));
+      } else if (Math.abs(dx) > Math.abs(dy)) {
         const facingRight = dx > 0;
         if (npc.idleFrames.left === npc.idleFrames.right) npc.setFrame(npc.idleFrames.left).setFlipX(facingRight);
         else npc.setFrame(facingRight ? npc.idleFrames.right : npc.idleFrames.left).setFlipX(false);
@@ -1169,6 +1345,10 @@ class WorldScene extends Phaser.Scene {
         if (found.kind === 'keyStation' && entry.id === 'take' && result === 'done') {
           this.collectKeyStation(found.target);
         }
+        // P5c: whatever just ran may have set a door's flag (the scanner's hack) or handed over a key from elsewhere (Alice gives the ICL key
+        // too): the door opens, and a key station whose key is now held drops its floating icon.
+        this.syncGates();
+        this.syncKeyStations();
       });
     }, choices);
     // FB-0036: emitted *after* dialog.open() (which sets DialogBox.isOpen synchronously), not before
@@ -1686,7 +1866,7 @@ class WorldScene extends Phaser.Scene {
   // src/scenes/ui.js Minimap/FullMap/Onboarding all call this directly rather than recomputing the
   // routing themselves.
   currentObjectiveAnchor() {
-    const step = objectiveTarget(this.mapKey, GameState.quest);
+    const step = objectiveTarget(this.mapKey, GameState.quest, GameState.flags); // P5c: the ICL's step depends on whether its door is open
     if (!step) return null;
     if (step.anchor) return resolveAnchor(this.mapObjects, step.anchor);
     if (step.npc) {

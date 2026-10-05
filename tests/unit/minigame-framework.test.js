@@ -13,7 +13,8 @@ const countItem = (slots, item) => slots.filter((slot) => slot && slot.item === 
 
 test('MINIGAMES: one entry per key station in docs/STORY.md, each fully specified', () => {
   const { MINIGAMES, STORY } = loadGameData();
-  const storyIds = Object.values(STORY.keyStations).map((ks) => ks.minigame);
+  // P5c (FB-0071): the ICL's game (flappy) opens the lab's door (STORY.iclGate) instead of being a key station's own, so it is listed there
+  const storyIds = [...Object.values(STORY.keyStations).map((ks) => ks.minigame), STORY.iclGate.minigame].filter(Boolean);
   assert.deepEqual(Object.keys(MINIGAMES).sort(), [...new Set(storyIds)].sort());
   for (const [id, def] of Object.entries(MINIGAMES)) {
     assert.equal(def.id, id);
@@ -43,6 +44,12 @@ test('MINIGAMES: each item matches the real key STORY.keyStations awards for the
   // e.g. 'physicsLab') and linked by keyStations[...].minigame -- so look up the matching station by
   // *that* field, not by a shared key.
   for (const [id, def] of Object.entries(MINIGAMES)) {
+    if (STORY.iclGate.minigame === id) {
+      // P5c (FB-0071): this game opens a door, it awards no key: no `item` (so no key icon on its win card), and it names the flag its story entry sets
+      assert.equal(def.item, undefined, `${id}: a door-opening game must not carry a key item`);
+      assert.equal(def.opens, STORY.iclGate.flag, `${id}: MINIGAMES.opens is out of sync with STORY.iclGate.flag`);
+      continue;
+    }
     const station = Object.values(STORY.keyStations).find((ks) => ks.minigame === id);
     assert.ok(station, `${id}: no STORY.keyStations entry names this as its minigame`);
     assert.equal(def.item, station.item, `${id}: MINIGAMES.item is out of sync with STORY.keyStations.item`);
@@ -154,7 +161,8 @@ test('outcome routing: quitting a key station\'s mini-game never awards the key'
 
 test('outcome routing: winning a key station\'s mini-game runs the rest of the list and awards the key', () => {
   const { GameState, keyStationDialog, applyDialogActions, gameEvents } = loadGameData();
-  const [take] = keyStationDialog('icl');
+  // P5c (FB-0071): Physics Lab's station (the ICL's no longer runs a game: its key is handed over inside the lab, see tests/unit/fb-0071-icl.test.js)
+  const [take] = keyStationDialog('physicsLab');
   let payload = null;
   gameEvents.on('minigame:requested', (p) => { payload = p; });
   let done;
@@ -162,9 +170,9 @@ test('outcome routing: winning a key station\'s mini-game runs the rest of the l
   applyDialogActions(take.actions, GameState, (result) => { done = result; });
   payload.onResult('won');
 
-  assert.equal(GameState.quest.keys.icl, true);
+  assert.equal(GameState.quest.keys.physicsLab, true);
   assert.equal(done, 'done');
-  assert.equal(countItem(GameState.inventory.slots, 'keyIcl'), 1);
+  assert.equal(countItem(GameState.inventory.slots, 'keyPhysicsLab'), 1);
 });
 
 test('outcome routing: a skip (the 3-fail gift) reaches the story exactly like a real win', () => {

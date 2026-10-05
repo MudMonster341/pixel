@@ -113,8 +113,9 @@ test.describe('Talkable campus students (ADR 0018)', () => {
     await openGame(page, { map: 'main-block-1' });
     await waitForMap(page, 'main-block-1');
     await startGame(page);
-    // The ICL desk is approached from (6,7); the student works at (4,7). E there is the desk's, not hers.
-    await teleport(page, 6, 7);
+    // P5c (FB-0071): the ICL is a sealed lab now and its students wait in the corridor outside. Teleported beside the lab's core console (the key
+    // station, (6,11)) and Alice, E there is the console's or Alice's, never a talkable student's.
+    await teleport(page, 6, 12);
     await page.keyboard.press('e');
     await expect.poll(async () => (await state(page)).dialogOpen).toBe(true);
     const talk = await dialogNow(page);

@@ -12,6 +12,7 @@
 //   { map, anchor: 'name' }     a Tiled object on that map, resolved by name (resolveAnchor())
 //   { map, npc: 'id' }          an NPC def's own `id` on that map (src/maps.js `npcs`)
 //   { map, keyStation: 'id' }   a key station def's own `id` on that map (src/maps.js `keyStations`)
+// Any step may add `whileFlagOff: 'flag'`: it applies only while that GameState flag is unset (maplogic.js objectiveTarget()).
 // A map with no entry in the route at all just means "no on-screen destination here" -- she's off the
 // story's route (out exploring campus while the goal is three floors up a building she isn't in, say);
 // the quest tracker's own sentence (src/maplogic.js questObjectiveText()) still guides her regardless.
@@ -29,10 +30,12 @@ const OBJECTIVE_ROUTES = {
     { map: 'main-block-2', anchor: 'Main Block Stairs 2 (up)' },
     { map: 'main-block-3', keyStation: 'physicsLab' },
   ],
-  // docs/STORY.md beat 7: the ICL, 1st floor -- one flight up from the foyer, then straight to it.
+  // docs/STORY.md beat 7: the ICL, 1st floor -- one flight up from the foyer, then to the lab's fingerprint scanner (P5c, FB-0071: the door is
+  // sealed until the scanner's mini-game is won, GameState flag `iclDoorOpen`), and once it is open on in to the key inside.
   'key-icl': [
     { map: 'campus', anchor: 'Main Block entrance' },
     { map: 'main-block-g', anchor: 'Main Block Stairs G (up)' },
+    { map: 'main-block-1', anchor: 'ICL scanner', whileFlagOff: 'iclDoorOpen' },
     { map: 'main-block-1', keyStation: 'icl' },
   ],
   // docs/STORY.md beat 8: Room 195, also the 1st floor.

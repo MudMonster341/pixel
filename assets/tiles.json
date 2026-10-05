@@ -2533,6 +2533,420 @@
       "solid": false,
       "overhead": false,
       "color": "#9d8e7a"
+    },
+    {
+      "name": "intTechFloor",
+      "solid": false,
+      "overhead": false,
+      "color": "#182541"
+    },
+    {
+      "name": "intTechFloorB",
+      "solid": false,
+      "overhead": false,
+      "color": "#192542"
+    },
+    {
+      "name": "intTechFloorStripH",
+      "solid": false,
+      "overhead": false,
+      "color": "#254460"
+    },
+    {
+      "name": "intTechFloorStripV",
+      "solid": false,
+      "overhead": false,
+      "color": "#254460"
+    },
+    {
+      "name": "intTechFloorStripSE",
+      "solid": false,
+      "overhead": false,
+      "color": "#254460"
+    },
+    {
+      "name": "intTechFloorStripSW",
+      "solid": false,
+      "overhead": false,
+      "color": "#254460"
+    },
+    {
+      "name": "intTechFloorStripNE",
+      "solid": false,
+      "overhead": false,
+      "color": "#254460"
+    },
+    {
+      "name": "intTechFloorStripNW",
+      "solid": false,
+      "overhead": false,
+      "color": "#254461"
+    },
+    {
+      "name": "intTechFloorStripTS",
+      "solid": false,
+      "overhead": false,
+      "color": "#2a516d"
+    },
+    {
+      "name": "intTechPad",
+      "solid": false,
+      "overhead": false,
+      "color": "#1a3c56"
+    },
+    {
+      "name": "intTechTrunkH",
+      "solid": false,
+      "overhead": false,
+      "color": "#32394c"
+    },
+    {
+      "name": "intTechTrunkV",
+      "solid": false,
+      "overhead": false,
+      "color": "#32394c"
+    },
+    {
+      "name": "intWallTech",
+      "solid": true,
+      "overhead": false,
+      "color": "#3c6382"
+    },
+    {
+      "name": "intWallTechEndL",
+      "solid": true,
+      "overhead": false,
+      "color": "#385b78"
+    },
+    {
+      "name": "intWallTechEndR",
+      "solid": true,
+      "overhead": false,
+      "color": "#395b78"
+    },
+    {
+      "name": "intWallTechCap",
+      "solid": true,
+      "overhead": false,
+      "color": "#465474"
+    },
+    {
+      "name": "intWallDisplay0",
+      "solid": true,
+      "overhead": false,
+      "color": "#173247"
+    },
+    {
+      "name": "intWallDisplay1",
+      "solid": true,
+      "overhead": false,
+      "color": "#1a3e55"
+    },
+    {
+      "name": "intWallDisplay2",
+      "solid": true,
+      "overhead": false,
+      "color": "#1e3c55"
+    },
+    {
+      "name": "intWallDisplay3",
+      "solid": true,
+      "overhead": false,
+      "color": "#244351"
+    },
+    {
+      "name": "intTechDisplayBase0",
+      "solid": true,
+      "overhead": false,
+      "color": "#2d445e"
+    },
+    {
+      "name": "intTechDisplayBase1",
+      "solid": true,
+      "overhead": false,
+      "color": "#2b3a55"
+    },
+    {
+      "name": "intTechDisplayBase2",
+      "solid": true,
+      "overhead": false,
+      "color": "#293652"
+    },
+    {
+      "name": "intTechDisplayBase3",
+      "solid": true,
+      "overhead": false,
+      "color": "#394c58"
+    },
+    {
+      "name": "intWallScanner",
+      "solid": true,
+      "overhead": false,
+      "color": "#4f5f6e"
+    },
+    {
+      "name": "intScannerGlow0",
+      "solid": false,
+      "overhead": false,
+      "color": "#4fe3ff"
+    },
+    {
+      "name": "intScannerGlow1",
+      "solid": false,
+      "overhead": false,
+      "color": "#4fe3ff"
+    },
+    {
+      "name": "intScannerGlow2",
+      "solid": false,
+      "overhead": false,
+      "color": "#6ae8ff"
+    },
+    {
+      "name": "intScannerOk",
+      "solid": false,
+      "overhead": false,
+      "color": "#62f091"
+    },
+    {
+      "name": "intDoorHatchL",
+      "solid": true,
+      "overhead": false,
+      "color": "#90708c"
+    },
+    {
+      "name": "intDoorHatchR",
+      "solid": true,
+      "overhead": false,
+      "color": "#8c617e"
+    },
+    {
+      "name": "intDoorHatchHalfL",
+      "solid": false,
+      "overhead": false,
+      "color": "#625571"
+    },
+    {
+      "name": "intDoorHatchHalfR",
+      "solid": false,
+      "overhead": false,
+      "color": "#5e4663"
+    },
+    {
+      "name": "intDoorHatchOpenL",
+      "solid": false,
+      "overhead": false,
+      "color": "#3e425b"
+    },
+    {
+      "name": "intDoorHatchOpenR",
+      "solid": false,
+      "overhead": false,
+      "color": "#3f425b"
+    },
+    {
+      "name": "intTechRackTopA",
+      "solid": true,
+      "overhead": false,
+      "color": "#222b3e"
+    },
+    {
+      "name": "intTechRackBaseA",
+      "solid": true,
+      "overhead": false,
+      "color": "#121b2e"
+    },
+    {
+      "name": "intTechRackTopB",
+      "solid": true,
+      "overhead": false,
+      "color": "#212f41"
+    },
+    {
+      "name": "intTechRackBaseB",
+      "solid": true,
+      "overhead": false,
+      "color": "#111f31"
+    },
+    {
+      "name": "intTechLedsTopA",
+      "solid": false,
+      "overhead": false,
+      "color": "#87e07b"
+    },
+    {
+      "name": "intTechLedsTopB",
+      "solid": false,
+      "overhead": false,
+      "color": "#4de3ff"
+    },
+    {
+      "name": "intTechLedsBaseA",
+      "solid": false,
+      "overhead": false,
+      "color": "#5ff08f"
+    },
+    {
+      "name": "intTechLedsBaseB",
+      "solid": false,
+      "overhead": false,
+      "color": "#4de3ff"
+    },
+    {
+      "name": "intTechConsoleL",
+      "solid": true,
+      "overhead": false,
+      "color": "#26394e"
+    },
+    {
+      "name": "intTechConsoleM",
+      "solid": true,
+      "overhead": false,
+      "color": "#273b51"
+    },
+    {
+      "name": "intTechConsoleR",
+      "solid": true,
+      "overhead": false,
+      "color": "#26394e"
+    },
+    {
+      "name": "intTechConsoleS",
+      "solid": true,
+      "overhead": false,
+      "color": "#24364b"
+    },
+    {
+      "name": "intTechCoreConsole",
+      "solid": true,
+      "overhead": false,
+      "color": "#334b5a"
+    },
+    {
+      "name": "intTechChair",
+      "solid": true,
+      "overhead": false,
+      "color": "#21314d"
+    },
+    {
+      "name": "intTechCoffee",
+      "solid": true,
+      "overhead": false,
+      "color": "#3a475b"
+    },
+    {
+      "name": "intTechPlanter",
+      "solid": true,
+      "overhead": false,
+      "color": "#296559"
+    },
+    {
+      "name": "intTechPylon",
+      "solid": true,
+      "overhead": false,
+      "color": "#1d3548"
+    },
+    {
+      "name": "intHoloTable00",
+      "solid": true,
+      "overhead": false,
+      "color": "#274c67"
+    },
+    {
+      "name": "intHoloTable01",
+      "solid": true,
+      "overhead": false,
+      "color": "#1e3b56"
+    },
+    {
+      "name": "intHoloTable10",
+      "solid": true,
+      "overhead": false,
+      "color": "#204f69"
+    },
+    {
+      "name": "intHoloTable11",
+      "solid": true,
+      "overhead": false,
+      "color": "#21425d"
+    },
+    {
+      "name": "intHoloTable20",
+      "solid": true,
+      "overhead": false,
+      "color": "#204f69"
+    },
+    {
+      "name": "intHoloTable21",
+      "solid": true,
+      "overhead": false,
+      "color": "#21425d"
+    },
+    {
+      "name": "intHoloTable30",
+      "solid": true,
+      "overhead": false,
+      "color": "#274c67"
+    },
+    {
+      "name": "intHoloTable31",
+      "solid": true,
+      "overhead": false,
+      "color": "#1e3a54"
+    },
+    {
+      "name": "intHoloGlobe0L",
+      "solid": false,
+      "overhead": false,
+      "color": "#55d3ee"
+    },
+    {
+      "name": "intHoloGlobe0R",
+      "solid": false,
+      "overhead": false,
+      "color": "#55d3ee"
+    },
+    {
+      "name": "intHoloGlobe1L",
+      "solid": false,
+      "overhead": false,
+      "color": "#5cd9f2"
+    },
+    {
+      "name": "intHoloGlobe1R",
+      "solid": false,
+      "overhead": false,
+      "color": "#5cd9f2"
+    },
+    {
+      "name": "intHoloGlobe2L",
+      "solid": false,
+      "overhead": false,
+      "color": "#5cd9f2"
+    },
+    {
+      "name": "intHoloGlobe2R",
+      "solid": false,
+      "overhead": false,
+      "color": "#5cd9f2"
+    },
+    {
+      "name": "intTechLightBarL",
+      "solid": false,
+      "overhead": true,
+      "color": "#91edff"
+    },
+    {
+      "name": "intTechLightBarM",
+      "solid": false,
+      "overhead": true,
+      "color": "#91edff"
+    },
+    {
+      "name": "intTechLightBarR",
+      "solid": false,
+      "overhead": true,
+      "color": "#91edff"
     }
   ]
 }

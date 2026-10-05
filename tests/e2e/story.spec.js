@@ -133,13 +133,20 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   await stepOnto(page, upG);
   await waitForMap(page, 'main-block-1');
 
+  // P5c (FB-0071): the ICL's door is sealed until the scanner's mini-game is won (auto-won here, ?minigames=0), then the key is inside
+  const scannerTile = await page.evaluate(() => { const sc = game.scene.getScene('world').scanners[0]; return { x: Math.floor(sc.x / 16), y: Math.floor(sc.y / 16) }; });
+  await teleport(page, scannerTile.x, scannerTile.y + 1);
+  await talk(page);
+  s = await state(page);
+  expect(s.flags.iclDoorOpen).toBe(true);
+  expect(s.quest.keys.icl).toBe(false);
   const iclTile = await keyStationTile(page, 'icl');
   await teleport(page, iclTile.x, iclTile.y + 1);
   await talk(page);
   s = await state(page);
   expect(s.quest.keys).toEqual({ physicsLab: false, icl: true, room195: false });
   expect(countItem(s.slots, 'keyIcl')).toBe(1);
-  expect(s.journal).toContain('Found a key taped under a bench in the ICL.');
+  expect(s.journal).toContain('Found a key in the core console of the ICL.');
   tracker = await questTrackerText(page);
   expect(tracker.objective).toContain('Physics Lab'); // still the first missing key, not "next by count"
   expect(tracker.keys).toBe('Keys: 1 / 3');

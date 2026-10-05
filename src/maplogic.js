@@ -270,6 +270,40 @@ function doorFrameAt(elapsedMs, frameCount, frameMs = DOOR_FRAME_MS, reverse = f
   return reverse ? frameCount - 1 - step : step;
 }
 
+// ---------- sealed doors (P5c, FB-0071: the ICL's fingerprint-locked hatch) ----------
+// A map def's `gates` entry (src/maps.js, data from src/story.js `STORY.iclGate`) describes a `sealedDoor` object of that map's generated
+// Tiled data and its `scanner`: `door`/`scanner` are the two objects' names, `flag` the GameState flag that opens the door, `room` the rect
+// (tile units, inclusive) the door seals. The door starts closed and solid; WorldScene.createGates() opens it once the flag is set.
+//
+// isGateOpen(): should the door be open for this GameState? True when the flag is set, and also (the soft-lock guard for saves made before
+// this door existed) when she already holds the key the room gives, or the hunt is past it: nothing the player already earned is ever locked.
+function isGateOpen(gate, state) {
+  if (!gate) return true;
+  if (state.flags && state.flags[gate.flag]) return true;
+  if (gate.openIfKey && state.quest && state.quest.keys && state.quest.keys[gate.openIfKey]) return true;
+  if (gate.openIfStage && state.quest && gate.openIfStage.includes(state.quest.stage)) return true;
+  return false;
+}
+
+// Is tile (tx, ty) inside the room a gate seals? (An old save that was standing in the room, or a spawn there, must never be shut inside.)
+function tileInGateRoom(gate, tx, ty) {
+  const r = gate && gate.room;
+  return Boolean(r) && tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1;
+}
+
+// Is she pushing against a sealed door from the front (the row just below it, inside its cells, heading up)? `gate`: { x, y, cellsW }.
+function gateBumped(gate, tx, ty, movingUp) {
+  return Boolean(movingUp) && ty === gate.y + 1 && tx >= gate.x && tx < gate.x + (gate.cellsW || 1);
+}
+
+// ---------- tile animations (P5c): blinking rack LEDs, the holo globe ----------
+// A `tileAnim` object cycles `frameCount` overlay tiles, each showing `ms` ms; `phase` offsets the start (in ms), so a bank of racks blinks out of
+// step. Pure so a test can walk it.
+function tileAnimFrame(nowMs, frameCount, ms, phase = 0) {
+  if (!(frameCount > 0) || !(ms > 0)) return 0;
+  return Math.floor((Math.max(0, nowMs + phase)) / ms) % frameCount;
+}
+
 // ---------- the lift (P4b, FB-0064 / FB-0069) ----------
 // A map def's `lift` (src/maps.js MAIN_BLOCK_LIFT) is plain data: `floors` (each `{ label, map, liftName }`: what the choice says, the
 // map it lands on and the name of that floor's `lift` object, whose front tile she arrives on), a `question`, and optionally
@@ -484,11 +518,15 @@ function objectiveId(quest) {
 // `{ map, anchor }`/`{ map, npc }`/`{ map, keyStation }` step into actual on-screen tile coordinates
 // (it alone has the live mapObjects/npcs/keyStations to resolve an id/anchor name against); this
 // function only picks *which* step applies, which needs no live scene at all.
-function objectiveTarget(mapKey, quest) {
+// P5c (FB-0071): a step may name `whileFlagOff` (a GameState flag): it applies only while that flag is not set, so the ICL's route points at
+// the fingerprint scanner first and, once the door is open (`iclDoorOpen`), at the key station inside. `flags` is GameState.flags; left out, a
+// flag-conditioned step counts as applying (the plain, flag-less behaviour every earlier caller had).
+function objectiveTarget(mapKey, quest, flags) {
   const id = objectiveId(quest);
   if (!id) return null;
   const route = OBJECTIVE_ROUTES[id] || [];
-  return route.find((step) => step.map === mapKey) || null;
+  const applies = (step) => !step.whileFlagOff || !flags || !flags[step.whileFlagOff];
+  return route.find((step) => step.map === mapKey && applies(step)) || null;
 }
 
 // ---------- Character sheet registry (FB-0044) ----------
@@ -545,6 +583,7 @@ function animalSheets(animals, species, layouts) {
 // story objects; ambient students are atmosphere and must never shadow them. (Doors/stairs aren't
 // E-interactables -- walking onto one warps -- so they don't take part.)
 const INTERACT_PRIORITY = {
+  scanner: 3, // P5c: the ICL's fingerprint scanner and its sealed door: the way to the key room, like a key station
   keyStation: 3, // a key room's desk: the treasure hunt's own objective
   questNpc: 2, // a story NPC with dialog data (the volunteer, ...)
   lift: 2, // P4b: a lift door's floor-choice list (E at the doors), never shadowed by a student standing nearby

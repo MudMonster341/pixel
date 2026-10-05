@@ -114,15 +114,29 @@ const MAPS = {
     indoors: true,
     lift: MAIN_BLOCK_LIFT,
     doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF }],
+    // P5c (FB-0071): the ICL's fingerprint-locked door. Plain data (src/story.js STORY.iclGate) that names the `sealedDoor` and `scanner` objects of
+    // the generated map: world.js createGates()/createScanners() read it (like createLifts() reads `lift`).
+    gates: [STORY.iclGate],
     keyStations: [
       // Coordinates sit exactly on a real furniture tile in each room (checked against the
-      // generated map, docs/INTERIORS_PLAN.md): ICL's is a computer bench, Room 195's is the
-      // teacher's desk (FB-0030/0031 compact redesign).
-      // Quality loop run 2 (2026-09-28): ICL's own desk grid moved to make room for real aisles +
-      // a walkway (docs/quality/scorecard.md "Interior art run 2"), so the first bench is now here.
-      { id: 'icl', name: STORY.keyStations.icl.name, item: STORY.keyStations.icl.item, x: 6, y: 6, dialog: keyStationDialog('icl') },
+      // generated map, docs/INTERIORS_PLAN.md): ICL's is the lab's core console, inside the sealed
+      // door (P5c, FB-0071), Room 195's is the teacher's desk (FB-0030/0031 compact redesign).
+      { id: 'icl', name: STORY.keyStations.icl.name, item: STORY.keyStations.icl.item, x: 6, y: 10, dialog: keyStationDialog('icl') },
       { id: 'room195', name: STORY.keyStations.room195.name, item: STORY.keyStations.room195.item, x: 24, y: 5, dialog: keyStationDialog('room195') },
     ],
+    // P5c (FB-0071): Alice, the ICL's robot (a story NPC with a name tag, ADR 0021), hovering over her charging pad beside the core console and
+    // well off the lit lane from the door (x 9..10). Her sheet `npc-alice` is preloaded like every NPC's (maplogic.js characterSheets()); `hover`
+    // gives her the gentle idle bob (a 2-frame animation of her sheet, world.js createNpcs()) instead of the still pose the others have.
+    npcs: [{
+      id: 'alice',
+      name: 'Alice',
+      character: 'alice',
+      x: 7,
+      y: 10,
+      facing: 'down',
+      hover: true,
+      dialog: STORY.alice,
+    }],
     ambient: AMBIENT['main-block-1'],
   },
   'main-block-2': {

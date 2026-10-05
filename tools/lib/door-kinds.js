@@ -41,6 +41,10 @@ const DOOR_KINDS = {
   // The test maps' house door, at both ends (a text map, hand-authored in src/maps.js with the same names): the house's front door
   // outside, and the same wood door in the interior's back wall.
   houseDoor: { closed: ['door'], half: ['doorHalf'], open: ['doorOpen'] },
+  // P5c (FB-0071): the ICL's fingerprint-locked hatch, a sliding blast door in the corridor wall. Unlike every door above it never warps:
+  // it is a Tiled `sealedDoor` object (tools/interiors/build-interiors.js sealedDoor()) that stays closed and solid until the scanner beside it
+  // has been used (the `iclDoorOpen` flag), then plays closed -> half -> open and stays open for good.
+  iclHatch: { closed: ['intDoorHatchL', 'intDoorHatchR'], half: ['intDoorHatchHalfL', 'intDoorHatchHalfR'], open: ['intDoorHatchOpenL', 'intDoorHatchOpenR'] },
 };
 
 // The three door-object properties for a kind (strings, as Tiled stores them).

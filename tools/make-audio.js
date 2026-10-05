@@ -206,6 +206,41 @@ function synthRimshot() {
   return mix(tom, delayed(0.17, synthSnare(31, 0.18)), delayed(0.4, synthCrash())).map((v) => v * 0.8);
 }
 
+// M3 (Prof. Raja's chariot): hooves and a horn. The rumble is a gallop, soft at first and swelling as it comes closer: three-beat
+// bars ("da-da-DUM") of low thuds with a smoothed-noise rumble underneath, about 2.1 s. The horn is a two-note brass-ish blast (a
+// triangle plus a quieter octave, a little vibrato on the long note), about 0.9 s.
+function synthChariotRumble() {
+  const dur = 2.1; // (the offline bundle keeps every generated sfx under 100 KB: tests/unit/pack-offline.test.js)
+  const thud = (seed, gain) => mix(
+    tone(0.16, (t) => 70 + 80 * Math.exp(-t * 30), { wave: 'sine', ampFn: (t) => Math.min(1, t / 0.003) * Math.exp(-t * 17) * gain }),
+    brighten(tone(0.05, () => 0, { wave: 'noise', seed, ampFn: (t) => Math.exp(-t * 90) * gain * 0.35 })),
+  );
+  const beats = [];
+  for (let bar = 0, t = 0; t < dur - 0.2; bar++, t += 0.42) {
+    const k = Math.min(1, t / (dur - 0.4)); // swells as it approaches
+    const gain = 0.25 + 0.75 * k;
+    beats.push(delayed(t, thud(100 + bar * 3, gain * 0.7)));
+    beats.push(delayed(t + 0.11, thud(101 + bar * 3, gain * 0.6)));
+    beats.push(delayed(t + 0.24, thud(102 + bar * 3, gain)));
+  }
+  const raw = tone(dur, () => 0, { wave: 'noise', seed: 97, ampFn: (t) => Math.pow(t / dur, 1.3) * 0.5 });
+  const rumble = raw.map((v, i) => { // a 6-sample average keeps the lows
+    let sum = 0;
+    for (let j = 0; j < 6; j++) sum += i - j >= 0 ? raw[i - j] : 0;
+    return (sum / 6) * 0.9;
+  });
+  return mix(new Float32Array(Math.round(dur * SAMPLE_RATE)), rumble, ...beats).map((v) => Math.max(-1, Math.min(1, v * 0.65)));
+}
+
+function synthChariotHorn() {
+  const note = (freq, dur, vibrato) => {
+    const env = (t) => Math.min(1, t / 0.03) * Math.max(0, Math.min(1, (dur - t) / 0.08));
+    const f = (t) => freq * (1 + (vibrato && t > 0.15 ? 0.012 * Math.sin(2 * Math.PI * 6 * t) : 0));
+    return mix(tone(dur, f, { wave: 'triangle', ampFn: (t) => env(t) * 0.55 }), tone(dur, (t) => f(t) * 2, { wave: 'square', ampFn: (t) => env(t) * 0.08 }));
+  };
+  return concat(note(196, 0.28, false), new Float32Array(Math.round(0.04 * SAMPLE_RATE)), note(294, 0.6, true));
+}
+
 // W3 (the birthday finale, src/scenes/finale.js): the sounds of the cake and the fireworks, and the chiptune song. Every noise uses a fixed
 // seed, so the files are byte-identical on every run (tests/unit/assets.test.js).
 
@@ -290,6 +325,8 @@ const GENERATED = [
   { to: 'generated/drum-crash.wav', build: synthCrash },
   { to: 'generated/drum-roll.wav', build: synthDrumRoll },
   { to: 'generated/drum-rimshot.wav', build: synthRimshot },
+  { to: 'generated/chariot-rumble.wav', build: synthChariotRumble },
+  { to: 'generated/chariot-horn.wav', build: synthChariotHorn },
   { to: 'generated/blow-pff.wav', build: synthBlowPff },
   { to: 'generated/firework-whoosh.wav', build: synthFireworkWhoosh },
   { to: 'generated/firework-pop.wav', build: synthFireworkPop },

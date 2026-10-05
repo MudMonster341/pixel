@@ -158,12 +158,12 @@ function keyRoomSteps(keyStationId, line) {
 }
 
 // ---------- the moments (src/moments.js: the pacing; docs/plans/2026-10-04-moments-and-small-touches.md: the design) ----------
-// Two small unskippable scenes. They play through the same in-world runner as everything above, started by src/scenes/world.js
+// Three small unskippable scenes. They play through the same in-world runner as everything above, started by src/scenes/world.js
 // checkMoment() with `unskippable`, and every line has `autoMs` so they always end by themselves (8-20 s, measured by
 // tests/unit/moments.test.js). Nobody is moved except the actors a moment spawns: she is never walked anywhere, so a moment can never
 // leave her in a wall. Every actor a moment spawns is despawned again before it ends.
 //
-// The two prop sheets (drawn by tools/make-moments.js; layouts mirrored here and checked against the committed PNGs):
+// The three prop sheets (drawn by tools/make-moments.js; layouts mirrored here and checked against the committed PNGs):
 const MOMENT_SHEETS = {
   // 32x32 frames. The unicorn: a generic white horse with a horn and a pastel mane. 0 and 1 are the grazing head-bob.
   unicorn: {
@@ -183,15 +183,28 @@ const MOMENT_SHEETS = {
     frames: { idle: 0, snare: 1, kick: 2, crash: 3, snareCrash: 4 },
     feet: 11,
   },
+  // 40x44 frames. Prof. Raja's chariot, seen from the FRONT (it rolls down the hall toward the camera and away again): two gilded horses, a
+  // maroon-and-gold cart with a royal parasol and two pennants. 0 and 1 are the two trot beats (the horses bob, the wheels turn, the
+  // pennants flap); 2 and 3 are the same with Prof. Raja seated in the cart.
+  chariot: {
+    key: 'moment-chariot',
+    file: 'assets/moment-chariot.png',
+    frameWidth: 40,
+    frameHeight: 44,
+    frames: { trotA: 0, trotB: 1, ridedA: 2, ridedB: 3 },
+    feet: 21, // px below the frame's centre where the hooves stand
+  },
 };
 const UNICORN = MOMENT_SHEETS.unicorn.frames;
 const DRUMS = MOMENT_SHEETS.drums.frames;
+const CHARIOT = MOMENT_SHEETS.chariot.frames;
 
 // Points. A named anchor's centre is tile + 0.5 and spawn/move add another half tile when they turn a point into pixels
 // (scripts-runtime.js toPixel), so these helpers take WHOLE-TILE offsets and compensate: gateTile(9, -6) is exactly the centre of the
 // tile 9 east and 6 north of Gate 2's own tile, and playerTile(-2, 0) the centre of the tile two to the left of the tile she stands on.
 const gateTile = (dx, dy) => ({ anchor: 'Gate 2 (Main Entrance)', offset: [dx - 0.5, dy - 0.5] });
 const doorTile = (dx, dy) => ({ anchor: 'Main Block entrance', offset: [dx - 0.5, dy - 0.5] });
+const stairsTile = (dx, dy) => ({ anchor: 'Main Block Stairs G (up)', offset: [dx - 0.5, dy - 0.5] }); // the Main Block foyer's staircase (tile 15,25)
 const playerTile = (dx, dy) => ({ actor: 'player', offset: [dx - 0.5, dy - 0.5] });
 
 // M1, the unicorn and the prince (the owner's own inside joke, her line EXACTLY as written). Just inside Gate 2: a unicorn grazes on the
@@ -307,6 +320,69 @@ const MOMENT_MEVIN_STEPS = [
   { unlockInput: true },
 ];
 
+// M3, Prof. Raja's chariot (the owner: "make him a sort of Indian raja ... a sudden random appearance of a chariot that comes and takes him
+// away, all in a fun interesting way"). In the Main Block foyer, once she holds the first key (src/moments.js). Raja is a named ambient
+// character standing at tile (26,19) in the hall (the ambient crowd is hidden for a moment and the standing one is retired when it starts,
+// src/scenes/world.js retireAmbientFor(); here he is a script actor on his own tile, so nothing jumps). The camera glides to him, he says
+// his line, a gallop swells, he looks up, and a gilded chariot comes down the hall from the north (out of the library lobby, front view,
+// horn, dust puffs), pulling up beside him. He steps aboard ("My ride"), it thunders off down the hall in a trail of sparkles and dust, and
+// she is left with her closing line and the camera back on her. Everything is placed from the staircase's tile (stairsTile), not from her:
+// the camera is centred two rows BELOW the figures, so Raja and the chariot stand above the dialog box during every line (checked in
+// tests/unit/moments.test.js), wherever in the hall she stands. About 16-17 s.
+const MOMENT_CHARIOT_STEPS = [
+  { lockInput: true },
+  { letterbox: 'in' },
+  { spawnActor: { id: 'raja', sprite: 'npc-prof-raja', at: stairsTile(11, -6), facing: 'left' } },
+  { parallel: [
+    { cameraPan: { to: stairsTile(7, -4), ms: 1000 } },
+    { face: { actor: 'raja', toward: 'player' } },
+  ] },
+  { say: { speaker: 'Prof. Raja', lines: ['Ah, {name}! Class is dismissed. A king never walks.'], autoMs: 1700 } },
+  // A gallop swells in the distance; he turns to look up the hall, and the chariot comes down it out of the library lobby.
+  { sound: 'chariotRumble' },
+  { parallel: [
+    { sequence: [{ wait: 700 }, { face: { actor: 'raja', dir: 'up' } }, { emote: { actor: 'raja', kind: '!' } }] },
+    { sequence: [
+      { wait: 600 },
+      { spawnActor: { id: 'chariot', sprite: MOMENT_SHEETS.chariot.key, kind: 'image', frame: CHARIOT.trotA, feet: MOMENT_SHEETS.chariot.feet, shadowSize: [34, 7], at: stairsTile(5, -13), facing: 'down' } },
+      { loop: { actor: 'chariot', frames: [CHARIOT.trotA, CHARIOT.trotB], frameMs: 140 } },
+      { parallel: [
+        { sequence: [
+          { move: { actor: 'chariot', path: [stairsTile(5, -9), stairsTile(6, -7)], speed: 6 } },
+          { move: { actor: 'chariot', path: [stairsTile(6, -5)], speed: 3 } },
+        ] },
+        { sparkles: { actor: 'chariot', ms: 1700, every: 90, kind: 'dust' } },
+      ] },
+    ] },
+  ] },
+  // It pulls up: the horses stop, the horn blares, Raja turns to it.
+  { frame: { actor: 'chariot', frame: CHARIOT.trotA } },
+  { parallel: [
+    { sound: 'chariotHorn' },
+    { face: { actor: 'raja', toward: 'chariot' } },
+  ] },
+  { wait: 300 },
+  { say: { speaker: 'Prof. Raja', lines: ['My ride. Kindly mind the marks, {name}.'], autoMs: 1700 } },
+  // He steps up beside the horses and disappears into the cart; the parasol is already up.
+  { move: { actor: 'raja', path: [stairsTile(7, -6), stairsTile(6, -6)], speed: 3.5 } },
+  { despawnActor: 'raja' },
+  { sound: 'chariotHorn' },
+  { loop: { actor: 'chariot', frames: [CHARIOT.ridedA, CHARIOT.ridedB], frameMs: 140 } },
+  { wait: 250 },
+  // Off down the hall, accelerating, in a cloud of dust and a trail of gold sparkles; it is out of the picture before the dust settles.
+  { parallel: [
+    { move: { actor: 'chariot', path: [stairsTile(6, 4)], speed: 5, ease: 'Quad.easeIn' } },
+    { sparkles: { actor: 'chariot', ms: 1600, every: 70, kind: 'dust' } },
+    { sparkles: { actor: 'chariot', ms: 1600, every: 90 } },
+  ] },
+  { despawnActor: 'chariot' },
+  { cameraPan: { to: { actor: 'player' }, ms: 900 } },
+  { say: { speaker: '{name}', lines: ['Okay. Never mind. This is definitely BITS.'], autoMs: 1600 } },
+  { cameraFollow: 'player' },
+  { letterbox: 'out' },
+  { unlockInput: true },
+];
+
 const SCRIPTS = {
   // The fast path: `?intro=0`, an old save, or simply walking up to the same spot -- the existing
   // 'Gate 2 entrance' Tiled trigger (unchanged) fires this exactly like it always fired the old gate2
@@ -336,4 +412,5 @@ const SCRIPTS = {
   // The moments (src/moments.js MOMENTS names these keys; run unskippable by world.js checkMoment()).
   momentUnicorn: MOMENT_UNICORN_STEPS,
   momentMevin: MOMENT_MEVIN_STEPS,
+  momentChariot: MOMENT_CHARIOT_STEPS,
 };

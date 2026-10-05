@@ -29,6 +29,9 @@
 //         and camera included), which wins over the role's outfit in ambientSheetKey(); `character` stays the plain body used as the
 //         fallback if that sheet never loaded. `factIds` (e.g. ['CF23']) limits which of the role's facts the character says after
 //         her fixed lines; `[]` means only the fixed lines, said again every time (Mustafa). A line may use `{name}`: the player's name.
+//   unlessMoment?: OPTIONAL, a moment id (src/moments.js): once that moment has played (GameState.seenMoments) the entry is never built again,
+//         and the moment itself removes the standing one when it starts (world.js createAmbient()/retireAmbientFor()). Prof. Raja carries
+//         'm3': the chariot takes him away for good. Until then he is an ordinary named character with his own lines.
 //   The student's clothes come from her ROLE, not from the entry (unless it has a `sheet`): a club role (CAMPUS_ROLES[role].outfit) draws with
 //         the club's colours, `npc-<character>-<outfit>` (FB-0057, src/campus-facts.js ambientSheetKey()).
 //   kind: 'patrol'  -- { waypoints: [{x,y}, ...], loop?, speed, pauseMs, facing? }
@@ -184,9 +187,9 @@ const AMBIENT = {
     // least 3 tiles from the LUG volunteer (14,16) behind the left staircase, the stairs object (15,25), and every
     // door, and never in a one-tile lane (the ramp's rail lanes, the staircase's west lane) or a doorway.
     // By the right-back sofas, and in the open hall west of the terrarium.
-    // FB-0051 (P2b): Prof. Raja waits in the hall (a later package sends a chariot for him), Shamsuddin crosses it.
+    // FB-0051 (P2b): Prof. Raja waits in the hall until the chariot (M3, src/moments.js) comes for him once she holds the first key; Shamsuddin crosses it.
     { id: 'mbg-amb-sit-1', character: 'ambient-e', role: 'tech-club-member', kind: 'idle', x: 26, y: 19, facing: 'left', factIds: ['CF12'],
-      name: "Prof. Raja", sheet: 'npc-prof-raja',
+      name: "Prof. Raja", sheet: 'npc-prof-raja', unlessMoment: 'm3',
       lines: [
         "Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture.",
         "I carry myself like royalty because my timetable demands it. Mostly the Monday ones.",
@@ -312,3 +315,10 @@ const AMBIENT = {
     { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 34, y: 19, facing: 'down' },
   ],
 };
+
+// The entries of one map's ambient list that exist for this save: an entry with `unlessMoment` is dropped once that moment has played
+// (`seenMoments`: a Set or an array of moment ids). Pure; src/scenes/world.js createAmbient() builds its sprites from the result.
+function ambientEntriesFor(list, seenMoments) {
+  const seen = seenMoments && typeof seenMoments.has === 'function' ? seenMoments : new Set(seenMoments || []);
+  return (list || []).filter((def) => !(def.unlessMoment && seen.has(def.unlessMoment)));
+}

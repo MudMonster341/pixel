@@ -64,6 +64,10 @@ const SOUNDS = {
   drumCrash: { file: 'assets/audio/generated/drum-crash.wav', volume: 0.4, loop: false, category: 'sfx' },
   drumRoll: { file: 'assets/audio/generated/drum-roll.wav', volume: 0.5, loop: false, category: 'sfx' },
   drumRimshot: { file: 'assets/audio/generated/drum-rimshot.wav', volume: 0.5, loop: false, category: 'sfx' },
+  // M3 (Prof. Raja's chariot, tools/make-audio.js synthChariotRumble()/synthChariotHorn()): a swelling gallop (~2.1 s) and a two-note horn (~0.9 s),
+  // played by the moment's script (src/scripts.js SCRIPTS.momentChariot).
+  chariotRumble: { file: 'assets/audio/generated/chariot-rumble.wav', volume: 0.55, loop: false, category: 'sfx' },
+  chariotHorn: { file: 'assets/audio/generated/chariot-horn.wav', volume: 0.5, loop: false, category: 'sfx' },
 
   // ---------- mini-games (src/minigames/): jump/flap/line-clear are synth-generated (no pack had a
   // clean match, docs/ROADMAP.md M5 rule 6); win/lose reuse Kenney jingles ----------

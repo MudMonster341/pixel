@@ -1155,3 +1155,9 @@ per docs/plans/2026-10-03-birthday-sprint.md. No pushes during the build; the fu
 **Did:** `npm run feedback`: nothing new (owner has not played the second build; no edits to campus-lines-review.md; no NPC line mentions a birthday). Juice pass by one Sonnet agent: `src/juice.js` (pure plans + shape-drawn effects, `?juice=0`, wall-clock failsafe), key-pickup sparkle flying to the "Keys n/3" tracker label (also for Alice's key), mini-game hit flash/shake (`hurtHit`) and win confetti, "!" over a person who stops to talk and a heart over named friends after the talk. 15 `JUICE:` tests.
 **Check in a browser:** sparkle target in pill vs expanded state, confetti on the win card, shake gentleness, `?juice=0`.
 **Next:** M3 Prof. Raja's chariot (main-block-g), M4 Sana/Shraddha/Palak, then W2/W6 placeholders.
+
+## 2026-10-05 (Day 4) - M3 Prof. Raja's chariot: 1084 unit tests green
+
+**Did:** moment `m3` in main-block-g (trigger around the stairs, x12..28 y22..29, needs >=1 key: new generic `after: { keys: N }`), script `momentChariot` (~16.4 s: Raja "A king never walks", gallop, gilded front-view chariot with two palomino CC0 horses arrives from the north with dust, horn, he boards, it leaves south; Taru "Okay. Never mind. This is definitely BITS."), `moment-chariot.png` via `tools/make-moments.js`, sounds `chariotRumble`/`chariotHorn`, `sparkles` kind 'dust', ambient Raja carries `unlessMoment: 'm3'` and is gone after the scene (`ambientEntriesFor`, `retireAmbientFor`). Docs/credits updated. Likely seen right after she first comes back down to the foyer holding a key.
+**Check in a browser:** camera pan to (22,21), depth sorting in the hall's 1-tile lanes, Raja gone after reload, gallop/horn timing; no qa-shots flow for M3 yet.
+**Next:** M4 Sana/Shraddha/Palak (`after: { keys: 2 }`), then W2/W6.

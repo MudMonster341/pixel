@@ -516,7 +516,19 @@ class WorldScene extends Phaser.Scene {
   // every frame by updateAmbient() (patrol waypoints, the "pause near her" yield, the chat pairs' own
   // emote), which createNpcs()'s own always-still NPCs never needed.
   createAmbient() {
-    this.ambientNpcs = (this.def.ambient || []).map((def, i) => this.buildAmbientNpc(def, i));
+    // `unlessMoment` (src/ambient.js: Prof. Raja leaves in M3, the chariot): an entry whose moment has already played is never built again.
+    this.ambientNpcs = ambientEntriesFor(this.def.ambient, GameState.seenMoments).map((def, i) => this.buildAmbientNpc(def, i));
+  }
+
+  // The moment `momentId` is starting: the ambient people it takes away (`unlessMoment`: Prof. Raja, whom the chariot collects) are removed now,
+  // sprite, shadow and body, so they are not standing there again when the scene ends (the script plays them itself as an actor).
+  retireAmbientFor(momentId) {
+    this.ambientNpcs = (this.ambientNpcs || []).filter((ambient) => {
+      if (ambient.def.unlessMoment !== momentId) return true;
+      ambient.sprite.disableBody(true, true); // off and invisible, but still a valid object for the player's collider
+      ambient.shadow.destroy();
+      return false;
+    });
   }
 
   buildAmbientNpc(def, index) {
@@ -2078,6 +2090,7 @@ class WorldScene extends Phaser.Scene {
       blocked,
       visitCount: this.momentsThisVisit,
       freeSeconds: this.freeSeconds,
+      keys: Object.values(GameState.quest.keys).filter(Boolean).length,
       anchor: (name) => resolveAnchor(this.mapObjects, name),
     });
     if (moment) this.playMoment(moment);
@@ -2093,6 +2106,7 @@ class WorldScene extends Phaser.Scene {
     markMomentStarted(GameState, moment.id, GameState.playSeconds);
     notifyStateChanged(); // src/save.js autosaves soon after
     const before = new Set(this.scriptRunner.actors.keys());
+    this.retireAmbientFor(moment.id);
     this.setAmbientVisible(false);
     const restore = () => {
       for (const id of [...this.scriptRunner.actors.keys()]) if (!before.has(id)) this.scriptRunner.step_despawnActor(id);

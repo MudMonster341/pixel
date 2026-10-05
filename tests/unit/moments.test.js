@@ -30,30 +30,48 @@ const campusJson = JSON.parse(read('assets', 'maps', 'campus.json'));
 const campusGrid = gridFromTiled(campusJson);
 const campusObjects = tiledObjects(campusJson);
 const anchor = (name) => { const p = resolveAnchor(campusObjects, name); return p ? { x: p.x, y: p.y } : null; };
-const rectOf = (id) => momentTriggerRect(MOMENTS.find((m) => m.id === id), anchor);
 const walkable = (x, y) => isWalkableTile(campusGrid, tileInfo, x, y);
+// Any map a moment can be on (M1 and M2 are on the campus, M3 in the Main Block foyer): its anchors and its walkable tiles.
+const mapCache = new Map();
+function mapOf(key) {
+  if (!mapCache.has(key)) {
+    const json = JSON.parse(read('assets', 'maps', `${key}.json`));
+    const grid = gridFromTiled(json);
+    const objects = tiledObjects(json);
+    mapCache.set(key, {
+      key, json, grid, objects,
+      anchor: (name) => { const p = resolveAnchor(objects, name); return p ? { x: p.x, y: p.y } : null; },
+      walkable: (x, y) => isWalkableTile(grid, tileInfo, x, y),
+    });
+  }
+  return mapCache.get(key);
+}
+const momentOf = (id) => MOMENTS.find((m) => m.id === id);
+const rectOf = (id) => momentTriggerRect(momentOf(id), mapOf(momentOf(id).map).anchor);
 
-// A GameState-shaped object for the pure rules.
-const fresh = (over = {}) => ({ seenMoments: new Set(), lastMomentAt: null, seenCutscenes: new Set(['gate2']), ...over });
+// A GameState-shaped object for the pure rules (no keys held: `quest` has the real shape, { keys: { physicsLab, icl, room195 } }).
+const fresh = (over = {}) => ({ seenMoments: new Set(), lastMomentAt: null, seenCutscenes: new Set(['gate2']), quest: { keys: { physicsLab: false, icl: false, room195: false } }, ...over });
 const inside = (id) => { const r = rectOf(id); return { tileX: r.x0 + 1, tileY: r.y0 + 1 }; };
-const ctxFor = (id, over = {}) => ({ map: 'campus', ...inside(id), enabled: true, blocked: false, visitCount: 0, anchor, ...over });
+const ctxFor = (id, over = {}) => ({ map: momentOf(id).map, ...inside(id), enabled: true, blocked: false, visitCount: 0, anchor: mapOf(momentOf(id).map).anchor, ...over });
 
 // ---------- the table ----------
 
-test('FB-0051: MOMENTS lists M1 then M2, each on the campus with a real script, a trigger rectangle that exists on the map, and the right order', () => {
-  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2']);
+test('FB-0051: MOMENTS lists M1, M2 then M3, each with a real script, a trigger rectangle that exists on its own map, and the right order', () => {
+  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2', 'm3']);
   for (const m of MOMENTS) {
-    assert.ok(MAPS[m.map] && !MAPS[m.map].indoors, `${m.id}: an outdoor map`);
+    assert.ok(MAPS[m.map], `${m.id}: a real map`);
     assert.ok(Array.isArray(SCRIPTS[m.script]) && SCRIPTS[m.script].length > 0, `${m.id}: script "${m.script}" is in SCRIPTS`);
-    const rect = momentTriggerRect(m, anchor);
-    assert.ok(rect, `${m.id}: the anchor "${m.trigger.anchor}" resolves on the campus`);
+    const here = mapOf(m.map);
+    const rect = momentTriggerRect(m, here.anchor);
+    assert.ok(rect, `${m.id}: the anchor "${m.trigger.anchor}" resolves on ${m.map}`);
     assert.ok(rect.x1 >= rect.x0 && rect.y1 >= rect.y0);
     let open = 0;
-    for (let y = rect.y0; y <= rect.y1; y++) for (let x = rect.x0; x <= rect.x1; x++) if (walkable(x, y)) open++;
+    for (let y = rect.y0; y <= rect.y1; y++) for (let x = rect.x0; x <= rect.x1; x++) if (here.walkable(x, y)) open++;
     assert.ok(open >= 20, `${m.id}: she can actually stand on most of the trigger (${open} walkable tiles)`);
   }
   assert.deepEqual(plain(MOMENTS[0].after), { cutscene: 'gate2' }, 'M1 waits for the Gate 2 welcome / the opening');
   assert.deepEqual(plain(MOMENTS[1].after), { moments: ['m1'] }, 'M2 comes after M1');
+  assert.deepEqual(plain(MOMENTS[2].after), { keys: 1 }, 'M3 waits for the first key');
   assert.equal(MOMENT_GAP_S, 90);
   assert.equal(MOMENT_PER_VISIT, 1);
   // The entrance pair chains: M2 overrides the global gap (a few seconds after M1 ENDS) and may share M1's map visit; M1 uses the defaults.
@@ -62,6 +80,10 @@ test('FB-0051: MOMENTS lists M1 then M2, each on the campus with a real script, 
   assert.equal(momentGapS(MOMENTS[1]), 6);
   assert.equal(momentGapS(MOMENTS[0]), MOMENT_GAP_S, 'M1 has no override');
   assert.equal(MOMENTS[0].sameVisitOk, undefined);
+  assert.equal(momentGapS(MOMENTS[2]), MOMENT_GAP_S, 'M3 uses the default 90 s gap');
+  assert.equal(momentFitsVisit(MOMENTS[2], 1), false, 'and one moment per map visit');
+  assert.equal(MOMENTS[2].sameVisitOk, undefined);
+  assert.equal(MOMENTS[2].afterFreeS, undefined);
   // M1 is on the avenue just inside Gate 2 (before the forecourt); M2 is on the forecourt in front of the Main Block door
   const gate = anchor('Gate 2 (Main Entrance)');
   const door = anchor('Main Block entrance');
@@ -418,14 +440,15 @@ test('FB-0051: the drum bar and the rimshot line up: the bar is 8 hits of 280 ms
 
 test('FB-0051: measured at the runtime\'s own speeds, each moment lasts 8-20 s from every tile its trigger can fire on, and never waits for a key', () => {
   for (const m of MOMENTS) {
-    const rect = momentTriggerRect(m, anchor);
+    const here = mapOf(m.map);
+    const rect = momentTriggerRect(m, here.anchor);
     let min = Infinity;
     let max = 0;
     let tiles = 0;
     for (let ty = rect.y0; ty <= rect.y1; ty++) {
       for (let tx = rect.x0; tx <= rect.x1; tx++) {
-        if (!walkable(tx, ty)) continue;
-        const tl = momentTimeline(SCRIPTS[m.script], { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+        if (!here.walkable(tx, ty)) continue;
+        const tl = momentTimeline(SCRIPTS[m.script], { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
         assert.deepEqual(plain(tl.unknownSteps), [], `${m.id} at ${tx},${ty}: a step the measurer does not know, or a point that does not resolve`);
         assert.equal(tl.needsInput, false, `${m.id}: a line without autoMs would wait for a key press`);
         min = Math.min(min, tl.durationMs);
@@ -455,12 +478,13 @@ test('FB-0051: the measurer\'s speeds are the runtime\'s own (letterbox slide, t
 
 test('FB-0051: every place an actor stands or walks on the ground is open, walkable campus (no wall, tree trunk, building or water), from every tile she can be on, and the camera targets are on the map', () => {
   for (const m of MOMENTS) {
-    const rect = momentTriggerRect(m, anchor);
+    const here = mapOf(m.map);
+    const rect = momentTriggerRect(m, here.anchor);
     const feet = { character: 7 };
     for (let ty = rect.y0; ty <= rect.y1; ty++) {
       for (let tx = rect.x0; tx <= rect.x1; tx++) {
-        if (!walkable(tx, ty)) continue;
-        const tl = momentTimeline(SCRIPTS[m.script], { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+        if (!here.walkable(tx, ty)) continue;
+        const tl = momentTimeline(SCRIPTS[m.script], { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
         for (const [id, a] of Object.entries(tl.actors)) {
           // the unicorn and the kit are image actors: their hooves are `feet` px below their centre (MOMENT_SHEETS)
           const sheet = Object.values(MOMENT_SHEETS).find((s) => a.kind === 'image' && s.key === a.sheet);
@@ -469,7 +493,7 @@ test('FB-0051: every place an actor stands or walks on the ground is open, walka
             if (w.alt > 0) continue; // in the air: it flies over everything
             const x = Math.floor(w.x / 16);
             const y = Math.floor((w.y + below) / 16);
-            assert.ok(walkable(x, y), `${m.id}: ${id} stands on tile ${x},${y} (blocked), with her at ${tx},${ty}`);
+            assert.ok(here.walkable(x, y), `${m.id}: ${id} stands on tile ${x},${y} (blocked), with her at ${tx},${ty}`);
           }
         }
         // the player is never moved by a moment: nothing can leave her in a collider
@@ -484,15 +508,16 @@ test('FB-0051: every place an actor stands or walks on the ground is open, walka
   }
   for (const m of MOMENTS) {
     for (const name of new Set(JSON.stringify(SCRIPTS[m.script]).match(/"anchor":"[^"]+"/g))) {
-      assert.ok(anchor(JSON.parse(`{${name}}`).anchor), `${m.id}: ${name} resolves on the campus`);
+      assert.ok(mapOf(m.map).anchor(JSON.parse(`{${name}}`).anchor), `${m.id}: ${name} resolves on ${m.map}`);
     }
   }
 });
 
 test('FB-0051: every actor a moment spawns is gone again at the end, hidden actors are shown again, and she ends exactly where she started, free', () => {
   for (const m of MOMENTS) {
-    const rect = momentTriggerRect(m, anchor);
-    const tl = momentTimeline(SCRIPTS[m.script], { anchor, player: { x: (rect.x0 + 2) * 16 + 8, y: (rect.y0 + 1) * 16 + 8 } });
+    const here = mapOf(m.map);
+    const rect = momentTriggerRect(m, here.anchor);
+    const tl = momentTimeline(SCRIPTS[m.script], { anchor: here.anchor, player: { x: (rect.x0 + 2) * 16 + 8, y: (rect.y0 + 1) * 16 + 8 } });
     for (const [id, a] of Object.entries(tl.actors)) assert.equal(a.despawned, true, `${m.id}: ${id} is still standing there when the scene ends`);
     assert.deepEqual([tl.player.x, tl.player.y], [(rect.x0 + 2) * 16 + 8, (rect.y0 + 1) * 16 + 8]);
     // the runner puts input back on its own whatever the script says (run()'s finally), and the script itself unlocks last
@@ -824,6 +849,7 @@ test('FB-0051: the review doc lists the moment lines (so the owner can edit them
   for (const text of [
     "WOAH, WHAT? I'm not drunk yet, so why is a unicorn here?", "Don't mind me. I'm always watching.", 'Huh... is this the actual BITS?',
     'WOAHHH, {name}! You da goat!', 'Come watch me perform at Jashn some day!', 'Mevin (Treble)',
+    'Ah, {name}! Class is dismissed. A king never walks.', 'My ride. Kindly mind the marks, {name}.', 'Okay. Never mind. This is definitely BITS.',
   ]) assert.ok(doc.includes(text), `campus-lines-review.md lacks "${text}"`);
   const lines = [];
   for (const m of MOMENTS) walkSteps(SCRIPTS[m.script], (type, body) => { if (type === 'say') lines.push(...body.lines); }, m.script);
@@ -941,12 +967,13 @@ test('FB-0051: during every `say` of a moment, every actor and prop is at or abo
   const margin = 4; // keep a few px clear of the box
   const halfWidth = 960 / ZOOM / 2; // 160 world px
   for (const m of MOMENTS) {
-    const rect = momentTriggerRect(m, anchor);
+    const here = mapOf(m.map);
+    const rect = momentTriggerRect(m, here.anchor);
     let checked = 0;
     for (let ty = rect.y0; ty <= rect.y1; ty++) {
       for (let tx = rect.x0; tx <= rect.x1; tx++) {
-        if (!walkable(tx, ty)) continue;
-        const tl = momentTimeline(SCRIPTS[m.script], { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+        if (!here.walkable(tx, ty)) continue;
+        const tl = momentTimeline(SCRIPTS[m.script], { anchor: here.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
         assert.ok(tl.says.length >= 3 || m.id === 'm2', `${m.id}: the timeline records its lines`);
         for (const say of tl.says) {
           for (const a of say.actors) {
@@ -991,4 +1018,306 @@ test('FB-0051: the "E" interact prompt is hidden for the whole of any script (mo
   // a scene without a prompt (the unit fakes) is fine
   const other = makeRunner();
   await other.runner.run([{ wait: 1 }]);
+});
+
+// ---------- M3, Prof. Raja's chariot ----------
+
+const foyer = () => mapOf('main-block-g');
+const RAJA_TILE = { x: 26, y: 19 }; // his ambient entry's tile in the Main Block foyer
+
+test('FB-0051: `after: { keys: N }` holds a moment back until she has N keys (counted from GameState.quest.keys, or ctx.keys); N = 1 for M3, so M2 and M3 are independent of each other', () => {
+  const { momentKeysHeld } = game;
+  const keys = (physicsLab, icl, room195) => ({ quest: { keys: { physicsLab, icl, room195 } } });
+  assert.equal(momentKeysHeld(fresh(), {}), 0);
+  assert.equal(momentKeysHeld({ seenMoments: new Set() }, {}), 0, 'a bare state has no quest: no keys');
+  assert.equal(momentKeysHeld(fresh(keys(true, false, true)), {}), 2);
+  assert.equal(momentKeysHeld(fresh(), { keys: 3 }), 3, 'ctx.keys wins');
+  const m3 = (over = {}, state = fresh()) => momentDue(state, 1000, ctxFor('m3', over));
+  assert.equal(m3({}), null, 'no key yet');
+  assert.equal(m3({ keys: 0 }), null);
+  assert.equal(m3({}, fresh(keys(false, false, false))), null);
+  assert.equal(m3({ keys: 1 })?.id, 'm3', 'one key (ctx)');
+  assert.equal(m3({}, fresh(keys(true, false, false)))?.id, 'm3', 'the first key (state)');
+  assert.equal(m3({}, fresh(keys(false, true, false)))?.id, 'm3', 'any one key counts');
+  assert.equal(m3({}, fresh(keys(true, true, true)))?.id, 'm3', 'all three keys: still due the first time');
+  // a generic condition: N = 2 holds back one key, passes two (the three friends, M4, will use this)
+  const two = [{ id: 'mx', map: 'main-block-g', script: 'x', trigger: MOMENTS[2].trigger, after: { keys: 2 } }];
+  assert.equal(momentDue(fresh(), 1000, ctxFor('m3', { moments: two, keys: 1 })), null);
+  assert.equal(momentDue(fresh(), 1000, ctxFor('m3', { moments: two, keys: 2 }))?.id, 'mx');
+  // it needs neither M1 nor M2 to have played (they are on the campus; she may reach the foyer first on an old save)
+  assert.equal(m3({ keys: 1 }, fresh({ seenCutscenes: new Set() }))?.id, 'm3');
+  // and the world feeds it the real count
+  assert.match(read('src', 'scenes', 'world.js'), /keys: Object\.values\(GameState\.quest\.keys\)\.filter\(Boolean\)\.length,/);
+});
+
+test('FB-0051: M3 plays once only, only on the Main Block ground floor, only inside its hall trigger, never while anything is up, and keeps the default pacing (90 s, one per visit)', () => {
+  const r = rectOf('m3');
+  const keyed = (over = {}) => fresh({ quest: { keys: { physicsLab: true, icl: false, room195: false } }, ...over });
+  assert.equal(momentDue(keyed(), 500, ctxFor('m3'))?.id, 'm3');
+  assert.equal(momentDue(keyed(), 500, ctxFor('m3', { map: 'campus' })), null, 'never on another map');
+  assert.equal(momentDue(keyed(), 500, ctxFor('m3', { map: 'main-block-1' })), null);
+  for (const [tileX, tileY] of [[r.x0 - 1, r.y0 + 1], [r.x1 + 1, r.y0 + 1], [r.x0 + 2, r.y0 - 1], [r.x0 + 2, r.y1 + 1]]) {
+    assert.equal(momentDue(keyed(), 500, ctxFor('m3', { tileX, tileY })), null, `outside the trigger at ${tileX},${tileY}`);
+  }
+  assert.equal(momentDue(keyed(), 500, ctxFor('m3', { blocked: true })), null, 'a dialog or script is up');
+  assert.equal(momentDue(keyed(), 500, ctxFor('m3', { enabled: false })), null, '?moments=0');
+  // once only, ever
+  const played = keyed({ seenMoments: new Set(['m3']) });
+  assert.equal(momentDue(played, 1e9, ctxFor('m3', { keys: 3 })), null);
+  // the default gap and the per-visit cap
+  const after = (now, over) => momentDue(keyed({ seenMoments: new Set(['m1', 'm2']), lastMomentAt: 200 }), now, ctxFor('m3', over));
+  assert.equal(after(206, {}), null, 'not the 6 s of the entrance pair');
+  assert.equal(after(289.9, {}), null);
+  assert.equal(after(290, {})?.id, 'm3', '90 s after the last moment');
+  assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
+});
+
+test('FB-0051: M3 plays in order: Raja\'s line, a gallop, the chariot arrives (a horn, dust), "My ride", he steps aboard, it leaves, her closing line; no line mentions a birthday', () => {
+  const steps = plain(SCRIPTS.momentChariot);
+  const flat = [];
+  walkSteps(steps, (type, body) => flat.push({ type, body }), 'm3');
+  const idx = (pred, from = 0) => flat.findIndex((s, i) => i >= from && pred(s));
+  const spawnRaja = idx((s) => s.type === 'spawnActor' && s.body.id === 'raja');
+  const line1 = idx((s) => s.type === 'say' && s.body.lines[0].startsWith('Ah, {name}!'));
+  const rumble = idx((s) => s.type === 'sound' && s.body === 'chariotRumble');
+  const spawnChariot = idx((s) => s.type === 'spawnActor' && s.body.id === 'chariot');
+  const dustIn = idx((s) => s.type === 'sparkles' && s.body.kind === 'dust' && s.body.actor === 'chariot', spawnChariot);
+  const horn = idx((s) => s.type === 'sound' && s.body === 'chariotHorn');
+  const line2 = idx((s) => s.type === 'say' && s.body.lines[0].startsWith('My ride.'));
+  const board = idx((s) => s.type === 'despawnActor' && s.body === 'raja');
+  const ridden = idx((s) => s.type === 'loop' && s.body.frames.includes(MOMENT_SHEETS.chariot.frames.ridedA));
+  const leave = idx((s) => s.type === 'move' && s.body.actor === 'chariot', ridden);
+  const gone = idx((s) => s.type === 'despawnActor' && s.body === 'chariot');
+  const closing = idx((s) => s.type === 'say' && s.body.speaker === '{name}');
+  const order = [spawnRaja, line1, rumble, spawnChariot, dustIn, horn, line2, board, ridden, leave, gone, closing];
+  assert.ok(order.every((i) => i >= 0), `a beat is missing: ${order}`);
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'beats out of order');
+  const says = flat.filter((s) => s.type === 'say').map((s) => s.body);
+  assert.equal(says.length, 3);
+  assert.deepEqual(says.map((s) => s.speaker), ['Prof. Raja', 'Prof. Raja', '{name}'], 'Raja keeps his ambient name tag');
+  assert.deepEqual(says.map((s) => s.lines), [['Ah, {name}! Class is dismissed. A king never walks.'], ['My ride. Kindly mind the marks, {name}.'], ['Okay. Never mind. This is definitely BITS.']]);
+  // the same sheet and look as the ambient Raja standing in the hall
+  assert.equal(flat[spawnRaja].body.sprite, 'npc-prof-raja');
+  assert.equal(AMBIENT['main-block-g'].find((e) => e.name === 'Prof. Raja').sheet, 'npc-prof-raja');
+  // the chariot's two frame loops (empty cart, then Raja aboard) and its exit with dust AND sparkles
+  const loops = flat.filter((s) => s.type === 'loop').map((s) => s.body.frames);
+  assert.deepEqual(loops, [[0, 1], [2, 3]]);
+  const exit = steps.find((s) => s.parallel && s.parallel.some((p) => p.move && p.move.actor === 'chariot') && s.parallel.some((p) => p.sparkles && p.sparkles.kind === 'dust') && s.parallel.some((p) => p.sparkles && !p.sparkles.kind));
+  assert.ok(exit, 'it leaves in a cloud of dust and a trail of sparkles');
+  for (const s of says) for (const line of s.lines) assert.doesNotMatch(line.toLowerCase(), /birthday|bday|b-day/);
+});
+
+test('FB-0051: M3 on the real foyer: it lasts 8-20 s, ends without a key press, Raja starts on his own ambient tile, and every ground spot of the arrival, the stop and the exit lane is open floor', () => {
+  const here = foyer();
+  const rect = rectOf('m3');
+  const tl = momentTimeline(SCRIPTS.momentChariot, { anchor: here.anchor, player: { x: (rect.x0 + 2) * 16 + 8, y: (rect.y0 + 1) * 16 + 8 } });
+  assert.deepEqual(plain(tl.unknownSteps), []);
+  assert.equal(tl.needsInput, false);
+  assert.ok(tl.durationMs >= MOMENT_MIN_MS && tl.durationMs <= MOMENT_MAX_MS, `${Math.round(tl.durationMs)} ms`);
+  assert.ok(tl.durationMs >= 14000 && tl.durationMs <= 19000, `about 16 s (${Math.round(tl.durationMs)} ms)`);
+  // Raja begins exactly where his ambient entry stands
+  const ambientRaja = AMBIENT['main-block-g'].find((e) => e.name === 'Prof. Raja');
+  assert.deepEqual([ambientRaja.x, ambientRaja.y], [RAJA_TILE.x, RAJA_TILE.y]);
+  const rajaStart = tl.actors.raja.waypoints[0];
+  assert.deepEqual([Math.floor(rajaStart.x / 16), Math.floor(rajaStart.y / 16)], [RAJA_TILE.x, RAJA_TILE.y]);
+  // every straight stretch of the ground path (sampled every 4 px, the feet of whoever walks it) is open floor; the chariot's feet are 21 px below its centre
+  const feet = { raja: 7, chariot: MOMENT_SHEETS.chariot.feet };
+  for (const [id, a] of Object.entries(tl.actors)) {
+    for (let i = 1; i < a.waypoints.length; i++) {
+      const p = a.waypoints[i - 1];
+      const q = a.waypoints[i];
+      const n = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 4));
+      for (let k = 0; k <= n; k++) {
+        const x = Math.floor((p.x + ((q.x - p.x) * k) / n) / 16);
+        const y = Math.floor((p.y + ((q.y - p.y) * k) / n + feet[id]) / 16);
+        assert.ok(here.walkable(x, y), `${id}: its feet cross tile ${x},${y} (blocked) on the way to waypoint ${i}`);
+      }
+    }
+  }
+  // it comes from the north (the library lobby side) and leaves south: front view all the way
+  const chariot = tl.actors.chariot.waypoints;
+  assert.ok(chariot[0].y < chariot[1].y && chariot.at(-1).y > chariot[0].y + 8 * 16, 'it comes down the hall and leaves down it');
+  assert.ok(chariot[0].y + 22 < tl.says[1].camY - 90, 'it starts above the top edge of the picture (off screen), so it really arrives');
+  assert.ok(chariot.at(-1).y - 22 > tl.says[1].camY + 90, 'and ends below the bottom edge: out of the picture');
+  // it stops beside Raja and clear of the stairs' block (x 13..18) and of the sofas (x 23..25)
+  const stop = chariot[3];
+  assert.ok(stop.x - 20 > 19 * 16 && stop.x + 20 < 23 * 16, `the stopped chariot spans ${stop.x - 20}..${stop.x + 20} px`);
+  // she is never moved
+  assert.equal(tl.player.waypoints.length, 1);
+});
+
+test('FB-0051: M3\'s trigger covers every way to the staircase, the LUG volunteer behind it, Raja\'s corner and the library door: she cannot get past the central hall without crossing it, and the stairs\' own arrival tile is inside it', () => {
+  const here = foyer();
+  const rect = rectOf('m3');
+  const inRect = (x, y) => x >= rect.x0 && x <= rect.x1 && y >= rect.y0 && y <= rect.y1;
+  const spawn = here.objects.find((o) => o.type === 'spawn');
+  const start = [Math.floor(spawn.x), Math.floor(spawn.y)];
+  assert.ok(!inRect(...start), 'she arrives from the front doors, outside the trigger');
+  const seen = new Set([start.join(',')]);
+  const stack = [start];
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const k = `${nx},${ny}`;
+      if (seen.has(k) || !here.walkable(nx, ny) || inRect(nx, ny)) continue;
+      seen.add(k);
+      stack.push([nx, ny]);
+    }
+  }
+  assert.ok(seen.size > 100, `sanity: the flood covers the lobby, the corridor and the wings (${seen.size} tiles)`);
+  const stairs = here.anchor('Main Block Stairs G (up)');
+  const places = {
+    'the stairs': [[Math.floor(stairs.x), Math.floor(stairs.y)], [Math.floor(stairs.x) + 1, Math.floor(stairs.y)]],
+    'the LUG volunteer': [[14, 16], [14, 17]],
+    'Raja': [[RAJA_TILE.x, RAJA_TILE.y]],
+    'the library door': [[19, 10], [20, 10]],
+  };
+  for (const [what, tiles] of Object.entries(places)) {
+    for (const [x, y] of tiles) {
+      if (!here.walkable(x, y)) continue; // a tile that is not floor is not a way anywhere
+      assert.ok(!seen.has(`${x},${y}`), `${what}: tile ${x},${y} is reachable without crossing M3's trigger`);
+    }
+  }
+  assert.ok(places['the stairs'].every(([x, y]) => inRect(x, y)));
+  assert.ok(inRect(Math.floor(stairs.x), Math.floor(stairs.y) + 1), 'the tile in front of the stairs (where she steps off them) is inside');
+  assert.ok(here.walkable(RAJA_TILE.x, RAJA_TILE.y) && !seen.has(`${RAJA_TILE.x},${RAJA_TILE.y}`), 'Raja\'s corner is only reachable through the trigger');
+  // a modest area: the hall in front of the staircase, not the whole floor
+  assert.ok((rect.x1 - rect.x0 + 1) * (rect.y1 - rect.y0 + 1) <= 160);
+});
+
+test('FB-0051: during every line of M3 Raja and the chariot stand at or above the camera\'s centre row, well inside the picture; the camera is centred 2 rows below the figures', () => {
+  const here = foyer();
+  const rect = rectOf('m3');
+  const tl = momentTimeline(SCRIPTS.momentChariot, { anchor: here.anchor, player: { x: (rect.x0 + 5) * 16 + 8, y: (rect.y0 + 3) * 16 + 8 } });
+  assert.deepEqual(plain(tl.says.map((s) => s.actors.map((a) => a.id).sort())), [['raja'], ['chariot', 'raja'], []]);
+  const pan = tl.says[0];
+  assert.equal(pan.camY, 21 * 16 + 8, 'the camera is centred on tile row 21 (Raja stands on row 19)');
+  assert.equal(pan.camX, 22 * 16 + 8);
+  for (const say of tl.says.slice(0, 2)) {
+    for (const a of say.actors) {
+      const sheet = Object.values(MOMENT_SHEETS).find((s) => a.kind === 'image' && s.key === a.sheet);
+      assert.ok(a.y + (sheet ? sheet.feet : 8) <= say.camY + 14, `${a.id} is behind the dialog box`);
+    }
+  }
+  // the camera never needs to go past the map's edge: centred at least half a screen from every side
+  assert.ok(pan.camX >= 160 && pan.camX <= here.json.width * 16 - 160 && pan.camY >= 90 && pan.camY <= here.json.height * 16 - 90);
+});
+
+test('FB-0051: Prof. Raja is an ordinary named ambient character until M3 (his lines still work), then gone for good: the entry carries unlessMoment "m3" and the ambient builder drops it once m3 is in seenMoments', () => {
+  const { ambientEntriesFor } = game;
+  const list = AMBIENT['main-block-g'];
+  const raja = list.find((e) => e.id === 'mbg-amb-sit-1');
+  assert.equal(raja.name, 'Prof. Raja');
+  assert.equal(raja.unlessMoment, 'm3');
+  assert.ok(MOMENTS.some((m) => m.id === raja.unlessMoment), 'the moment he leaves with exists');
+  assert.match(raja.lines.join(' '), /ride coming/i, 'his ambient lines are unchanged and still hint at the ride');
+  assert.ok(raja.lines.every((l) => l.length <= 160));
+  // before: present; after: gone, everyone else stays; works for a Set or an array
+  assert.ok(ambientEntriesFor(list, new Set()).some((e) => e.id === raja.id));
+  assert.ok(ambientEntriesFor(list, new Set(['m1', 'm2'])).some((e) => e.id === raja.id), 'other moments do not take him');
+  assert.ok(ambientEntriesFor(list, undefined).some((e) => e.id === raja.id));
+  for (const seen of [new Set(['m3']), ['m1', 'm3']]) {
+    const left = ambientEntriesFor(list, seen);
+    assert.ok(!left.some((e) => e.id === raja.id), 'gone once m3 has played');
+    assert.equal(left.length, list.length - 1, 'and nobody else is touched');
+  }
+  // only Raja carries the field
+  const holders = Object.values(AMBIENT).flat().filter((e) => e.unlessMoment).map((e) => e.id);
+  assert.deepEqual(holders, ['mbg-amb-sit-1']);
+  // the engine: createAmbient() builds from ambientEntriesFor(), and a moment that starts retires its own people BEFORE the crowd is hidden
+  const world = read('src', 'scenes', 'world.js');
+  assert.match(world, /this\.ambientNpcs = ambientEntriesFor\(this\.def\.ambient, GameState\.seenMoments\)\.map\(/);
+  const play = world.slice(world.indexOf('  playMoment(moment) {'), world.indexOf('  // The 3 key-room beats'));
+  assert.ok(play.indexOf('this.retireAmbientFor(moment.id);') > 0 && play.indexOf('this.retireAmbientFor(moment.id);') < play.indexOf('this.setAmbientVisible(false);'));
+  assert.match(world, /if \(ambient\.def\.unlessMoment !== momentId\) return true;/);
+  assert.match(world, /ambient\.sprite\.disableBody\(true, true\)/);
+  // a saved game that has m3 never builds him (seenMoments is saved), and a brand-new game gets him back
+  const { GameState, snapshotState, applyState, resetGameState } = game;
+  GameState.seenMoments = new Set(['m3']);
+  const snap = plain(snapshotState(GameState));
+  resetGameState();
+  assert.equal(ambientEntriesFor(list, GameState.seenMoments).some((e) => e.id === raja.id), true, 'a brand-new game: he is back');
+  applyState(GameState, snap);
+  assert.equal(ambientEntriesFor(list, GameState.seenMoments).some((e) => e.id === raja.id), false, 'Continue: still gone');
+  resetGameState();
+});
+
+test('FB-0051: the chariot sheet is 4 frames of 40x44, drawn (gold, maroon, saffron, the palomino horses), made by tools/make-moments.js and preloaded like the other moment sheets; Raja appears in the last two frames only', () => {
+  const sheet = MOMENT_SHEETS.chariot;
+  assert.equal(sheet.key, 'moment-chariot');
+  assert.equal(sheet.file, 'assets/moment-chariot.png');
+  assert.deepEqual([sheet.frameWidth, sheet.frameHeight, Object.keys(sheet.frames).length], [40, 44, 4]);
+  assert.deepEqual(plain(sheet.frames), { trotA: 0, trotB: 1, ridedA: 2, ridedB: 3 });
+  assert.equal(sheet.feet, 21, 'the hooves are on the frame\'s bottom row (centre 22, bottom pixel 43)');
+  const img = png(sheet.file);
+  assert.deepEqual([img.width, img.height], [160, 44]);
+  const colorsIn = (f) => {
+    const set = new Set();
+    for (let y = 0; y < img.height; y++) {
+      for (let x = f * 40; x < (f + 1) * 40; x++) {
+        const i = (y * img.width + x) * 4;
+        if (img.data[i + 3]) set.add(`#${[0, 1, 2].map((k) => img.data[i + k].toString(16).padStart(2, '0')).join('')}`);
+      }
+    }
+    return set;
+  };
+  for (const c of ['#e0b84f', '#8e1f3a', '#ff9933', '#e7b04a', '#fff4cf']) assert.ok(colorsIn(0).has(c), `the chariot lacks ${c}`);
+  assert.ok(!colorsIn(0).has('#c9cbd6') && !colorsIn(1).has('#c9cbd6'), 'no rider in the empty-cart frames');
+  assert.ok(colorsIn(2).has('#c9cbd6') && colorsIn(3).has('#c9cbd6'), 'Raja\'s grey hair is in the ridden frames');
+  // everything stays inside the frame and the hooves reach the bottom row
+  for (let f = 0; f < 4; f++) {
+    let bottom = -1;
+    for (let y = 0; y < 44; y++) for (let x = f * 40; x < (f + 1) * 40; x++) if (img.data[(y * img.width + x) * 4 + 3]) bottom = y;
+    assert.ok(bottom === 43 || (f % 2 === 1 && bottom === 42), `frame ${f}: the hooves are on the bottom row (the B beat bobs one pixel up): ${bottom}`);
+  }
+  const tool = read('tools', 'make-moments.js');
+  assert.match(tool, /const CHARIOT_W = 40;/);
+  assert.match(tool, /const CHARIOT_H = 44;/);
+  assert.equal(Number(tool.match(/const CHARIOT_FRAMES = (\d+);/)[1]), 4);
+  assert.match(tool, /'moment-chariot\.png': buildChariotSheet\(\)/);
+  assert.match(tool, /SpriteSheetBrown\.png/, 'the CC0 Ninja Adventure front-view horse');
+  assert.match(read('CREDITS.md'), /moment-chariot\.png/, 'credited');
+  // it is in the offline bundle (the generic sheet loop above already checks every MOMENT_SHEETS file) and preloaded by main.js through that table
+  assert.ok(new Set(require('../../tools/pack-offline').collectRuntimeAssets().assets.map((a) => a.path)).has('assets/moment-chariot.png'));
+});
+
+test('FB-0051: the chariot sounds (a swelling gallop and a two-note horn) are registered, exist, are generated by tools/make-audio.js, are not clipped, and are in the offline bundle', () => {
+  for (const id of ['chariotRumble', 'chariotHorn']) {
+    assert.ok(SOUNDS[id], `SOUNDS.${id}`);
+    assert.equal(SOUNDS[id].category, 'sfx');
+    assert.equal(SOUNDS[id].loop, false);
+    assert.ok(fs.existsSync(path.join(ROOT, SOUNDS[id].file)), `${SOUNDS[id].file} is missing (npm run audio)`);
+    assert.match(read('tools', 'make-audio.js'), new RegExp(SOUNDS[id].file.replace('assets/audio/', '').replace(/\./g, '\\.')));
+    const wav = fs.readFileSync(path.join(ROOT, SOUNDS[id].file));
+    const n = (wav.length - 44) / 2;
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(wav.readInt16LE(44 + i * 2)) / 32767);
+    assert.ok(peak > 0.2 && peak < 0.98, `${id}: peak ${peak.toFixed(2)}`);
+    const seconds = n / wav.readUInt32LE(24);
+    if (id === 'chariotRumble') assert.ok(seconds >= 2 && seconds <= 3, `the gallop runs ${seconds.toFixed(2)} s`);
+    else assert.ok(seconds >= 0.5 && seconds <= 1.5, `the horn lasts ${seconds.toFixed(2)} s`);
+  }
+  const have = new Set(require('../../tools/pack-offline').collectRuntimeAssets().assets.map((a) => a.path));
+  for (const id of ['chariotRumble', 'chariotHorn']) assert.ok(have.has(SOUNDS[id].file), `${SOUNDS[id].file} is not in the offline manifest`);
+  // the script uses both
+  const used = new Set(JSON.stringify(SCRIPTS.momentChariot).match(/"sound":"[A-Za-z]+"/g));
+  assert.ok(used.has('"sound":"chariotRumble"') && used.has('"sound":"chariotHorn"'));
+});
+
+test('FB-0051: runner: `sparkles` with kind "dust" puffs soft beige ellipses at the actor\'s FEET (its ground line, not the lifted height), in front of it, and never stars', async () => {
+  const { runner, made } = makeRunner();
+  await runner.run([{ spawnActor: { id: 'c', sprite: 'moment-chariot', kind: 'image', frame: 0, feet: 21, shadow: false, at: { x: 10, y: 10 } } }]);
+  const a = runner.actors.get('c');
+  a.alt = 30; // lifted: dust still stays on the ground
+  const before = made.filter((m) => m.ellipse).length;
+  await runner.run([{ sparkles: { actor: 'c', ms: 80, every: 10, kind: 'dust' } }]);
+  const puffs = made.filter((m) => m.ellipse).slice(before);
+  assert.ok(puffs.length >= 6, `${puffs.length} puffs`);
+  assert.equal(made.filter((m) => m.star).length, 0, 'no stars');
+  const ground = a.sprite.y + 21;
+  assert.ok(puffs.every((p) => p.y <= ground && p.y >= ground - 12), 'drawn at the hooves (and drifting up a few px as they fade)');
+  assert.ok(puffs.every((p) => p.depth > a.sprite.depth), 'in front of the chariot');
+  assert.match(runnerSource, /kind = 'stars'/);
 });

@@ -484,14 +484,14 @@ test('FB-0057: every ambient student\'s resolved texture is in the preload list 
   assert.match(world, /if \(!this\.textures\.exists\(textureKey\)\) textureKey = `npc-\$\{def\.character\}`;/);
 });
 
-test('FB-0051: every moment (src/moments.js) has its script, its character sheets and prop sheets preloaded and on disk, its sounds registered, and its anchors on the campus', () => {
+test('FB-0051: every moment (src/moments.js) has its script, its character sheets and prop sheets preloaded and on disk, its sounds registered, and its anchors on its own map', () => {
   const { MOMENTS, MOMENT_SHEETS, SOUNDS, resolveAnchor } = loadGameData();
   const preload = new Set(characterSheets(MAPS, AMBIENT, SCRIPTS).map((s) => s.key));
-  const campus = tiledObjects(JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'maps', 'campus.json'), 'utf8')));
-  assert.ok(MOMENTS.length >= 2);
+  assert.ok(MOMENTS.length >= 3);
   for (const m of MOMENTS) {
     assert.ok(MAPS[m.map] && SCRIPTS[m.script], `${m.id}: map and script exist`);
-    assert.ok(resolveAnchor(campus, m.trigger.anchor), `${m.id}: trigger anchor "${m.trigger.anchor}" is on the campus`);
+    const campus = tiledObjects(JSON.parse(fs.readFileSync(path.join(ROOT, 'assets', 'maps', `${m.map}.json`), 'utf8'))); // the moment's own map
+    assert.ok(resolveAnchor(campus, m.trigger.anchor), `${m.id}: trigger anchor "${m.trigger.anchor}" is on ${m.map}`);
     const visit = (node) => {
       if (Array.isArray(node)) { node.forEach(visit); return; }
       if (!node || typeof node !== 'object') return;
@@ -500,7 +500,7 @@ test('FB-0051: every moment (src/moments.js) has its script, its character sheet
         assert.ok(fs.existsSync(path.join(ROOT, 'assets', `${node.spawnActor.sprite}.png`)), `${m.id}: ${node.spawnActor.sprite}.png is missing`);
       }
       if (typeof node.sound === 'string') assert.ok(SOUNDS[node.sound], `${m.id}: unknown sound ${node.sound}`);
-      if (node.anchor) assert.ok(resolveAnchor(campus, node.anchor), `${m.id}: anchor "${node.anchor}" is not on the campus`);
+      if (node.anchor) assert.ok(resolveAnchor(campus, node.anchor), `${m.id}: anchor "${node.anchor}" is not on ${m.map}`);
       Object.values(node).forEach(visit);
     };
     visit(SCRIPTS[m.script]);

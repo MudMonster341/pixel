@@ -27,7 +27,8 @@ const MOMENT_MAX_MS = 20000;
 // In the order she meets them. `trigger` is a rectangle of tiles on `map`, written as offsets from the tile of a named map object
 // (so a regenerated campus that moves the gate or the door moves the trigger with it, ADR 0016): tile (anchor + [dx, dy]), the
 // rectangle spans dx0..dx1 x dy0..dy1 inclusive. `after`: { moments: ['m1'] } must have played; { cutscene: 'gate2' } must have been
-// seen (the Gate 2 welcome / opening, src/scenes/world.js). Overrides of the global rules, for a moment that is meant to chain right
+// seen (the Gate 2 welcome / opening, src/scenes/world.js); { keys: N } she must hold at least N of the three keys (M3, the chariot, N = 1;
+// the three friends will use 2). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
 // after another: `minGapS` REPLACES MOMENT_GAP_S (seconds of play since the last moment ENDED), `sameVisitOk: true` lets it start on a
 // map visit that already had a moment (MOMENT_PER_VISIT). `afterFreeS`: she must have had that many seconds of FREE control (not inside
 // a script, cutscene, dialog, door walk or any overlay: ctx.freeSeconds) since the last of those ended, so a moment never starts the
@@ -61,6 +62,18 @@ const MOMENTS = [
     after: { moments: ['m1'] },
     minGapS: 6, // chains after M1: about 6 s after M1 ENDS (the walk from the gate takes a few seconds more)
     sameVisitOk: true, // the owner wants both as she first enters the campus: one visit, M1 then M2
+  },
+  {
+    id: 'm3',
+    name: "Prof. Raja's chariot",
+    map: 'main-block-g',
+    script: 'momentChariot',
+    // The central hall in front of the staircase and along its right side (x 12..28, y 22..29 on the real ground floor): every way to the
+    // stairs and to the LUG stall behind them crosses it, and so does the arrival from the stairs when she comes back down
+    // (tests/unit/moments.test.js floods the real map). Prof. Raja himself stands a few tiles north-east of it, at (26,19).
+    trigger: { anchor: 'Main Block Stairs G (up)', dx0: -3, dx1: 13, dy0: -3, dy1: 4 },
+    after: { keys: 1 }, // once she holds the first key; default pacing (90 s gap, one per map visit)
+    // (the ambient Prof. Raja entry in src/ambient.js carries `unlessMoment: 'm3'`: once this has played he is gone for good)
   },
 ];
 
@@ -96,13 +109,21 @@ function momentTriggerRect(moment, anchor) {
   return { x0: tx + t.dx0, y0: ty + t.dy0, x1: tx + t.dx1, y1: ty + t.dy1 };
 }
 
+// How many of the three keys she holds: ctx.keys (a caller that already counted, tests) or counted from state.quest.keys
+// ({ physicsLab, icl, room195 }: booleans); none when the state has no quest (a bare test state).
+function momentKeysHeld(state, ctx) {
+  if (ctx && typeof ctx.keys === 'number') return ctx.keys;
+  return state.quest && state.quest.keys ? Object.values(state.quest.keys).filter(Boolean).length : 0;
+}
+
 // Which moment, if any, should start right now. Pure: everything it needs is passed in.
 //   state: see the header. now: the play clock, in seconds.
 //   ctx: { map, tileX, tileY (the player's feet tile), enabled (momentsEnabled()), blocked (a dialog, mini-game, key-room script, any
 //          script, a door/warp walk, the pause menu, the journal or the map is up: anything that owns the screen), visitCount (moments
 //          already started on this map visit), freeSeconds (seconds of free control since the last script / cutscene / dialog / door walk /
 //          overlay ended or started: src/scenes/world.js; left out = not tracked, so no `afterFreeS` holds anything back),
-//          anchor(name) -> { x, y } | null, moments? (a table to use instead of MOMENTS: tests) }
+//          keys? (how many of the three keys she holds; left out = counted from state.quest.keys), anchor(name) -> { x, y } | null,
+//          moments? (a table to use instead of MOMENTS: tests) }
 function momentDue(state, now, ctx) {
   if (!ctx.enabled || ctx.blocked) return null;
   const seen = state.seenMoments && typeof state.seenMoments.has === 'function' ? state.seenMoments : new Set(state.seenMoments || []);
@@ -114,6 +135,7 @@ function momentDue(state, now, ctx) {
     const after = moment.after || {};
     if ((after.moments || []).some((id) => !seen.has(id))) continue;
     if (after.cutscene && !(state.seenCutscenes && state.seenCutscenes.has(after.cutscene))) continue;
+    if (after.keys && momentKeysHeld(state, ctx) < after.keys) continue;
     const rect = momentTriggerRect(moment, ctx.anchor);
     if (!rect) continue;
     if (ctx.tileX < rect.x0 || ctx.tileX > rect.x1 || ctx.tileY < rect.y0 || ctx.tileY > rect.y1) continue;

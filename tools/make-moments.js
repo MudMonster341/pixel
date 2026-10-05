@@ -1,4 +1,4 @@
-// Generates the two prop sheets the "moments" use (docs/plans/2026-10-04-moments-and-small-touches.md, src/moments.js, src/scripts.js
+// Generates the prop sheets the "moments" use (docs/plans/2026-10-04-moments-and-small-touches.md, src/moments.js, src/scripts.js
 // MOMENT_SHEETS) as PNG files in assets/.   Run:  node tools/make-moments.js [--out <dir>]   (also part of `npm run assets`)
 //
 //   moment-unicorn.png   32x32 frames, 6 across.  M1, the unicorn and the prince.
@@ -9,6 +9,9 @@
 //        composed here in code. A GENERIC white horse with a horn: not any protected character.
 //   moment-drums.png     28x22 frames, 5 across.  M2, Mevin's little drum kit (kick, snare, rack and floor tom, hi-hat, crash).
 //        0 idle   1 snare hit   2 kick hit   3 crash hit   4 snare and crash together
+//   moment-chariot.png   40x44 frames, 4 across.  M3, Prof. Raja's chariot, seen from the front: two gilded horses (the Ninja Adventure FRONT-view
+//        horse, CC0, recoloured palomino; the same git-ignored pack folder as the unicorn's horse), a maroon-and-gold cart, parasol, pennants.
+//        0 trot A   1 trot B   2 trot A with Prof. Raja aboard   3 trot B with Raja aboard
 //
 // Never hand-edit the PNGs: edit the tables below and re-run. Frame sizes are mirrored in src/scripts.js MOMENT_SHEETS;
 // tests/unit/moments.test.js checks both against the committed files.
@@ -251,9 +254,135 @@ function buildDrumSheet() {
   return sheet;
 }
 
+// ---------- the chariot ----------
+// M3, Prof. Raja's chariot: seen from the FRONT (it rolls down the hall toward the camera and away again), two gilded horses abreast,
+// a maroon-and-gold cart behind them with two edge-on spoked wheels, two saffron pennants and a gold-and-maroon royal parasol. The horses
+// are the Ninja Adventure FRONT-view brown horse (CC0, the same pack as the unicorn's, credited in CREDITS.md), recoloured palomino with a
+// pale mane, with a red plume and a ruby harness added in code; everything else is composed here. A GENERIC royal chariot: nobody's
+// protected character. Frame order (src/scripts.js MOMENT_SHEETS.chariot): 0 trot A, 1 trot B (the horses bob, the wheels turn, the
+// pennants flap), 2 and 3 the same with Prof. Raja seated in the cart.
+const HORSE_FRONT = path.join(__dirname, '..', 'assets', 'External Tilesets', 'Ninja-Adventure-Horse', 'SpriteSheetBrown.png');
+const CHARIOT_W = 40;
+const CHARIOT_H = 44;
+const CHARIOT_FRAMES = 4;
+const FRONT_W = 16;
+const FRONT_H = 16;
+
+const FRONT_RECOLOR = {
+  '#d14b34': '#e7b04a', // face and body: palomino gold
+  '#8f3e56': '#b9772f', // chest shade
+  '#5f7160': '#fff4cf', // forelock and mane: pale
+  '#f2ad7d': '#ffd7b0', // muzzle
+  '#141b1b': '#2a1420', // outline: a deep wine, not black
+};
+
+function loadHorseFront(index) {
+  const sheet = decodePNG(fs.readFileSync(HORSE_FRONT));
+  const frame = canvas(FRONT_W, FRONT_H);
+  for (let y = 0; y < FRONT_H; y++) {
+    for (let x = 0; x < FRONT_W; x++) {
+      const s = (y * sheet.width + index * FRONT_W + x) * 4;
+      if (!sheet.data[s + 3]) continue;
+      const from = key(sheet.data[s], sheet.data[s + 1], sheet.data[s + 2]);
+      frame.set(x, y, FRONT_RECOLOR[from] || from);
+    }
+  }
+  return frame;
+}
+
+const CH = { K: '#2a1420', R: '#8e1f3a', r: '#6a1429', L: '#b32a4c', G: '#e0b84f', Y: '#ffe27a', O: '#ff9933', o: '#d9701c', W: '#fff4cf', B: '#c0392b' };
+// Prof. Raja seated, seen from the front: grey hair, maroon jacket with a gold sash (the same palette as his standing sprite). 10 wide.
+const RAJA_SEATED = [
+  '...KKKK...',
+  '..KhhhhK..',
+  '.KhhhhhhK.',
+  '.KhSSSShK.',
+  '.KSeSSeSK.',
+  '.KSSSSSSK.',
+  '..KSSSSK..',
+  '..KKGGKK..',
+  '.KJJJGJJK.',
+  'KJLJJGJJLK',
+  'KJJJJGGJJK',
+  'KJLJJGJJJK',
+];
+const RAJA_COLORS = { K: CH.K, h: '#c9cbd6', S: '#e9b98f', e: '#4a2d2d', J: '#7a1530', L: '#a32347', G: CH.G };
+
+function drawChariot(index) {
+  const img = canvas(CHARIOT_W, CHARIOT_H);
+  const b = index % 2; // trot A / trot B
+  const rider = index >= 2;
+  // wheels, edge-on (behind the horses): a gold rim with dark spokes that turn between the two frames
+  for (const wx of [0, 36]) {
+    rect(img, wx, 22, 4, 16, CH.K);
+    rect(img, wx + 1, 23, 2, 14, CH.G);
+    for (let y = 23; y < 37; y++) if ((y + b * 2) % 4 < 2) { img.set(wx + 1, y, CH.o); img.set(wx + 2, y, CH.r); }
+  }
+  // the royal parasol: a pole and a striped dome with a scalloped gold edge
+  rect(img, 19, 5, 2, 14, CH.G);
+  for (let x = 9; x <= 30; x++) {
+    const k = (x - 19.5) / 11;
+    const h = Math.ceil(5 * Math.sqrt(Math.max(0, 1 - k * k)));
+    for (let y = 5 - h; y < 5; y++) img.set(x, y, Math.floor((x - 9) / 3) % 2 ? CH.G : CH.R);
+    img.set(x, 5, x % 2 ? CH.Y : CH.G);
+  }
+  rect(img, 18, 0, 4, 1, CH.K);
+  img.set(19, 0, CH.Y); img.set(20, 0, CH.Y);
+  // the cart: the rim and the front panel (only the top of it shows above the horses)
+  rect(img, 5, 18, 30, 1, CH.Y);
+  rect(img, 5, 19, 30, 9, CH.R);
+  rect(img, 5, 19, 30, 1, CH.K);
+  for (let x = 7; x < 34; x += 5) { rect(img, x, 22, 3, 3, CH.G); img.set(x + 1, 23, CH.B); } // a row of gold lozenges with a ruby heart
+  rect(img, 5, 27, 30, 1, CH.G);
+  // the two pennants on the cart's corners, flapping: saffron, drooping a pixel on the B frame
+  for (const fx of [6, 33]) {
+    rect(img, fx, 8, 1, 11, CH.G);
+    const out = fx < 20 ? -1 : 1;
+    const droop = b;
+    for (let i = 1; i <= 5; i++) {
+      const x = fx + out * i;
+      const height = Math.max(1, 4 - Math.floor((i * 3) / 5));
+      for (let y = 0; y < height; y++) img.set(x, 8 + y + (b && i > 2 ? droop : 0), y === height - 1 ? CH.o : CH.O);
+    }
+    img.set(fx, 7, CH.Y);
+  }
+  // Prof. Raja, on the parasol's pole side: the pole is behind him (his own body comes first)
+  if (rider) stamp(img, 15, 6, RAJA_SEATED, RAJA_COLORS);
+  // the horses (in front): they bob a pixel on the B frame, left and right on opposite beats
+  const bob = b ? -1 : 0;
+  const left = loadHorseFront(b);
+  const right = loadHorseFront(1 - b);
+  [[left, 4], [right, 20]].forEach(([horse, hx], n) => {
+    const oy = 28 + (n ? 0 : bob) + (n ? bob : 0);
+    for (let y = 0; y < FRONT_H; y++) for (let x = 0; x < FRONT_W; x++) {
+      const c = horse.get(x, y);
+      if (c) img.set(hx + x, oy + y, c);
+    }
+    // a red plume with a gold tip on the forehead, a ruby collar with gold studs across the chest
+    stamp(img, hx + 7, oy - 3, ['.Y.', 'YWY', '.G.', '.B.'], CH);
+    rect(img, hx + 3, oy + 12, 10, 2, CH.B);
+    for (const sx of [4, 7, 10]) img.set(hx + sx, oy + 12, CH.Y);
+  });
+  // the yoke between the horses
+  rect(img, 18, 33, 4, 1, CH.G);
+  return img;
+}
+
+function buildChariotSheet() {
+  const sheet = canvas(CHARIOT_W * CHARIOT_FRAMES, CHARIOT_H);
+  for (let i = 0; i < CHARIOT_FRAMES; i++) {
+    const frame = drawChariot(i);
+    for (let y = 0; y < CHARIOT_H; y++) for (let x = 0; x < CHARIOT_W; x++) {
+      const c = frame.get(x, y);
+      if (c) sheet.set(i * CHARIOT_W + x, y, c);
+    }
+  }
+  return sheet;
+}
+
 // name -> { width, height, data } for every committed moment sheet.
 function buildMomentSheets() {
-  return { 'moment-unicorn.png': buildUnicornSheet(), 'moment-drums.png': buildDrumSheet() };
+  return { 'moment-unicorn.png': buildUnicornSheet(), 'moment-drums.png': buildDrumSheet(), 'moment-chariot.png': buildChariotSheet() };
 }
 
 function writeMomentSheets(outDir) {
@@ -262,7 +391,7 @@ function writeMomentSheets(outDir) {
   return Object.keys(sheets);
 }
 
-module.exports = { buildMomentSheets, writeMomentSheets, FRAME, KIT_W, KIT_H, UNICORN_FRAMES, KIT_FRAMES };
+module.exports = { buildMomentSheets, writeMomentSheets, FRAME, KIT_W, KIT_H, UNICORN_FRAMES, KIT_FRAMES, CHARIOT_W, CHARIOT_H, CHARIOT_FRAMES };
 
 if (require.main === module) {
   const flag = process.argv.indexOf('--out');

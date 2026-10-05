@@ -215,6 +215,8 @@ function loadGameData() {
     advanceFreeSeconds: get('advanceFreeSeconds'),
     momentDue: get('momentDue'),
     momentGapS: get('momentGapS'),
+    momentKeysHeld: get('momentKeysHeld'),
+    ambientEntriesFor: get('ambientEntriesFor'),
     momentTriggerRect: get('momentTriggerRect'),
     markMomentStarted: get('markMomentStarted'),
     markMomentEnded: get('markMomentEnded'),

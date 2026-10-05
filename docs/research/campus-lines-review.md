@@ -54,7 +54,7 @@ FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and it
 - `{name}` in a line is the player's name (it is "Taru" unless the player typed another). No line mentions a birthday: that stays the surprise at the end.
 - **Mustafa** (black and orange LUG hoodie) stands near each mini-game with a different fixed line, and repeats only that line. The three tiles: Physics Lab (main-block-3, 9,4), ICL (main-block-1, 6,17: in the corridor outside the lab, since P5c the ICL is a sealed lab), Room 195 (main-block-1, 27,4).
 - **Professors** keep their tag as "Prof. <first name>" (names only, no surnames). After the jokes the sourced fact about that professor is said (Raja CF12, Angel CF22, Elakkiya CF23), nothing else.
-  Raja's last line hints at the chariot scene that comes in a later package. The girls (Sana, Shraddha, Palak), Mevin and Narda are also a later package.
+  Raja's last line hints at the chariot scene (M3, built: see "Moments" below); he is an ordinary talkable professor until that scene, then gone for good. The girls (Sana, Shraddha, Palak), Mevin and Narda are also a later package.
 - The other friends carry on with their role's facts after their own lines (e.g. Sid, a CS student, shares a CS fact).
 - Looks: Satvik has a camera and a slightly deeper skin tone, Prof. Angel has small white wings, Prof. Raja a gold-trimmed maroon jacket. The hair length is the pack body's own (three hair shapes), so people differ by hair colour, skin, shirt and body.
 - Risky lines to look at first: Prof. Raja ("I carry myself like royalty"), Prof. Elakkiya ("goated", "no mercy"), Prof. Angel ("the wings are real"), Najam ("Sleep is a feature I turned off").
@@ -68,7 +68,7 @@ FB-0051 (P2b, the owner's friends, Mustafa and three professors; ADR 0021 and it
 | Varun | campus, tile 238,136, sheet npc-friend-varun | I'm Varun. I came for a quick chat and stayed for a long one. / My code has two states: it works, and nobody touch it. / Is the canteen open? Asking for my stomach. It has no Wi-Fi and no patience. |
 | Mitul | campus, tile 190,63, sheet npc-friend-mitul | Mitul reporting! Fun fact: it's always a missing semicolon. Always. / I counted my deadlines. Then I stopped counting, for my own health. / Hydration check, {name}! Water first. Then energy drink number seven. |
 | Siva | campus, tile 150,115, sheet npc-friend-siva | Siva here! I use dark mode for everything. Even this conversation. / Why do programmers prefer dark mode? Because light attracts bugs. / If it works, don't touch it. If it doesn't, also don't touch it. Go get chai. |
-| Prof. Raja | main-block-g, tile 26,19, sheet npc-prof-raja | Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture. / I carry myself like royalty because my timetable demands it. Mostly the Monday ones. / I have a ride coming. Quite soon, actually. |
+| Prof. Raja (leaves for good after M3, the chariot moment: his ambient entry has `unlessMoment: 'm3'`; these lines work until then) | main-block-g, tile 26,19, sheet npc-prof-raja | Greetings, {name}. I am Prof. Raja. A proper entrance is half of any lecture. / I carry myself like royalty because my timetable demands it. Mostly the Monday ones. / I have a ride coming. Quite soon, actually. |
 | Shamsuddin | main-block-g, patrols 22,24 to 27,24, sheet npc-friend-shamsuddin | Shamsuddin! I name my files final, final2 and really_final. It's called version control. / My code review was one question mark. I'm still thinking about it. / Wi-Fi is the one thing I can't compile, debug or fix. Good luck! |
 | Mustafa | main-block-1, tile 6,17, sheet npc-mustafa | That door is a fingerprint scanner with an attitude. Tap gently, don't mash. / My record on that scan is embarrassing. I'm not telling. |
 | Mustafa | main-block-1, tile 27,4, sheet npc-mustafa | Room 195 is a climb. Bring good shoes. And a bit of patience. / Look up before you go up. Things come down faster than deadlines do. |
@@ -137,6 +137,10 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | | | {name} | Huh... is this the actual BITS? |
 | M2 Mevin the drummer (plays for Treble, the music club; runs in with a drum kit, drums a bar, ends on a rimshot, runs off) | the brick forecourt in front of the Main Block, as she first walks up to the Main Block, about 6 s after M1 ends | Mevin (Treble) | WOAHHH, {name}! You da goat! |
 | | | Mevin (Treble) | Come watch me perform at Jashn some day! |
+
+| M3 Prof. Raja's chariot (once, the first time she is in the Main Block foyer holding at least the first key; Raja is the ambient professor standing at the right of the hall: the camera glides to him, a gallop swells, a gilded chariot with two horses, a parasol and pennants comes down the hall with dust puffs and a horn, he steps aboard, it thunders off down the hall; about 16 s) | the central hall in front of the staircase | Prof. Raja | Ah, {name}! Class is dismissed. A king never walks. |
+| | | Prof. Raja | My ride. Kindly mind the marks, {name}. |
+| | | {name} | Okay. Never mind. This is definitely BITS. |
 
 M1's first line is the owner's own inside joke, exactly as written (no softening). The prince is a generic crowned stand-in; the unicorn is a generic white horse with a horn (no protected character).
 

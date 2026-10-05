@@ -22,8 +22,8 @@
 // `{ say: { speaker, lines, autoMs? } }`, `{ wait: ms }`, `{ sound: id }`, `{ setFlag: 'name' | { name, value } }`,
 // `{ parallel: [step, ...] }`, `{ sequence: [step, ...] }` (several steps as ONE branch of a `parallel`), and the moments' extras
 // (src/moments.js, docs/plans/2026-10-04-moments-and-small-touches.md): `{ lift: { actor, to, ms, ease?, fadeOut? } }` (altitude in
-// px: the sprite rises, its shadow and depth stay on the ground), `{ sparkles: { actor, ms, every? } }` (a trail of stars behind an
-// actor), `{ loop: { actor, frames, frameMs } }` (a frame loop that keeps running in the background until a `frame`/`anim`/
+// px: the sprite rises, its shadow and depth stay on the ground), `{ sparkles: { actor, ms, every?, kind?: 'dust' } }` (a trail of stars behind an
+// actor, or dust puffs at its feet), `{ loop: { actor, frames, frameMs } }` (a frame loop that keeps running in the background until a `frame`/`anim`/
 // `despawnActor` stops it), `{ face: { actor, toward } }` (turn toward another actor or point), `autoMs` on a `say` (every line
 // advances by itself that many ms after it finished typing, so a moment always ends without a key press). `to`/`at`/a `move` path's points are each either a tile `{ x, y }`, a
 // named map-object anchor (a plain string, resolved at runtime by src/maplogic.js resolveAnchor() --
@@ -638,7 +638,8 @@ class ScriptRunner {
 
   // A trail of little stars behind an actor for `ms` (the unicorn's lift-off): one every `every` ms, drawn where the actor is drawn
   // (altitude included), each drifting down and fading out. Purely decoration: nothing waits on them.
-  step_sparkles({ actor: actorId, ms = 1000, every = 70 } = {}) {
+  // `kind: 'dust'` (the chariot's wheels): instead a few soft beige puffs at the actor's FEET (its ground line), swelling as they fade.
+  step_sparkles({ actor: actorId, ms = 1000, every = 70, kind = 'stars' } = {}) {
     const actorEntry = this.getActor(actorId);
     if (!actorEntry || this.skipping) return undefined;
     const scene = this.scene;
@@ -646,6 +647,17 @@ class ScriptRunner {
     const emit = () => {
       const sprite = actorEntry.sprite;
       if (!sprite.active) return;
+      if (kind === 'dust') {
+        const feetY = sprite.y + this.actorFeetOffset(actorEntry);
+        const shades = [0xe8dcc0, 0xd9c9a8, 0xf3ead6];
+        for (let i = 0; i < 2; i++) {
+          const x = sprite.x + (Math.random() - 0.5) * 30;
+          const y = feetY - 1 - Math.random() * 3;
+          const puff = scene.add.ellipse(x, y, 5, 4, shades[Math.floor(Math.random() * shades.length)], 0.7).setDepth(sprite.depth + 2);
+          scene.tweens.add({ targets: puff, y: y - 6, alpha: 0, scale: 2.2, duration: 560, onComplete: () => puff.destroy() });
+        }
+        return;
+      }
       const x = sprite.x + (Math.random() - 0.5) * 14;
       const y = sprite.y - (actorEntry.alt || 0) + (Math.random() - 0.5) * 10;
       const color = colors[Math.floor(Math.random() * colors.length)];

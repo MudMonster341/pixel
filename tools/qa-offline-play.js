@@ -9,7 +9,9 @@ const ROOT = path.join(__dirname, '..');
 const OUT = require('os').tmpdir();
 const pw = require(path.join(ROOT, 'node_modules', 'playwright-core'));
 const engine = process.argv[2] || 'chromium';
-const INDEX = process.env.PLAY_URL || pathToFileURL(path.join(ROOT, 'dist', 'offline', 'index.html')).href; // PLAY_URL: play a hosted copy instead
+const INDEX_BASE = process.env.PLAY_URL || pathToFileURL(path.join(ROOT, 'dist', 'offline', 'index.html')).href; // PLAY_URL: play a hosted copy instead
+// moments=0: this script walks and teleports around the campus on a timer; an unskippable moment (src/moments.js) would eat its key presses.
+const INDEX = `${INDEX_BASE}${INDEX_BASE.includes('?') ? '&' : '?'}moments=0`;
 
 const log = (...a) => console.log(`[${engine}]`, ...a);
 const errors = [];

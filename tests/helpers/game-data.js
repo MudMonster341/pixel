@@ -210,6 +210,7 @@ function loadGameData() {
     MOMENT_TIMING: get('MOMENT_TIMING'),
     momentsEnabled: get('momentsEnabled'),
     momentFitsVisit: get('momentFitsVisit'),
+    advanceFreeSeconds: get('advanceFreeSeconds'),
     momentDue: get('momentDue'),
     momentGapS: get('momentGapS'),
     momentTriggerRect: get('momentTriggerRect'),

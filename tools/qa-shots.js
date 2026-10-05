@@ -167,7 +167,7 @@ async function teleport(page, x, y) {
 
 async function shootOutdoors(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  const baseUrl = `${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0`;
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&moments=0`;
   await page.goto(baseUrl);
   await waitReady(page);
   const objects = await mapObjects(page);
@@ -344,7 +344,7 @@ async function shootOutdoors(browser) {
 async function shootIndoors(browser) {
   for (const mapKey of INTERIOR_MAPS) {
     const page = await browser.newPage({ viewport: VIEWPORT });
-    const baseUrl = `${BASE_URL}/?dev=0&map=${mapKey}&cutscene=0&title=0`;
+    const baseUrl = `${BASE_URL}/?dev=0&map=${mapKey}&cutscene=0&title=0&moments=0`;
     const loaded = await tryStep(page, `indoor-${mapKey}-entrance`, async () => {
       await page.goto(baseUrl);
       await waitReady(page);
@@ -372,7 +372,9 @@ async function shootIndoors(browser) {
 async function shootCutscene(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
   // Scripts are on by default; only tests that don't want one pass ?cutscene=0.
-  const baseUrl = `${BASE_URL}/?dev=0&map=campus&title=0`;
+  // moments=0: the unicorn (src/moments.js) must not start on the avenue after the welcome and lock this page's own cutscene shots; the
+  // moments have their own flow below (shootMoments).
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&title=0&moments=0`;
   await page.goto(baseUrl);
   await waitReady(page);
 
@@ -439,6 +441,62 @@ async function shootCutscene(browser) {
   await page.close();
 }
 
+// ---------- the moments (src/moments.js): M1 the unicorn and the prince, then M2 Mevin the drummer ----------
+// The one flow with moments ON (every other URL in this file passes moments=0). A fresh state at the avenue: the Gate 2 welcome counts as
+// seen (so Mustafa does not play), no moment has played, and M1 needs 2.5 s of free control (`afterFreeS`) before it starts, so the wait for it
+// is short. Shots are taken mid-scene, a fixed time after the script starts: M1 ~6 s in
+// (the unicorn grazing, the prince walking up to it), M2 ~5.5 s in (Mevin and his drum kit, the first line). Each wait has its own bounded
+// timeout, and a failed shot never takes the rest down.
+
+async function shootMoments(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
+  const scriptRunning = () => game.scene.getScene('world').scriptRunner.isRunning;
+  const scriptIdle = () => !game.scene.getScene('world').scriptRunner.isRunning;
+  const triggerRects = () => {
+    const world = game.scene.getScene('world');
+    const anchor = (name) => resolveAnchor(world.mapObjects, name);
+    return Object.fromEntries(MOMENTS.map((m) => [m.id, momentTriggerRect(m, anchor)]));
+  };
+
+  const ready = await tryStep(page, 'moments-setup', async () => {
+    await page.goto(baseUrl);
+    await waitReady(page);
+    await page.evaluate(() => {
+      GameState.seenCutscenes.add('gate2'); // no Mustafa welcome: the moments are what this flow is about
+      GameState.seenMoments = new Set();
+      GameState.lastMomentAt = null;
+    });
+  });
+  if (!ready) { await page.close(); return; }
+  const rects = await page.evaluate(triggerRects);
+
+  // M1: stand inside its trigger (the east side of the avenue, in the roundabout approach) and wait for the 2.5 s of free control to pass.
+  const m1 = await tryStep(page, 'moment-01-unicorn', async () => {
+    await teleport(page, rects.m1.x0 + 12, rects.m1.y1); // the median of the avenue, just north of the crossing
+    await waitFor(page, scriptRunning, { timeout: 12000 }); // 2.5 s of free control, then M1 starts
+    await page.waitForTimeout(6000); // ~6 s in: the unicorn grazing, the prince walking up to it
+    await shoot(page, 'moment-01-unicorn');
+  });
+
+  if (m1) {
+    // let M1 finish (about 16 s in all), then M2 follows ~6 s after it ends, once she is on the forecourt
+    await tryStep(page, 'moment-01-unicorn (finish)', async () => {
+      await waitFor(page, scriptIdle, { timeout: 25000 });
+    });
+    await tryStep(page, 'moment-02-mevin', async () => {
+      await teleport(page, rects.m2.x0 + 3, rects.m2.y1); // on the forecourt, clear of the entrance beat's own trigger
+      await waitFor(page, scriptRunning, { timeout: 20000 }); // the ~6 s gap after M1 ended, then M2
+      await page.waitForTimeout(5500); // ~5.5 s in: Mevin and the kit are there and the first line is on screen
+      await shoot(page, 'moment-02-mevin');
+    });
+    await tryStep(page, 'moment-02-mevin (finish)', async () => {
+      await waitFor(page, scriptIdle, { timeout: 25000 });
+    });
+  }
+  await page.close();
+}
+
 // ---------- title screen, loading screen, pause menu and the controls panel (FB-0023/0024) ----------
 
 async function shootTitleAndPause(browser) {
@@ -447,7 +505,7 @@ async function shootTitleAndPause(browser) {
   // (Mustafa's greeting/name entry/customisation/bus arrival, src/scenes/intro-*.js) is its own flow
   // with its own screenshots in tools/qa-shots-intro.js -- skipped here (`intro=0`) so this function's
   // shots (loading screen, pause menu) keep working exactly as before that opening existed.
-  const baseUrl = `${BASE_URL}/?dev=0&map=campus&intro=0`;
+  const baseUrl = `${BASE_URL}/?dev=0&map=campus&intro=0&moments=0`;
   await page.goto(baseUrl);
 
   const gotTitle = await tryStep(page, 'title-screen', async () => {
@@ -519,7 +577,7 @@ async function shootMinigames(browser) {
     // scene state the previous one left behind), so a failure partway skips the rest of *this*
     // game's shots but still moves on to the next game.
     await tryStep(page, `minigame-${id}`, async () => {
-      await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&minigames=1`);
+      await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&minigames=1&moments=0`);
       await waitReady(page);
 
       const sceneKey = await page.evaluate((gameId) => {
@@ -629,7 +687,7 @@ async function shootEnding(browser) {
   // cover -> card photo -> card message -> the end), so there's little to salvage from a partial
   // run, but a failure here still can't take down any *other* flow (main()'s own per-flow catch).
   await tryStep(page, 'ending sequence', async () => {
-    await page.goto(`${BASE_URL}/?dev=0&map=main-block-g&cutscene=0&title=0`);
+    await page.goto(`${BASE_URL}/?dev=0&map=main-block-g&cutscene=0&title=0&moments=0`);
     await waitReady(page);
     await page.evaluate(() => {
       GameState.playerName = 'Zara';
@@ -746,6 +804,7 @@ async function main() {
       ['outdoor points', shootOutdoors],
       ['indoor floors/rooms', shootIndoors],
       ['Gate 2 script + UI', shootCutscene],
+      ['moments (unicorn, Mevin)', shootMoments],
       ['title/pause/menus', shootTitleAndPause],
       ['mini-games', shootMinigames],
       ['ending sequence', shootEnding],

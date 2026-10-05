@@ -29,17 +29,24 @@ const MOMENT_MAX_MS = 20000;
 // rectangle spans dx0..dx1 x dy0..dy1 inclusive. `after`: { moments: ['m1'] } must have played; { cutscene: 'gate2' } must have been
 // seen (the Gate 2 welcome / opening, src/scenes/world.js). Overrides of the global rules, for a moment that is meant to chain right
 // after another: `minGapS` REPLACES MOMENT_GAP_S (seconds of play since the last moment ENDED), `sameVisitOk: true` lets it start on a
-// map visit that already had a moment (MOMENT_PER_VISIT). Leave both out and the defaults apply.
+// map visit that already had a moment (MOMENT_PER_VISIT). `afterFreeS`: she must have had that many seconds of FREE control (not inside
+// a script, cutscene, dialog, door walk or any overlay: ctx.freeSeconds) since the last of those ended, so a moment never starts the
+// instant control comes back (M1 waits 2.5 s after the opening/Mustafa welcome: she gets control and takes a few steps first). Leave all of them
+// out and the defaults apply.
 const MOMENTS = [
   {
     id: 'm1',
     name: 'The unicorn and the prince',
     map: 'campus',
     script: 'momentUnicorn', // SCRIPTS key (src/scripts.js)
-    // Just inside Gate 2, across the whole avenue and the lawn edges on both sides (x 238..250, y 151..153 on the real campus):
-    // she meets it walking from the bus stop up toward the forecourt, wherever she crosses it.
-    trigger: { anchor: 'Gate 2 (Main Entrance)', dx0: -7, dx1: 5, dy0: -6, dy1: -4 },
+    // The whole gate avenue from just inside Gate 2 up to the road in front of the forecourt, across the avenue and the lawn edges
+    // (x 232..250, y 138..153 on the real campus): she meets it walking from the bus stop up toward the Main Block, wherever she is
+    // once her 2.5 s of free control are up (she is still south of the gate then, so it starts as she walks in through the gate and
+    // up the avenue; the camera pans to the unicorn from wherever she stands). It ends 1 row short of M2's area (y 129..137), so the
+    // two never overlap.
+    trigger: { anchor: 'Gate 2 (Main Entrance)', dx0: -13, dx1: 5, dy0: -19, dy1: -4 },
     after: { cutscene: 'gate2' },
+    afterFreeS: 2.5, // not the instant the opening / Mustafa's welcome hands control back
   },
   {
     id: 'm2',
@@ -93,13 +100,16 @@ function momentTriggerRect(moment, anchor) {
 //   state: see the header. now: the play clock, in seconds.
 //   ctx: { map, tileX, tileY (the player's feet tile), enabled (momentsEnabled()), blocked (a dialog, mini-game, key-room script, any
 //          script, a door/warp walk, the pause menu, the journal or the map is up: anything that owns the screen), visitCount (moments
-//          already started on this map visit), anchor(name) -> { x, y } | null, moments? (a table to use instead of MOMENTS: tests) }
+//          already started on this map visit), freeSeconds (seconds of free control since the last script / cutscene / dialog / door walk /
+//          overlay ended or started: src/scenes/world.js; left out = not tracked, so no `afterFreeS` holds anything back),
+//          anchor(name) -> { x, y } | null, moments? (a table to use instead of MOMENTS: tests) }
 function momentDue(state, now, ctx) {
   if (!ctx.enabled || ctx.blocked) return null;
   const seen = state.seenMoments && typeof state.seenMoments.has === 'function' ? state.seenMoments : new Set(state.seenMoments || []);
   for (const moment of ctx.moments || MOMENTS) {
     if (seen.has(moment.id) || moment.map !== ctx.map) continue;
     if (!momentFitsVisit(moment, ctx.visitCount)) continue;
+    if (moment.afterFreeS && ctx.freeSeconds !== undefined && ctx.freeSeconds < moment.afterFreeS) continue;
     if (state.lastMomentAt != null && now - state.lastMomentAt < momentGapS(moment)) continue;
     const after = moment.after || {};
     if ((after.moments || []).some((id) => !seen.has(id))) continue;
@@ -110,6 +120,12 @@ function momentDue(state, now, ctx) {
     return moment;
   }
   return null;
+}
+
+// The free-control counter (WorldScene keeps one, `freeSeconds`, advanced every frame with this): seconds she has been in control
+// without anything owning the screen. Anything owning it (`busy`: a script, cutscene, dialog, door walk, pause menu, journal, map) resets it.
+function advanceFreeSeconds(previous, dtSeconds, busy) {
+  return busy ? 0 : previous + dtSeconds;
 }
 
 // Bookkeeping: a moment counts as played the instant it STARTS (a reload mid-scene never replays it), and the spacing clock is

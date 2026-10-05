@@ -67,7 +67,7 @@ test('FB-0051: MOMENTS lists M1 then M2, each on the campus with a real script, 
   const door = anchor('Main Block entrance');
   const r1 = rectOf('m1');
   const r2 = rectOf('m2');
-  assert.ok(r1.y1 < gate.y && gate.y - r1.y0 <= 10, 'M1 is just north of the gate');
+  assert.ok(r1.y1 < gate.y && gate.y - r1.y0 <= 22, 'M1 is the gate avenue, north of the gate');
   assert.ok(r1.x0 <= gate.x && gate.x <= r1.x1, 'M1 spans the avenue');
   assert.ok(r2.y0 > door.y && r2.y0 - door.y <= 8, 'M2 is on the forecourt south of the door');
   assert.ok(r1.y0 > r2.y1, 'M1 is further from the Main Block than M2: she meets M1 first');
@@ -829,4 +829,102 @@ test('FB-0051: the review doc lists the moment lines (so the owner can edit them
   for (const m of MOMENTS) walkSteps(SCRIPTS[m.script], (type, body) => { if (type === 'say') lines.push(...body.lines); }, m.script);
   assert.ok(lines.length >= 5);
   for (const line of lines) assert.doesNotMatch(line.toLowerCase(), /birthday|bday|b-day/);
+});
+
+// ---------- not the instant control returns (afterFreeS) ----------
+
+test('FB-0051: M1 needs 2.5 s of FREE control before it starts (not the instant the opening hands control back); M2 has no such wait', () => {
+  assert.equal(MOMENTS[0].afterFreeS, 2.5);
+  assert.equal(MOMENTS[1].afterFreeS, undefined, 'M2 simply follows M1 by its own ~6 s gap');
+  const at = (freeSeconds, over = {}) => momentDue(fresh(), 100, ctxFor('m1', { freeSeconds, ...over }));
+  assert.equal(at(0), null, 'control has only just come back');
+  assert.equal(at(2.4), null, 'just under 2.5 s of free control');
+  assert.equal(at(2.5)?.id, 'm1', '2.5 s of free control: due');
+  assert.equal(at(30)?.id, 'm1');
+  assert.equal(at(undefined)?.id, 'm1', 'a caller that does not track free time is not held back (and nothing saved holds it back either)');
+  assert.equal(momentDue(fresh({ seenMoments: new Set(['m1']), lastMomentAt: 0 }), 100, ctxFor('m2', { freeSeconds: 0, visitCount: 1 }))?.id, 'm2', 'M2 ignores the free-time rule');
+  assert.doesNotMatch(read('src', 'save.js'), /freeSeconds/, 'a runtime counter: never saved, so an old save changes nothing');
+});
+
+test('FB-0051: the free-control clock runs only while she is really in control and resets whenever anything owns the screen', () => {
+  const { advanceFreeSeconds } = game;
+  assert.equal(advanceFreeSeconds(0, 0.016, false), 0.016);
+  assert.equal(advanceFreeSeconds(5, 0.5, false), 5.5);
+  assert.equal(advanceFreeSeconds(5, 0.5, true), 0, 'a script, cutscene, dialog, door walk or overlay resets it');
+  // a walk frame by frame: 2.5 s of walking, then a Mustafa-style script, then it has to be earned again
+  let free = 0;
+  let started = null;
+  const frame = (busy, t) => { free = advanceFreeSeconds(free, 1 / 60, busy); if (started === null && momentDue(fresh(), 100, ctxFor('m1', { freeSeconds: free, blocked: busy }))) started = t; };
+  for (let i = 0; i < 60 * 12; i++) frame(i < 60 * 2, i / 60); // 2 s of opening (busy), then free
+  assert.ok(started >= 2 + 2.5 - 0.05 && started <= 2 + 2.5 + 0.1, `started ${started}s in: 2.5 s after control returned`);
+  started = null;
+  for (let i = 0; i < 60 * 5; i++) frame(false, i / 60); // already 10 s free: a fresh check starts at once
+  assert.equal(started, 0);
+  free = advanceFreeSeconds(free, 1 / 60, true); // a dialog opens
+  assert.equal(free, 0);
+  assert.equal(momentDue(fresh(), 100, ctxFor('m1', { freeSeconds: free })), null, 'reset: waits another 2.5 s');
+  // the engine feeds it: reset by anything that owns the screen, on every new visit, passed to momentDue
+  const world = read('src', 'scenes', 'world.js');
+  assert.match(world, /this\.freeSeconds = 0;/);
+  assert.match(world, /const busy = this\.transitioning \|\| this\.scriptRunner\.isRunning \|\| !ui0 \|\| !ui0\.tutorial \|\| ui0\.isBlocking\(\);\s*this\.freeSeconds = advanceFreeSeconds\(this\.freeSeconds, Math\.min\(delta, 250\) \/ 1000, busy\);/);
+  assert.match(world, /freeSeconds: this\.freeSeconds,/);
+});
+
+test('FB-0051: from where the opening leaves her, the 2.5 s of free control are over before she even reaches M1\'s trigger (walking or running), so M1 starts as she enters it', () => {
+  const rect = rectOf('m1');
+  const gate = anchor('Gate 2 (Main Entrance)');
+  const WALK = 5; // tiles per second (src/scenes/world.js WALK_SPEED 80 px/s)
+  assert.match(read('src', 'scenes', 'world.js'), /const WALK_SPEED = 80;/);
+  // where SCRIPTS.opening leaves her: the bus stop (4.75 tiles east, ~25 south of the gate) plus Mustafa's walk
+  const start = { x: gate.x + 5.75, y: gate.y + 20.6 };
+  const pathPoints = [start, { x: gate.x - 0.5, y: gate.y }, { x: gate.x - 0.5, y: gate.y - 25 }]; // through the gate, then straight up the avenue
+  const at = (tiles) => {
+    let left = tiles;
+    for (let i = 0; i + 1 < pathPoints.length; i++) {
+      const a = pathPoints[i];
+      const b = pathPoints[i + 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      if (left <= len) return { x: a.x + ((b.x - a.x) * left) / len, y: a.y + ((b.y - a.y) * left) / len };
+      left -= len;
+    }
+    return pathPoints.at(-1);
+  };
+  // the time until her feet first enter the trigger (its southern edge), walking and running
+  const southEdge = rect.y1 + 1; // tiles at y >= this are still outside
+  let lo = 0;
+  let hi = 200;
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (at(m).y > southEdge) lo = m; else hi = m; }
+  const entryTiles = hi;
+  const inside = (q) => Math.floor(q.x) >= rect.x0 && Math.floor(q.x) <= rect.x1 && Math.floor(q.y) >= rect.y0 && Math.floor(q.y) <= rect.y1;
+  assert.ok(inside(at(entryTiles + 0.01)), 'sanity: that point is inside the trigger');
+  assert.ok(entryTiles / WALK >= MOMENTS[0].afterFreeS, `walking she enters it after ${(entryTiles / WALK).toFixed(1)} s, before the ${MOMENTS[0].afterFreeS} s are up`);
+  assert.ok(entryTiles / 8.75 >= MOMENTS[0].afterFreeS, `running she enters it after ${(entryTiles / 8.75).toFixed(1)} s, before the ${MOMENTS[0].afterFreeS} s are up`);
+  // the free clock at that moment is >= 2.5 s, so momentDue starts M1 on the very first frame inside
+  const first = at(entryTiles + 0.01);
+  assert.equal(momentDue(fresh(), 100, ctxFor('m1', { tileX: Math.floor(first.x), tileY: Math.floor(first.y), freeSeconds: entryTiles / 8.75 }))?.id, 'm1');
+  // and while she is still south of the gate with only 2.5 s of control it is outside the trigger: it starts when she walks in
+  const p = at(MOMENTS[0].afterFreeS * WALK);
+  assert.ok(!inside(p) && p.y > gate.y, 'after 2.5 s at a walk she is still south of the gate');
+  // and it never overlaps M2's area, so the two entrance moments cannot start from one spot
+  const r2 = rectOf('m2');
+  assert.ok(rect.y0 > r2.y1 || rect.x1 < r2.x0 || rect.x0 > r2.x1, 'the two triggers do not overlap');
+});
+
+test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-shots has two flows that play the moments (moment-01-unicorn, moment-02-mevin)', () => {
+  const shots = read('tools', 'qa-shots.js');
+  const urls = [...shots.matchAll(/\$\{BASE_URL\}\/\?dev=0[^`]*/g)].map((m) => m[0]);
+  assert.ok(urls.length >= 6, `found ${urls.length} URLs`);
+  const withMoments = urls.filter((u) => !u.includes('moments=0'));
+  assert.equal(withMoments.length, 1, `only the moments flow loads with moments on: ${withMoments}`);
+  assert.match(withMoments[0], /map=campus&title=0&intro=0&save=0/);
+  assert.match(shots, /async function shootMoments\(browser\)/);
+  assert.match(shots, /\['moments \(unicorn, Mevin\)', shootMoments\]/);
+  assert.match(shots, /shoot\(page, 'moment-01-unicorn'\)/);
+  assert.match(shots, /shoot\(page, 'moment-02-mevin'\)/);
+  assert.match(shots, /tryStep\(page, 'moment-01-unicorn'/);
+  assert.match(shots, /tryStep\(page, 'moment-02-mevin'/);
+  for (const m of shots.slice(shots.indexOf('async function shootMoments')).matchAll(/waitFor\(page, \w+, \{ timeout: (\d+) \}\)/g)) assert.ok(Number(m[1]) <= 25000, 'bounded waits');
+  const intro = read('tools', 'qa-shots-intro.js');
+  for (const url of intro.match(/\$\{BASE_URL\}\/\?dev=0[^`]*/g)) assert.ok(url.includes('moments=0'), url);
+  assert.match(read('tools', 'qa-offline-play.js'), /moments=0/);
 });

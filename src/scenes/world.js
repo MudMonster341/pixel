@@ -126,6 +126,9 @@ class WorldScene extends Phaser.Scene {
     // The moments (src/moments.js): how many have started on THIS visit of this map. WorldScene restarts for every map change, so a
     // new visit starts at 0; at most MOMENT_PER_VISIT may start per visit.
     this.momentsThisVisit = 0;
+    // Seconds of FREE control since a script / cutscene / dialog / door walk / overlay last owned the screen (src/moments.js
+    // advanceFreeSeconds()); a moment's `afterFreeS` waits on it. A new map visit (a door walk just happened) starts at 0.
+    this.freeSeconds = 0;
     this.currentAreaName = null; // last area/zone/building name the location banner announced (P4)
     // buildMap() only ever *assigns* this.overheadLayer when the new map's own Tiled data actually
     // has an 'overhead' layer (tree canopies, ADR 0008) -- it never clears it otherwise. Since
@@ -1170,6 +1173,13 @@ class WorldScene extends Phaser.Scene {
     // title screen or a minute with the game closed never counts. Capped per frame so a stalled tab cannot fast-forward it.
     GameState.playSeconds += Math.min(delta, 250) / 1000;
     this.updateDaylight(delta); // before the early return: the light keeps moving through a key-room beat or a door walk
+    {
+      // ...and the free-control clock: reset by anything that owns the screen (a script or cutscene, a door walk or warp, a dialog, the
+      // pause menu, the journal, the map), running only while she is really in control.
+      const ui0 = this.scene.get('ui');
+      const busy = this.transitioning || this.scriptRunner.isRunning || !ui0 || !ui0.tutorial || ui0.isBlocking();
+      this.freeSeconds = advanceFreeSeconds(this.freeSeconds, Math.min(delta, 250) / 1000, busy);
+    }
     if (this.transitioning) return;
 
     const ui = this.scene.get('ui');
@@ -2032,6 +2042,7 @@ class WorldScene extends Phaser.Scene {
       enabled: true,
       blocked,
       visitCount: this.momentsThisVisit,
+      freeSeconds: this.freeSeconds,
       anchor: (name) => resolveAnchor(this.mapObjects, name),
     });
     if (moment) this.playMoment(moment);

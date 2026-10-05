@@ -79,7 +79,7 @@ async function advanceDialogToClose(page, maxPresses = 12) {
 
 async function run(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  await page.goto(`${BASE_URL}/?dev=0&map=campus&intro=1`);
+  await page.goto(`${BASE_URL}/?dev=0&map=campus&intro=1&moments=0`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('title')?.menuItems));
   await page.waitForTimeout(600); // let the live campus pan settle into a representative frame
   await shoot(page, '01-title-live-campus-pan'); // logo + blinking "PRESS ENTER" over the real map
@@ -150,7 +150,7 @@ async function run(browser) {
 
 async function shootEntranceAndKeyRoomBeats(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
-  await page.goto(`${BASE_URL}/?dev=0&map=campus&title=0&intro=0&cutscene=1`);
+  await page.goto(`${BASE_URL}/?dev=0&map=campus&title=0&intro=0&cutscene=1&moments=0`);
   await page.waitForFunction(() => Boolean(window.game?.scene.getScene('world')?.player?.active));
 
   // The Main Block entrance beat (ADR 0016 SCRIPTS.entrance, replacing the old static illustration).

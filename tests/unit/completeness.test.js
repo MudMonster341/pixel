@@ -86,7 +86,8 @@ for (const key of MAP_KEYS) {
     for (const index of used) assert.ok(tileCellVisible(index), `${key}: tile "${TILE_NAMES[index]}" (#${index}) is fully transparent in assets/tiles.png`);
     // openTiles: a door's "open" overlay names tiles; each must exist
     const warpLike = [...m.objects.map((o) => o.props.openTiles), ...(m.def.warps || []).map((w) => w.openTiles)];
-    for (const value of warpLike) for (const name of parseOpenTiles(value) || []) assert.ok(TILE_NAME_SET.has(name), `${key}: openTiles names "${name}", which is not in assets/tiles.json`);
+    // (FB-0077: "-" is the frame list's "nothing there", used by the Gate 2 barrier's `gateBarrier` parts, src/maplogic.js BLANK_TILE_NAME)
+    for (const value of warpLike) for (const name of parseOpenTiles(value) || []) assert.ok(name === '-' || TILE_NAME_SET.has(name), `${key}: openTiles names "${name}", which is not in assets/tiles.json`);
   });
 }
 

@@ -2947,6 +2947,48 @@
       "solid": false,
       "overhead": true,
       "color": "#91edff"
+    },
+    {
+      "name": "barrierRestOpen",
+      "solid": false,
+      "overhead": false,
+      "color": "#5d5259"
+    },
+    {
+      "name": "barrierPivotHalf",
+      "solid": false,
+      "overhead": false,
+      "color": "#705c5f"
+    },
+    {
+      "name": "barrierHalfMast",
+      "solid": false,
+      "overhead": false,
+      "color": "#664b51"
+    },
+    {
+      "name": "barrierHalfElbow",
+      "solid": false,
+      "overhead": false,
+      "color": "#614951"
+    },
+    {
+      "name": "barrierPivotUp",
+      "solid": false,
+      "overhead": false,
+      "color": "#746063"
+    },
+    {
+      "name": "barrierUpMid",
+      "solid": false,
+      "overhead": false,
+      "color": "#896568"
+    },
+    {
+      "name": "barrierUpTop",
+      "solid": false,
+      "overhead": false,
+      "color": "#7a5a5e"
     }
   ]
 }

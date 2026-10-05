@@ -1112,6 +1112,88 @@ function barrierRest(img, x, y) {
   img.fill(x + 2, y + 3, 5, 2, 'R'); // red cap over the boom tip
   img.fill(x + 2, y + 3, 5, 1, 'K');
 }
+// FB-0077 ("add in animation of this opening when we near it so it opens and stays open"): the boom RAISES as she nears the gate and stays up.
+// tools/lib/door-kinds.js gateBarrierParts() names the frames; these are the new pictures, appended at the end of TILES so no earlier index moves.
+//   barrierRestOpen    the support post with nothing resting on it (the boom has lifted off)
+//   barrierPivotHalf / barrierHalfMast / barrierHalfElbow   the half-raised boom: ~45 degrees up and to the west from its housing, drawn across
+//                      the housing's own tile, the one above it and the one above-left (a lowered boom lies along the row, so it rises "into" the screen)
+//   barrierPivotUp / barrierUpMid / barrierUpTop   the raised boom: vertical, standing on the housing, two tiles tall, the road clear
+// All of them are one drawing: the boom as a striped bar (4 px red/white bands like the lowered `barrierArm`, outlined, a pale cap at the tip)
+// rotated about its hub inside the housing, drawn on a 2 x 3 tile canvas (columns: the tile west of the housing and the housing's own;
+// rows: two above the housing's row, one above, the row itself) and cut into tiles. A cell that should stay empty is checked to be empty.
+const BARRIER_CANVAS = { w: TILE * 2, h: TILE * 3, hubX: TILE + 9, hubY: TILE * 2 + 6 }; // the hub: inside the housing, at its top-left
+const BARRIER_POSES = {
+  half: { angle: 45, length: 28, halfWidth: 1.15 },
+  open: { angle: 90, length: 30, halfWidth: 1.5 },
+};
+const barrierPoseCache = {};
+// The housing without the lowered boom's stub entering it on the left (that stub is the lowered pose's own picture).
+function barrierHousing(img, x, y) {
+  img.box(x + 7, y + 2, 8, 13, 'O'); // the housing
+  img.fill(x + 8, y + 3, 6, 1, 'Q');
+  img.fill(x + 8, y + 4, 6, 3, 'R'); // red cap
+  img.set(x + 11, y + 5, 'Y'); // warning lamp
+  img.fill(x + 8, y + 12, 6, 2, 'o'); // plinth shade
+}
+function barrierPose(poseName) {
+  if (barrierPoseCache[poseName]) return barrierPoseCache[poseName];
+  const pose = BARRIER_POSES[poseName];
+  const { w, h, hubX, hubY } = BARRIER_CANVAS;
+  const arm = new Img(w, h);
+  const a = (pose.angle * Math.PI) / 180;
+  const dirX = -Math.cos(a); // the lowered boom points west; raising it lifts the tip up the screen
+  const dirY = -Math.sin(a);
+  const nX = -dirY;
+  const nY = dirX;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const rx = x - hubX;
+      const ry = y - hubY;
+      const t = rx * dirX + ry * dirY; // along the boom, from the hub
+      const across = rx * nX + ry * nY; // across it (positive: the east / lower side, where the light is not)
+      const s = Math.abs(across);
+      if (t >= -2 && t <= pose.length + 1 && s <= pose.halfWidth + 1) {
+        if (t >= 0 && t <= pose.length && s <= pose.halfWidth) {
+          const red = Math.floor(t / 4) % 2 === 0;
+          arm.set(x, y, t > pose.length - 1 ? 'Q' : (red ? 'R' : 'W')); // a pale end cap
+          if (across > pose.halfWidth - 1 && t > 0 && t <= pose.length - 1) arm.set(x, y, red ? 'r' : '#'); // the shaded side, as on the lowered boom
+        } else {
+          arm.set(x, y, 'K');
+        }
+      }
+    }
+  }
+  const canvas = new Img(w, h);
+  putImg(canvas, 0, 0, arm);
+  barrierHousing(canvas, TILE, TILE * 2); // the housing stands over the boom's root
+  barrierPoseCache[poseName] = { arm, canvas };
+  return barrierPoseCache[poseName];
+}
+// One cell of a pose: `col` 0 (west of the housing) or 1 (the housing's column), `row` 0 (two above the housing's row) .. 2 (its own row).
+function barrierPoseTile(img, x, y, poseName, col, row) {
+  const { canvas } = barrierPose(poseName);
+  putImg(img, x, y, canvas, col * TILE, row * TILE, TILE, TILE);
+}
+// Guard against a mis-sliced pose: every cell the frame table calls BLANK must really have no boom pixel in it.
+function barrierPoseCellHasArm(poseName, col, row) {
+  const { arm } = barrierPose(poseName);
+  for (let yy = 0; yy < TILE; yy++) for (let xx = 0; xx < TILE; xx++) if (arm.data[(((row * TILE) + yy) * arm.w + col * TILE + xx) * 4 + 3] > 0) return true;
+  return false;
+}
+for (const [poseName, used] of Object.entries({ half: ['1,2', '1,1', '0,1'], open: ['1,2', '1,1', '1,0'] })) {
+  for (let col = 0; col < 2; col++) {
+    for (let row = 0; row < 3; row++) {
+      if (!used.includes(`${col},${row}`) && barrierPoseCellHasArm(poseName, col, row)) throw new Error(`barrier pose ${poseName}: the boom reaches cell ${col},${row}, which the frame table (tools/lib/door-kinds.js) leaves blank`);
+    }
+  }
+}
+function barrierRestOpen(img, x, y) {
+  img.box(x + 2, y + 3, 5, 12, 'O'); // the support post, as in `barrierRest`, with no boom tip on it
+  img.fill(x + 3, y + 4, 3, 1, 'Q');
+  img.fill(x + 3, y + 12, 3, 2, 'o');
+  img.fill(x + 2, y + 3, 5, 2, 'R'); // red cap
+  img.fill(x + 2, y + 3, 5, 1, 'K');
+}
 
 // Tall trees are split into a solid trunk (ground level, drawn like any other object) and a 2x2 canopy above it,
 // drawn on an overhead layer so walking behind it reads as depth (STYLE_GUIDE). FB-0053/FB-0056: every tree is one
@@ -1725,6 +1807,16 @@ const TILES = [
   // The lab's floor panels and light strips, bulkhead walls, the sealed hatch (closed / half / open) and its scanner pad, server racks and their
   // blinking-LED overlays, consoles, the holo table and its globe, the wall display and the ceiling light bar: see tools/lib/icl-tech-art.js.
   ...ICL_TECH.tiles,
+
+  // ---- FB-0077 (the Gate 2 boom barrier raises as she nears it and stays up), appended at the end so no earlier index moves ----
+  // tools/lib/door-kinds.js gateBarrierParts() names them. None is solid: the boom stops cars, she walks past it as before.
+  { name: 'barrierRestOpen', draw: barrierRestOpen },
+  { name: 'barrierPivotHalf', draw: (img, x, y) => barrierPoseTile(img, x, y, 'half', 1, 2) },
+  { name: 'barrierHalfMast', draw: (img, x, y) => barrierPoseTile(img, x, y, 'half', 1, 1) },
+  { name: 'barrierHalfElbow', draw: (img, x, y) => barrierPoseTile(img, x, y, 'half', 0, 1) },
+  { name: 'barrierPivotUp', draw: (img, x, y) => barrierPoseTile(img, x, y, 'open', 1, 2) },
+  { name: 'barrierUpMid', draw: (img, x, y) => barrierPoseTile(img, x, y, 'open', 1, 1) },
+  { name: 'barrierUpTop', draw: (img, x, y) => barrierPoseTile(img, x, y, 'open', 1, 0) },
 ];
 
 

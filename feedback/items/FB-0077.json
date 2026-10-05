@@ -4,9 +4,9 @@
   "type": "change",
   "area": "Maps & buildings",
   "priority": "normal",
-  "status": "in-progress",
+  "status": "fixed",
   "createdAt": "2026-10-05T17:20:45.065Z",
-  "updatedAt": "2026-10-05T17:23:56.829Z",
+  "updatedAt": "2026-10-05T17:50:07.906Z",
   "details": "",
   "context": {
     "map": "campus",
@@ -62,8 +62,18 @@
     }
   },
   "screenshot": "screenshots/FB-0077.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "The Gate 2 barrier now lifts (lowered, half, standing up) when you walk within about 4 tiles of it, and stays up for good, also after you reload. Unit tests: tests/unit/fb-0077-gate-barrier.test.js.",
+      "at": "2026-10-05T17:50:07.906Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/gate-barrier.spec.js › the Gate 2 barrier starts lowered, rises as she walks up to it and stays up",
+    "commit": null,
+    "at": "2026-10-05T17:50:07.906Z"
+  },
   "history": [
     {
       "at": "2026-10-05T17:20:45.065Z",
@@ -74,6 +84,11 @@
       "at": "2026-10-05T17:23:56.829Z",
       "by": "agent",
       "status": "in-progress"
+    },
+    {
+      "at": "2026-10-05T17:50:07.906Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

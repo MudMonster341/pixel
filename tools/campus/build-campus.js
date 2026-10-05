@@ -11,7 +11,7 @@ const path = require('path');
 const layout = require('./layout');
 const autotile = require('./autotile');
 const { encodePNG } = require('../lib/png');
-const { doorProps } = require('../lib/door-kinds');
+const { doorProps, gateBarrierParts, GATE_BARRIER_BLANK } = require('../lib/door-kinds');
 
 const ROOT = path.join(__dirname, '..', '..');
 const TILE_PX = 16;
@@ -2003,6 +2003,8 @@ for (const h of westHostels.concat(eastHostels)) {
   plantTree(stopX + 4, treeTop, 'palm', true);
 }
 
+let gateBarrier = null; // FB-0077: { restX, pivotX, row, armCount }, filled in by the Gate 2 block just below, written out in section 17
+
 // Quality loop, category 1 run 1 (2026-09-28): "Gate 2 has no gate... two gate pillars with the BITS
 // sign, a security booth, a barrier arm, and planters with plants" -- Gate 2 used to be just a
 // crossing band in the fence with a couple of bollards further in, nothing that read as an actual
@@ -2049,6 +2051,13 @@ for (const h of westHostels.concat(eastHostels)) {
   if (inGrid(restX, gateLineRow)) structures[gateLineRow * W + restX] = TILE.barrierRest;
   for (let x = restX + 1; x < pivotX; x++) {
     if (inGrid(x, gateLineRow)) structures[gateLineRow * W + x] = TILE.barrierArm;
+  }
+  // FB-0077: the boom is animated (it raises when she nears it and stays up). Where it stands is remembered for section 17, which writes
+  // the `gateBarrier` objects (tools/lib/door-kinds.js gateBarrierParts()). The raised boom stands in the two rows above the housing and
+  // the half-raised one reaches the tile west of that, so those three cells must be free lawn/pavement (nothing but the ground there).
+  gateBarrier = { restX, pivotX, row: gateLineRow, armCount: pivotX - restX - 1 };
+  for (const [dx, dy] of [[0, -1], [0, -2], [-1, -1]]) {
+    if (structures[(gateLineRow + dy) * W + pivotX + dx] !== -1) throw new Error(`the raised barrier needs ${pivotX + dx},${gateLineRow + dy} empty, found ${tileInfo.tiles[structures[(gateLineRow + dy) * W + pivotX + dx]].name}`);
   }
 }
 
@@ -2519,6 +2528,33 @@ for (const h of hostels) {
 }
 rectObjectFrame('area', 'Gate 2', gate2U - AVENUE_W / 2, fenceFrame.v1 - MPT, gate2U + AVENUE_W / 2, fenceFrame.v1 + MPT, [{ name: 'kind', type: 'string', value: 'gate' }]);
 rectObjectFrame('area', 'Side Gate', fenceFrame.u0 - MPT, sideGateV - layout.sideGate.spanMeters / 2, fenceFrame.u0 + MPT, sideGateV + layout.sideGate.spanMeters / 2, [{ name: 'kind', type: 'string', value: 'gate' }]);
+
+// FB-0077 ("add in animation of this opening when we near it so it opens and stays open"): the Gate 2 boom barrier as door-like objects. Written
+// last so no earlier object id moves. The engine (src/scenes/world.js createGateBarrier()) plays closed -> half -> open on every part when she
+// comes within a few tiles, then leaves the open frame in the structures layer for good (flag `gateBarrierOpen`). Each part is a point object
+// on its first cell with `cells`, `closedTiles`, `halfTiles`, `openTiles` (tile names, '-' = nothing there): the closed frame of every part is
+// exactly what the map shows now (checked below), so the barrier looks the same until it plays.
+if (!gateBarrier) throw new Error('no Gate 2 barrier was laid');
+for (const part of gateBarrierParts(gateBarrier.armCount)) {
+  const px = gateBarrier.restX + part.dx;
+  const py = gateBarrier.row + part.dy;
+  const [cw, ch] = part.cells.split('x').map(Number);
+  part.closed.forEach((name, i) => {
+    const cx = px + (ch > 1 && cw === 1 ? 0 : i);
+    const cy = py + (ch > 1 && cw === 1 ? i : 0);
+    const shown = structures[cy * W + cx] === -1 ? GATE_BARRIER_BLANK : tileInfo.tiles[structures[cy * W + cx]].name;
+    if (shown !== name) throw new Error(`barrier part "Gate 2 barrier${part.suffix}": the map shows ${shown} at ${cx},${cy}, its closed frame says ${name}`);
+  });
+  for (const state of ['closed', 'half', 'open']) {
+    for (const name of part[state]) if (name !== GATE_BARRIER_BLANK && !(name in TILE)) throw new Error(`barrier frame tile "${name}" is not in assets/tiles.json (npm run assets)`);
+  }
+  pointObject('gateBarrier', `Gate 2 barrier${part.suffix}`, px, py, [
+    { name: 'cells', type: 'string', value: part.cells },
+    { name: 'closedTiles', type: 'string', value: part.closed.join(',') },
+    { name: 'halfTiles', type: 'string', value: part.half.join(',') },
+    { name: 'openTiles', type: 'string', value: part.open.join(',') },
+  ]);
+}
 
 // ================= 18. write Tiled JSON =================
 

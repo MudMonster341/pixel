@@ -50,6 +50,8 @@ const MAPS = {
       { match: 'Library Block entrance', reason: 'The Library is closed today.' },
       { match: 'Mechanical Block entrance', reason: 'The Mechanical Block is closed today.' },
     ],
+    // FB-0077: the Gate 2 boom barrier raises when she nears it and stays up (src/story.js STORY.gateBarrier; world.js createGateBarrier()).
+    gateBarrier: STORY.gateBarrier,
     // Quality loop, Characters run 1 (2026-09-29): ambient campus life (src/ambient.js,
     // src/scenes/world.js createAmbient()) -- students walking, jogging, sitting, chatting.
     ambient: AMBIENT.campus,

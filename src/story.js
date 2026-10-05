@@ -157,6 +157,20 @@ STORY.iclGate = {
   ],
 };
 
+// FB-0077: the Gate 2 boom barrier opens by itself when she comes near it and then stays up for good. All data: src/maps.js points the campus def at
+// it (`gateBarrier`), the generated campus carries the `gateBarrier` objects (tools/campus/build-campus.js, frames from tools/lib/door-kinds.js).
+// `range`: tiles from the barrier at which it starts to rise; `frameMs`: how long each of its frames (lowered, half, up) lasts, so about 0.6 s in
+// all; `flag` is saved with everything else. `openIfCutscene`/`openIfStage`/`map`: a save that has already played the Gate 2 welcome, begun the hunt or
+// stands inside a building loads with the barrier up (src/save.js, maplogic.js isGateBarrierOpen()).
+STORY.gateBarrier = {
+  map: 'campus',
+  flag: 'gateBarrierOpen',
+  range: 4,
+  frameMs: 300,
+  openIfCutscene: 'gate2',
+  openIfStage: ['hunting', 'rewarded'],
+};
+
 // P5c (FB-0071): Alice, the ICL's robot. Greets her the first time (explains the lab in two short lines and hands over the key, on the same
 // actions the core console uses, so whichever of the two she talks to first gives it), then a few light lines in order, then a last one on repeat.
 STORY.alice = [

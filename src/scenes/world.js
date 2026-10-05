@@ -152,6 +152,7 @@ class WorldScene extends Phaser.Scene {
     this.tileAnims = []; // P5c: the tile animations of THIS map (createScanners()/createTileAnims()); a restart starts from none
     this.scanners = [];
     this.gates = [];
+    this.gateBarrier = null; // FB-0077: this map's Gate 2 boom barrier (createGateBarrier()), if it has one
   }
 
   // FB-0072 (the one choke point): `transitioning` is the flag every "the player does not have the
@@ -212,6 +213,7 @@ class WorldScene extends Phaser.Scene {
     this.createScanners();
     this.createGates();
     this.createTileAnims();
+    this.createGateBarrier(); // FB-0077: the Gate 2 boom raises as she nears it and stays up
     // P4c: a restart mid-animation (a warp's fade ending, the player quitting) must never leave a door overlay or its timers behind.
     this.events.once('shutdown', () => this.destroyDoorAnims());
 
@@ -940,6 +942,71 @@ class WorldScene extends Phaser.Scene {
     }
   }
 
+  // FB-0077: the Gate 2 boom barrier. Its door-like `gateBarrier` objects (a few parts: the post-and-arm row, the mast above the housing, the elbow
+  // beside it) all play the P4c closed -> half -> open animation together when she comes within STORY.gateBarrier.range tiles of it, at the
+  // slower pace of its own `frameMs` (about 0.6 s), with the door's sound and the latch click as it locks up. Opening swaps its structure
+  // tiles for the open frame (the arm tiles are cleared, the raised boom stands in the two tiles above the housing: none of them solid, so the
+  // gate stays passable on foot exactly as before) and records the flag `gateBarrierOpen`, so it never lowers again, not after a reload either:
+  // a scene that finds the flag already set (a save, a walk back from a building) builds it open at once, no animation. Pure rules: maplogic.js.
+  createGateBarrier() {
+    this.gateBarrier = null;
+    const def = this.def.gateBarrier;
+    const parts = (this.mapObjects || []).filter((o) => o.type === 'gateBarrier').map((o) => {
+      const cells = parseDoorCells(o.props.cells);
+      return { name: o.name, x: Math.floor(o.x), y: Math.floor(o.y), cellsW: cells.w, cellsH: cells.h, frames: doorFrames(o.props) };
+    }).filter((part) => part.frames);
+    if (!def || !parts.length) return;
+    this.gateBarrier = { def, parts, box: gateBarrierBox(parts), open: false };
+    if (GameState.flags[def.flag]) this.setGateBarrierOpen(false);
+  }
+
+  // She is within range of the (still lowered) barrier: raise it. Runs every frame, whoever is moving her (she, or a script walking her up the avenue).
+  updateGateBarrier() {
+    const barrier = this.gateBarrier;
+    if (!barrier || barrier.open || !this.player) return;
+    if (gateBarrierNear(barrier.box, Math.floor(this.player.x / TILE), Math.floor(this.player.y / TILE), barrier.def.range)) this.setGateBarrierOpen(true);
+  }
+
+  // Raises the barrier for good. With `animate` its parts play closed -> half -> open first (over the lowered tiles, which are cleared the moment
+  // the animation starts: the overlay's first frame is that very picture), then the open frame goes into the structures layer.
+  setGateBarrierOpen(animate) {
+    const barrier = this.gateBarrier;
+    if (!barrier || barrier.open) return;
+    barrier.open = true;
+    if (!GameState.flags[barrier.def.flag]) {
+      GameState.flags[barrier.def.flag] = true;
+      notifyStateChanged();
+    }
+    const layer = this.solidLayers.find((l) => l.layer.name === 'structures');
+    const eachCell = (visit) => barrier.parts.forEach((part) => {
+      const names = part.frames[part.frames.length - 1];
+      names.forEach((name, i) => visit(part, name, doorCellAt(part, i)));
+    });
+    const apply = () => {
+      if (!layer) return;
+      eachCell((part, name, cell) => {
+        const index = name === BLANK_TILE_NAME ? -1 : this.tileInfo.tiles.findIndex((t) => t.name === name);
+        if (index >= 0) layer.putTileAt(index + 1, cell.x, cell.y);
+        else layer.removeTileAt(cell.x, cell.y);
+      });
+    };
+    if (!animate || !layer) { apply(); return; }
+    eachCell((part, name, cell) => layer.removeTileAt(cell.x, cell.y));
+    AudioManager.play('doorOpen');
+    const overlays = barrier.parts.map((part) => this.showDoorOverlay({
+      name: part.name, x: part.x, y: part.y, cellsW: part.cellsW, cellsH: part.cellsH, frames: part.frames, frameMs: barrier.def.frameMs, depth: 1,
+    }));
+    let waiting = overlays.filter(Boolean).length;
+    const finished = () => {
+      if (--waiting > 0) return;
+      apply();
+      overlays.forEach((overlay) => overlay && overlay.destroy());
+      AudioManager.play('doorClose'); // the latch as it locks up
+    };
+    if (!waiting) { apply(); return; }
+    overlays.forEach((overlay) => overlay && overlay.open(finished));
+  }
+
   // A key station whose key is now held (Alice handed it over, or another station did) fades its floating icon, as taking it from the station does.
   syncKeyStations() {
     for (const ks of this.keyStations || []) {
@@ -1217,6 +1284,7 @@ class WorldScene extends Phaser.Scene {
       const busy = this.transitioning || this.scriptRunner.isRunning || !ui0 || !ui0.tutorial || ui0.isBlocking();
       this.freeSeconds = advanceFreeSeconds(this.freeSeconds, Math.min(delta, 250) / 1000, busy);
     }
+    this.updateGateBarrier(); // before the early return: it rises as she walks up to it even during the Gate 2 welcome script
     if (this.transitioning) return;
 
     const ui = this.scene.get('ui');
@@ -1937,8 +2005,10 @@ class WorldScene extends Phaser.Scene {
     if (!this.doorAnims) this.doorAnims = new Map();
     const previous = this.doorAnims.get(key);
     if (previous) previous.destroy();
-    const depth = this.doorOverlayDepth(warp);
+    const depth = warp.depth ?? this.doorOverlayDepth(warp); // FB-0077: the gate barrier sits at ground level, right over the tile layers
+    const frameMs = warp.frameMs || DOOR_FRAME_MS; // ...and plays slower than a door
     const indexOfTile = (name) => {
+      if (name === BLANK_TILE_NAME) return -1; // FB-0077: "nothing there" in this frame (the barrier's arm tiles once it is up)
       const index = this.tileInfo.tiles.findIndex((t) => t.name === name);
       if (index === -1) console.warn(`"${warp.name || warp.to}": unknown door tile "${name}"`);
       return index;
@@ -1950,7 +2020,8 @@ class WorldScene extends Phaser.Scene {
     for (let i = 0; i < cellCount; i++) {
       const first = (frameTiles[0][i] ?? -1) >= 0 ? frameTiles[0][i] : frameTiles[frameTiles.length - 1][i];
       if (!(first >= 0)) { images.push(null); continue; }
-      images.push(this.tileImage((warp.x + (i % across)) * TILE, (warp.y + Math.floor(i / across)) * TILE, first).setDepth(depth));
+      // (a cell whose first frame is blank, FB-0077, starts hidden: its image only borrows the last frame's tile until the animation shows it)
+      images.push(this.tileImage((warp.x + (i % across)) * TILE, (warp.y + Math.floor(i / across)) * TILE, first).setDepth(depth).setVisible((frameTiles[0][i] ?? -1) >= 0));
     }
     const show = (k) => images.forEach((img, i) => {
       if (!img) return;
@@ -1971,7 +2042,7 @@ class WorldScene extends Phaser.Scene {
       if (destroyed) return;
       stop();
       const n = frames.length;
-      const total = doorAnimDuration(n);
+      const total = doorAnimDuration(n, frameMs);
       show(reverse ? n - 1 : 0);
       const finish = () => {
         if (destroyed || finishCurrent !== finish) return;
@@ -1983,7 +2054,7 @@ class WorldScene extends Phaser.Scene {
       if (total === 0) { finish(); return; }
       counter = this.tweens.addCounter({
         from: 0, to: total, duration: total,
-        onUpdate: (tween) => { if (!destroyed && finishCurrent === finish) show(doorFrameAt(tween.getValue(), n, DOOR_FRAME_MS, reverse)); },
+        onUpdate: (tween) => { if (!destroyed && finishCurrent === finish) show(doorFrameAt(tween.getValue(), n, frameMs, reverse)); },
         onComplete: finish,
       });
       failsafe = this.time.delayedCall(total + DOOR_ANIM_FAILSAFE_MS, finish);

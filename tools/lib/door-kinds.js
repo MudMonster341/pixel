@@ -54,4 +54,29 @@ function doorProps(kind) {
   return { closedTiles: k.closed.join(','), halfTiles: k.half.join(','), openTiles: k.open.join(',') };
 }
 
-module.exports = { DOOR_KINDS, doorProps };
+// FB-0077 ("add in animation of this opening when we near it so it opens and stays open"): the Gate 2 boom barrier is door-like too, but
+// it is not one doorway: lowered it is a row of tiles across the whole road, raised it stands up beside its pivot housing, so the
+// frames are a handful of PARTS (each a point object of type `gateBarrier` with the same three properties a door carries, plus `cells`):
+//   row    the pivot-post row: the support post, the arm tiles, the pivot housing        (armCount + 2 cells wide)
+//   mast   the two tiles above the housing: nothing while lowered, the raised arm's mid and top once open (1 x 2 cells, top row first)
+//   elbow  the tile left of the one above the housing: only the half-raised arm's upper end   (1 x 1)
+// BLANK ('-') is "nothing there": the overlay hides that cell and, once the barrier has opened, the engine clears the structure tile.
+// `armCount` is the number of lowered arm tiles between the support post and the housing (build-campus.js lays them); the three parts'
+// offsets are from the support post's tile and the pivot's row. Closed = the picture the map already shows; half = the arm at ~45
+// degrees rising from the housing; open = the arm vertical beside it and the road clear. tools/make-assets.js draws the new tiles.
+const BLANK = '-';
+function gateBarrierParts(armCount) {
+  const blanks = (n) => Array(n).fill(BLANK);
+  return [
+    {
+      suffix: '', dx: 0, dy: 0, cells: `${armCount + 2}x1`,
+      closed: ['barrierRest', ...Array(armCount).fill('barrierArm'), 'barrierPivot'],
+      half: ['barrierRestOpen', ...blanks(armCount), 'barrierPivotHalf'],
+      open: ['barrierRestOpen', ...blanks(armCount), 'barrierPivotUp'],
+    },
+    { suffix: ' mast', dx: armCount + 1, dy: -2, cells: '1x2', closed: blanks(2), half: [BLANK, 'barrierHalfMast'], open: ['barrierUpTop', 'barrierUpMid'] },
+    { suffix: ' elbow', dx: armCount, dy: -1, cells: '1x1', closed: [BLANK], half: ['barrierHalfElbow'], open: [BLANK] },
+  ];
+}
+
+module.exports = { DOOR_KINDS, doorProps, gateBarrierParts, GATE_BARRIER_BLANK: BLANK };

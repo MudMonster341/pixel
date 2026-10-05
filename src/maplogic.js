@@ -296,6 +296,47 @@ function gateBumped(gate, tx, ty, movingUp) {
   return Boolean(movingUp) && ty === gate.y + 1 && tx >= gate.x && tx < gate.x + (gate.cellsW || 1);
 }
 
+// ---------- the Gate 2 boom barrier (FB-0077: "add in animation of this opening when we near it so it opens and stays open") ----------
+// The barrier is a few door-like point objects of type `gateBarrier` (tools/lib/door-kinds.js gateBarrierParts(), written by tools/campus/build-campus.js),
+// each with `cells` and the same closed/half/open frame lists a door has; a frame's tile name BLANK_TILE_NAME is "nothing there". The map def's
+// `gateBarrier` (src/story.js STORY.gateBarrier) names the flag, the trigger range and the map. It starts lowered; when she comes within `range` tiles
+// of it, world.js plays closed -> half -> open on every part, leaves the open frame in the structures layer and sets the flag, so it stays up for good.
+const BLANK_TILE_NAME = '-';
+
+// The cell `index` of a door-like part ({ x, y, cellsW, cellsH }), the way showDoorOverlay() lays its cells: left to right, or top to bottom
+// when the part is one cell wide and several tall.
+function doorCellAt(part, index) {
+  const down = (part.cellsH || 1) > 1 && (part.cellsW || 1) === 1;
+  return { x: part.x + (down ? 0 : index), y: part.y + (down ? index : 0) };
+}
+
+// The smallest tile rectangle holding every cell of the barrier's parts: { x0, y0, x1, y1 } inclusive.
+function gateBarrierBox(parts) {
+  const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  for (const part of parts) {
+    box.x0 = Math.min(box.x0, part.x);
+    box.y0 = Math.min(box.y0, part.y);
+    box.x1 = Math.max(box.x1, part.x + (part.cellsW || 1) - 1);
+    box.y1 = Math.max(box.y1, part.y + (part.cellsH || 1) - 1);
+  }
+  return box;
+}
+
+// Is tile (tx, ty) within `range` tiles (either axis) of the barrier's box?
+function gateBarrierNear(box, tx, ty, range) {
+  return Boolean(box) && tx >= box.x0 - range && tx <= box.x1 + range && ty >= box.y0 - range && ty <= box.y1 + range;
+}
+
+// Should the barrier already be up for this GameState (the soft-lock guard / migration for saves made before it opened by itself)? True once the
+// flag is set, and for a save that is clearly past the gate: the Gate 2 welcome has played, or the hunt has begun.
+function isGateBarrierOpen(barrier, state) {
+  if (!barrier) return true;
+  if (state.flags && state.flags[barrier.flag]) return true;
+  if (barrier.openIfCutscene && state.seenCutscenes && state.seenCutscenes.has(barrier.openIfCutscene)) return true;
+  if (barrier.openIfStage && state.quest && barrier.openIfStage.includes(state.quest.stage)) return true;
+  return false;
+}
+
 // ---------- tile animations (P5c): blinking rack LEDs, the holo globe ----------
 // A `tileAnim` object cycles `frameCount` overlay tiles, each showing `ms` ms; `phase` offsets the start (in ms), so a bank of racks blinks out of
 // step. Pure so a test can walk it.

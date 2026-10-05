@@ -98,6 +98,14 @@ function applyState(state, saved) {
   state.minigames = saved.minigames && typeof saved.minigames === 'object' ? { ...saved.minigames } : state.minigames;
   state.collected = new Set(saved.collected || []);
   state.seenCutscenes = new Set(saved.seenCutscenes || []);
+  // FB-0077: the Gate 2 boom barrier opens by itself when she nears it and stays up (flag `gateBarrierOpen`). A save from before that existed which is
+  // already past the gate (the Gate 2 welcome has played, the hunt has begun, or she is standing inside a building) loads with it up: it never
+  // lowers again and she never has to walk back to watch it open (src/story.js STORY.gateBarrier, maplogic.js isGateBarrierOpen()).
+  const barrier = typeof STORY !== 'undefined' ? STORY.gateBarrier : null;
+  if (barrier && !state.flags[barrier.flag]) {
+    const elsewhere = Boolean(saved.map) && saved.map !== barrier.map;
+    if (elsewhere || isGateBarrierOpen(barrier, state)) state.flags[barrier.flag] = true;
+  }
   // A save from before the moments existed has none of these: no moment has played, so each may play once (never "already seen").
   state.seenMoments = new Set(Array.isArray(saved.seenMoments) ? saved.seenMoments : []);
   state.playSeconds = Number.isFinite(saved.playSeconds) && saved.playSeconds > 0 ? saved.playSeconds : 0;

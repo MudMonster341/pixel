@@ -61,6 +61,7 @@ class ScriptRunner {
     this.skipping = false;
     this.unskippable = unskippable;
     this.scene.transitioning = true;
+    this.hidePrompt(); // no "E" bubble over her head for the whole script (WorldScene.updatePrompt() brings it back on the first free frame)
     try {
       await this.runSteps(steps);
     } finally {
@@ -69,6 +70,15 @@ class ScriptRunner {
       this.skipping = false;
       this.unskippable = false;
     }
+  }
+
+  // The interact prompt ("E" / "!") belongs to the free-roaming game: WorldScene.update() stops running while a script owns the screen, so a
+  // bubble that was showing when the script started would hang over her head for its whole length. Hidden at the start (and again if a
+  // script hands control back mid-way, `unlockInput`); there is nothing to restore by hand: updatePrompt() sets its visibility again on
+  // every frame she is in control, so it reappears right after the script if something is in reach.
+  hidePrompt() {
+    const prompt = this.scene.prompt;
+    if (prompt && typeof prompt.setVisible === 'function') prompt.setVisible(false);
   }
 
   async runSteps(steps) {
@@ -203,6 +213,7 @@ class ScriptRunner {
   // script that never calls this back off is still safe.
   step_unlockInput() {
     this.scene.transitioning = false;
+    this.hidePrompt();
   }
 
   step_letterbox(mode) {

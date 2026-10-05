@@ -928,3 +928,67 @@ test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-
   for (const url of intro.match(/\$\{BASE_URL\}\/\?dev=0[^`]*/g)) assert.ok(url.includes('moments=0'), url);
   assert.match(read('tools', 'qa-offline-play.js'), /moments=0/);
 });
+
+// ---------- always visible above the dialog box; no "E" prompt ----------
+
+test('FB-0051: during every `say` of a moment, every actor and prop is at or above the camera\'s centre row and inside the picture (the dialog box covers the lower ~40% of the screen)', () => {
+  // While a moment runs the letterbox bars are in, so the dialog box sits at hudLayout()'s letterboxed position (y 324 of the 540 px screen); the
+  // camera centres on the player (or its pan target) at the screen's middle, so the box begins (324 - 270) / ZOOM px below the camera centre.
+  const ZOOM = 3;
+  const boxY = game.hudLayout(960, 540, undefined, { letterboxed: true }).dialogBox.y;
+  assert.equal(boxY, 324);
+  const boxTopBelowCentre = (boxY - 270) / ZOOM; // 18 world px
+  const margin = 4; // keep a few px clear of the box
+  const halfWidth = 960 / ZOOM / 2; // 160 world px
+  for (const m of MOMENTS) {
+    const rect = momentTriggerRect(m, anchor);
+    let checked = 0;
+    for (let ty = rect.y0; ty <= rect.y1; ty++) {
+      for (let tx = rect.x0; tx <= rect.x1; tx++) {
+        if (!walkable(tx, ty)) continue;
+        const tl = momentTimeline(SCRIPTS[m.script], { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+        assert.ok(tl.says.length >= 3 || m.id === 'm2', `${m.id}: the timeline records its lines`);
+        for (const say of tl.says) {
+          for (const a of say.actors) {
+            const sheet = Object.values(MOMENT_SHEETS).find((s) => a.kind === 'image' && s.key === a.sheet);
+            const feet = a.y + (sheet ? sheet.feet : 8); // the ground line: a character's feet are 8 px below its centre
+            assert.ok(feet <= say.camY + boxTopBelowCentre - margin, `${m.id} with her at ${tx},${ty}: ${a.id}'s feet are ${Math.round(feet - say.camY)} px below the camera centre: behind the dialog box (limit ${boxTopBelowCentre - margin})`);
+            assert.ok(Math.abs(a.x - say.camX) <= halfWidth - 16, `${m.id} with her at ${tx},${ty}: ${a.id} is off the side of the screen during a line`);
+            assert.ok(a.y - say.camY >= -(270 / ZOOM) + 70 / ZOOM + 12, `${m.id}: ${a.id} is up under the letterbox bar`);
+          }
+          checked += say.actors.length;
+        }
+      }
+    }
+    assert.ok(checked > 0, `${m.id}: someone is on screen during a line`);
+  }
+  // sanity: the measurer sees Mevin and the kit standing to her right during his lines, and the unicorn and the prince during theirs
+  const tl = momentTimeline(SCRIPTS.momentMevin, { anchor, player: { x: 225 * 16 + 8, y: 134 * 16 + 8 } });
+  assert.deepEqual(plain(tl.says.map((s) => s.actors.map((a) => a.id).sort())), [['kit', 'mevin']]);
+  assert.ok(tl.says[0].actors.every((a) => a.x > tl.player.x + 24 && a.x < tl.player.x + 72), 'Mevin and the kit are a few tiles to her right');
+  const tu = momentTimeline(SCRIPTS.momentUnicorn, { anchor, player: { x: 244 * 16 + 8, y: 153 * 16 + 8 } });
+  assert.deepEqual(plain(tu.says.map((s) => s.actors.map((a) => a.id).sort())), [['unicorn'], ['prince', 'unicorn'], []]);
+});
+
+test('FB-0051: the "E" interact prompt is hidden for the whole of any script (moments included) and WorldScene brings it back by itself afterwards', async () => {
+  const { runner, scene } = makeRunner();
+  const shown = [];
+  scene.prompt = { visible: true, setVisible(v) { this.visible = v; shown.push(v); return this; } };
+  const during = [];
+  const running = runner.run([{ wait: 30 }, { unlockInput: true }, { wait: 30 }], { unskippable: true });
+  assert.equal(scene.prompt.visible, false, 'hidden the moment the script starts');
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  during.push(scene.prompt.visible);
+  scene.prompt.visible = true; // something re-showed it mid-script (the script handed control back)
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  during.push(scene.prompt.visible);
+  await running;
+  assert.deepEqual(during, [false, false], 'hidden while the script runs, and again when a script hands control back mid-way');
+  // nothing forces it back on by hand: updatePrompt() sets its visibility every frame she is in control, so it returns right after
+  const world = read('src', 'scenes', 'world.js');
+  assert.match(world, /updatePrompt\(blocked, time\) \{\s*const found = blocked \? null : this\.nearestInteractable\(\);\s*this\.prompt\.setVisible\(Boolean\(found\)\);/);
+  assert.match(read('src', 'scripts-runtime.js'), /this\.hidePrompt\(\); \/\/ no "E" bubble/);
+  // a scene without a prompt (the unit fakes) is fine
+  const other = makeRunner();
+  await other.runner.run([{ wait: 1 }]);
+});

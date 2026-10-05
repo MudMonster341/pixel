@@ -53,11 +53,11 @@ const MOMENTS = [
     name: 'Mevin the drummer',
     map: 'campus',
     script: 'momentMevin',
-    // Everything in front of the Main Block door (x 219..232, y 129..137 on the real campus): the steps, the brick forecourt and the
+    // Everything in front of the Main Block door (x 219..230, y 129..137 on the real campus): the steps, the brick forecourt and the
     // pavement beside it. Every walkable tile next to the door lies inside it, so she cannot reach the door without crossing it
     // (tests/unit/moments.test.js floods the real map to prove it). If she crosses it before the gap is over she is still standing in
     // it when it is (the first-time entrance beat at the steps holds her there for several seconds), and it starts on the first free frame.
-    trigger: { anchor: 'Main Block entrance', dx0: -6, dx1: 7, dy0: 1, dy1: 9 },
+    trigger: { anchor: 'Main Block entrance', dx0: -6, dx1: 5, dy0: 1, dy1: 9 }, // dx1 5: Mevin stands 3 tiles to her right, and the palm at x234 must stay clear
     after: { moments: ['m1'] },
     minGapS: 6, // chains after M1: about 6 s after M1 ENDS (the walk from the gate takes a few seconds more)
     sameVisitOk: true, // the owner wants both as she first enters the campus: one visit, M1 then M2
@@ -156,7 +156,9 @@ const MOMENT_TIMING = {
 
 // Plays a script on paper. env: { anchor(name) -> { x, y } | null (tile units, as resolveAnchor), player: { x, y } (her sprite centre in
 // pixels), isWalkable?(tx, ty) }. Returns { durationMs, needsInput (a `say` without autoMs waits for a key), actors: { id: { sheet,
-// visible, despawned, x, y (pixels), alt (px), waypoints: [{ x, y, alt, tMs }] } }, player: { x, y, waypoints }, unknownSteps }.
+// visible, despawned, x, y (pixels), alt (px), waypoints: [{ x, y, alt, tMs }] } }, player: { x, y, waypoints }, unknownSteps,
+// says: [{ tMs, camX, camY (pixels: where the camera is centred: on her unless a cameraPan moved it), actors: [{ id, sheet, kind, x, y, alt }]
+// (everyone on screen and visible at that moment) }] -- one per `say` step, so a test can check what is visible above the dialog box }.
 // Positions follow the runtime exactly: a point is tile units, spawn/move turn it into pixels with toPixel() (tile * 16 + 8), and a point
 // relative to an actor starts from the actor's pixel position divided by 16.
 function momentTimeline(steps, env) {
@@ -165,7 +167,9 @@ function momentTimeline(steps, env) {
   const actors = {};
   const player = { x: env.player.x, y: env.player.y, alt: 0, waypoints: [{ x: env.player.x, y: env.player.y, alt: 0, tMs: 0 }] };
   const unknown = [];
+  const says = [];
   let needsInput = false;
+  let camPan = null; // null = the camera follows her; else the { x, y } pixel it was panned to (and stays at until cameraFollow)
   const get = (id) => (id === 'player' ? player : actors[id]);
 
   const resolve = (point) => {
@@ -193,17 +197,30 @@ function momentTimeline(steps, env) {
     const type = Object.keys(step)[0];
     const body = step[type];
     switch (type) {
-      case 'lockInput': case 'unlockInput': case 'cameraFollow': case 'sound': case 'setFlag': case 'frame': case 'loop':
+      case 'lockInput': case 'unlockInput': case 'sound': case 'setFlag': case 'frame': case 'loop':
       case 'setActorVisible': case 'face':
         if (type === 'setActorVisible' && get(body.actor)) get(body.actor).visible = body.visible;
         return 0;
+      case 'cameraFollow': camPan = null; return 0;
       case 'letterbox': return MOMENT_TIMING.letterboxMs;
       case 'fade': return body.ms ?? 250;
-      case 'cameraPan': return body.ms ?? MOMENT_TIMING.defaultPanMs;
+      case 'cameraPan': {
+        const p = resolve(body.to);
+        if (p) camPan = { x: toPixel(p.x), y: toPixel(p.y) };
+        return body.ms ?? MOMENT_TIMING.defaultPanMs;
+      }
       case 'wait': return body;
       case 'anim': return (body.frames || []).length * (body.frameMs ?? 120);
       case 'emote': return body.kind === 'sparkle' ? MOMENT_TIMING.sparkleEmoteMs : MOMENT_TIMING.emoteMs;
-      case 'say': return sayMs(body);
+      case 'say': {
+        says.push({
+          tMs: t,
+          camX: camPan ? camPan.x : player.x,
+          camY: camPan ? camPan.y : player.y,
+          actors: Object.entries(actors).filter(([, a]) => !a.despawned && a.visible).map(([id, a]) => ({ id, sheet: a.sheet, kind: a.kind, x: a.x, y: a.y, alt: a.alt })),
+        });
+        return sayMs(body);
+      }
       case 'sparkles': return body.ms;
       case 'lift': {
         const a = get(body.actor);
@@ -259,5 +276,5 @@ function momentTimeline(steps, env) {
 
   let total = 0;
   for (const step of steps) total += run(step, total);
-  return { durationMs: total, needsInput, actors, player, unknownSteps: unknown };
+  return { durationMs: total, needsInput, actors, player, unknownSteps: unknown, says };
 }

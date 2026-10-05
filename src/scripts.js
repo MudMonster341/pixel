@@ -251,10 +251,12 @@ const DRUM_BAR = [
 const jump = (actor, px = 14) => [{ lift: { actor, to: px, ms: 180, ease: 'Quad.easeOut' } }, { lift: { actor, to: 0, ms: 180, ease: 'Quad.easeIn' } }];
 
 // M2, Mevin the drummer (a friend; he plays the drums for Treble, the music club; he is not in the Main Block). In front of the Main Block
-// (the trigger is x 219..232, y 129..137: the steps, the forecourt and the pavement): he runs in from the east along the road verge with a
+// (the trigger is x 219..230, y 129..137: the steps, the forecourt and the pavement): he runs in from the east along the road verge with a
 // little drum kit and a snare roll, jumps beside her, shouts, drums a bar while she grins (a note, a heart), ends on a rimshot and runs
-// off with the kit. Everything is placed relative to the tile she stands on (he stands one tile below and one to the right of her, the
-// kit in front of him, after a run along the road verge, the one row of tiles that is open from the east), so it is never on top of her and never inside the building wall north of the steps. About 14-17 s.
+// off with the kit. Everything is placed relative to the tile she stands on: he stands 3 tiles to her RIGHT, half a tile above her row,
+// with the kit just in front of him (so he drums behind it), never lower than her own feet -- the dialog box covers the bottom ~40% of the
+// screen while she is centred, so anything below her row would be hidden behind it while he speaks (tests/unit/moments.test.js checks
+// every `say`). He runs in along the road verge (the one row of tiles open from the east, off screen), then up onto her row. About 14-17 s.
 const MOMENT_MEVIN_STEPS = [
   { lockInput: true },
   { letterbox: 'in' },
@@ -262,11 +264,11 @@ const MOMENT_MEVIN_STEPS = [
   { spawnActor: { id: 'kit', sprite: MOMENT_SHEETS.drums.key, kind: 'image', frame: DRUMS.idle, feet: MOMENT_SHEETS.drums.feet, shadowSize: [24, 6], at: doorTile(22, 9), facing: 'left' } },
   { sound: 'drumRoll' },
   { parallel: [
-    { move: { actor: 'mevin', path: [doorTile(14, 9), playerTile(1, 1)], speed: 7 } },
-    { move: { actor: 'kit', path: [doorTile(16, 9), playerTile(1, 2)], speed: 7 } },
+    { move: { actor: 'mevin', path: [doorTile(14, 9), playerTile(3, -0.5)], speed: 7 } },
+    { move: { actor: 'kit', path: [doorTile(16, 9), playerTile(3, -0.25)], speed: 7 } },
   ] },
   // He lands the roll on a crash and jumps.
-  { face: { actor: 'mevin', dir: 'down' } },
+  { face: { actor: 'mevin', dir: 'left' } }, // toward her
   { face: { actor: 'player', toward: 'mevin' } },
   { parallel: [
     { sound: 'drumCrash' },

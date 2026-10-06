@@ -102,6 +102,40 @@ const MINIGAMES = {
       ],
     },
   },
+  // ADR 0025 (EDI Madness, phase E3): garage parking with a driving instructor (src/minigames/edi.js + edi-logic.js). It is built to replace the flyer at the
+  // ICL scanner, so like the flyer it opens the lab's DOOR (`opens: 'iclDoorOpen'`, no key `item`, `cards` for the door wording); until phase E4 wires
+  // the scanner to it, the flyer stays reachable and this entry is only launched by tools and tests. The score is the stages parked (scoreTarget 3). The intro
+  // card has no subtitle slot, so "Garage parking with your instructor" is not shown (the cover picture says GARAGE PARKING under the title).
+  edi: {
+    id: 'edi',
+    name: 'EDI MADNESS',
+    sceneKey: 'minigame-edi',
+    opens: 'iclDoorOpen',
+    cover: { key: 'edi-cover', file: 'assets/minigames/edi-cover.png' },
+    instructions: [
+      'ARROWS/WASD: DRIVE  SPACE: HANDBRAKE',
+      'PARK 3 TIMES WITHOUT HITTING A PILLAR',
+    ],
+    scoreTarget: 3,
+    scoreLabel: 'PARKED',
+    cards: {
+      winTitle: 'PERFECT PARKING!',
+      winLine: 'Your instructor would pass you. The ICL door opens!',
+      skipTitle: 'DOOR UNLOCKED!',
+      skipLine: 'The lab door opens anyway -- nice try.',
+      skipLabel: 'SKIP -- OPEN THE DOOR ANYWAY',
+      skipHint: "You've tried 3 times -- open the door anyway if you'd rather move on.",
+    },
+    // FB-0082 mechanism: a short backstory over the intro cover before the intro card (once per opening, never after a retry).
+    story: {
+      cover: { key: 'edi-cover' },
+      pages: [
+        "The ICL's sealed door wants proof of EDI-level parking skills.",
+        'Your instructor has strapped himself in. He looks nervous.',
+        'Park three times without crushing a pillar. Ready?',
+      ],
+    },
+  },
 };
 
 // A fresh per-game progress record (docs/ARCHITECTURE.md "State, saving"): saved as

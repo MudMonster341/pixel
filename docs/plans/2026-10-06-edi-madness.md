@@ -1,6 +1,6 @@
 # Plan: "EDI Madness", the ICL game becomes a garage-parking game (owner request, 2026-10-05 night)
 
-Status: **designed, NOT started** (the first agent run died on the usage limit while still reading; the tree was clean, nothing was lost). Decision record: [ADR 0025](../../decisions/0025-edi-madness-replaces-the-icl-flyer.md).
+Status: **designed, NOT started** (the first agent run died on the usage limit while still reading; the tree was clean, nothing was lost). **E1 (logic) and E2 (art) are committed. EDI Madness (E3): the scene `src/minigames/edi.js`, the `MINIGAMES.edi` entry (intro, door cards, three story pages), the `EDI scene:` unit tests (`tests/unit/edi-scene.test.js`), the qa-shots flow `edi-00-story` ... `edi-09-banner` (`--only edi`) and one e2e spec are written but NOT yet run in a browser; the ICL scanner still starts the flyer until E4.** Decision record: [ADR 0025](../../decisions/0025-edi-madness-replaces-the-icl-flyer.md).
 
 ## What the owner asked
 "Change the second game to a game called EDI Madness. It is basically her with an instructor having to do garage parking ... it becomes a parking game where you have to do parking." Asked which game: the owner chose **the ICL lab's game** (the second key on the route; today the flyer "ICL Fingerprint Hack" at the scanner that opens the sealed ICL door).

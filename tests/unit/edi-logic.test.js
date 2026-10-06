@@ -333,7 +333,7 @@ test('EDI source: no Phaser, no randomness, EDI_-prefixed constants, registered 
   assert.ok(html.includes('src/minigames/edi-logic.js'));
   assert.ok(html.indexOf('edi-logic.js') < html.indexOf('src/scenes/world.js'), 'loaded with the other pure files, before the scenes');
   assert.ok(fs.readFileSync(path.join(ROOT, 'tests', 'helpers', 'game-data.js'), 'utf8').includes('src/minigames/edi-logic.js'));
-  assert.equal(fs.existsSync(path.join(ROOT, 'src', 'minigames', 'edi.js')), false, 'the scene is phase E3');
+  assert.equal(fs.existsSync(path.join(ROOT, 'src', 'minigames', 'edi.js')), true, 'the scene is phase E3 (tests/unit/edi-scene.test.js)');
 });
 
 // ---------- physics ----------

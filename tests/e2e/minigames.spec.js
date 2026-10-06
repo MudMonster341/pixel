@@ -352,4 +352,42 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect(after.flying).toBe(true);
     expect(after.promptVisible).toBe(false);
   });
+
+  // ADR 0025 (EDI Madness, phase E3): the garage-parking scene, launched directly (the ICL scanner still starts the flyer until phase E4). The drive is real
+  // keys; the debug hook only puts the car a short way out from stage 1's bay, facing it. Gas until she is over the bay, then the handbrake (Space) holds her still.
+  test('EDI Madness: story, intro, a scripted drive that parks stage 1, the banner, stage 2, Esc quits', async ({ page }) => {
+    await openGame(page, { map: 'main-block-1', minigames: true });
+    await page.evaluate(() => {
+      GameState.quest.stage = 'hunting';
+      game.scene.getScene('world').launchMinigame('edi', () => {});
+    });
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).active).toBe(true);
+    const pageCount = await page.evaluate(() => game.scene.getScene('minigame-edi').storyPages.length);
+    expect(pageCount).toBe(3);
+    for (let i = 0; i < pageCount; i++) {
+      await waitCardReady(page, 'minigame-edi');
+      expect((await mgInfo(page, 'minigame-edi')).cardItems[0]).toBe('NEXT (ENTER)');
+      await page.keyboard.press('Enter');
+    }
+    await waitCardReady(page, 'minigame-edi');
+    expect((await mgInfo(page, 'minigame-edi')).cardItems[0]).toBe('START (ENTER)');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).mgState).toBe('playing');
+
+    await page.evaluate(() => game.scene.getScene('minigame-edi').debugSetStage(0, { pose: true }));
+    await page.keyboard.down('ArrowUp');
+    await page.waitForFunction(() => game.scene.getScene('minigame-edi').edi.car.y <= 76); // over the bay (its centre is y 68)
+    await page.keyboard.up('ArrowUp');
+    await page.keyboard.down('Space'); // the handbrake stops her inside the bay; she holds still for 0.8 s
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).score).toBe(1);
+    await page.keyboard.up('Space');
+    expect(await page.evaluate(() => game.scene.getScene('minigame-edi').bannerText.text)).toBe('STAGE 1 PARKED!');
+    // the banner (input off) gives way to stage 2
+    await expect.poll(async () => page.evaluate(() => game.scene.getScene('minigame-edi').edi.stageIndex)).toBe(1);
+    expect((await mgInfo(page, 'minigame-edi')).mgState).toBe('playing');
+
+    await page.keyboard.press('Escape'); // Esc quits at any time, no key, no flag
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).active).toBe(false);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).worldActive).toBe(true);
+  });
 });

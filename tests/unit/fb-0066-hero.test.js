@@ -27,7 +27,7 @@ const pngSize = (...parts) => { const b = fs.readFileSync(path.join(ROOT, ...par
 test('FB-0066: the Physics Lab game is the hero fight: id hero, registered with the framework and the scene list, no platformer id any more', () => {
   const { MINIGAMES, STORY } = loadGameData();
   assert.equal(MINIGAMES.platformer, undefined);
-  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['flappy', 'hero', 'tower']);
+  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['edi', 'flappy', 'hero', 'tower']); // 'edi' since the EDI Madness scene (ADR 0025, phase E3)
   const def = MINIGAMES.hero;
   assert.equal(def.id, 'hero');
   assert.equal(def.sceneKey, 'minigame-hero');

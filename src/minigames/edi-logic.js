@@ -33,6 +33,8 @@
 // The instructor (data below + ediInstructorLine) is warm and a little funny and never mean. The state emits `line` events and keeps
 // `state.instructor = { kind, text, ms }` (ms left to show) for the HUD bubble. Names here start with EDI_/edi so they cannot clash with
 // the other games' globals (plain script tags share one scope). Every number is a tuning knob for phase E5.
+// Phase E3 added the section "what the scene needs" (key mapping, HUD texts, the bay glow, the speech bubble's free spot, the retry rule,
+// ediAttemptStart): small pure functions, so the Phaser scene stays a thin drawing layer.
 
 const EDI_W = 960;
 const EDI_H = 540;
@@ -328,6 +330,106 @@ function ediRetryStage(state) {
 // How many stages are parked so far (the HUD's "stage n / 3" progress): the finished ones, plus this one if it is won.
 function ediStagesParked(state) {
   return state.stageIndex + (state.status === 'stageWon' || state.status === 'won' ? 1 : 0);
+}
+
+// ---------- what the scene needs (phase E3), kept pure so tests/unit/edi-scene.test.js can pin it without Phaser ----------
+// src/minigames/edi.js only draws these and forwards the keys. Screen rectangles are { x, y, w, h } in the 960 x 540 pixel space.
+const EDI_BANNER_MS = 1400; // "STAGE n PARKED!" between two stages (input is off while it shows)
+const EDI_END_BEAT_MS = 900; // the beat between the last stage parked (or a lost stage) and the shell's card, so the last bump / the last line can be seen
+const EDI_WINCE_MS = 1000; // the instructor's portrait winces this long after a bump
+const EDI_BLINK_MS = 200; // the invulnerability blink (2.5 Hz, under the 3 Hz flash limit, docs/GAME_FEEL.md)
+const EDI_BUBBLE_MAX_W = 380; // the speech bubble is never wider than this
+const EDI_PORTRAIT = { x: 872, y: 440, size: 48 }; // the instructor's portrait: the bottom-right corner of the floor, clear of every stage's start, bay and pillars
+
+// The held keys (the scene reads them from Phaser: { UP, W, DOWN, S, LEFT, A, RIGHT, D, SPACE }, booleans) as the logic's input.
+function ediInputFromKeys(held) {
+  const k = held || {};
+  return { gas: Boolean(k.UP || k.W), brake: Boolean(k.DOWN || k.S), left: Boolean(k.LEFT || k.A), right: Boolean(k.RIGHT || k.D), handbrake: Boolean(k.SPACE) };
+}
+
+// The state an attempt starts from: the stage that was lost, again (fresh hearts and clock), or stage 1 when there is nothing before it (a fresh
+// opening of the game) or the earlier attempt was won. The scene keeps no stage number of its own, so nothing can leak between two openings.
+function ediAttemptStart(prev, name) {
+  if (prev && prev.status !== 'won') return ediRetryStage(prev);
+  return createEdiParking(0, { name });
+}
+
+function ediStageLabel(stageIndex) {
+  return `STAGE ${stageIndex + 1}/${EDI_STAGE_COUNT}`;
+}
+function ediBannerText(stageIndex) {
+  return `STAGE ${stageIndex + 1} PARKED!`;
+}
+function ediTimeLeftMs(state) {
+  return Math.max(0, (ediStageOf(state).limitMs || EDI_STAGE_LIMIT_MS) - state.t);
+}
+function ediClockText(ms) { // m:ss, rounded up so "0:00" only shows when the time really is over
+  const s = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// How strongly the bay glows green: a faint outline all the time, brighter once she is in it with the right heading, and brighter still as she holds still.
+function ediBayAlpha(state) {
+  return state.aligned ? 0.35 + 0.4 * state.parkProgress : 0.14;
+}
+
+// The car's alpha: it blinks while the invulnerability lasts.
+function ediBlinkAlpha(invulnMs) {
+  return invulnMs > 0 && Math.floor(invulnMs / EDI_BLINK_MS) % 2 === 1 ? 0.35 : 1;
+}
+
+// The frame of 'edi-cars' for the learner car at `heading` (a row per colour, a column per heading).
+function ediLearnerFrame(heading) {
+  return EDI_CAR_ROWS.indexOf('learner') * 8 + ediCarFrame(heading);
+}
+
+// A pose `back` px out from the bay's centre on its axis, facing it (back 0: in the bay): where the QA shots and the e2e spec put the car to "park from here".
+function ediPoseNearBay(stage, back = 70) {
+  const bay = stage.bay;
+  return { x: bay.x + bay.w / 2 - Math.cos(bay.axis) * back, y: bay.y + bay.h / 2 - Math.sin(bay.axis) * back, heading: bay.axis };
+}
+
+function ediRectsOverlap(a, b) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+// What the instructor's bubble must not cover: every obstacle (their bounding boxes, grown a little), the bay, the start spot, the car now, the portrait.
+function ediKeepClearRects(state) {
+  const stage = ediStageOf(state);
+  const out = [];
+  ediObstacleBoxes(stage).forEach((b, i) => {
+    const pad = stage.obstacles[i].kind === 'wall' ? 2 : 8; // a wall is a thin line of its own; a pillar or a parked car gets a margin
+    const ex = b.hw * Math.abs(b.c) + b.hh * Math.abs(b.s);
+    const ey = b.hw * Math.abs(b.s) + b.hh * Math.abs(b.c);
+    out.push({ x: b.cx - ex - pad, y: b.cy - ey - pad, w: 2 * (ex + pad), h: 2 * (ey + pad) });
+  });
+  const bay = stage.bay;
+  out.push({ x: bay.x - 12, y: bay.y - 12, w: bay.w + 24, h: bay.h + 24 });
+  for (const p of [stage.start, state.car]) out.push({ x: p.x - 40, y: p.y - 40, w: 80, h: 80 }); // an 80 px square holds the 44 x 22 car at any heading
+  out.push({ x: EDI_PORTRAIT.x - 4, y: EDI_PORTRAIT.y - 4, w: EDI_PORTRAIT.size + 8, h: EDI_PORTRAIT.size + 22 }); // the portrait and its name tag
+  return out;
+}
+
+// Where a w x h bubble may go, best first: beside the portrait, above it, the bottom-left and top-right corners of the floor, the middle.
+function ediBubbleCandidates(w, h) {
+  const p = EDI_PORTRAIT;
+  return [
+    { x: p.x - 10 - w, y: p.y + p.size - h },
+    { x: p.x + p.size - w, y: p.y - 10 - h },
+    { x: EDI_TILE + 12, y: EDI_H - EDI_TILE - 8 - h },
+    { x: EDI_W - EDI_TILE - 8 - w, y: EDI_TILE + 8 },
+    { x: (EDI_W - w) / 2, y: (EDI_H - h) / 2 },
+  ].map((c) => ({ x: Math.round(c.x), y: Math.round(c.y), w, h }));
+}
+
+// The rectangle for the bubble now: `current` while it is still clear of everything (so it does not jump about), else the first free candidate.
+// `extraKeep`: more rectangles to stay clear of (the scene's hint strip passes the bubble's, so the two never overlap), grown by a small gap.
+function ediPickBubbleRect(state, w, h, current, extraKeep = []) {
+  const keep = ediKeepClearRects(state).concat(extraKeep.filter(Boolean).map((r) => ({ x: r.x - 6, y: r.y - 6, w: r.w + 12, h: r.h + 12 })));
+  const free = (r) => keep.every((k) => !ediRectsOverlap(r, k));
+  if (current && current.w === w && current.h === h && free(current)) return current;
+  const all = ediBubbleCandidates(w, h);
+  return all.find(free) || all[0];
 }
 
 // ---------- one step ----------

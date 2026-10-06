@@ -922,6 +922,103 @@ async function shootMinigames(browser) {
   }
 }
 
+// ---------- EDI Madness (ADR 0025, phase E3): the garage-parking game, the same chain as the hero/tower games above ----------
+// Launched through WorldScene.launchMinigame() like those, and made deterministic with the scene's own debug hooks (src/minigames/edi.js): debugSetStage(n, ...)
+// jumps to stage n+1 with the car at its start, near its bay (`pose: true`) or in it (`inBay: true`), and `debugFreeze` stops the clock so a half-full parking ring or the
+// stage banner stays up for the shot. Shots: edi-00-story, edi-01-intro, edi-02-play-1 (stage 1 at its start, the instructor's first line), edi-03-play-2 (stage 2,
+// in the bay, the green glow and the half-full ring), edi-04-play-3 (stage 3, a short way out from its bay), edi-05-bump (a heart lost, the spark, the wince, the
+// instructor's line), edi-09-banner ("STAGE 1 PARKED!" with the tick and the confetti), edi-06-gameover, edi-07-skip-offer, edi-08-win.
+async function shootEdi(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  await tryStep(page, 'edi', async () => {
+    await page.goto(`${BASE_URL}/?dev=0&map=campus&cutscene=0&title=0&minigames=1&moments=0`);
+    await waitReady(page);
+    const sceneKey = await page.evaluate(() => {
+      game.scene.getScene('world').launchMinigame('edi', () => {});
+      return MINIGAMES.edi.sceneKey;
+    });
+    await waitFor(page, (key) => game.scene.isActive(key), { arg: sceneKey, timeout: 5000 });
+    await waitCardAcceptsInput(page, sceneKey);
+    await shoot(page, 'edi-00-story'); // FB-0082: the backstory opens first; shoot its first page, then skip to the usual intro card (the SKIP STORY call)
+    await page.evaluate((key) => game.scene.getScene(key).skipStory(), sceneKey);
+    await waitCardAcceptsInput(page, sceneKey);
+    await shoot(page, 'edi-01-intro');
+    await page.keyboard.press('Enter'); // START
+    await waitFor(page, (key) => game.scene.getScene(key).mgState === 'playing', { arg: sceneKey, timeout: 5000 });
+    await page.waitForTimeout(200);
+
+    await page.evaluate((key) => game.scene.getScene(key).debugSetStage(0), sceneKey);
+    await page.waitForTimeout(250); // let playUpdate() sync the sprites before the shot
+    await shoot(page, 'edi-02-play-1');
+
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.debugSetStage(1, { inBay: true });
+      s.edi.aligned = true; s.edi.parkMs = 400; s.edi.parkProgress = 0.5; // halfway through the 0.8 s hold
+      s.debugFreeze = true;
+    }, sceneKey);
+    await page.waitForTimeout(250);
+    await shoot(page, 'edi-03-play-2');
+
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.debugFreeze = false;
+      s.debugSetStage(2, { pose: true });
+    }, sceneKey);
+    await page.waitForTimeout(250);
+    await shoot(page, 'edi-04-play-3');
+
+    // a bump: straight at stage 1's top wall, fast enough to cost a heart (the shot is taken the moment the bump has happened)
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.debugSetStage(0, { pose: { x: 200, y: 64, heading: -Math.PI / 2 } });
+      s.edi.car.speed = 70;
+    }, sceneKey);
+    await waitFor(page, (key) => game.scene.getScene(key).edi.bumps > 0, { arg: sceneKey, timeout: 5000 });
+    await shoot(page, 'edi-05-bump');
+
+    // the banner between two stages, held with the clock frozen
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.debugSetStage(0, { inBay: true });
+      s.edi.status = 'stageWon';
+      s.debugFreeze = true;
+      s.handleEvent({ type: 'parked', stage: 0 });
+      s.handleEvent({ type: 'stageWon', stage: 0 });
+    }, sceneKey);
+    await page.waitForTimeout(250);
+    await shoot(page, 'edi-09-banner');
+    await page.evaluate((key) => { game.scene.getScene(key).debugFreeze = false; }, sceneKey);
+
+    await page.evaluate((key) => game.scene.getScene(key).lose(), sceneKey);
+    await waitFor(page, (key) => game.scene.getScene(key).mgState === 'gameover', { arg: sceneKey, timeout: 5000 });
+    await page.waitForTimeout(100);
+    await shoot(page, 'edi-06-gameover');
+
+    // two more losses reach the 3-fail skip offer (driven through beginAttempt()/lose(), not a Retry keypress, so the card's acceptInput guard never enters)
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate((key) => {
+        const s = game.scene.getScene(key);
+        s.beginAttempt();
+        s.lose();
+      }, sceneKey);
+      await waitFor(page, (key) => game.scene.getScene(key).mgState === 'gameover', { arg: sceneKey, timeout: 5000 });
+    }
+    await page.waitForTimeout(100);
+    await shoot(page, 'edi-07-skip-offer');
+
+    await page.evaluate((key) => {
+      const s = game.scene.getScene(key);
+      s.beginAttempt();
+      s.win();
+    }, sceneKey);
+    await waitFor(page, (key) => game.scene.getScene(key).mgState === 'win', { arg: sceneKey, timeout: 5000 });
+    await page.waitForTimeout(100);
+    await shoot(page, 'edi-08-win');
+  });
+  await page.close();
+}
+
 // ---------- the ending (docs/STORY.md "the box opens...", docs/ROADMAP.md M3): the box-opening
 // sequence and the birthday card. Reaches the reward the same shortcut tests/e2e/ending.spec.js
 // uses (setting GameState.quest directly and talking to the volunteer) rather than replaying the
@@ -1057,6 +1154,7 @@ async function main() {
       ['moments (unicorn, Mevin)', shootMoments, ['moment-01', 'moment-02']],
       ['title/pause/menus', shootTitleAndPause, ['title', 'loading', 'pause']],
       ['mini-games', shootMinigames, ['minigame']],
+      ['EDI Madness', shootEdi, ['edi', 'minigame-edi']],
       ['moment 3 (the chariot)', shootMomentChariot, ['moment-03', 'chariot']],
       ['moment 4 (the three friends)', shootMomentFriends, ['moment-04', 'friends']],
       ['journal album', shootAlbum, ['album']],

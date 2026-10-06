@@ -52,7 +52,7 @@ test('FB-0074: the current docs say tower climb (the story table, the architectu
 test('FB-0074: the Room 195 game is the tower: id tower, registered with the framework and the scene list, no tetris id anywhere', () => {
   const { MINIGAMES, STORY } = loadGameData();
   assert.equal(MINIGAMES.tetris, undefined);
-  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['flappy', 'hero', 'tower']);
+  assert.deepEqual(Object.keys(MINIGAMES).sort(), ['edi', 'flappy', 'hero', 'tower']); // 'edi' since the EDI Madness scene (ADR 0025, phase E3)
   const def = MINIGAMES.tower;
   assert.equal(def.id, 'tower');
   assert.equal(def.sceneKey, 'minigame-tower');

@@ -209,7 +209,7 @@ class WorldScene extends Phaser.Scene {
     this.createPickups();
     this.createKeyStations();
     this.createLifts();
-    // P5c (FB-0071): the ICL's fingerprint-locked door, its scanner, and the lab's blinking lights.
+    // P5c (FB-0071): the ICL's locked door, its scanner (the EDI test console), and the lab's blinking lights.
     this.createScanners();
     this.createGates();
     this.createTileAnims();
@@ -884,7 +884,7 @@ class WorldScene extends Phaser.Scene {
       });
   }
 
-  // P5c (FB-0071): the ICL's fingerprint-locked hatch. Every Tiled `sealedDoor` object (tools/interiors/plans.js: two solid door-leaf tiles in the corridor
+  // P5c (FB-0071): the ICL's locked hatch. Every Tiled `sealedDoor` object (tools/interiors/plans.js: two solid door-leaf tiles in the corridor
   // wall) is a door that stays shut until its flag is set (maps.js `gates`, src/story.js STORY.iclGate): a sealed one rattles and says its locked line when she
   // pushes at it, E at it says it is sealed, and once the flag is set (the scanner's mini-game won or skipped) it plays the P4c opening animation, its tiles
   // become the open frame (walkable) and it stays open. A save that already has the ICL key, is past it, or stands inside the lab starts with it open
@@ -935,7 +935,7 @@ class WorldScene extends Phaser.Scene {
     }
   }
 
-  // Door flags set since the scene began (the scanner's hack, a key from elsewhere): open whichever gate its rules now say is open.
+  // Door flags set since the scene began (the scanner's mini-game, a key from elsewhere): open whichever gate its rules now say is open.
   syncGates() {
     for (const gate of this.gates || []) {
       if (!gate.open && gate.def && isGateOpen(gate.def, GameState)) this.setGateOpen(gate, true);
@@ -1030,8 +1030,8 @@ class WorldScene extends Phaser.Scene {
     this.rattleDoor(gate);
   }
 
-  // The fingerprint scanners (Tiled `scanner` objects: a solid pad in the wall, tools/interiors/plans.js scannerPad()). Each is an interactable (E starts the
-  // hack: the gate data's `scannerDialog`) with a glow overlay that pulses blue (a tile animation) until its door is open, then stays green.
+  // The scanners (to the player the EDI test console; Tiled `scanner` objects: a solid pad in the wall, tools/interiors/plans.js scannerPad()). Each is an interactable (E starts the
+  // parking game: the gate data's `scannerDialog`) with a glow overlay that pulses blue (a tile animation) until its door is open, then stays green.
   createScanners() {
     const defs = this.def.gates || [];
     const indexOf = (name) => this.tileInfo.tiles.findIndex((t) => t.name === name);
@@ -1043,7 +1043,7 @@ class WorldScene extends Phaser.Scene {
       const okIndex = indexOf(o.props.ok || 'intScannerOk');
       const scanner = {
         x: toPixel(x), y: toPixel(y), name: o.name, door: o.props.door, accepted: false,
-        def: { id: `scanner:${o.name}`, name: 'Fingerprint scanner', dialog: gateDef ? gateDef.scannerDialog : [] },
+        def: { id: `scanner:${o.name}`, name: 'EDI test console', dialog: gateDef ? gateDef.scannerDialog : [] },
       };
       if (glow.length) {
         const image = this.tileImage(x * TILE, y * TILE, glow[0]).setDepth(this.doorOverlayDepth({ x, y }));
@@ -1572,7 +1572,7 @@ class WorldScene extends Phaser.Scene {
     for (const ambient of this.ambientNpcs || []) consider('ambientNpc', 'npc', ambient.sprite, ambient.sprite.def);
     for (const ks of this.keyStations || []) consider('keyStation', 'keyStation', ks, ks.def);
     for (const lift of this.lifts || []) consider('lift', 'lift', lift, lift.def); // P4b: E at a lift's doors
-    // P5c (FB-0071): E at the ICL's fingerprint scanner (starts the hack) or at its sealed hatch (says it is sealed); a door that is open is not a thing to use.
+    // P5c (FB-0071): E at the ICL's scanner / EDI test console (starts the parking game) or at its sealed hatch (says it is sealed); a door that is open is not a thing to use.
     for (const scanner of this.scanners || []) consider('scanner', 'scanner', scanner, scanner.def);
     for (const gate of this.gates || []) if (!gate.open && gate.def) consider('scanner', 'gate', doorCenterPx(gate), gate.doorDef);
     // A tame, talkable cat (ADR 0018; lowest priority like an ambient student). Its tile centre is the
@@ -1663,7 +1663,7 @@ class WorldScene extends Phaser.Scene {
         if (found.kind === 'keyStation' && entry.id === 'take' && result === 'done') {
           this.collectKeyStation(found.target);
         }
-        // P5c: whatever just ran may have set a door's flag (the scanner's hack) or handed over a key from elsewhere (Alice gives the ICL key
+        // P5c: whatever just ran may have set a door's flag (the scanner's mini-game) or handed over a key from elsewhere (Alice gives the ICL key
         // too): the door opens, and a key station whose key is now held drops its floating icon.
         this.syncGates();
         this.syncKeyStations();

@@ -1,6 +1,6 @@
 # 0025: "EDI Madness" (garage parking with an instructor) replaces the ICL flyer
 
-Date: 2026-10-06 (owner request on the night of 2026-10-05). Status: **accepted, not yet built** (plan: [docs/plans/2026-10-06-edi-madness.md](../docs/plans/2026-10-06-edi-madness.md)).
+Date: 2026-10-06 (owner request on the night of 2026-10-05). Status: **accepted, built E1-E4, E5 feel after the owner drives it** (plan: [docs/plans/2026-10-06-edi-madness.md](../docs/plans/2026-10-06-edi-madness.md)).
 
 ## Context
 The mini-game line-up ([ADR 0024](0024-mini-game-lineup-and-moments-system.md)) is: Physics Lab = hero fight, ICL = fingerprint-door "Server Dash" flyer then the lab with Alice, Room 195 = tower climb. The owner asked to change "the second game" into **EDI Madness**: Taru and a driving instructor doing garage parking. Asked which game that is, the owner chose the ICL lab's game.

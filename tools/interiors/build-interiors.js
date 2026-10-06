@@ -443,7 +443,7 @@ class Floor {
   }
 
   // P5c: a wall-mounted fingerprint scanner (a solid wall fitting) and its `scanner` object, which names the door it opens. The engine lays the
-  // pulsing glow over the pad (src/scenes/world.js createScanners()); E in front of it starts the hack.
+  // pulsing glow over the pad (src/scenes/world.js createScanners()); E in front of it starts the ICL's mini-game (EDI Madness, ADR 0025).
   scannerPad(x, y, name, door) {
     this.structures[this.idx(x, y)] = TILE.intWallScanner;
     this.pointObject('scanner', name, x, y, { door, glow: 'intScannerGlow0,intScannerGlow1,intScannerGlow2,intScannerGlow1', ok: 'intScannerOk', ms: '450' });

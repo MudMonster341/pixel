@@ -70,7 +70,7 @@ async function talkToStation(page, id, sceneKey) {
   }
 }
 
-// P5c (FB-0071): the flyer is the ICL's fingerprint hack now: E at the scanner beside the sealed door starts it (the key is handed over inside the lab).
+// P5c (FB-0071) / ADR 0025: EDI Madness is the ICL's door game: E at the scanner (the EDI test console) beside the sealed door starts it (the key is handed over inside the lab).
 async function talkToScanner(page, sceneKey) {
   const tile = await page.evaluate(() => { const sc = game.scene.getScene('world').scanners[0]; return { x: Math.floor(sc.x / 16), y: Math.floor(sc.y / 16) }; });
   await teleport(page, tile.x, tile.y + 1);
@@ -100,13 +100,13 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect((await state(page)).quest.keys.room195).toBe(false);
   });
 
-  test('the ICL scanner launches the flyer and Esc leaves the door sealed; the physicsLab station launches the hero fight (FB-0066, FB-0071)', async ({ page }) => {
+  test('the ICL scanner launches EDI Madness and Esc (even over its backstory) leaves the door sealed; the physicsLab station launches the hero fight (FB-0066, FB-0071, ADR 0025)', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToScanner(page, 'minigame-flappy');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(true);
+    await talkToScanner(page, 'minigame-edi');
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).active).toBe(true);
     await page.keyboard.press('Escape');
-    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(false);
+    await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).active).toBe(false);
     expect((await state(page)).flags.iclDoorOpen).toBeFalsy(); // quitting leaves the ICL door sealed; the scanner can be tried again
 
     await openGame(page, { map: 'main-block-3', minigames: true });
@@ -140,7 +140,9 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     worldTextureSource = await page.evaluate(() => game.scene.getScene('world').player.texture.source[0].image.src);
-    await talkToScanner(page, 'minigame-flappy');
+    // ADR 0025: the flyer is unreachable from the story now (the rollback), so it is launched directly
+    await page.evaluate(() => { game.scene.getScene('world').launchMinigame('flappy', () => {}); });
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(true);
     await waitCardReady(page, 'minigame-flappy');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
@@ -324,7 +326,9 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
   test('FB-0042: the flyer hovers with a "press space to flap" prompt, and gravity/scrolling wait for the first flap', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
-    await talkToScanner(page, 'minigame-flappy');
+    // ADR 0025: the flyer is unreachable from the story now (the rollback), so it is launched directly
+    await page.evaluate(() => { game.scene.getScene('world').launchMinigame('flappy', () => {}); });
+    await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).active).toBe(true);
     await waitCardReady(page, 'minigame-flappy');
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await mgInfo(page, 'minigame-flappy')).mgState).toBe('playing');
@@ -353,7 +357,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect(after.promptVisible).toBe(false);
   });
 
-  // ADR 0025 (EDI Madness, phase E3): the garage-parking scene, launched directly (the ICL scanner still starts the flyer until phase E4). The drive is real
+  // ADR 0025 (EDI Madness, phase E3): the garage-parking scene, launched directly (the scanner starts it too since phase E4: tested above). The drive is real
   // keys; the debug hook only puts the car a short way out from stage 1's bay, facing it. Gas until she is over the bay, then the handbrake (Space) holds her still.
   test('EDI Madness: story, intro, a scripted drive that parks stage 1, the banner, stage 2, Esc quits', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });

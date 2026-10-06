@@ -15,7 +15,7 @@ After the first playtest the owner replaced Tetris (FB-0074 asked for a candy-cr
 
 ## Decision
 - **Key games:** Physics Lab = hero fight (generic stand-ins: a white kitten hero with a pink bow vs a dark bat-eared "shadow bat"; the owner's Hello Kitty/Batman are protected characters, ADR 0021);
-  ICL = the flyer re-skinned as "ICL Fingerprint Hack" that opens a sealed door, the key is then handed over inside by Alice; Room 195 = **tower climb** (written by us on `platformer-physics.js`;
+  ICL = the flyer re-skinned as "ICL Fingerprint Hack" that opens a sealed door (**addendum 2026-10-06: replaced by "EDI Madness", garage parking, see [ADR 0025](0025-edi-madness-replaces-the-icl-flyer.md); the flyer stays as an unreachable rollback**), the key is then handed over inside by Alice; Room 195 = **tower climb** (written by us on `platformer-physics.js`;
   the open Donkey-Kong-style projects found have no licence file, so none was copied). **Match-3 is dropped; Tetris is removed.** Sumo vs Narda is a parked bonus (TP room, not a priority).
 - **Moments** (`src/moments.js`): in-world scripts, unskippable, play **once per save**, 8-20 s, never during dialogs/mini-games/scripts/door walks/pause; default pacing 90 s apart and one per map visit;
   the entrance pair is exempt (M2 follows M1 by about 6 s) so Mevin is not starved; M1 waits 2.5 s of free control after the welcome; `?moments=0` disables them for tests.

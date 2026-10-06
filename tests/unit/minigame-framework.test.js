@@ -13,9 +13,9 @@ const countItem = (slots, item) => slots.filter((slot) => slot && slot.item === 
 
 test('MINIGAMES: one entry per key station in docs/STORY.md, each fully specified', () => {
   const { MINIGAMES, STORY } = loadGameData();
-  // P5c (FB-0071): the ICL's game (flappy) opens the lab's door (STORY.iclGate) instead of being a key station's own, so it is listed there
-  // ADR 0025: 'edi' (EDI Madness) is registered in phase E3 but only wired to the scanner in phase E4, so until then it is the one game the story does not name
-  const storyIds = [...Object.values(STORY.keyStations).map((ks) => ks.minigame), STORY.iclGate.minigame, 'edi'].filter(Boolean);
+  // P5c (FB-0071): the ICL's game opens the lab's door (STORY.iclGate) instead of being a key station's own, so it is listed there
+  // ADR 0025: that game is 'edi' (EDI Madness) now; 'flappy' (the old flyer) stays registered as the one-line rollback, so it is the ONE game the story does not name
+  const storyIds = [...Object.values(STORY.keyStations).map((ks) => ks.minigame), STORY.iclGate.minigame, 'flappy'].filter(Boolean);
   assert.deepEqual(Object.keys(MINIGAMES).sort(), [...new Set(storyIds)].sort());
   for (const [id, def] of Object.entries(MINIGAMES)) {
     assert.equal(def.id, id);
@@ -47,7 +47,7 @@ test('MINIGAMES: each item matches the real key STORY.keyStations awards for the
   for (const [id, def] of Object.entries(MINIGAMES)) {
     if (STORY.iclGate.minigame === id || def.opens) {
       // P5c (FB-0071): this game opens a door, it awards no key: no `item` (so no key icon on its win card), and it names the flag its story entry sets
-      // (ADR 0025: EDI Madness opens the same door, so it names the same flag; STORY.iclGate still names the flyer until phase E4)
+      // (ADR 0025: STORY.iclGate starts EDI Madness; the unreachable rollback flyer opens the same door, so it names the same flag)
       assert.equal(def.item, undefined, `${id}: a door-opening game must not carry a key item`);
       assert.equal(def.opens, STORY.iclGate.flag, `${id}: MINIGAMES.opens is out of sync with STORY.iclGate.flag`);
       continue;

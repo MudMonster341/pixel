@@ -106,7 +106,7 @@ test('FB-0033: once hunting, the destination follows the first missing key acros
   // instead confirm the icl-specific route once physicsLab is already held.
   await page.evaluate(() => { GameState.quest.keys.physicsLab = true; });
   target = await page.evaluate(() => game.scene.getScene('world').currentObjectiveAnchor());
-  // P5c (FB-0071): the ICL's door is sealed until its scanner is hacked, so the guide points at the scanner first...
+  // P5c (FB-0071): the ICL's door is sealed until its scanner's parking game is passed, so the guide points at the scanner first...
   const scanner = await page.evaluate(() => game.scene.getScene('world').scanners[0]);
   expect(target.x).toBeCloseTo(scanner.x / 16, 1);
   expect(target.y).toBeCloseTo(scanner.y / 16, 1);

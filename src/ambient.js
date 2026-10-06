@@ -234,7 +234,7 @@ const AMBIENT = {
   ],
 
   'main-block-1': [
-    // P5c (FB-0071): the ICL is a sealed, spaceship-like lab now (its door is a fingerprint-locked hatch at (9..10,14) with the scanner at (11,14); inside it
+    // P5c (FB-0071): the ICL is a sealed, spaceship-like lab now (its door is a locked hatch at (9..10,14) with the scanner/EDI test console at (11,14); inside it
     // are only Alice (7,10) and the core console's key (6,10), reachable only through that door). So nobody stands in the lab, and the students who wait
     // for it stand in the CORRIDOR in front of it, clear of the hatch/scanner lane: at least 3 tiles from the hatch, the scanner and the stairwell door, and
     // never in front of them (tests/unit/story-clearance.test.js geometry, plus the sealed-door cases in tests/unit/fb-0071-icl.test.js). History: the old closet's
@@ -246,8 +246,8 @@ const AMBIENT = {
     { id: 'mb1-amb-icl-2', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 6, y: 17, facing: 'up', factIds: [],
       name: "Mustafa", sheet: 'npc-mustafa',
       lines: [
-        "That door is a fingerprint scanner with an attitude. Tap gently, don't mash.",
-        "My record on that scan is embarrassing. I'm not telling.",
+        "That door wants a parking test. Gently on the pedal, don't mash.",
+        "My record on that parking test is embarrassing. I'm not telling.",
       ] },
     // Room 195: at the far end of the two-row room, 3.2 tiles from the teacher's desk, so the desk stays clear.
     { id: 'mb1-amb-mustafa-195', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 27, y: 4, facing: 'left', factIds: [],

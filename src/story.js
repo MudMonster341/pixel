@@ -86,7 +86,7 @@ const STORY = {
 
   // The three key rooms (docs/STORY.md "Key rooms" table): a desk/bench interactable, not a floor
   // pickup -- pressing E starts the room's own moment. `minigame` names the real M4 mini-game this
-  // key is won from (hero fight / flappy / tower, per the table, src/minigames/) -- the `take` entry
+  // key is won from (hero fight / EDI Madness's door / tower, per the table, src/minigames/) -- the `take` entry
   // below runs it *before* `give`/`key` (src/dialog.js's `minigame` action suspends the rest of the
   // list until the mini-game reports an outcome), so the key/journal/toast lines only fire once she's
   // actually won it (or taken the after-3-losses skip gift, docs/STORY.md "nobody may be locked out").
@@ -99,7 +99,7 @@ const STORY = {
       journal: 'Found a key on a bench in the Physics Lab.',
       doneLine: 'The bench is empty now — you already took this key.',
     },
-    // P5c (FB-0071): the ICL is a fingerprint-locked lab. Its mini-game (flappy, "ICL Fingerprint Hack") now opens the DOOR (STORY.iclGate
+    // P5c (FB-0071): the ICL is a locked lab. Its mini-game (EDI Madness, ADR 0025; it was the flyer "ICL Fingerprint Hack") opens the DOOR (STORY.iclGate
     // below), so this station has no `minigame` of its own: the key lies in the lab's core console, next to Alice, who hands it over too.
     icl: {
       name: 'ICL',
@@ -119,7 +119,7 @@ const STORY = {
   },
 };
 
-// P5c (FB-0071): the ICL's fingerprint-locked door, all content. src/maps.js points the `main-block-1` map def at it (`gates`), the generated map
+// P5c (FB-0071, reworded for EDI Madness, ADR 0025): the ICL's locked door, all content. src/maps.js points the `main-block-1` map def at it (`gates`), the generated map
 // (tools/interiors/plans.js mainBlock1) carries the `sealedDoor` and `scanner` objects it names. E at the scanner asks the mini-game to open the
 // door (a win, or the framework's skip after 3 losses, both report 'won'); Esc leaves it sealed, and she can come back any time. The flag it sets,
 // `iclDoorOpen`, is saved with everything else and keeps the door open for good. `openIfKey`/`openIfStage`/`room` are the soft-lock guards: a save
@@ -130,30 +130,30 @@ STORY.iclGate = {
   door: 'ICL door',
   scanner: 'ICL scanner',
   flag: STORY_ICL_FLAG,
-  minigame: 'flappy',
+  minigame: 'edi', // ADR 0025: EDI Madness (parking). ROLLBACK to the flyer = change this and the scannerDialog's `{ minigame: 'edi' }` below back to 'flappy' (flappy.js stays, unreachable).
   openIfKey: 'icl',
   openIfStage: ['rewarded'],
   room: { x0: 4, y0: 4, x1: 15, y1: 13 },
-  lockedLine: 'Sealed. Fingerprint scan required.',
+  lockedLine: 'Sealed. Parking test required.',
   // E at the hatch itself (never starts the game; the scanner is the thing to use).
   doorDialog: [
-    { id: 'sealed', when: { notFlag: STORY_ICL_FLAG }, lines: ['Sealed. Fingerprint scan required.', 'The scanner on the wall beside the door is the way in.'] },
+    { id: 'sealed', when: { notFlag: STORY_ICL_FLAG }, lines: ['Sealed. Parking test required.', 'The EDI test console beside the door is the way in.'] },
     { id: 'open', lines: ['The hatch is open. The lab hums quietly beyond it.'] },
   ],
-  // E at the scanner: the fingerprint hack, then the door opens.
+  // E at the scanner (still the `scanner` object; to the player it is the EDI test console): the parking test, then the door opens.
   scannerDialog: [
     {
       id: 'scan',
       when: { notFlag: STORY_ICL_FLAG },
-      lines: ['A fingerprint scanner pulses blue. Time to crack it.'],
+      lines: ['The console beeps. The door only opens for someone who can park.'],
       actions: [
-        { minigame: 'flappy' },
+        { minigame: 'edi' }, // ADR 0025 rollback: 'flappy' (see `minigame` above)
         { setFlag: STORY_ICL_FLAG },
-        { journal: 'Hacked the fingerprint scanner: the ICL door is open.' },
-        { toast: 'Scan accepted. The ICL door opens.' },
+        { journal: 'Passed the EDI parking test: the ICL door is open.' },
+        { toast: 'Test passed. The ICL door opens.' },
       ],
     },
-    { id: 'done', lines: ['Scan accepted. The door is open.'] },
+    { id: 'done', lines: ['Test passed. The door is open.'] },
   ],
 };
 
@@ -180,12 +180,12 @@ STORY.alice = [
     lines: [
       "Welcome to the ICL, {name}! I'm Alice. I run 4,096 threads and still lose to the coffee machine.",
       'Those racks crunch the numbers, the holo table draws them, and I try to look useful.',
-      'You cracked my front door, so this is yours: the LUG key from my core console. Take it!',
+      'You parked your way through my front door, so this is yours: the LUG key from my core console. Take it!',
     ],
     actions: [
       { key: 'icl' },
       { give: 'keyIcl' },
-      { journal: 'Alice, the ICL robot, gave me the key after I cracked her door.' },
+      { journal: 'Alice, the ICL robot, gave me the key after I parked my way through her door.' },
       { toast: 'You got the ICL key!' },
     ],
   },

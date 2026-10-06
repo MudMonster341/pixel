@@ -9,7 +9,10 @@
 //   - old saves never soft-lock (a save with the ICL key, one past the hunt, one standing in the lab all start with the door open);
 //   - the lab has the new tile kit (cyan strips, racks, holo table, wall display, consoles, a ceiling light bar), Alice's sheet exists and is preloaded;
 //   - the engine's own door code (world.js createGates()/setGateOpen()/checkGateBump()/nearestInteractable()) run on a stand-in scene;
-//   - the objective route leads to the scanner first, then to the key; the flyer is "ICL Fingerprint Hack" with an intro of at most 3 lines.
+//   - the objective route leads to the scanner first, then to the key; the old flyer "ICL Fingerprint Hack" stays intact, unreachable, as the rollback.
+//
+// ADR 0025 (EDI Madness, phase E4): ported, not deleted. The scanner (to the player: the EDI test console) now starts the parking game `edi` instead of the
+// flyer `flappy`; every assertion about the flag, the door, the key, the guards and the texts below holds for `edi` exactly as it did for the flyer.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -98,7 +101,7 @@ test('FB-0071: the ICL door is a sealed hatch: a `sealedDoor` object over two SO
   }
 });
 
-test('FB-0071: a fingerprint scanner pad is mounted beside the door (a solid wall fitting, named for the door), with its pulse and "accepted" overlay frames', () => {
+test('FB-0071: a scanner pad (the EDI test console) is mounted beside the door (a solid wall fitting, named for the door), with its pulse and "accepted" overlay frames', () => {
   assert.ok(scanner, 'main-block-1 has no scanner object');
   assert.equal(scanner.name, 'ICL scanner');
   assert.equal(scanner.props.door, door.name);
@@ -297,7 +300,8 @@ test('FB-0071: the data wiring: the map def points at STORY.iclGate, whose door 
   assert.ok(objects.some((o) => o.type === 'sealedDoor' && o.name === gate.door));
   assert.ok(objects.some((o) => o.type === 'scanner' && o.name === gate.scanner));
   assert.equal(gate.flag, 'iclDoorOpen');
-  assert.equal(gate.minigame, 'flappy');
+  assert.equal(gate.minigame, 'edi', 'ADR 0025: the scanner starts EDI Madness');
+  assert.equal(MINIGAMES[gate.minigame].opens, gate.flag, 'the game the gate names sets this very flag');
   assert.equal(STORY.keyStations.icl.minigame, undefined, 'the key is not a mini-game prize any more');
   assert.equal(STORY.keyStations.icl.item, 'keyIcl', 'the key id and item are unchanged');
   assert.equal(def.keyStations.find((k) => k.id === 'icl').item, 'keyIcl');
@@ -314,20 +318,20 @@ test('FB-0071: the scanner asks the mini-game, and only a win (or the 3-loss ski
   assert.equal(picked.entry.id, 'scan');
   let done = null;
   applyDialogActions(picked.entry.actions, GameState, (r) => { done = r; });
-  assert.equal(requested.id, 'flappy', 'it launches the flyer');
+  assert.equal(requested.id, 'edi', 'it launches EDI Madness (ADR 0025), not the flyer');
   assert.equal(GameState.flags.iclDoorOpen, undefined, 'nothing is set until the mini-game reports');
   requested.onResult('won'); // a real win, or the framework's skip after 3 losses (framework-scene.js reports both as 'won')
   assert.equal(GameState.flags.iclDoorOpen, true, 'the door flag is set');
   assert.equal(done, 'done');
   assert.equal(GameState.quest.keys.icl, false, 'no key from the scanner');
   assert.equal(GameState.inventory.slots.filter((s) => s && s.item === 'keyIcl').length, 0);
-  assert.ok(toasts.some((t) => /scan accepted/i.test(t)));
+  assert.ok(toasts.some((t) => /test passed/i.test(t)));
   assert.ok(GameState.journal.some((j) => /ICL door is open/.test(j)));
   // once open, E at the scanner only says so (the game is not offered again)
   assert.equal(pickDialogEntry(scannerDef, GameState).entry.id, 'done');
 });
 
-test('FB-0071: Esc / quitting the hack leaves the door sealed, and she can retry any time (nobody is locked out)', () => {
+test('FB-0071: Esc / quitting the parking test leaves the door sealed, and she can retry any time (nobody is locked out)', () => {
   const { pickDialogEntry, applyDialogActions, GameState, gameEvents } = loadGameData();
   const scannerDef = { id: 'scanner:ICL scanner', dialog: gate.scannerDialog };
   let requested = null;
@@ -337,10 +341,10 @@ test('FB-0071: Esc / quitting the hack leaves the door sealed, and she can retry
   requested.onResult('quit');
   assert.equal(done, 'quit');
   assert.equal(GameState.flags.iclDoorOpen, undefined, 'still sealed');
-  assert.equal(pickDialogEntry(scannerDef, GameState).entry.id, 'scan', 'the scan is offered again');
+  assert.equal(pickDialogEntry(scannerDef, GameState).entry.id, 'scan', 'the test is offered again');
   requested = null;
   applyDialogActions(pickDialogEntry(scannerDef, GameState).entry.actions, GameState);
-  assert.equal(requested.id, 'flappy', 'the retry launches it again');
+  assert.equal(requested.id, 'edi', 'the retry launches it again');
   requested.onResult('won');
   assert.equal(GameState.flags.iclDoorOpen, true);
   // and the framework side: Esc is a quit, the skip is a win (src/minigames/framework-scene.js)
@@ -349,13 +353,13 @@ test('FB-0071: Esc / quitting the hack leaves the door sealed, and she can retry
   assert.match(fw, /onSkip: \(\) => this\.win\(true\)/);
 });
 
-test('FB-0071: the sealed door says "Sealed. Fingerprint scan required." (pushing at it and E at it) until the flag is set', () => {
+test('FB-0071: the sealed door says "Sealed. Parking test required." (pushing at it and E at it) until the flag is set', () => {
   const { pickDialogEntry, GameState } = loadGameData();
-  assert.equal(gate.lockedLine, 'Sealed. Fingerprint scan required.');
+  assert.equal(gate.lockedLine, 'Sealed. Parking test required.');
   const doorDef = { id: 'gate:ICL door', dialog: gate.doorDialog };
   const sealed = pickDialogEntry(doorDef, GameState).entry;
   assert.equal(sealed.id, 'sealed');
-  assert.equal(sealed.lines[0], 'Sealed. Fingerprint scan required.');
+  assert.equal(sealed.lines[0], 'Sealed. Parking test required.');
   assert.ok(!sealed.actions, 'E at the hatch never starts the game: the scanner is the thing to use');
   GameState.flags.iclDoorOpen = true;
   assert.equal(pickDialogEntry(doorDef, GameState).entry.id, 'open');
@@ -533,7 +537,7 @@ test('FB-0071: createGates() opens the door at once, with no animation, for a sa
   }
 });
 
-test('FB-0071: pushing up at the sealed hatch toasts "Sealed. Fingerprint scan required.", thuds and rattles once per approach; not when open, blocked, or in front of the scanner', () => {
+test('FB-0071: pushing up at the sealed hatch toasts "Sealed. Parking test required.", thuds and rattles once per approach; not when open, blocked, or in front of the scanner', () => {
   const { GameState } = game;
   GameState.flags = {};
   GameState.quest = { stage: 'hunting', keys: { physicsLab: false, icl: false, room195: false } };
@@ -542,7 +546,7 @@ test('FB-0071: pushing up at the sealed hatch toasts "Sealed. Fingerprint scan r
   scene.createGates();
   scene.checkGateBump(false);
   scene.checkGateBump(false);
-  assert.deepEqual(events.filter((e) => e[0] === 'toast').map((e) => e[1]), ['Sealed. Fingerprint scan required.'], 'once, not every frame');
+  assert.deepEqual(events.filter((e) => e[0] === 'toast').map((e) => e[1]), ['Sealed. Parking test required.'], 'once, not every frame');
   assert.deepEqual(scene.rattled, ['ICL door']);
   // walking away re-arms it
   scene.player.body = { center: { x: 10.5 * T }, bottom: 17 * T };
@@ -565,7 +569,7 @@ test('FB-0071: E picks the scanner or the sealed hatch by distance (the story pr
   const at = (x, y) => { const { scene } = standIn({ spawnTile: { x, y } }); scene.createScanners(); scene.createGates(); scene.npcs = []; scene.ambientNpcs = []; scene.keyStations = []; scene.lifts = []; scene.animals = []; scene.player.x = x * T + 8; scene.player.y = y * T + 8; return scene; };
   const front = at(11, 15).nearestInteractable();
   assert.equal(front.kind, 'scanner', 'in front of the scanner');
-  assert.equal(front.def.name, 'Fingerprint scanner');
+  assert.equal(front.def.name, 'EDI test console');
   const hatch = at(9, 15).nearestInteractable();
   assert.equal(hatch.kind, 'gate', 'in front of the hatch');
   assert.equal(hatch.def.dialog, gate.doorDialog);
@@ -597,10 +601,10 @@ test('FB-0071: world.js wires the new code: the creators run in create(), E inte
 });
 
 // ======================================================================================================
-// 7. The flyer, re-skinned as the fingerprint hack
+// 7. The old flyer stays, unreachable, as the one-line rollback (ADR 0025)
 // ======================================================================================================
 
-test('FB-0071: the flyer is "ICL Fingerprint Hack": same target and rules, no key (no item, door wording on its cards), an intro card of at most 3 lines (title + 2)', () => {
+test('FB-0071 (rollback, ADR 0025): the unreachable flyer is still "ICL Fingerprint Hack": same target and rules, no key (no item, door wording on its cards), an intro card of at most 3 lines (title + 2)', () => {
   const def = MINIGAMES.flappy;
   assert.equal(def.name, 'ICL Fingerprint Hack');
   assert.equal(def.id, 'flappy', 'the id and scene key are kept: old saves\' progress (GameState.minigames.flappy) still applies');

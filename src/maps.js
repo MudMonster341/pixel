@@ -116,7 +116,7 @@ const MAPS = {
     indoors: true,
     lift: MAIN_BLOCK_LIFT,
     doorLocks: [{ match: 'Main Block Stairs 1 (up)', stages: ['hunting', 'rewarded'], reason: STAIRS_ROPED_OFF }],
-    // P5c (FB-0071): the ICL's fingerprint-locked door. Plain data (src/story.js STORY.iclGate) that names the `sealedDoor` and `scanner` objects of
+    // P5c (FB-0071): the ICL's locked door (EDI Madness opens it, ADR 0025). Plain data (src/story.js STORY.iclGate) that names the `sealedDoor` and `scanner` objects of
     // the generated map: world.js createGates()/createScanners() read it (like createLifts() reads `lift`).
     gates: [STORY.iclGate],
     keyStations: [

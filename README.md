@@ -88,7 +88,7 @@ src/scenes/ui.js      minimap, inventory bar, dialog box, tutorial, pause menu, 
 src/scenes/title.js   title screen
 src/scenes/card.js    the ending's birthday card
 src/scenes/credits.js the credits after the card (wishes, THE END); data + timing in src/credits.js
-src/minigames/        the three key mini-games (hero fight, flyer, tower climb)
+src/minigames/        the key mini-games (hero fight, EDI Madness parking, tower climb; the old flyer stays as an unreachable rollback)
 src/dev/              dev-only tools (feedback overlay)
 tools/make-*.js       the pixel art (run `npm run assets` after changing any of them)
 tools/feedback*.js    feedback storage + command line

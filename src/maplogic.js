@@ -270,7 +270,7 @@ function doorFrameAt(elapsedMs, frameCount, frameMs = DOOR_FRAME_MS, reverse = f
   return reverse ? frameCount - 1 - step : step;
 }
 
-// ---------- sealed doors (P5c, FB-0071: the ICL's fingerprint-locked hatch) ----------
+// ---------- sealed doors (P5c, FB-0071: the ICL's locked hatch) ----------
 // A map def's `gates` entry (src/maps.js, data from src/story.js `STORY.iclGate`) describes a `sealedDoor` object of that map's generated
 // Tiled data and its `scanner`: `door`/`scanner` are the two objects' names, `flag` the GameState flag that opens the door, `room` the rect
 // (tile units, inclusive) the door seals. The door starts closed and solid; WorldScene.createGates() opens it once the flag is set.
@@ -560,7 +560,7 @@ function objectiveId(quest) {
 // (it alone has the live mapObjects/npcs/keyStations to resolve an id/anchor name against); this
 // function only picks *which* step applies, which needs no live scene at all.
 // P5c (FB-0071): a step may name `whileFlagOff` (a GameState flag): it applies only while that flag is not set, so the ICL's route points at
-// the fingerprint scanner first and, once the door is open (`iclDoorOpen`), at the key station inside. `flags` is GameState.flags; left out, a
+// the scanner (EDI test console) first and, once the door is open (`iclDoorOpen`), at the key station inside. `flags` is GameState.flags; left out, a
 // flag-conditioned step counts as applying (the plain, flag-less behaviour every earlier caller had).
 function objectiveTarget(mapKey, quest, flags) {
   const id = objectiveId(quest);
@@ -624,7 +624,7 @@ function animalSheets(animals, species, layouts) {
 // story objects; ambient students are atmosphere and must never shadow them. (Doors/stairs aren't
 // E-interactables -- walking onto one warps -- so they don't take part.)
 const INTERACT_PRIORITY = {
-  scanner: 3, // P5c: the ICL's fingerprint scanner and its sealed door: the way to the key room, like a key station
+  scanner: 3, // P5c: the ICL's scanner (EDI test console) and its sealed door: the way to the key room, like a key station
   keyStation: 3, // a key room's desk: the treasure hunt's own objective
   questNpc: 2, // a story NPC with dialog data (the volunteer, ...)
   lift: 2, // P4b: a lift door's floor-choice list (E at the doors), never shadowed by a student standing nearby

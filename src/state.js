@@ -124,7 +124,7 @@ const GameState = {
   // restored like everything else.
   quest: defaultQuest(),
   // Mini-game progress (docs/ROADMAP.md M4, src/minigames/framework-data.js): keyed by mini-game id
-  // ('hero'/'flappy'/'tower'), each `{ attempts, bestScore, won, skipped }`, created lazily by
+  // ('hero'/'flappy'/'edi'/'tower'), each `{ attempts, bestScore, won, skipped }`, created lazily by
   // recordAttempt() the first time she plays one -- an empty object here is a fresh game with none
   // played yet, and an old save from before M4 simply has no key for one it never touched.
   minigames: {},

@@ -54,7 +54,8 @@ const MINIGAMES = {
     scoreTarget: 9,
     scoreLabel: 'HITS',
   },
-  // P5c (FB-0071): the ICL is a fingerprint-locked lab, and this flyer is the hack that opens its DOOR (src/story.js STORY.iclGate: the scanner's `minigame`
+  // ROLLBACK ONLY (ADR 0025): unreachable from the story now (STORY.iclGate starts 'edi'); point it back at 'flappy' to ship the flyer again.
+  // P5c (FB-0071): the ICL is a locked lab, and this flyer was the hack that opened its DOOR (src/story.js STORY.iclGate: the scanner's `minigame`
   // action, then the `iclDoorOpen` flag). It no longer awards a key, so it has no `item` (no key icon on its win card); `opens` names the flag it sets, and
   // `cards` words its win, skip and game-over cards for a door instead of a key (framework-scene.js MinigameCard). It was "ICL Server Dash".
   flappy: {
@@ -103,8 +104,8 @@ const MINIGAMES = {
     },
   },
   // ADR 0025 (EDI Madness, phase E3): garage parking with a driving instructor (src/minigames/edi.js + edi-logic.js). It is built to replace the flyer at the
-  // ICL scanner, so like the flyer it opens the lab's DOOR (`opens: 'iclDoorOpen'`, no key `item`, `cards` for the door wording); until phase E4 wires
-  // the scanner to it, the flyer stays reachable and this entry is only launched by tools and tests. The score is the stages parked (scoreTarget 3). The intro
+  // ICL scanner, so like the flyer it opens the lab's DOOR (`opens: 'iclDoorOpen'`, no key `item`, `cards` for the door wording); since phase E4 the
+  // scanner starts it (STORY.iclGate), and the flyer above is the unreachable rollback. The score is the stages parked (scoreTarget 3). The intro
   // card has no subtitle slot, so "Garage parking with your instructor" is not shown (the cover picture says GARAGE PARKING under the title).
   edi: {
     id: 'edi',

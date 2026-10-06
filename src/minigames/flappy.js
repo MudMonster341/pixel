@@ -1,3 +1,4 @@
+// UNREACHABLE since ADR 0025 (EDI Madness opens the ICL door now); kept as the one-line rollback (STORY.iclGate `minigame` + the scanner dialog's action back to 'flappy').
 // The ICL's fingerprint hack (docs/STORY.md key 2, FB-0071): a flappy-bird-style flyer that opens the lab's fingerprint-locked DOOR (the game used to
 // hand over the key itself as "ICL Server Dash": a bird through gaps in server racks). You fly a glowing data packet through gaps in neon "firewalls"
 // to crack the scan; the big fingerprint scanner ring behind the play field FILLS as the score rises, and at the target the scan is cracked.

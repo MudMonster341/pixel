@@ -194,11 +194,11 @@ test('the LUG treasure hunt: a named playthrough from the gate to the reward box
   await expect.poll(async () => page.evaluate(() => game.scene.getScene('ui').journal.visible)).toBe(true);
   expect(await page.evaluate(() => game.scene.getScene('ui').isBlocking())).toBe(true); // movement blocked while it's open
   const journalRows = await page.evaluate(() => game.scene.getScene('ui').journal.rowTexts.map((t) => t.text));
-  // One journal line for the quest start, one for cracking the ICL scanner (P5c, FB-0071: the door opens), one per key found -- the reward's own
+  // One journal line for the quest start, one for passing the EDI parking test at the ICL scanner (P5c, FB-0071: the door opens), one per key found -- the reward's own
   // line comes later. In the order she did them here: start, scanner, ICL key, Room 195 key, Physics Lab key.
   expect(journalRows.length).toBe(5);
   expect(journalRows[0]).toContain('3 keys hidden around campus');
-  expect(journalRows[1]).toContain('Hacked the fingerprint scanner: the ICL door is open.');
+  expect(journalRows[1]).toContain('Passed the EDI parking test: the ICL door is open.');
   expect(journalRows[2]).toContain('Found a key in the core console of the ICL.');
   expect(journalRows[3]).toContain('Found a key on the teacher');
   expect(journalRows[4]).toContain('Found a key on a bench in the Physics Lab.');

@@ -30,8 +30,8 @@ const OBJECTIVE_ROUTES = {
     { map: 'main-block-2', anchor: 'Main Block Stairs 2 (up)' },
     { map: 'main-block-3', keyStation: 'physicsLab' },
   ],
-  // docs/STORY.md beat 7: the ICL, 1st floor -- one flight up from the foyer, then to the lab's fingerprint scanner (P5c, FB-0071: the door is
-  // sealed until the scanner's mini-game is won, GameState flag `iclDoorOpen`), and once it is open on in to the key inside.
+  // docs/STORY.md beat 7: the ICL, 1st floor -- one flight up from the foyer, then to the lab's scanner / EDI test console (P5c, FB-0071: the door is
+  // sealed until the scanner's mini-game (EDI Madness) is won, GameState flag `iclDoorOpen`), and once it is open on in to the key inside.
   'key-icl': [
     { map: 'campus', anchor: 'Main Block entrance' },
     { map: 'main-block-g', anchor: 'Main Block Stairs G (up)' },

@@ -1216,3 +1216,8 @@ Hero fight: left click = one shot, hold = Z cadence, Z kept, confirming click ne
 **Decisions the owner may dispute:** all stages `anyDirection: true` (nose-in or reverse-in both park); gas held into a wall loses one heart then times out (reason 'time'); tuning constants in the file header for E5.
 **Env note:** this session runs in a Linux cloud container, not the owner's PC; git-ignored art (`assets/External Tilesets`, sprout-lands) is absent, so 3 failures + 40 cancelled (FB-0051 moments, "assets up to date", vendor LICENSE) are the baseline here and unrelated.
 **Next:** E2 art (garage backgrounds, car sprites, instructor portrait, title sign).
+
+## 2026-10-06 - E2 EDI Madness art: 1247 unit (14 new `EDI art` tests)
+
+**Owner decision (art):** no free top-down car pack reachable (opengameart blocked in this container; Kenney packs here are 3/4 views): use the pack cars (Kenney Modern City green/grey/orange, 4 views) and compose the in-between angles in code. **Did (one Sonnet agent, reviewed, LOOKED at bgs/cars/cover):** `tools/lib/edi-art.js` (reads `EDI_STAGES` via vm) + 7 PNGs in assets/minigames (`edi-bg-1..3` 960x540, `edi-cars` 8 headings x 7 colours incl. the white/green learner car with an L sign, `edi-sprites`, `edi-instructor` 2 frames, `edi-cover` 480x270 stretched 2x). `EDI_ART`/`ediCarFrame(heading)` in edi-logic.js register the files for preload and the offline bundle. Weakest: the instructor's face, the four diagonal car frames (flat-rotated 3/4 car). E/W 3/4 vs N/S near top-down is a small perspective jump.
+**Next:** E3 scene (`edi.js`, framework entry, HUD, qa-shots flows).

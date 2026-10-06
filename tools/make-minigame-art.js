@@ -44,6 +44,20 @@
 //   hero-cover.png          480x270 (half scale, stretched 2x): the hero game's COVER (FB-0066 item M5), behind the intro card: a
 //                           sunset, a big pale sun, cloud bands, dark city skyline at the sides, a rooftop ledge in the foreground
 //                           with the two stand-ins posed close together (kitten left, shadow bat right) and a title banner.
+//   edi-bg-1.png .. edi-bg-3.png   960x540 (full size, drawn 1:1): the three EDI Madness garages (ICL scanner game, ADR 0025), one per
+//                           stage: concrete floor, lane and bay lines, the target bay (white outline, a big P), the walls and the
+//                           hazard-striped pillars, every parked car in its slot, painted arrows, ceiling lamps and a P sign. Everything is read
+//                           from src/minigames/edi-logic.js EDI_STAGES (so the solid things drawn are exactly the collision rectangles).
+//                           Drawn by tools/lib/edi-art.js.
+//   edi-cars.png            448x392, 56x56 cells, 8 headings per row (E SE S SW W NW N NE: frame = Math.round(heading / (PI / 4)) mod 8,
+//                           heading 0 = east, clockwise), rows = learner (white, green trim, an "L" sign), green, grey, orange, red, yellow,
+//                           blue (EDI_CAR_ROWS in tools/lib/edi-art.js). The CC0 Kenney Roguelike Modern City car (side, front and back views);
+//                           the diagonals are the side view turned 45 degrees in code. The car is 44 px long, the logic's hitbox.
+//   edi-sprites.png         256x32, 32x32 cells: heart full, heart empty, bump spark, stars puff, green tick, STOP tag, brake dust, sparkle.
+//   edi-instructor.png      96x48, two 48x48 frames: the driving instructor's HUD portrait (neutral, wincing); the head of the project's
+//                           own student sheet, redressed (dark hair, green cap, moustache, white polo with a green collar).
+//   edi-cover.png           480x270 (half scale, stretched 2x): the EDI Madness COVER behind the intro card: title ribbon, checkered stripe,
+//                           the learner car, the instructor in a speech bubble, a pillar and a P sign. Generic lettering, no real logo.
 // `--out <dir>` writes elsewhere (tests check the files are up to date), matching the convention in
 // tools/make-assets.js / tools/make-cutscenes.js.
 const fs = require('fs');
@@ -1358,10 +1372,12 @@ const HV_GLYPHS = {
   C: ['.####', '#....', '#....', '#....', '#....', '#....', '.####'],
   D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'],
   E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+  G: ['.####', '#....', '#....', '#.###', '#...#', '#...#', '.###.'],
   H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
   I: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '#####'],
   K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
   L: ['#....', '#....', '#....', '#....', '#....', '#....', '#####'],
+  M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'],
   N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
   O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
   P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
@@ -1476,6 +1492,9 @@ function buildHeroCover() {
   return img;
 }
 
+// ---------- EDI Madness (ADR 0025): drawn in tools/lib/edi-art.js, with this file's own helpers ----------
+const ediArt = require('./lib/edi-art')({ Img, decodePNG, glow, drawRows, scaleImg, fillPoly, fillTri, drawPixelText, hvTextWidth, heroUiHeart, SPARKLE });
+
 // ---------- write the files ----------
 
 const outFlag = process.argv.indexOf('--out');
@@ -1491,10 +1510,16 @@ write('hero-bg.png', buildHeroBg());
 write('hero-sprites.png', buildHeroSprites());
 write('hero-bar.png', buildHeroBar());
 write('hero-cover.png', buildHeroCover());
+const ediFrames = ediArt.carFrameSet();
+for (let stage = 0; stage < 3; stage++) write(`edi-bg-${stage + 1}.png`, ediArt.buildEdiBg(stage, ediFrames));
+write('edi-cars.png', ediArt.buildEdiCars());
+write('edi-sprites.png', ediArt.buildEdiSprites());
+write('edi-instructor.png', ediArt.buildEdiInstructor());
+write('edi-cover.png', ediArt.buildEdiCover(ediFrames));
 // The old Physics Lab platformer's backdrops are retired (FB-0066: the Physics Lab is the hero fight now) -- remove them if a previous
 // run left them behind, so assets.test.js's "every generated file is exactly what the tool would write" check doesn't trip over stale files.
 for (const name of ['platformer-bg.png', 'platformer-bg-far.png', 'platformer-bg-mid.png']) {
   const stale = path.join(outDir, name);
   if (fs.existsSync(stale)) fs.unlinkSync(stale);
 }
-console.log(`Wrote flappy-bg, flappy-sprites, tower-bg, tower-sprites, tower-prince, hero-bg, hero-sprites, hero-bar and hero-cover to ${path.relative(path.join(__dirname, '..'), outDir)}/`);
+console.log(`Wrote flappy-bg, flappy-sprites, tower-bg, tower-sprites, tower-prince, hero-bg, hero-sprites, hero-bar, hero-cover and the EDI Madness art (edi-bg-1..3, edi-cars, edi-sprites, edi-instructor, edi-cover) to ${path.relative(path.join(__dirname, '..'), outDir)}/`);

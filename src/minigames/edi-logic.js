@@ -68,6 +68,23 @@ const EDI_FAILSAFE_MS = 150000; // a whole attempt that lasts this long counts a
 const EDI_STAGE_COUNT = 3;
 const EDI_LINE_MS = 3600; // how long the instructor's bubble shows a line
 
+// ---------- the art (phase E2, tools/lib/edi-art.js writes these; the scene in phase E3 preloads from this table) ----------
+// The paths are literals on purpose: tools/pack-offline.js finds every 'assets/...' string in src/, so listing them here puts them in the offline bundle.
+const EDI_ART = {
+  bg: ['assets/minigames/edi-bg-1.png', 'assets/minigames/edi-bg-2.png', 'assets/minigames/edi-bg-3.png'], // 960 x 540 each, one per stage, drawn 1:1
+  cars: 'assets/minigames/edi-cars.png', // 448 x 392: 8 x 7 cells of EDI_CAR_CELL; a row per colour (EDI_CAR_ROWS), a column per heading
+  sprites: 'assets/minigames/edi-sprites.png', // 256 x 32: 8 cells of 32 (EDI_SPRITE_FRAME)
+  instructor: 'assets/minigames/edi-instructor.png', // 96 x 48: two 48 x 48 frames (0 neutral, 1 wincing)
+  cover: 'assets/minigames/edi-cover.png', // 480 x 270, stretched 2x behind the intro card
+};
+const EDI_CAR_CELL = 56;
+const EDI_CAR_ROWS = ['learner', 'green', 'grey', 'orange', 'red', 'yellow', 'blue']; // the learner car is the player's; the others are parked cars
+const EDI_SPRITE_FRAME = { heartFull: 0, heartEmpty: 1, spark: 2, stars: 3, tick: 4, stop: 5, dust: 6, sparkle: 7 };
+// The column of the car sheet for a heading (radians, 0 = east, clockwise): E SE S SW W NW N NE = 0..7.
+function ediCarFrame(heading) {
+  return ((Math.round(heading / (Math.PI / 4)) % 8) + 8) % 8;
+}
+
 // ---------- the stages (data) ----------
 // A stage: { id, name, start: {x, y, heading}, obstacles: [{kind: 'wall'|'pillar'|'car', x, y, w, h, angle?}] (x, y = top-left corner, `angle`
 // turns it about its centre), bay: {x, y, w, h, axis} (the target rectangle and the heading of its long axis), anyDirection, arrows (painted

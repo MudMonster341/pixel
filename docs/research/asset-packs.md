@@ -42,6 +42,8 @@ money.
 
 **Also in use (FB-0066, 2026-10-05): the Physics Lab hero fight's roof.** `tools/make-minigame-art.js` crops two grey roof-panel tiles (16x16 at sheet x 136 and 153, y 0) from the same Roguelike Modern City sheet (CC0) for the rooftop floor of the arena and of the cover picture. The kitten hero, the shadow bat, the minion, the bolts, the hearts, the skyline, the sunset and the title lettering are code-composed from the project palette (generic stand-ins, ADR 0021; nothing from the packs).
 
+**Also in use (EDI Madness, 2026-10-06): the parking game's cars.** `tools/lib/edi-art.js` crops the green car in its three views (side in both directions at sheet x 534/583 y 280, back at 532,308, front at 566,308) from the same Roguelike Modern City sheet (CC0), removes the 1 px tile margins, swaps its four body tones for white-and-green (the learner car) and red, yellow, blue, grey, orange and green (parked cars), and turns the side view 45 degrees in code for the four diagonal headings. The garage floor, walls, pillars, bay paint, lettering, hearts and the instructor (the head of our own student sheet, redressed) are code-composed. No new pack was needed.
+
 I built three small mockups from the four downloaded packs, at the game's real render scale (16px
 tile × zoom 3 = 48px on screen), and looked at them next to the current game. They're saved at:
 

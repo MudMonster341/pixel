@@ -105,6 +105,13 @@ test('every mini-game backdrop is sized to its own scene\'s viewport', () => {
     'hero-cover.png': [480, 270],
     'hero-sprites.png': [256, 128],
     'hero-bar.png': [80, 10],
+    'edi-bg-1.png': [960, 540], // EDI Madness: drawn 1:1 (full size), the cover at half scale
+    'edi-bg-2.png': [960, 540],
+    'edi-bg-3.png': [960, 540],
+    'edi-cars.png': [448, 392],
+    'edi-sprites.png': [256, 32],
+    'edi-instructor.png': [96, 48],
+    'edi-cover.png': [480, 270],
   };
   for (const [name, [expectedW, expectedH]] of Object.entries(sizes)) {
     const png = path.join(ASSETS, 'minigames', name);

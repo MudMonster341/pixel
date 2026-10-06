@@ -22,24 +22,15 @@ Owner's wishes: cute and soft look with story meaning; art need not be insane bu
 feel; people and animals moving; talk to everyone and learn campus facts. After the first playtest: **"the game is fine, but the wow aspect isn't
 there yet"**, plus 33 feedback items. **Ratings stay paused.**
 
-## State (2026-10-05, Day 3 evening)
+## State (2026-10-06, end of Day 4 session)
 
-`main` is **ahead of origin by many commits, NOT pushed** (push only when the owner says; the pre-push hook runs the full suite, 9-17 min). Last full run today:
-**unit 1058 green + 186/186 browser tests green** (final run 2026-10-05 night; also qa:shots 103/103 and qa:offline Chromium + WebKit clean). Nothing is running.
+`main` was **pushed to GitHub on 2026-10-06 at the owner's request** (`https://github.com/MudMonster341/pixel`; the pre-push hook runs the full suite, 9-17 min, output in `push.log`). After that commit `main` and `origin/main` are equal. Nothing is running.
+Tests at the last full run: **unit 1205** (+ browser 184/186 on the day's second full run: 3 load timeouts that pass alone, headroom added, ERR-0019) and qa:shots / qa:offline clean before the 2nd-playtest fixes. The push hook's run is the newest full result.
 
-### Done on Day 3 (feedback packages P1-P5, all committed, FB items marked fixed in the Inbox)
-- **P1 controls/UI:** E/Space/Enter advance messages (one handler); the player halts under any script/overlay (ERR-0016); panel frame right/bottom border restored (ERR-0017); Quit (title + pause) + goodbye scene; ending chain hardened; Main Block door glass solid, two-tile doorways.
-- **P2:** ICVL -> ICL everywhere (save migration); named ambient NPCs (`name`, `lines`, `sheet`, `factIds`): Deanne, 9 friends, 3 Mustafas (black+orange hoodie) near the games, Prof. Elakkiya/Angel/Raja; club outfits (ACM dark pink, LUG orange/black, MTC black/white, others sky blue); funnier CS openers. Lines for the owner: docs/research/campus-lines-review.md.
-- **P3 outdoors:** `tools/render-map-crop.js` (LOOK at any map without a browser), kerb/road autotile (`tools/campus/autotile.js`), oval roundabout, road west with a turning circle, real parking lots, RTA bus stop + bay + shelter, full-width barrier, new palms/leafy trees.
-- **P4 Main Block:** black void, side-on doors/windows, Library lobby at the foyer back-centre (door still closed), stairs from the LimeZu pack, working lifts on 4 floors, every door/lift animates (closed/half/open).
-- **P5 mini-games:** Room 195 = **tower climb** (Tetris removed; match-3 dropped by the owner), Physics Lab = hero fight (kitten hero vs shadow bat, original stand-ins, Z shoots, themed cover), ICL = sealed spaceship lab: scanner + "ICL Fingerprint Hack" opens the door, Alice the robot gives the key.
-- The owner's "moments" (unicorn+prince, Mevin, Raja's chariot, Sana/Shraddha/Palak, ball pit, sumo vs Narda) are designed and the questions settled: **docs/plans/2026-10-04-moments-and-small-touches.md** (not built yet).
-
-### Also done on Day 3 evening (after P5)
-- **Moments M1 unicorn + prince, M2 Mevin (Treble)** with the pacing system (`src/moments.js`; once only; entrance pair chains: M2 about 6 s after M1; M1 waits 2.5 s of free control; `?moments=0` for tests); **W4 golden hour** (`src/daylight.js`, morning -> dusk with the keys, `?daylight=0`); **W3 finale** (box -> cake with 22 candles blown one by one -> fireworks over a Dubai skyline + chiptune "Happy Birthday" -> card -> credits -> title; ADR 0023).
-- Play copy `../2D_pixel_game-play` updated to `9969ccf` (ready for the owner's 2nd playtest, early).
-
-### Owner's 33 items: FB-0044..FB-0076 all fixed except FB-0051 (in progress: chariot, the three girls, Mevin, Narda are moments) and FB-0075/0076 await their check. FB-0076 has a question to the owner in the thread.
+### Everything built so far (Day 3 + Day 4: see [HANDOVER.md](HANDOVER.md) for commits, switches, seen vs unseen)
+- Day 3: P1 controls/UI, P2 named NPCs + club outfits, P3 outdoors, P4 Main Block (lifts, doors, stairs), P5 mini-games (tower climb Room 195, hero fight Physics Lab, ICL sealed lab with Alice), moments M1/M2, golden hour, birthday finale.
+- Day 4: juice pass, M3 Raja's chariot, M4 Sana/Shraddha/Palak (now on the **3rd-floor corridor after the Physics Lab key**), W2 memory album (Journal Tab page, placeholders until photos), W6 selfie (P key), and the owner's 2nd-playtest fixes **FB-0077** (Gate 2 barrier lifts and stays up), **FB-0078** (slim code-drawn unicorn; prince: "If you're ever a little tipsy, I'll always watch out for you"), **FB-0079** (Aakar, sky blue, Dr. Evil voice), **FB-0080** (Mahin, badminton), **FB-0081** (left click shoots in the hero fight, Z kept), **FB-0082** (Rapunzel-tower backstory pages). FB-0051 fixed.
+- The owner has played the build up to ~2226e24; they have not seen the fixes above or the 3rd-floor friends.
 
 ## Owner decisions (all settled)
 Offline bundle + a hosted link as backup (Netlify Drop, unlisted, card photos included; **the owner uploads it**, an account login is needed: ADR 0022);
@@ -48,13 +39,12 @@ wing doors closed + each says a line; no ruler portraits; **named friends allowe
 roadmap" **disabled** until the owner says; ratings paused; **one Sonnet agent at a time, monitored** (see Rules).
 
 ## What is LEFT (in order)
-1. **Wait for the owner's 2nd playtest** (feedback via the O overlay), fix what they find.
-2. **Remaining wow** (recommended answers, owner did not answer round 3): juice pass (key-pickup sparkle, emotes), W2 album + W6 selfie (placeholders; photos via `assets/card/`).
-3. **Later moments** (optional, by 10-09): Raja's chariot (M3), Sana/Shraddha/Palak scene (M4). **PARKED by the owner on 2026-10-05, not a priority: the TP room (ball pit + arcade + sumo vs Narda).**
-4. **Before handover:** `npm run qa:shots` (LOOK at them), `npm run qa:offline`, the full `npm test`, update `../2D_pixel_game-play`, tell the owner it is ready for the 2nd playtest (~10-08).
-5. **Final (by 2026-10-09):** card assets in `assets/card/` -> `npm run pack:offline -- --zip` and `npm run pack:site`; the owner uploads `dist/offline-site` to Netlify; send Taru the link + zip + `HOW_TO_OPEN.txt`.
+1. **EDI Madness** (owner request, 2026-10-05 night): the ICL game (the flyer at the scanner) becomes a top-down garage-parking game with an instructor. **Designed, not started.** Plan: [docs/plans/2026-10-06-edi-madness.md](docs/plans/2026-10-06-edi-madness.md), decision [ADR 0025](decisions/0025-edi-madness-replaces-the-icl-flyer.md). Phases E1 logic, E2 art, E3 scene, E4 wiring + texts, E5 feel after the owner drives it; the flyer stays as a one-line rollback; cut line: stage 3, stage 2, portrait, story pages. Target playable by 10-07 night.
+2. **Waiting on the owner:** the content of a **new cut scene after the ICL lab** (and possibly a "last" one after Room 195; unclear which they meant: ask), their next feedback (`npm run feedback`), the FB-0076 answer, lines edits in campus-lines-review.md, and the **card assets** in `assets/card/` (by ~10-07; `album` photos optional).
+3. **Optional if time allows:** more moments between the games per the owner's direction (Raja stays where he is). **PARKED, do not start unless asked: the TP room (ball pit + arcade + sumo vs Narda).**
+4. **Final handover by 2026-10-09 (10-10 slack):** card assets -> `npm run pack:offline -- --zip` and `npm run pack:site`, `qa:shots` (LOOK), `qa:offline` (Chromium + `webkit`), the full `npm test` once, update `../2D_pixel_game-play`, give the owner the zip + HOW_TO_OPEN.txt + `dist/offline-site` (docs/HOSTING.md). The agent never creates accounts or publishes.
 
-**Cut line:** the TP room is already parked; then Raja's chariot, then the three-girls scene, then W6/W2. Keep M1, M2, the finale, golden hour. **Never cut:** P1 (done), the bundle and hosted link, credits, soft-lock guards, completeness checklist, the full test before handover.
+**Cut line:** TP room (parked), then EDI stage 3 / 2 only if time forces it, then W2/W6 polish. **Never cut:** the offline zip and hosted link, credits, soft-lock guards (skip after 3 losses in every game, the ICL door guard), the completeness checklist, the full test before the final handover.
 
 ## What the owner provides (and when)
 - **Card assets** (photos, the 3 memory-album photos + captions (`album`), closing video, final wishes, recipient/age) in `assets/card/` (gitignored; shape in `assets/card/card.example.json`):

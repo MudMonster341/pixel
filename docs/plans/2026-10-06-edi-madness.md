@@ -1,0 +1,37 @@
+# Plan: "EDI Madness", the ICL game becomes a garage-parking game (owner request, 2026-10-05 night)
+
+Status: **designed, NOT started** (the first agent run died on the usage limit while still reading; the tree was clean, nothing was lost). Decision record: [ADR 0025](../../decisions/0025-edi-madness-replaces-the-icl-flyer.md).
+
+## What the owner asked
+"Change the second game to a game called EDI Madness. It is basically her with an instructor having to do garage parking ... it becomes a parking game where you have to do parking." Asked which game: the owner chose **the ICL lab's game** (the second key on the route; today the flyer "ICL Fingerprint Hack" at the scanner that opens the sealed ICL door).
+EDI is read as a driving school (the Emirates Driving Institute, a Dubai joke). **Never copy a real logo or brand art**: generic "EDI MADNESS" lettering and a learner "L" plate.
+
+## Feasibility and cut line
+Feasible in the time: the shell (`MinigameBaseScene`), the pure-logic + thin-scene split (hero, tower), the story pages (FB-0082), the ICL wiring (scanner, `iclDoorOpen`, Alice) and a CC0 top-down car pack (Kenney Pixel Vehicle Pack, `assets/vendor/kenney-pixel-vehicle-pack`, already used for the campus cars) all exist. What is new is car physics, 3 stage layouts, an instructor and art.
+Target: playable by **2026-10-07 night**, one test round and the owner's hands-on feel check on **10-08**, handover **10-09**.
+**Cut line (in this order if time runs short):** stage 3 (tight garage), then stage 2, then the instructor's portrait (text only), then the story pages. **Rollback:** the flyer code and art (`flappy.js`, `flappy-logic.js`, `flappy-sprites.png`) STAY in the repo, unreachable; if EDI Madness is not good by 10-08, point the scanner back at `flappy` (one line in `src/story.js` plus the reworded texts) and ship the flyer.
+
+## Design (the contract for the agents)
+Scene key `minigame-edi`, MINIGAMES id `edi`; pure logic `src/minigames/edi-logic.js`, thin scene `src/minigames/edi.js` (like hero / tower).
+- **Top-down parking.** Taru drives a small learner car (white/green, "L" plate) with a driving **instructor** in the passenger seat. W/Up gas, S/Down brake then reverse, A/D or Left/Right steer (steering scales with speed), Space handbrake. Kinematic bicycle model, deterministic fixed step, slow max speed (forward about 2.2 tiles/s, reverse about 1.2), no skidding.
+- **Gentle (a gift):** 3 hearts; a bump costs a heart only above a small speed, a scrape just stops the car and the instructor winces; 1 s invulnerability, small push-back; generous parking tolerance; the bay glows green when aligned.
+- **Three stages**, each a layout in data (walls, pillars, parked cars, the target bay and its axis): (1) an easy straight-in bay in an open lot; (2) reverse into a bay between two parked cars; (3) a tight garage level with pillars and a one-way arrow. **Parked** = the rotated car rectangle inside the bay (small tolerance), heading within about 12 degrees of the bay axis, speed under a threshold for 0.8 s. A stage has a 75 s limit (gentle failure: the stage restarts, counts one loss); the shell's 150 s failsafe still ends every attempt; **skip after 3 losses** opens the door as in every game; Esc quits.
+- **Instructor lines** (short, warm, funny, `{name}`, **no birthday mention**): a start line per stage ("Mirror, signal, then gently on the pedal, {name}."), on a bump ("Careful! That pillar has been there since the nineties."), near-park ("Lovely. Now stop. STOP. Stooop..."), success ("Perfect parking! I would pass you."), timeout ("Take a breath. Again."). Speech bubble + small portrait in a HUD corner (no dialog box over the garage). Name tag "Instructor".
+- **Story pages** (the FB-0082 mechanism, `MINIGAMES.edi.story`): "The ICL's sealed door wants proof of EDI-level parking skills." / "Your instructor has strapped himself in. He looks nervous." / "Park three times without crushing a pillar. Ready?" Controls on the intro card: `ARROWS/WASD: DRIVE  SPACE: HANDBRAKE` (limit 42 characters), title "EDI MADNESS", subtitle "Garage parking with your instructor".
+- **Art (free packs only, FB-0025):** car sprites from the Kenney vehicle pack, recoloured; garage floor, lines, pillars, walls, bay markings, arrows, "P" signs and the title sign are code-drawn in `tools/make-minigame-art.js`; the instructor portrait is a recoloured/cropped existing character sheet. Never hand-edit PNGs; LOOK at every generated image.
+- **Wiring (replace the flyer, change nothing else):** the ICL scanner starts `edi`; a win or skip-after-3-losses sets the same saved flag `iclDoorOpen` and the hatch animates as before; Alice and the core console still give the key; the guide route keeps its shape. Reword: scanner/door lines (`src/story.js`), Mustafa's ICL line (`src/ambient.js`), Alice's "You cracked my front door" line, the journal/toast clue text, `docs/STORY.md`, `docs/research/campus-lines-review.md`, ADR 0024's line-up table, README if it lists games.
+- **Audio:** reuse existing sfx (hurt, win chime). A very quiet generated engine hum only if trivial; otherwise none.
+
+## Phases (one Sonnet agent at a time; each = one run, small `Edit`s, `test:unit` green, the coordinator reviews, looks at previews/shots, commits, then briefs the next)
+| Phase | Scope | Coordinator check |
+|---|---|---|
+| **E1 logic** | `edi-logic.js` + `EDI:` unit tests only: physics, rotated-rect collision, bump/scrape rule, parked detection, the 3 stage layouts as data, a scripted controller in the test that PARKS each stage in time (no stage unwinnable), time limits, failsafe, skip-after-3, instructor lines | `test:unit`, read the stage data once |
+| **E2 art** | generator: 3 garage backgrounds (or one tile-based layout), car + parked-car sprites, "L" plate, instructor portrait, title sign; registered in preload + the offline manifest | LOOK at all previews at 1x and 4x |
+| **E3 scene** | `edi.js` on the shell, `framework-data.js` entry (intro, story, controls), HUD (hearts, stage n/3, timer, instructor bubble), qa-shots flows (intro, story, play x3, game over, skip offer, win) | run the new qa-shots flow and LOOK; run `tests/e2e/minigames.spec.js` |
+| **E4 wiring + texts** | the ICL scanner starts `edi`; reword every ICL text; port the FB-0071 tests; docs, ADR 0024 addendum | `test:unit`, `tests/e2e/story.spec.js`, `scripts.spec.js`, `campus-life.spec.js`, `minigames.spec.js`, completeness/story-clearance |
+| **E5 feel** | after the owner drives it: tolerances, max speed, steering, stage difficulty, line tweaks | owner's playtest |
+
+If a run dies on a usage limit: `git status` + `npm run test:unit`, then resume the same agent with SendMessage (ERR-0018).
+
+## Soft-lock checklist (never cut)
+Skip after 3 losses (win path identical: `iclDoorOpen` set, door opens); every stage ends (75 s) and every attempt ends (150 s); Esc quits at any time; saves that already have the ICL key or the open door are untouched; `story-clearance` / `completeness` keep passing; the ICL room stays reachable and Alice still gives the key.

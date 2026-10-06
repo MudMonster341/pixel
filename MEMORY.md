@@ -1203,3 +1203,9 @@ Aakar = `mbg-amb-walk-2` (the only ACM member in main-block-g), sheet `npc-frien
 
 Hero fight: left click = one shot, hold = Z cadence, Z kept, confirming click never fires (pointer starts unarmed in `startAttempt`), intro line `CLICK/Z: SHOOT`. Tower: `MINIGAMES.tower.story` (4 pages over the tower backdrop, Enter/E/Space/click/6 s auto, SKIP STORY button, once per opening, not after a retry). Coordinator ran tests/e2e/minigames.spec.js (10/10, incl. the new FB-0082 spec; the agent had no browser) and qa-shots (looked at tower-00-story and hero-01-intro). Note: the FB-0081 screenshot was taken after the Physics Lab key (ICL flyer card visible); the owner means the "Hello Kitty game" = hero fight.
 **Next:** the owner's moments reorder: M4 (Sana/Shraddha/Palak) moves to the 3rd floor after the Physics Lab key; a new scene after the ICL (content pending); Raja stays.
+
+## 2026-10-06 - EDI Madness planned; handoff + next-session prompt written; push to GitHub
+
+**Did:** the owner asked to turn "the second game" into **EDI Madness** (garage parking with an instructor); chosen game = the ICL lab's flyer. The first agent run died on the usage limit while still reading (tree clean, 1205 unit green, nothing lost). Wrote docs/plans/2026-10-06-edi-madness.md (design, phases E1-E5, soft-lock checklist, cut line, rollback: the flyer stays) and ADR 0025; rewrote HANDOFF.md state/what-is-left and docs/NEXT_SESSION_PROMPT.md. The owner asked to push everything to main: pushed (output in push.log).
+**Open with the owner:** what the new cut scene after the ICL is (and whether a "last" one follows Room 195), FB-0076 answer, card assets, line edits.
+**Next:** E1 (edi-logic.js + unit tests), then E2-E4, owner drives it (E5), final round + pack by 10-09.

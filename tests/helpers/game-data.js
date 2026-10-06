@@ -30,6 +30,7 @@ const SCRIPTS = [
   // and are never loaded by unit tests.
   'src/minigames/framework-data.js', 'src/minigames/flappy-logic.js',
   'src/minigames/platformer-physics.js', 'src/minigames/tower-logic.js', 'src/minigames/hero-logic.js',
+  'src/minigames/edi-logic.js',
   'src/dialog.js',
   // The ending's card content (docs/STORY.md "the ending"): pure data/validation, no Phaser -- see
   // src/card.js's own header comment for why this needs to tolerate a missing/malformed card.json.

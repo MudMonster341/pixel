@@ -445,7 +445,7 @@ class TitleScene extends Phaser.Scene {
 
     const parts = [dim, panel, title, sub];
     parts.forEach((part) => part.setDepth(118).setVisible(false));
-    buttons.forEach((button) => button.setVisible(false));
+    buttons.forEach((button) => button.setDepth(119).setVisible(false)); // above the dim layer and panel (118), or No / Yes are painted underneath them
     return { parts, buttons, items, index: 0, visible: false };
   }
 

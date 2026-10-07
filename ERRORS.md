@@ -432,3 +432,9 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Symptom:** the second full run of the day (15.2 min instead of 10) failed 3 specs on the 30 s test timeout (ending x2, depth-groups door-mash); all three pass alone (ending 21-23 s each).
 **Cause:** not a game regression: the finale lengthened the ending chain to ~21 s on a quiet machine, and the owner was playing on the same machine at the time.
 **Fix:** `test.setTimeout(90_000)` on the two ending specs (assertions unchanged, same rule as ERR-0012/0013). depth-groups.spec:170 stays at 30 s (9.5 s alone); if it fails again under load, give it the same headroom.
+
+## ERR-0020 - "Start a new game?" showed an empty dialog; Enter picked "No" (2026-10-07)
+**Symptom (owner):** with a save in the browser, Play "takes me back to the main page" and a new game cannot be started.
+**Cause:** the confirm panel and its dim layer are at depth 118 but the No / Yes `Button`s were never given a depth (Phaser default 0): they were painted UNDER the panel, so the dialog looked empty; the owner pressed Enter, which picks the default "No", and landed on the menu again. A mouse click would also have hit whatever zone sat higher. It was there since FB-0040; every test drove it by keyboard and none looked at the picture.
+**Fix:** `Button.setDepth()` (shadow, frame, label, zone) in src/scenes/ui.js; title.js raises both confirm buttons to 119.
+**Test:** tests/e2e/title.spec.js "the \"start a new game?\" confirm draws its No / Yes buttons above its own panel, and a click on Yes starts the new game". Lesson: for any modal, assert the layering (or LOOK at a shot), not just the key path.

@@ -170,6 +170,16 @@ class Button {
     this.text.setPosition(x + w / 2, y + lift + h / 2).setColor(state === 'hover' ? COLORS.highlight : COLORS.text);
   }
 
+  // A button sits at depth 0 unless its owner raises it: a modal (title.js's "start a new game?" panel, depth 118) must lift its buttons above
+  // its own dim layer and panel, or they are painted underneath and the player cannot see No / Yes. Shadow, frame, label: three layers in a row.
+  setDepth(depth) {
+    this.shadow.setDepth(depth);
+    this.nine.setDepth(depth + 1);
+    this.text.setDepth(depth + 2);
+    this.zone.setDepth(depth + 3); // the click zone too: the topmost zone gets the click, so a raised button must not lose it to a menu button behind it
+    return this;
+  }
+
   setVisible(visible) {
     this.shadow.setVisible(visible);
     this.nine.setVisible(visible);

@@ -1252,3 +1252,7 @@ Pushed `claude/practical-pasteur-gu1tam` and `claude/edi-madness-backup` (same c
 - `tools/pack-offline.js` no longer reads TEMP_CARD_SLIDES (the unused card-temp PNGs stay on disk, no longer bundled); `tools/make-card-art.js` untouched.
 **Checks:** unit 1274/1274; `ending.spec` + `journal.spec` 4/4 (run alone); `qa-shots --only ending` LOOKED at the card, finale unchanged. Side note: the owner started `npm start` themselves at 20:25 (not mine).
 **Next:** the owner's run-through; then, if good, the card assets, pack:offline/site and the final test round.
+
+## 2026-10-07 (night) - owner: "cannot start a new game": ERR-0020 fixed; admin panel looked into
+
+Reproduced headless (fresh start is fine; with a save the "Start a new game?" dialog had invisible No/Yes buttons under its panel, Enter = No). Fixed in `Button.setDepth` + title.js; new e2e test; title.spec 13/13, unit 1274. Admin panel: investigated only (see the answer to the owner): saves live in the player's browser localStorage, the hosted site is static, the shipped builds already have no feedback overlay.

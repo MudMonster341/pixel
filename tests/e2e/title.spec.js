@@ -242,6 +242,43 @@ test('FB-0040: Play asks before overwriting an existing save -- Yes proceeds to 
   expect((await state(page)).map).toBe('campus');
 });
 
+// Owner report 2026-10-07: "I cannot start a new game, it takes me back to the main page". The confirm's No / Yes buttons were painted at depth 0, under
+// the dim layer and panel (depth 118): the player saw an empty dialog, pressed Enter (the default is 'No') and landed on the menu again.
+test('the "start a new game?" confirm draws its No / Yes buttons above its own panel, and a click on Yes starts the new game', async ({ page }) => {
+  const profile = `e2e-newgame-confirm-depth-${Date.now()}`;
+  await openGame(page, { map: 'meadow', save: true, profile });
+  await startGame(page);
+  await teleport(page, 11, 13);
+  await holdKey(page, 'w', 500);
+  await waitForMap(page, 'house');
+  await page.evaluate((p) => saveGame(p), profile);
+
+  await openTitle(page, { save: true, profile });
+  await selectTitleMenuItem(page, 'play');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(true);
+
+  const layers = await page.evaluate(() => {
+    const c = game.scene.getScene('title').newGameConfirm;
+    const panelDepth = Math.max(...c.parts.map((p) => p.depth));
+    return { panelDepth, buttons: c.buttons.map((b) => ({ shadow: b.shadow.depth, nine: b.nine.depth, text: b.text.depth, zone: b.zone.depth, box: b.box })) };
+  });
+  for (const b of layers.buttons) {
+    expect(b.shadow).toBeGreaterThan(layers.panelDepth);
+    expect(b.nine).toBeGreaterThan(layers.panelDepth);
+    expect(b.text).toBeGreaterThan(layers.panelDepth);
+    expect(b.zone).toBeGreaterThan(layers.panelDepth);
+  }
+
+  const yes = layers.buttons[1].box; // a real mouse click on the Yes button
+  await page.mouse.move(yes.x + yes.w / 2, yes.y + yes.h / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect.poll(() => newGameConfirmVisible(page)).toBe(false);
+  await waitForBoot(page);
+  expect((await state(page)).map).toBe('campus');
+});
+
 test('FB-0040: Esc while the confirm is open always means "No"', async ({ page }) => {
   const profile = `e2e-newgame-confirm-esc-${Date.now()}`;
   await openGame(page, { map: 'meadow', save: true, profile });

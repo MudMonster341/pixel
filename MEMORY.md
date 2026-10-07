@@ -1237,3 +1237,8 @@ Hero fight: left click = one shot, hold = Z cadence, Z kept, confirming click ne
 ## 2026-10-07 - handoff written; work branches pushed
 
 Pushed `claude/practical-pasteur-gu1tam` and `claude/edi-madness-backup` (same commits, hook skipped on the owner's explicit say-so; `main` untouched and without EDI). Rewrote docs/NEXT_SESSION_PROMPT.md (where everything is, owner decisions, test caveats of the cloud container, what is next) and pointed HANDOFF.md at it. **Next:** the owner drives EDI Madness (E5), describes the ICL cut scene, supplies card assets.
+
+## 2026-10-07 - session start on the owner's PC: branch checked out, EDI seen with full art
+
+**Did:** checked out `claude/practical-pasteur-gu1tam` (tracks origin; `main` still lacks EDI). `npm run feedback`: nothing new (only the standing FB-0025 rule). `npm run test:unit` here: **1267/1267 pass, 0 fail, 0 cancelled**, so the cloud's 3 failures + 40 cancelled were environmental (missing git-ignored art), as suspected. `qa-shots --only edi` rendered all 10 shots and LOOKED: garages, cars, HUD, instructor bubble, cover, win card all read well. One defect fixed: the "Instructor" caption under the portrait was dim grey on the light floor and touched the bottom wall; now dark `#1a1c2c`, 3 px higher (`src/minigames/edi.js`).
+**Not done / waiting:** the owner drives EDI (E5 feel); card assets are not in `assets/card/` yet; the new cut scene after the ICL is undecided; the play copy `../2D_pixel_game-play` is still on the old `main` (without EDI).

@@ -82,7 +82,7 @@ class EdiScene extends MinigameBaseScene {
     const p = EDI_PORTRAIT;
     hud(this.add.rectangle(p.x + p.size / 2, p.y + p.size / 2, p.size + 8, p.size + 8, COLORS.panel).setStrokeStyle(2, COLORS.border).setDepth(EDIS_HUD_DEPTH));
     this.portrait = hud(this.add.sprite(p.x, p.y, 'edi-instructor', 0).setOrigin(0, 0).setDepth(EDIS_HUD_DEPTH + 1));
-    hud(uiText(this, p.x + p.size / 2, p.y + p.size + 10, 'Instructor', 8, COLORS.dim).setOrigin(0.5, 0).setDepth(EDIS_HUD_DEPTH + 1));
+    hud(uiText(this, p.x + p.size / 2, p.y + p.size + 7, 'Instructor', 8, '#1a1c2c').setOrigin(0.5, 0).setDepth(EDIS_HUD_DEPTH + 1));
     this.bubblePanel = makePanel(this, 0, 0, 100, 40).setDepth(EDIS_HUD_DEPTH + 2).setVisible(false);
     this.bubbleText = uiText(this, 0, 0, '', EDIS_BUBBLE_FONT, COLORS.text).setDepth(EDIS_HUD_DEPTH + 3).setVisible(false);
     this.bubbleText.setWordWrapWidth(EDI_BUBBLE_MAX_W - 2 * EDIS_BUBBLE_PAD);

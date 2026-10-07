@@ -13,7 +13,7 @@ const zlib = require('zlib');
 const { ROOT, loadGameData } = require('../helpers/game-data');
 const pack = require('../../tools/pack-offline');
 
-const { MAPS, AMBIENT, SCRIPTS, SOUNDS, CUTSCENES, TEMP_CARD_SLIDES, characterSheets, ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS, animalSheets } = loadGameData();
+const { MAPS, AMBIENT, SCRIPTS, SOUNDS, CUTSCENES, characterSheets, ANIMALS, ANIMAL_SPECIES, ANIMAL_LAYOUTS, animalSheets } = loadGameData();
 const manifest = () => pack.collectRuntimeAssets();
 const paths = (m) => new Set(m.assets.map((a) => a.path));
 
@@ -26,7 +26,6 @@ test('offline: the manifest covers every character sheet, sound, map, cutscene, 
   for (const def of Object.values(SOUNDS)) expected.push(def.file); // AudioManager.preload()
   for (const def of Object.values(MAPS)) if (def.tiled) expected.push(`assets/maps/${def.tiled}.json`);
   for (const def of Object.values(CUTSCENES)) expected.push(`assets/cutscenes/${def.image.replace(/^cutscene-/, '')}.png`);
-  for (const slide of TEMP_CARD_SLIDES) expected.push(`assets/cutscenes/${slide.key}.png`);
   // the clothes swatches, read independently of the bundler's own parser
   const customize = fs.readFileSync(path.join(ROOT, 'src/scenes/intro-customize.js'), 'utf8');
   for (const m of customize.matchAll(/\{ id: '(\w+)', label:/g)) expected.push(`assets/player-${m[1]}.png`);

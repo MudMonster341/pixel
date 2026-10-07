@@ -6,10 +6,19 @@
 // The photos are the owner's own, from the git-ignored assets/card/ folder (the same mechanism as the card's slideshow): card.json's optional
 //   "album": [ { "file": "a1.jpg", "caption": "..." }, ... ]     // up to 3 entries, one per LUG key, in the order the keys are stored
 // (src/state.js defaultQuest(): physicsLab, icl, room195), each "file" a name inside assets/card/photos/ -- validated by buildCardConfig()
-// (src/card.js, `config.album`; a malformed entry is kept as `null` so it does not shift the later photos onto the wrong keys). Until the owner supplies them, a slot is a PLACEHOLDER polaroid (a pastel card with a code-drawn heart and
-// "A memory for you") with a default caption, so the album always works and a fresh checkout never errors.
+// (src/card.js, `config.album`; a malformed entry is kept as `null` so it does not shift the later photos onto the wrong keys).
+// The album is OPTIONAL: with no real entry in card.json (the fresh-checkout case) albumAvailable() is false and the Journal has no Album page and
+// no hint about one at all -- nothing is drawn as a stand-in. Once at least one entry exists, a slot without its own photo (or whose file failed to
+// load) is still a small pastel polaroid with a default caption, so the page never looks half-built.
 
 const ALBUM_SLOT_COUNT = 3;
+
+// True only when card.json's `album` has at least one real (non-null) entry. `config` is a buildCardConfig() result, or null/anything while
+// card.json has not been read yet or is missing: then there is no album page, no Tab switching and no footer hint (src/scenes/ui.js JournalPanel).
+function albumAvailable(config) {
+  const album = config && Array.isArray(config.album) ? config.album : [];
+  return album.some((entry) => entry && typeof entry.file === 'string' && entry.file.length > 0);
+}
 
 // The default caption of a slot whose entry has none (or has no entry at all): keyed by key id, so it stays true whichever order she finds
 // the keys in. A key id this table doesn't know (a future key) gets "Memory N".
@@ -65,6 +74,14 @@ function albumUnlockedCount(slots) {
 // ids the panel remembers for this session). Returns the slot indexes.
 function albumNewSlots(slots, seen) {
   return slots.filter((s) => s.unlocked && !(seen && seen.has(s.keyId))).map((s) => s.index);
+}
+
+// The Journal's clues-page footer hint about the album: null when there is no album (no hint at all), else { text, fresh } where `fresh` means a
+// polaroid is waiting that the page has not shown yet (the footer then turns highlight-coloured).
+function albumTabHint(config, slots, seen) {
+  if (!albumAvailable(config)) return null;
+  const fresh = albumNewSlots(slots, seen).length > 0;
+  return { fresh, text: fresh ? 'TAB: NEW POLAROID!' : `TAB: ALBUM ${albumUnlockedCount(slots)}/${ALBUM_SLOT_COUNT}` };
 }
 
 // True when every key is found (a non-empty `keys` with each value true): the card's slideshow only takes the album once the hunt is done.

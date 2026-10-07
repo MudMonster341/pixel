@@ -7,8 +7,8 @@
 // This repo's checkout has no assets/card/ at all (gitignored, docs/STORY.md) -- so every test here
 // doubles as the "a missing video or empty photo folder must not break anything" check the ending's
 // own brief asks for: there is nothing else this suite could run against. It also means every run of
-// this spec plays the temporary slideshow (src/card.js TEMP_CARD_SLIDES, "add in a temporary card as
-// well") end to end, with no console errors, since that's the only slideshow a fresh checkout has.
+// this spec plays the no-photo card (no frame or slideshow: the cake is the centrepiece, src/scenes/card.js
+// buildCakeGlow()/buildCake()) end to end, with no console errors, since that's the only card a fresh checkout has.
 const { test, expect } = require('@playwright/test');
 const { openGame, state, startGame, teleport, chooseTitleMenu } = require('./helpers');
 
@@ -45,6 +45,10 @@ function cardState(page) {
       coverOpening: scene.coverOpening,
       slideCount: scene.slides ? scene.slides.length : null,
       slideKey: scene.photoA ? scene.photoA.texture.key : null,
+      hasPhotos: scene.hasPhotos,
+      hasGlow: Boolean(scene.cakeGlow),
+      cakeParts: scene.cakeParts ? scene.cakeParts.length : 0,
+      frameParts: scene.frameParts ? scene.frameParts.length : null,
       recipient: scene.config ? scene.config.recipient : null,
     };
   });
@@ -140,13 +144,15 @@ test('finishing the story opens the box, then the card, skippable, and returns t
   await expect.poll(async () => (await cardState(page)).active, { timeout: 10_000 }).toBe(true);
   const card = await cardState(page);
   expect(card.recipient).toBe('Taru'); // {name} is the card's recipient (default Taru), not the typed player name (ADR 0019)
-  // No assets/card/photos/ in this checkout -- the slideshow falls back to the temporary slideshow
-  // (src/card.js TEMP_CARD_SLIDES, "add in a temporary card as well") instead of breaking
-  // (docs/ROADMAP.md M3 "a missing video or empty photo folder must not break anything"), and looks
-  // like a finished 5-slide slideshow rather than a single repeated placeholder.
-  const tempSlideCount = await page.evaluate(() => TEMP_CARD_SLIDES.length);
-  expect(card.slideCount).toBe(tempSlideCount);
-  expect(card.slideKey).toBe('card-temp-1');
+  // No assets/card/photos/ in this checkout -- there is no frame, slideshow or placeholder picture at all
+  // (docs/ROADMAP.md M3 "a missing video or empty photo folder must not break anything"): zero slides, no
+  // photo textures in use, and the cake (3 candle flames + the cake image) is the centrepiece on a glow.
+  expect(card.hasPhotos).toBe(false);
+  expect(card.slideCount).toBe(0);
+  expect(card.slideKey).toBeNull();
+  expect(card.frameParts).toBe(0);
+  expect(card.hasGlow).toBe(true);
+  expect(card.cakeParts).toBe(4);
 
   // The cover hasn't been dismissed yet -- Enter opens it (same key that would otherwise advance a
   // line of dialog, docs/ROADMAP.md M3's own dialog-box reuse).

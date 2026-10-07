@@ -89,28 +89,79 @@ test('renderCardText: replaces every {name} occurrence', () => {
   assert.equal(renderCardText('No placeholder here', 'Sam'), 'No placeholder here');
 });
 
-// buildCardSlides(): the temporary card (owner brief, this pass -- "add in a temporary card as
-// well"). This is the pure decision of *which* slides to show; the actual on-screen images and the
-// "a missing real photo falls back to a placeholder" texture check are src/scenes/card.js's own job
-// (needs a real Phaser/texture cache), covered instead by tests/e2e/ending.spec.js.
-test('buildCardSlides: falls back to the temporary slideshow when there are no real photos at all', () => {
+// buildCardSlides(): the pure decision of *which* slides to show. There is no placeholder or temporary slideshow any more (owner, 2026-10-07):
+// with no usable photo it is [] and the scene shows the cake instead. The on-screen images and the "a photo whose file failed to load is
+// dropped" texture check are src/scenes/card.js's own job (needs a real Phaser/texture cache): pinned below by reading the scene source,
+// and run for real by tests/e2e/ending.spec.js.
+test('no-photo card: buildCardSlides: no real photos at all means NO slides (no placeholder, no temporary slideshow)', () => {
   const { buildCardSlides, TEMP_CARD_SLIDES } = loadGameData();
   const resolvePhotoKey = () => { throw new Error('should not be called with an empty photo list'); };
-  assert.deepEqual(plain(buildCardSlides([], resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
-  assert.deepEqual(plain(buildCardSlides(undefined, resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
-  assert.deepEqual(plain(buildCardSlides(null, resolvePhotoKey)), plain(TEMP_CARD_SLIDES));
+  assert.deepEqual(plain(buildCardSlides([], resolvePhotoKey)), []);
+  assert.deepEqual(plain(buildCardSlides(undefined, resolvePhotoKey)), []);
+  assert.deepEqual(plain(buildCardSlides(null, resolvePhotoKey)), []);
+  assert.equal(TEMP_CARD_SLIDES, undefined, 'the temporary slideshow is gone');
 });
 
-test('buildCardSlides: the temporary slideshow has more than one slide and every caption is short and non-empty', () => {
-  const { TEMP_CARD_SLIDES } = loadGameData();
-  assert.ok(TEMP_CARD_SLIDES.length >= 4);
-  for (const slide of TEMP_CARD_SLIDES) {
-    assert.ok(slide.key && slide.key.length > 0);
-    assert.ok(slide.caption && slide.caption.length > 0 && slide.caption.length <= 60);
+test('no-photo card: a fresh checkout (no card.json) has zero slides from the real config path too', () => {
+  const game = loadGameData();
+  const { buildCardConfig, buildCardSlides } = game;
+  const cardSlidePhotos = game.evaluate('cardSlidePhotos');
+  const photos = cardSlidePhotos(buildCardConfig(null), { physicsLab: true, icl: true, room195: true });
+  assert.deepEqual(plain(buildCardSlides(photos, (i) => `card-photo-${i}`)), []);
+});
+
+test('no-photo card: the card scene draws no placeholder or temporary art, and shows the cake + glow only when there are no usable photos', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { ROOT } = require('../helpers/game-data');
+  const scene = fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'card.js'), 'utf8');
+  const code = scene.replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(code, /card-temp|card-placeholder-photo|TEMP_CARD_SLIDES/);
+  // a photo whose file failed to load is dropped, never swapped for a stand-in
+  assert.match(code, /filter\(\(\{ i \}\) => !isMissing\(i\)\)/);
+  assert.match(code, /\(n\) => `card-photo-\$\{usable\[n\]\.i\}`/);
+  // buildInterior: frame + corner cake only with photos; centre cake + glow otherwise
+  assert.match(code, /this\.hasPhotos = this\.slides\.length > 0;\s*if \(this\.hasPhotos\) \{\s*this\.buildFrame\(\);\s*this\.buildCake\(CAKE_SPOT, CAKE_SCALE, \{ w: 4, h: 5 \}\);\s*\} else \{\s*this\.buildCakeGlow\(\);\s*this\.buildCake\(CAKE_CENTER, CAKE_BIG_SCALE,/);
+  assert.match(code, /const CAKE_BIG_SCALE = 5;/);
+  assert.match(code, /const CAKE_CENTER = \{ x: CARD_CENTER_X, y: 232 \};/);
+  // the cake is centred in the frame's old area (y 100..350) and fits it at the integer scale (56x40 art)
+  assert.ok(232 - (40 * 5) / 2 >= 100 && 232 + (40 * 5) / 2 <= 350);
+  // the scene fields the e2e / qa hooks read stay defined without a photo frame
+  assert.match(code, /this\.slides = \[\];/);
+  assert.match(code, /this\.frameParts = \[\];/);
+  // interiorParts stays complete (the closing-video hide logic walks it) even when glow/frame parts are absent
+  assert.match(code, /this\.interiorParts = \[this\.panel, this\.titleGlow, this\.cakeGlow, this\.title, this\.cakeParts, this\.frameParts, this\.heartParts, this\.messagePanel\]\.flat\(\)\.filter\(Boolean\)/);
+});
+
+test('no-photo card: the scene still loads the cover, frame (real-photo mode), cake and heart art', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { ROOT } = require('../helpers/game-data');
+  const scene = fs.readFileSync(path.join(ROOT, 'src', 'scenes', 'card.js'), 'utf8');
+  for (const key of ['card-cover', 'card-frame', 'card-cake', 'card-heart']) assert.ok(scene.includes(`'${key}'`), `${key} is still loaded`);
+});
+
+test('no-photo card: the default card messages are the new plain lines, short enough for the card box, no em dashes or stock phrases', () => {
+  const { DEFAULT_CARD_MESSAGES, buildCardConfig } = loadGameData();
+  assert.deepEqual(plain(DEFAULT_CARD_MESSAGES), [
+    'Happy Birthday, {name}!',
+    'You found all three keys.',
+    'I hope today feels as warm as a sunset.',
+    'I hope someone makes you laugh until your cheeks hurt.',
+    'Eat the cake. Take the long way home. Do what you like.',
+    'Twenty-two looks good on you.',
+    'I made this for you. I hope it made you smile.',
+  ]);
+  for (const line of DEFAULT_CARD_MESSAGES) {
+    assert.ok(line.length <= 60, `too long for about two lines in the card's box: ${line}`);
+    assert.doesNotMatch(line, /—|--|journey|adventure|tapestry/i);
   }
+  const config = buildCardConfig(null);
+  assert.equal(config.messages[0], 'Happy Birthday, Taru!');
+  assert.ok(config.messages.every((line) => !line.includes('{name}')));
 });
 
-test('buildCardSlides: real photos win over the temporary slideshow whenever any exist at all', () => {
+test('buildCardSlides: real photos produce one slide each, whenever any exist at all', () => {
   const { buildCardSlides } = loadGameData();
   const photos = [
     { file: '1.jpg', caption: 'The first day' },
@@ -123,7 +174,7 @@ test('buildCardSlides: real photos win over the temporary slideshow whenever any
   ]);
 });
 
-test('buildCardSlides: a single real photo still wins over the 5-slide temporary slideshow', () => {
+test('buildCardSlides: a single real photo is a one-slide slideshow', () => {
   const { buildCardSlides } = loadGameData();
   const photos = [{ file: 'only.jpg', caption: 'Just one' }];
   const slides = buildCardSlides(photos, () => 'card-photo-0');

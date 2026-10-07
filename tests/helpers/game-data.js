@@ -294,7 +294,6 @@ function loadGameData() {
     renderCardText: get('renderCardText'),
     DEFAULT_CARD_MESSAGES: get('DEFAULT_CARD_MESSAGES'),
     buildCardSlides: get('buildCardSlides'),
-    TEMP_CARD_SLIDES: get('TEMP_CARD_SLIDES'),
     DEFAULT_RECIPIENT: get('DEFAULT_RECIPIENT'),
     DEFAULT_PLAYER_NAME: get('DEFAULT_PLAYER_NAME'),
     DEFAULT_CREDITS: get('DEFAULT_CREDITS'),

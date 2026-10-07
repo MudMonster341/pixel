@@ -1964,7 +1964,7 @@ class JournalPanel {
     this.rowTexts = [];
     // W2 (the memory album, src/album.js): a second page of this panel (TAB / Left / Right switch). `albumParts` are the polaroid containers
     // of the current build (destroyed on every rebuild); `albumConfig` is card.json read through buildCardConfig() the first time the journal
-    // opens with a key in hand (null until then and whenever the file is missing: every polaroid is then a placeholder); `albumSeen` are the
+    // opens with a key in hand (null until then and whenever the file is missing: there is then NO album page and no TAB hint, src/album.js albumAvailable()); `albumSeen` are the
     // key ids whose polaroid the page has already shown this session, so only a NEW one pops.
     this.page = 'clues';
     this.albumParts = [];
@@ -1982,12 +1982,13 @@ class JournalPanel {
     // (maxScroll === 0), so this is harmless whenever there's nothing to scroll.
     for (const key of ['UP', 'W']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(-1); });
     for (const key of ['DOWN', 'S']) scene.input.keyboard.on(`keydown-${key}`, (e) => { if (!e.repeat && this.visible) this.scrollBy(1); });
-    // W2: Tab / Left / Right flip between the clues and the album (Tab's own browser focus move is cancelled while the journal is open).
+    // W2: Tab / Left / Right flip between the clues and the album (Tab's own browser focus move is cancelled while the journal is open);
+    // they do nothing at all unless card.json has an album entry.
     for (const key of ['TAB', 'LEFT', 'RIGHT', 'A', 'D']) {
       scene.input.keyboard.on(`keydown-${key}`, (e) => {
         if (!this.visible) return;
         if (key === 'TAB' && e && e.preventDefault) e.preventDefault();
-        if (!e.repeat) this.setPage(this.page === 'clues' ? 'album' : 'clues');
+        if (!e.repeat && albumAvailable(this.albumConfig)) this.setPage(this.page === 'clues' ? 'album' : 'clues'); // no album entries: nothing to switch to
       });
     }
   }
@@ -2010,9 +2011,10 @@ class JournalPanel {
     this.albumParts.forEach((part) => part.setVisible(false));
   }
 
-  // W2: switch page and redraw (a no-op while closed).
+  // W2: switch page and redraw (a no-op while closed, and the album page can never be reached while card.json has no album entry).
   setPage(page) {
     if (!this.visible || this.page === page) return;
+    if (page === 'album' && !albumAvailable(this.albumConfig)) return;
     this.page = page;
     this.scroll = 0;
     this.redraw();
@@ -2088,7 +2090,8 @@ class JournalPanel {
     // W2: a tween left running on a destroyed polaroid would throw, so stop theirs first.
     this.albumParts.forEach((part) => { this.scene.tweens.killTweensOf(part); part.destroy(); });
     this.albumParts = [];
-    if (this.page === 'album') { this.buildAlbum(); return; }
+    if (this.page === 'album' && albumAvailable(this.albumConfig)) { this.buildAlbum(); return; }
+    this.page = 'clues';
     this.title.setText('JOURNAL');
     const entries = GameState.journal.length ? GameState.journal : ['No clues yet -- go talk to someone.'];
     const bodyW = this.w - 64;
@@ -2113,12 +2116,11 @@ class JournalPanel {
     this.panel.setPosition(this.x, y);
     this.panel.setPanelSize(this.w, h);
     this.title.setPosition(GAME_WIDTH / 2, y + 26);
-    // W2: the footer also points at the album page, and says so loudly when a new polaroid is waiting there.
-    const slots = this.albumSlotsNow();
-    const fresh = albumNewSlots(slots, this.albumSeen).length > 0;
-    const tabHint = fresh ? 'TAB: NEW POLAROID!' : `TAB: ALBUM ${albumUnlockedCount(slots)}/${ALBUM_SLOT_COUNT}`;
-    this.footer.setText(`${this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- ' : ''}${tabHint} -- J / ESC TO CLOSE`)
-      .setColor(fresh ? COLORS.highlight : COLORS.dim);
+    // W2: the footer also points at the album page, and says so loudly when a new polaroid is waiting there -- but only when card.json has
+    // album entries (src/album.js albumTabHint() is null otherwise: no hint at all).
+    const tab = albumTabHint(this.albumConfig, this.albumSlotsNow(), this.albumSeen);
+    this.footer.setText(`${this.maxScroll > 0 ? 'UP/DOWN TO SCROLL -- ' : ''}${tab ? `${tab.text} -- ` : ''}J / ESC TO CLOSE`)
+      .setColor(tab && tab.fresh ? COLORS.highlight : COLORS.dim);
     this.footer.setPosition(GAME_WIDTH / 2, y + h - 18);
 
     this.maskShape.clear().fillStyle(0xffffff).fillRect(this.x + 16, this.viewY, this.w - 32, this.viewportH);

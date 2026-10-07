@@ -1,5 +1,5 @@
-// The birthday card's content (docs/STORY.md "the ending"): recipient name, messages and the photo
-// slideshow's order/captions. Pure data + validation, no Phaser -- src/scenes/card.js is the only
+// The birthday card's content (docs/STORY.md "the ending"): recipient name, messages and the OPTIONAL photo
+// slideshow's order/captions (with no photos the card shows the cake instead). Pure data + validation, no Phaser -- src/scenes/card.js is the only
 // thing that draws this (docs/ARCHITECTURE.md "content is data, the engine is code").
 //
 // This is the ONE piece of content in the whole game the owner edits directly, by hand, without
@@ -38,20 +38,19 @@
 // Who the card (and the credits, src/credits.js) is for until card.json says otherwise.
 const DEFAULT_RECIPIENT = 'Taru';
 
-// Shown until the owner writes their own card.json -- warm, generic, and honest about being a
-// placeholder, so an unfinished setup still plays as a complete (if plain) little card rather than
-// looking broken.
+// The card's words until the owner writes their own card.json: short, plain and warm, the way a person
+// would say them, so a fresh checkout still plays as a finished little card.
 // Kept short on purpose -- src/scenes/card.js's own message box sits inside the card itself, sized
 // for about two lines per page (coordinator review, 2026-09-22), not the game's ordinary full-width
 // dialog box.
 const DEFAULT_CARD_MESSAGES = [
   'Happy Birthday, {name}!',
-  'You made it through the whole hunt --',
-  'every key, every room, right to the end.',
-  'This little game is just the wrapping.',
-  'The real gift is wishing you',
-  'a wonderful day.',
-  'Have the best year yet.',
+  'You found all three keys.',
+  'I hope today feels as warm as a sunset.',
+  'I hope someone makes you laugh until your cheeks hurt.',
+  'Eat the cake. Take the long way home. Do what you like.',
+  'Twenty-two looks good on you.',
+  'I made this for you. I hope it made you smile.',
 ];
 
 const CARD_CONFIG_URL = 'assets/card/card.json';
@@ -89,7 +88,7 @@ function buildCardConfig(raw) {
     : [];
 
   // The memory album (src/album.js): the first 3 entries, kept IN PLACE -- a malformed entry becomes `null` (that slot stays a placeholder)
-  // rather than shifting the later photos onto the wrong keys. Absent/invalid -> [] (every slot a placeholder).
+  // rather than shifting the later photos onto the wrong keys. Absent/invalid -> [] (no album page at all, src/album.js albumAvailable()).
   const album = Array.isArray(source.album)
     ? source.album.slice(0, ALBUM_MAX_ENTRIES).map((p) => (p && typeof p === 'object' && typeof p.file === 'string' && p.file.trim()
       ? { file: p.file.trim(), caption: typeof p.caption === 'string' ? p.caption.trim() : '' }
@@ -112,35 +111,17 @@ function renderCardText(text, name) {
   return text.replace(/\{name\}/g, name || '');
 }
 
-// ---------- the temporary slideshow ("add in a temporary card as well", owner brief, this pass) ----------
+// ---------- the photo slideshow (only when there are real photos) ----------
 //
-// Until the owner drops real photos into assets/card/photos/ (buildCardConfig() above always leaves
-// `photos` an empty array on a fresh checkout -- assets/card/ is gitignored and empty by default),
-// the slideshow shows these 5 generated pixel illustrations instead of the single "YOUR PHOTO HERE"
-// placeholder repeated forever: campus/story moments in story order (docs/STORY.md), so the
-// placeholder-state card still looks like a finished slideshow rather than an empty slot. The art
-// itself is drawn by tools/make-card-art.js (`card-temp-1.png`..`card-temp-5.png`, into
-// assets/cutscenes/ -- committed, not the owner's own gitignored content); this is just the caption
-// list src/scenes/card.js pairs each one with. Captions are short and neutral on purpose (matching
-// DEFAULT_CARD_MESSAGES' own tone) -- no invented personal details, this game doesn't know any yet.
-const TEMP_CARD_SLIDES = [
-  { key: 'card-temp-1', caption: 'Day one at BITS Dubai' },
-  { key: 'card-temp-2', caption: 'Up the stairs, behind the staircase' },
-  { key: 'card-temp-3', caption: 'The LUG treasure hunt' },
-  { key: 'card-temp-4', caption: 'Three keys, one at a time' },
-  { key: 'card-temp-5', caption: 'A small box, right at the end' },
-];
-
-// Chooses what the card's photo frame actually shows, given the resolved config's own `photos` list.
-// `resolvePhotoKey(index)` turns a real photo entry into the texture key to show for it (its own real
-// photo, or that one slide's placeholder texture if the file 404'd) -- passed in rather than looked up
-// here because that check needs `this.textures`/`this.missingPhotoKeys`, Phaser-only state this file
-// has no business knowing about (see the file header: this is pure data/logic, no Phaser). Real
-// photos always win whenever there are any at all -- the temporary slideshow only ever appears when
-// `photos` is completely empty, never mixed in alongside real ones.
+// There is NO placeholder or temporary slideshow: with no usable photo (the fresh-checkout case --
+// assets/card/ is gitignored and empty by default) this returns [] and src/scenes/card.js shows the
+// birthday cake as the card's centrepiece instead of a photo frame.
+//
+// `photos` is the list of usable real photos (the scene has already dropped any whose file failed to
+// load). `resolvePhotoKey(index)` turns entry `index` of that list into the texture key to show -- passed
+// in rather than looked up here because that needs `this.textures`, Phaser-only state this file has no
+// business knowing about (see the file header: this is pure data/logic, no Phaser).
 function buildCardSlides(photos, resolvePhotoKey) {
-  if (!Array.isArray(photos) || photos.length === 0) {
-    return TEMP_CARD_SLIDES.map((slide) => ({ ...slide }));
-  }
+  if (!Array.isArray(photos) || photos.length === 0) return [];
   return photos.map((photo, i) => ({ key: resolvePhotoKey(i), caption: photo.caption }));
 }

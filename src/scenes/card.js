@@ -1,5 +1,5 @@
 // The birthday card (docs/STORY.md "the ending", docs/ROADMAP.md M3): a full-screen, animated pixel
-// card -- confetti, a cake with candles, floating hearts, a photo slideshow and the owner's own
+// card -- confetti, a cake with candles, floating hearts, an OPTIONAL photo slideshow and the owner's own
 // messages, typed out one at a time -- ending by handing off to the credits scene (src/scenes/credits.js:
 // wishes, "THE END", back to the title screen). Started by
 // src/scenes/finale.js (the cake and fireworks, W3, which box-opening.js starts once the box has finished
@@ -8,9 +8,12 @@
 //
 // Content lives in src/card.js (buildCardConfig()) and, for real use, in the owner's own
 // assets/card/card.json + assets/card/photos/ + assets/card/video.mp4 -- all gitignored (see
-// .gitignore), so a fresh checkout has none of it. Every beat below is written to look complete and
-// warm even then: DEFAULT_CARD_MESSAGES (src/card.js) and card-placeholder-photo.png
-// (tools/make-card-art.js) are exactly that placeholder content, not an error state.
+// .gitignore), so a fresh checkout has none of it. Every beat below looks complete and warm even then:
+// with no usable real photo there is NO frame, slideshow or placeholder picture -- the birthday cake is the
+// card's centrepiece on a soft sunset glow (buildCakeGlow()/buildCake()) above the typed message, and
+// DEFAULT_CARD_MESSAGES (src/card.js) are the card's words. With at least one real photo (card.json
+// "photos", or the album's once every key is found) the frame + Ken Burns slideshow + caption appear
+// instead, with a small cake in the corner.
 //
 // Photo-slideshow geometry duplicates two small constants tools/make-card-art.js documents in its
 // own header comment (the frame's window rect, the cake's candle positions) rather than importing
@@ -18,7 +21,8 @@
 
 const FRAME_WINDOW = { x0: 10, y0: 10, x1: 209, y1: 149 }; // inside card-frame.png, 200x140
 const FRAME_SCALE = 1.5;
-const CAKE_SCALE = 1.3;
+const CAKE_SCALE = 1.3; // the small corner motif next to a photo slideshow
+const CAKE_BIG_SCALE = 5; // the centrepiece when there are no photos: an integer so the pixel art stays crisp (56x40 -> 280x200)
 const CAKE_CANDLE_LOCAL_X = [18, 28, 38]; // local px inside card-cake.png's 56-wide canvas
 const CAKE_CANDLE_LOCAL_TOP_Y = 4; // just above where the candle sticks start (local y 6)
 
@@ -54,6 +58,8 @@ const HEART_SPOTS = [
   [CARD_X + 40, CARD_BOTTOM - 40],
 ];
 const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
+// No photos: the cake is the centrepiece in the area the frame would use (y 100..350), spanning y 132..332 at CAKE_BIG_SCALE.
+const CAKE_CENTER = { x: CARD_CENTER_X, y: 232 };
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
@@ -71,6 +77,11 @@ class CardScene extends Phaser.Scene {
     this.ended = false;
     this.missingPhotoKeys = new Set();
     this.slidePhotos = []; // the card's photos, then (all keys found) the album's: src/album.js cardSlidePhotos()
+    this.slides = []; // the usable ones, built in buildInterior(); [] (and no photoA/photoB/caption) when there is no real photo
+    this.slideIndex = 0;
+    this.hasPhotos = false;
+    this.frameParts = [];
+    this.cakeParts = [];
     this.timers = []; // every looping/delayed timer this scene starts, so skipToEnd() can kill them all at once
   }
 
@@ -83,14 +94,6 @@ class CardScene extends Phaser.Scene {
     if (!this.textures.exists('card-frame')) this.load.image('card-frame', 'assets/cutscenes/card-frame.png');
     if (!this.textures.exists('card-cake')) this.load.image('card-cake', 'assets/cutscenes/card-cake.png');
     if (!this.textures.exists('card-heart')) this.load.image('card-heart', 'assets/cutscenes/card-heart.png');
-    if (!this.textures.exists('card-placeholder-photo')) this.load.image('card-placeholder-photo', 'assets/cutscenes/card-placeholder-photo.png');
-    // The temporary slideshow's art (src/card.js TEMP_CARD_SLIDES) -- always queued, unlike the
-    // owner's own photos below: these 5 are generated, committed files (tools/make-card-art.js), not
-    // gitignored content that might not exist, so there's nothing conditional about loading them.
-    for (let i = 1; i <= 5; i++) {
-      const key = `card-temp-${i}`;
-      if (!this.textures.exists(key)) this.load.image(key, `assets/cutscenes/card-temp-${i}.png`);
-    }
     // This scene's own message box reuses DialogBox (src/scenes/ui.js), which needs the UI kit's
     // textures -- normally already loaded by boot/title by the time this scene is reached, but
     // guarded/idempotent like every other preload() here, so a direct reach-in can't be caught short.
@@ -212,8 +215,17 @@ class CardScene extends Phaser.Scene {
     this.title = uiText(this, CARD_CENTER_X, TITLE_Y, `HAPPY BIRTHDAY, ${this.config.recipient.toUpperCase()}!`, 16, '#d94b8f')
       .setOrigin(0.5).setDepth(2);
 
-    this.buildFrame();
-    this.buildCake();
+    // With at least one usable real photo: the picture frame + slideshow + caption, and the small cake motif in the corner. With none (the
+    // fresh-checkout case, nothing is ever drawn as a stand-in photo): the cake is the card's centrepiece on a soft sunset glow instead.
+    this.slides = this.buildSlides();
+    this.hasPhotos = this.slides.length > 0;
+    if (this.hasPhotos) {
+      this.buildFrame();
+      this.buildCake(CAKE_SPOT, CAKE_SCALE, { w: 4, h: 5 });
+    } else {
+      this.buildCakeGlow();
+      this.buildCake(CAKE_CENTER, CAKE_BIG_SCALE, { w: 2 * CAKE_BIG_SCALE, h: 2.6 * CAKE_BIG_SCALE });
+    }
     this.buildHearts();
 
     // A smaller message box than the game's ordinary bottom-of-screen dialog, sized to sit under the
@@ -230,7 +242,25 @@ class CardScene extends Phaser.Scene {
     this.dialog = new DialogBox(this, MESSAGE_BOX);
     this.dialog.panel.setAlpha(0);
     this.dialog.body.setColor('#4a3520'); // warm dark ink on cream paper, not COLORS.text's near-white
-    this.interiorParts = [this.panel, this.titleGlow, this.title, this.cakeParts, this.frameParts, this.heartParts, this.messagePanel].flat();
+    this.interiorParts = [this.panel, this.titleGlow, this.cakeGlow, this.title, this.cakeParts, this.frameParts, this.heartParts, this.messagePanel].flat().filter(Boolean);
+  }
+
+  // The no-photo card's warm backdrop: a few low-alpha peach/gold ellipses behind the cake, like a low sun (the same faked-gradient technique
+  // as buildTitleGlow(), no text and no texture), pulsing gently as one halo.
+  buildCakeGlow() {
+    const g = this.add.graphics().setDepth(1);
+    const rings = [
+      { w: 600, h: 270, hex: 0xff9f7a, alpha: 0.10 },
+      { w: 470, h: 220, hex: 0xffb98a, alpha: 0.14 },
+      { w: 350, h: 170, hex: 0xffd08a, alpha: 0.18 },
+      { w: 250, h: 124, hex: 0xffe6a0, alpha: 0.24 },
+    ];
+    for (const ring of rings) g.fillStyle(ring.hex, ring.alpha).fillEllipse(CAKE_CENTER.x, CAKE_CENTER.y, ring.w, ring.h);
+    this.cakeGlow = g;
+    this.tweens.add({
+      targets: g, alpha: { from: 0.6, to: 1 }, duration: 2200,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
   }
 
   // "A soft glow on the title" (owner brief) -- the first attempt (a second, offset copy of the title
@@ -256,14 +286,15 @@ class CardScene extends Phaser.Scene {
     });
   }
 
-  // A small corner motif (coordinator review: was a large, lone centerpiece with nothing balancing
-  // it on the card's other side) -- tucked into the card's bottom-right corner, clear of the message
-  // box (MESSAGE_BOX's own right edge, 780) and the card's own border.
-  buildCake() {
-    const cake = this.add.image(CAKE_SPOT.x, CAKE_SPOT.y, 'card-cake').setScale(CAKE_SCALE).setDepth(2);
+  // The cake, with its three flickering flames. With real photos it is a small corner motif (coordinator review: was a large, lone
+  // centerpiece with nothing balancing it on the card's other side) tucked into the card's bottom-right corner, clear of the message
+  // box (MESSAGE_BOX's own right edge, 780) and the card's own border; with no photos it is the big centrepiece (CAKE_CENTER, an integer
+  // scale so the pixel art stays crisp). `flameSize` is the flame ellipse's size in screen px.
+  buildCake(spot, scale, flameSize) {
+    const cake = this.add.image(spot.x, spot.y, 'card-cake').setScale(scale).setDepth(2);
     const flames = CAKE_CANDLE_LOCAL_X.map((localX) => {
       const p = imageLocalPoint(cake, localX, CAKE_CANDLE_LOCAL_TOP_Y);
-      const flame = this.add.ellipse(p.x, p.y, 4, 5, 0xffd23f).setDepth(3);
+      const flame = this.add.ellipse(p.x, p.y, flameSize.w, flameSize.h, 0xffd23f).setDepth(3);
       this.tweens.add({
         targets: flame, scaleX: { from: 0.75, to: 1.2 }, scaleY: { from: 0.85, to: 1.25 },
         duration: Phaser.Math.Between(180, 260), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -280,8 +311,7 @@ class CardScene extends Phaser.Scene {
     const windowCenter = { x: (FRAME_WINDOW.x0 + FRAME_WINDOW.x1) / 2, y: (FRAME_WINDOW.y0 + FRAME_WINDOW.y1) / 2 };
     const windowSize = { w: FRAME_WINDOW.x1 - FRAME_WINDOW.x0, h: FRAME_WINDOW.y1 - FRAME_WINDOW.y0 };
 
-    this.slides = this.buildSlides();
-    this.slideIndex = 0;
+    this.slideIndex = 0; // this.slides was built by buildInterior(): buildFrame() only runs when there is at least one usable real photo
     const frameAnchor = this.add.image(cx, cy, 'card-frame').setScale(FRAME_SCALE).setVisible(false); // geometry only
     const firstPoint = imageLocalPoint(frameAnchor, windowCenter.x, windowCenter.y);
     frameAnchor.destroy();
@@ -305,7 +335,7 @@ class CardScene extends Phaser.Scene {
   }
 
   // Real owner photos can be any resolution/aspect ratio; scale-to-fit inside the frame's window
-  // rather than assuming the placeholder's own native 200x140. `baseScale` is remembered so
+  // rather than assuming any particular native size (200x140 or otherwise). `baseScale` is remembered so
   // startKenBurns() below has a stable 100% to breathe around, instead of re-deriving it from
   // whatever scale a mid-zoom tween happened to leave the image at.
   fitPhoto(image, windowSize) {
@@ -332,21 +362,13 @@ class CardScene extends Phaser.Scene {
     });
   }
 
-  // One slide per configured photo, falling back to the placeholder art (still keeping the owner's
-  // own caption, if they wrote one) for any entry whose file 404'd -- "missing photos tolerated"
-  // (docs/ROADMAP.md M3's own testing brief), not a broken slideshow. With no configured photos at
-  // all (the common case on a fresh checkout), src/card.js's own buildCardSlides() falls back to the
-  // temporary slideshow (TEMP_CARD_SLIDES) instead of a single repeated placeholder -- see its own
-  // comment for why "real photos always win" lives there, not here.
-  // W2: an album photo whose file failed to load is simply left out (never a placeholder slide for it): with no real photo anywhere the
-  // slideshow is the temporary one, exactly as before.
+  // One slide per usable real photo (a card.json photo or, once every key is found, an album photo). A photo whose file failed to load is
+  // simply left out -- "missing photos tolerated" (docs/ROADMAP.md M3's own testing brief) -- and never replaced by a placeholder slide.
+  // With no usable photo at all (the common case on a fresh checkout) this is [] and the interior shows the cake instead of a frame.
   buildSlides() {
     const isMissing = (i) => this.missingPhotoKeys.has(`card-photo-${i}`) || !this.textures.exists(`card-photo-${i}`);
-    const usable = this.slidePhotos.map((photo, i) => ({ photo, i })).filter(({ photo, i }) => !photo.album || !isMissing(i));
-    return buildCardSlides(usable.map((u) => u.photo), (n) => {
-      const i = usable[n].i;
-      return isMissing(i) ? 'card-placeholder-photo' : `card-photo-${i}`;
-    });
+    const usable = this.slidePhotos.map((photo, i) => ({ photo, i })).filter(({ i }) => !isMissing(i));
+    return buildCardSlides(usable.map((u) => u.photo), (n) => `card-photo-${usable[n].i}`);
   }
 
   nextSlide() {
@@ -370,10 +392,11 @@ class CardScene extends Phaser.Scene {
     this.caption.setText(slide.caption);
   }
 
-  // Three of the card's four corners (the fourth holds the cake motif, CAKE_SPOT) -- accents, not
-  // the empty-space filler the first version's scattered five ended up as.
+  // Three of the card's four corners (with real photos the fourth holds the cake motif, CAKE_SPOT; with none the cake is the centrepiece and
+  // the fourth corner gets a heart too) -- accents, not the empty-space filler the first version's scattered five ended up as.
   buildHearts() {
-    this.heartParts = HEART_SPOTS.map(([x, y], i) => {
+    const spots = this.hasPhotos ? HEART_SPOTS : [...HEART_SPOTS, [CARD_RIGHT - 40, CARD_BOTTOM - 40]];
+    this.heartParts = spots.map(([x, y], i) => {
       const heart = this.add.image(x, y, 'card-heart').setScale(2).setDepth(2).setAlpha(0.9);
       this.tweens.add({
         targets: heart, y: y - 8, duration: 1300 + i * 120, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',

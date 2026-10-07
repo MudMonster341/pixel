@@ -11,22 +11,22 @@
 //
 // Loaded after src/card.js (it reuses DEFAULT_RECIPIENT and renderCardText from there).
 
-// PLACEHOLDERS: these eight wishes are deliberately generic and soft -- the owner replaces them with
-// his own (via card.json "wishes") once the real card content exists. Nothing here may claim anything
-// personal about her life: no invented memories, no in-jokes, no real people. Keep each under 70
-// characters so a line stays readable at the credits' text size.
+// The eight default wishes: short, plain and warm, the way a person would say them. The owner can still
+// replace them with his own (card.json "wishes"). Nothing here may claim anything personal about her
+// life: no invented memories, no in-jokes, no real people. Keep each under 70 characters so a line
+// stays readable at the credits' text size.
 const DEFAULT_CREDITS = {
   recipient: DEFAULT_RECIPIENT,
   age: 22,
   wishes: [
-    'May this year be your gentlest and brightest yet.',
-    'I hope every day gives you a reason to smile.',
-    'Here is to laughing until it hurts, often.',
-    'May good friends always find their way to you.',
-    'I hope your next adventure is better than you imagined.',
-    'Wishing you calm mornings and happy surprises.',
-    'You have every reason to be proud of yourself.',
-    'Happy birthday, {name}. Today is entirely yours.',
+    'I hope this year is kind to you.',
+    'I hope you laugh a lot, and at the right moments.',
+    'I hope you get every little thing you were hoping for.',
+    'May your people always find you.',
+    'Sleep in. Eat well. Do what makes you happy.',
+    'You deserve the good days, so I hope there are many.',
+    'Twenty-two. Go and enjoy it.',
+    'Happy birthday, {name}. Today is yours.',
   ],
   madeBy: 'Mustafa',
 };

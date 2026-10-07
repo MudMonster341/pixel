@@ -140,9 +140,9 @@ When she turns in all 3 keys, the volunteer hands over a small box (`GameState.q
    shown once a save has actually reached this point) jumps straight back to the card (and then the
    credits) without replaying the box or the hunt.
 
-The game runs on placeholders (a generic message, a temporary 5-slide photo slideshow of campus/story
-moments -- see below) until the owner supplies real content -- nothing here can be "unfinished" in a
-way that breaks it.
+The game ships with plain, warm default words and no pictures of anyone (a cake on a sunset glow instead of
+a photo frame -- see below) until the owner supplies real content -- nothing here can be "unfinished" in a
+way that breaks it. Photos and the memory album are OPTIONAL.
 
 ### How to put your photos and messages in
 
@@ -152,16 +152,16 @@ it ever ending up in git history. A ready-to-copy, committed example of the exac
 below lives at [`assets/card/card.example.json`](../assets/card/card.example.json) -- copy it to
 `assets/card/card.json` in the same folder and edit it.
 
-Until any of this exists, the card doesn't show a bare "YOUR PHOTO HERE" placeholder photo forever --
-it plays a temporary 5-slide slideshow instead (the Main Block entrance, the foyer staircase, the LUG
-stall, the three keys, the box; `src/card.js` `TEMP_CARD_SLIDES`, drawn by `tools/make-card-art.js`),
-so the game still looks finished before the owner's real photos exist. The instant `card.json` lists
-even one real photo, the temporary slideshow disappears completely -- real photos always win, never
-mixed in alongside the temporary ones.
+With no photos (the default), the card has **no frame, no slideshow and no placeholder picture**: the
+birthday cake is its centrepiece (flickering candles on a soft peach/gold sunset glow, `src/scenes/card.js`
+`buildCakeGlow()` + `buildCake()`), the title above it, floating hearts around it and the typed message
+underneath. The instant `card.json` lists one real photo (or the album's photos join once all keys are
+found) the frame, the Ken Burns slideshow and the caption appear instead, with a small cake in the corner.
+The Journal has no Album page until `card.json` has at least one `album` entry.
 
 | What | Where | Notes |
 |---|---|---|
-| The messages, names and photo captions | `assets/card/card.json` | See the shape below. Missing or left out entirely -> a short set of placeholder messages plays instead. |
+| The messages, names and photo captions | `assets/card/card.json` | See the shape below. Missing or left out entirely -> the short built-in default messages play instead. |
 | Photos | `assets/card/photos/<file>` | Any image format a browser can show (`.jpg`/`.jpeg`/`.png`/`.webp`/`.gif`). Any size or aspect ratio -- each one is scaled to fit inside the card's picture frame. A landscape photo (roughly 3:2 or 4:3) looks best; a very tall portrait photo will end up small inside the frame. Each file must also be **listed** in `card.json`'s `photos` array (below) -- dropping a file into the folder alone doesn't add it, since a browser can't list a folder's contents on its own. |
 | The closing video (optional) | `assets/card/video.mp4` | Plays after the last message, before "THE END". If it's missing, the card just finishes on the last message instead -- nothing breaks either way. |
 | The box-opening video (optional) | `assets/cutscenes/video/box-opening.mp4` | See `docs/research/cutscene-video-prompts.md` for the exact clip spec (16:9, 4-8 seconds, silent, pixel-art style). If missing, the drawn box-opening sequence plays instead. |
@@ -199,18 +199,19 @@ never breaks the card):
   name typed on the game's own name-entry screen, so the gift always names her whatever a player types.
 - `age`: the number in the credits' "Happy 22". Optional, default 22.
 - `wishes`: the credits' wishes (see "The credits" below), one string each, about eight, each under
-  about 70 characters. Optional: the built-in generic placeholders in `src/credits.js` play if left out.
+  about 70 characters. Optional: the built-in default wishes in `src/credits.js` play if left out.
 - `messages`: shown one at a time, typed out, advanced with E/Space/Enter -- the same textbox every
   conversation in the game already uses. `{name}` anywhere in a line is replaced with `recipient`.
 - `photos`: **order matters** -- they play in this order, cross-fading, holding a few seconds each,
   looping. `file` is just the filename inside `assets/card/photos/`, not a full path. `caption` is
   optional; leave it out (or empty) for no caption on that photo. A `file` that doesn't actually
-  exist in the folder falls back to the placeholder illustration for that one slide (its caption
-  still shows), rather than breaking the rest of the slideshow.
+  exist in the folder is simply left out of the slideshow (no placeholder in its place), without breaking
+  the rest; with no usable photo at all the card shows the cake instead. Optional.
 - `album` (W2, the memory album): up to 3 photos, one per LUG key in this order: the Physics Lab key, the
   ICL key, the Room 195 key. Each key she finds unlocks its polaroid on the Journal's Album page (J, then
   Tab); `file` is again a name inside `assets/card/photos/`, `caption` is optional (a default like "Memory 1:
-  the Physics Lab key" shows without one). Left out, or a missing file, a slot is a placeholder polaroid
+  the Physics Lab key" shows without one). Optional: with no `album` entry at all the Journal has no Album page, no Tab switching and no TAB hint. With
+  at least one entry, a slot without a photo (or whose file is missing) is a small pastel polaroid
   ("A memory for you"): nothing breaks. Once all three keys are found, the card's slideshow also plays the
   album's photos after the `photos` (a file listed in both plays once). Square-ish or landscape photos fit
   the polaroid window best (it crops to fill).
@@ -223,7 +224,7 @@ slowly drifting hearts and confetti: "Happy Birthday, Taru" (the recipient), the
 about eight wishes fading in one at a time (about 3 s each, 30 s in all), then "THE END" and "Made
 for you by Mustafa" (about 42 s overall). Esc/Space/Enter skips ahead to THE END (and, once THE END is up,
 back to the title); the card's music keeps playing. "Watch the Card Again" replays the card and then
-the credits. The wishes shipped in `src/credits.js` are generic placeholders; the owner replaces them
+the credits. The default wishes in `src/credits.js` are short, plain and warm; the owner can replace them
 with `wishes` in card.json. Content and pacing live in `src/credits.js` (`DEFAULT_CREDITS`,
 `buildCreditsConfig()`, `creditsTimeline()`).
 
@@ -234,7 +235,7 @@ with `wishes` in card.json. Content and pacing live in `src/credits.js` (`DEFAUL
   2026-09-20: official site, prospectus PDF, Wikipedia, 2GIS, Google).
 - Where is the real **main entrance (Gate 2)**? Still assumed (FB-0022).
 - The card's real photos, video and final wording -- see "How to put your photos and messages in"
-  above; the game plays fine on placeholders until then.
+  above; the game plays fine on its defaults until then.
 
 ## Small choices made building the playable spine (M3, 2026-09-22)
 

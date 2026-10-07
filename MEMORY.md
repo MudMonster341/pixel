@@ -1242,3 +1242,13 @@ Pushed `claude/practical-pasteur-gu1tam` and `claude/edi-madness-backup` (same c
 
 **Did:** checked out `claude/practical-pasteur-gu1tam` (tracks origin; `main` still lacks EDI). `npm run feedback`: nothing new (only the standing FB-0025 rule). `npm run test:unit` here: **1267/1267 pass, 0 fail, 0 cancelled**, so the cloud's 3 failures + 40 cancelled were environmental (missing git-ignored art), as suspected. `qa-shots --only edi` rendered all 10 shots and LOOKED: garages, cars, HUD, instructor bubble, cover, win card all read well. One defect fixed: the "Instructor" caption under the portrait was dim grey on the light floor and touched the bottom wall; now dark `#1a1c2c`, 3 px higher (`src/minigames/edi.js`).
 **Not done / waiting:** the owner drives EDI (E5 feel); card assets are not in `assets/card/` yet; the new cut scene after the ICL is undecided; the play copy `../2D_pixel_game-play` is still on the old `main` (without EDI).
+
+## 2026-10-07 (evening) - owner: no "images of us" in the birthday; message-only card: 1274 unit
+
+**Owner request:** remove the photo placeholders from the birthday; keep the sunset (finale), confetti, sweet non-AI lines; maybe one image later. **Did (Sonnet agent, reviewed, flames tuned by the coordinator):**
+- Card (`src/scenes/card.js`, `src/card.js`): with no usable real photo there is NO frame, slideshow or placeholder; the 56x40 cake is the centrepiece at scale 5 on a soft peach/gold sunset glow, 4 hearts, small flames. With >=1 real photo (card.json `photos`, or the album's after all keys) the old frame + Ken Burns path is unchanged (small corner cake). A photo whose file 404s is dropped (never a placeholder). `TEMP_CARD_SLIDES` and the card-temp / card-placeholder-photo loads are gone.
+- Texts: `DEFAULT_CARD_MESSAGES` (7) and `DEFAULT_CREDITS.wishes` (8) rewritten to short plain warm lines (card.json still overrides both).
+- Journal album page + its "TAB: ALBUM" hint now exist ONLY when card.json `album` has at least one entry (`albumAvailable`, `albumTabHint` in `src/album.js`); no placeholder polaroids any more.
+- `tools/pack-offline.js` no longer reads TEMP_CARD_SLIDES (the unused card-temp PNGs stay on disk, no longer bundled); `tools/make-card-art.js` untouched.
+**Checks:** unit 1274/1274; `ending.spec` + `journal.spec` 4/4 (run alone); `qa-shots --only ending` LOOKED at the card, finale unchanged. Side note: the owner started `npm start` themselves at 20:25 (not mine).
+**Next:** the owner's run-through; then, if good, the card assets, pack:offline/site and the final test round.

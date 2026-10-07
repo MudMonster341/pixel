@@ -100,14 +100,14 @@ Derived from what the game actually loads, never a hand-kept list:
 - every `'assets/...'` string literal in `src/` (comments ignored): each `load.*` call, the `SOUNDS` table,
   mini-game backgrounds, box/card art, UI kit, ...;
 - the templates (`assets/${...}`) expanded from the content: character sheets (`characterSheets()`), Tiled
-  maps, cutscene art, clothes colours, the temporary card slides;
+  maps, cutscene art, clothes colours;
 - the git-ignored owner content, read at build time: `assets/card/card.json`, every photo it lists (`photos` and `album`) in
   `assets/card/photos/`, and the optional `assets/card/video.mp4`; plus the optional
   `assets/cutscenes/video/box-opening.mp4`. Videos over 150 MB make the build fail (compress them).
 
 `assets/vendor/` and `assets/External Tilesets/` are never embedded (the game does not load from them).
 Without a `card.json` the build still succeeds and prints a NOTE: the card then shows the default
-messages and the generated slideshow, exactly as in dev.
+messages and shows the cake instead of photos, exactly as in dev.
 
 ## Adding a new asset type or path
 

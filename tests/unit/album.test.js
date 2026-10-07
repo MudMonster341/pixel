@@ -18,6 +18,8 @@ const albumNewSlots = game.evaluate('albumNewSlots');
 const albumUnlockedCount = game.evaluate('albumUnlockedCount');
 const albumComplete = game.evaluate('albumComplete');
 const cardSlidePhotos = game.evaluate('cardSlidePhotos');
+const albumAvailable = game.evaluate('albumAvailable');
+const albumTabHint = game.evaluate('albumTabHint');
 
 const KEY_IDS = ['physicsLab', 'icl', 'room195'];
 const keysWith = (...held) => Object.fromEntries(KEY_IDS.map((id) => [id, held.includes(id)]));
@@ -121,6 +123,44 @@ test('W2: albumComplete is true only when every key is found (and there are keys
   assert.equal(albumComplete(null), false);
 });
 
+// ---------- the album is optional: no real entry in card.json means no album page at all ----------
+
+test('no-photo card: albumAvailable is true only when card.json\'s album has at least one real entry', () => {
+  assert.equal(albumAvailable(null), false, 'card.json not read yet / missing');
+  assert.equal(albumAvailable(undefined), false);
+  assert.equal(albumAvailable({}), false);
+  assert.equal(albumAvailable({ album: 'x' }), false);
+  assert.equal(albumAvailable(buildCardConfig(null)), false);
+  assert.equal(albumAvailable(buildCardConfig({})), false);
+  assert.equal(albumAvailable(buildCardConfig({ album: [] })), false);
+  assert.equal(albumAvailable(buildCardConfig({ album: [null, 7, 'x', {}] })), false, 'only malformed entries');
+  assert.equal(albumAvailable(buildCardConfig({ album: [{ file: 'a1.jpg' }] })), true);
+  assert.equal(albumAvailable(buildCardConfig({ album: [null, { file: 'a2.jpg' }] })), true, 'an entry in any slot counts');
+  assert.equal(albumAvailable(CONFIG), true);
+});
+
+test('no-photo card: the Journal footer hint about the album exists only when there is an album', () => {
+  const slots = albumSlots(CONFIG, keysWith('physicsLab'));
+  assert.equal(albumTabHint(null, albumSlots(null, keysWith('physicsLab')), new Set()), null);
+  assert.equal(albumTabHint(buildCardConfig(null), albumSlots(buildCardConfig(null), keysWith(...KEY_IDS)), new Set()), null);
+  assert.deepEqual(plain(albumTabHint(CONFIG, slots, new Set())), { fresh: true, text: 'TAB: NEW POLAROID!' });
+  assert.deepEqual(plain(albumTabHint(CONFIG, slots, new Set(['physicsLab']))), { fresh: false, text: 'TAB: ALBUM 1/3' });
+  assert.deepEqual(plain(albumTabHint(CONFIG, albumSlots(CONFIG, keysWith()), new Set())), { fresh: false, text: 'TAB: ALBUM 0/3' });
+});
+
+test('no-photo card: the Journal never switches pages or shows a TAB hint without album entries (wiring)', () => {
+  const ui = read('src/scenes/ui.js');
+  const journal = ui.slice(ui.indexOf('class JournalPanel'), ui.indexOf('\nclass ', ui.indexOf('class JournalPanel') + 10) > 0 ? ui.indexOf('\nclass ', ui.indexOf('class JournalPanel') + 10) : undefined);
+  // the keys do nothing extra, the page can never be reached, build() falls back to the clues
+  assert.match(journal, /if \(!e\.repeat && albumAvailable\(this\.albumConfig\)\) this\.setPage\(/);
+  assert.match(journal, /if \(page === 'album' && !albumAvailable\(this\.albumConfig\)\) return;/);
+  assert.match(journal, /if \(this\.page === 'album' && albumAvailable\(this\.albumConfig\)\) \{ this\.buildAlbum\(\); return; \}\s*this\.page = 'clues';/);
+  // the footer hint comes from albumTabHint() (null: no hint), never a hard-coded string
+  assert.match(journal, /const tab = albumTabHint\(this\.albumConfig, this\.albumSlotsNow\(\), this\.albumSeen\);/);
+  assert.match(journal, /\$\{tab \? `\$\{tab\.text\} -- ` : ''\}J \/ ESC TO CLOSE/);
+  assert.doesNotMatch(journal.replace(/\/\/.*$/gm, ''), /'TAB: (NEW POLAROID!|ALBUM)/, 'the TAB hint text lives only in src/album.js');
+});
+
 // ---------- the config ----------
 
 test('W2: buildCardConfig album: absent / not an array / garbage entries are tolerated (placeholders), never an error', () => {
@@ -182,11 +222,11 @@ test('W2: cardSlidePhotos with no album entries (the common case), null entries 
   assert.deepEqual(plain(cardSlidePhotos(albumOnly, keysWith('icl'))), [], 'not finished: no album photos in the card');
 });
 
-test('W2: the card scene plays src/album.js cardSlidePhotos(), drops an album photo that failed to load, and keeps the temporary slideshow when nothing real is left', () => {
+test('W2: the card scene plays src/album.js cardSlidePhotos(), drops any photo that failed to load (no placeholder slide), and shows the cake when nothing real is left', () => {
   const scene = read('src/scenes/card.js');
   assert.match(scene, /this\.slidePhotos = cardSlidePhotos\(this\.config, GameState\.quest\.keys\)/);
   assert.match(scene, /this\.slidePhotos\.forEach\(\(photo, i\) => this\.load\.image\(`card-photo-\$\{i\}`/);
-  assert.match(scene, /!photo\.album \|\| !isMissing\(i\)/);
+  assert.match(scene, /\.filter\(\(\{ i \}\) => !isMissing\(i\)\)/);
   assert.doesNotMatch(scene, /this\.config\.photos/, 'the scene reads the merged list, never config.photos directly');
 });
 

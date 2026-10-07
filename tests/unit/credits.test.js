@@ -25,6 +25,22 @@ test('DEFAULT_CREDITS: recipient Taru, age 22, eight short generic wishes, made 
   assert.equal(new Set(DEFAULT_CREDITS.wishes).size, 8, 'wishes should be distinct');
 });
 
+test('no-photo card: the eight default wishes are the new plain lines, no em dashes or stock phrases, {name} resolved', () => {
+  const { DEFAULT_CREDITS, buildCreditsConfig } = loadGameData();
+  assert.deepEqual(plain(DEFAULT_CREDITS.wishes), [
+    'I hope this year is kind to you.',
+    'I hope you laugh a lot, and at the right moments.',
+    'I hope you get every little thing you were hoping for.',
+    'May your people always find you.',
+    'Sleep in. Eat well. Do what makes you happy.',
+    'You deserve the good days, so I hope there are many.',
+    'Twenty-two. Go and enjoy it.',
+    'Happy birthday, {name}. Today is yours.',
+  ]);
+  for (const wish of DEFAULT_CREDITS.wishes) assert.doesNotMatch(wish, /—|--|journey|adventure|tapestry/i);
+  assert.equal(buildCreditsConfig(null).wishes[7], 'Happy birthday, Taru. Today is yours.');
+});
+
 // ---------- buildCreditsConfig: the merge with card.json ----------
 
 test('buildCreditsConfig(null/garbage): everything falls back to the defaults, {name} resolved to Taru', () => {

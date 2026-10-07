@@ -58,7 +58,6 @@ const TEMPLATE_HANDLERS = new Set([
   'assets/player-*.png', // clothes colours (src/main.js, src/scenes/intro-customize.js)
   'assets/maps/*.json', // Tiled maps (src/main.js)
   'assets/*.png', // character sheets (src/maplogic.js characterSheets())
-  'assets/cutscenes/card-temp-*.png', // the temporary card slideshow (src/scenes/card.js)
   'assets/cutscenes/*.png', // cutscene art (src/scenes/cutscene.js)
 ]);
 
@@ -144,7 +143,7 @@ function loadContent(root = ROOT) {
   const get = (name) => vm.runInContext(name, context);
   return {
     MAPS: get('MAPS'), AMBIENT: get('AMBIENT'), SCRIPTS: get('SCRIPTS'), CUTSCENES: get('CUTSCENES'), SOUNDS: get('SOUNDS'),
-    TEMP_CARD_SLIDES: get('TEMP_CARD_SLIDES'), characterSheets: get('characterSheets'),
+    characterSheets: get('characterSheets'),
     ANIMALS: get('ANIMALS'), ANIMAL_SPECIES: get('ANIMAL_SPECIES'), ANIMAL_LAYOUTS: get('ANIMAL_LAYOUTS'), animalSheets: get('animalSheets'),
   };
 }
@@ -189,7 +188,6 @@ function collectRuntimeAssets({ root = ROOT, exists = fs.existsSync, readFile = 
   for (const def of Object.values(content.MAPS)) if (def.tiled) add(`assets/maps/${def.tiled}.json`, `map "${def.tiled}"`);
   for (const [id, def] of Object.entries(content.CUTSCENES)) add(`assets/cutscenes/${def.image.replace(/^cutscene-/, '')}.png`, `cutscene "${id}"`);
   for (const id of clothesIds(root)) add(`assets/player-${id}.png`, `clothes colour "${id}"`);
-  for (const slide of content.TEMP_CARD_SLIDES) add(`assets/cutscenes/${slide.key}.png`, 'temporary card slideshow');
 
   // 2. literals in the source
   for (const ref of scanSourceAssetRefs(root)) {
@@ -232,7 +230,7 @@ function collectRuntimeAssets({ root = ROOT, exists = fs.existsSync, readFile = 
       }
     }
   } else {
-    notes.push('assets/card/card.json not found: the card will use the default messages and the generated slideshow (docs/STORY.md "How to put your photos and messages in")');
+    notes.push('assets/card/card.json not found: the card will use the default messages and show the cake instead of photos (docs/STORY.md "How to put your photos and messages in")');
   }
 
   if (missing.length) {

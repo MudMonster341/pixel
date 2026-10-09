@@ -90,6 +90,19 @@ const MOMENTS = [
     trigger: { anchor: 'Physics Lab', dx0: -7, dx1: 8, dy0: 9, dy1: 10 },
     after: { keyIds: ['physicsLab'] }, // once she holds the Physics Lab key (not just any key); default pacing (90 s gap, one per map visit)
   },
+  {
+    id: 'm5',
+    name: 'Prof. Angel',
+    map: 'main-block-1',
+    script: 'momentAngel',
+    // FB-0099: the ICL lab, on her way out with the key. The anchor is the sealed hatch (tile 9,14); the rectangle is x 4..15, y 11..12: the two rows
+    // in front of the hatch, between the core console (6,10) and the door. Row 11 is open across the whole lab and row 12 is the only way down to the
+    // lane in front of the hatch (row 13, x 8..11), so every walk from the console to the door crosses it (tests/unit/fb-0099-angel.test.js floods the
+    // real map). Angel comes in through the hatch and stops in that lane (row 13), so she never stands on the console, Alice's pad or the hatch.
+    trigger: { anchor: 'ICL door', dx0: -5, dx1: 6, dy0: -3, dy1: -2 },
+    after: { keyIds: ['icl'] }, // once she holds the ICL key (she beat the door game and took it from the console, or Alice handed it over); default pacing
+    afterFreeS: 0.6, // not the very frame the key dialog closes (the toast is still sliding in): she takes a step or two first, still inside the rectangle
+  },
 ];
 
 // `?moments=0` (dev and tests, tests/e2e/helpers.js sets it for every spec) turns every moment off, and so does `?cutscene=0` (a moment

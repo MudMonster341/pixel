@@ -4445,6 +4445,9 @@ function buildFriendCharacter(look) {
 const PROF_WOMEN = {
   'prof-elakkiya': { hair: 'salt', skin: 'wheat', top: '#1f5f6b', topHi: '#4aa0ad', skirt: '#2b2b3a' }, // a teal blazer, dark skirt
   'prof-angel': { hair: 'black', skin: 'fair', top: '#8fb0dc', topHi: '#d6e4f7', skirt: '#5a6a8a', prop: WINGS }, // soft blue, with wings
+  // FB-0099 (M5, src/scripts.js SCRIPTS.momentAngel): the same Prof. Angel before the wings grow. She walks into the ICL in this one, a sparkle
+  // pops, and the script swaps her for the winged sheet above. A script actor only (not on any map).
+  'prof-angel-plain': { hair: 'black', skin: 'fair', top: '#8fb0dc', topHi: '#d6e4f7', skirt: '#5a6a8a' },
 };
 // M4 (src/scripts.js SCRIPTS.momentFriends): Taru's friends Sana, Shraddha and Palak, the same body as the lead and the women professors with their
 // own hair, skin, top, skirt and one accessory each. Script actors only (they are not on any map). `top`/`topHi`/`skirt` as PROF_WOMEN.

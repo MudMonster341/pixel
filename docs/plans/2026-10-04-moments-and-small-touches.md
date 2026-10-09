@@ -65,6 +65,8 @@ Moments are **in-world scripts** like the RTA bus and the Mustafa greeting (`src
 | M7 | **Sumo vs Narda** | An arcade cabinet in the TP room with Narda next to it ("Beat me at sumo!") | The sumo game below. Bonus: no key. | mini-game (pure logic + scene + art generator) | M |
 | M8 | **Tower climb: save the prince** | The other arcade cabinet in the TP room; **may become the Room 195 key game** (see the line-up) | The tower-climb game below. | mini-game on the platformer physics | M-L |
 
+**Prof. Angel (BUILT 2026-10-10, owner FB-0099; the moment id is `m5` in `src/moments.js`, not the table's M5, the cover):** in the ICL lab (map `main-block-1`, x 4..15, rows 11..12, `after: { keyIds: ['icl'] }`, default pacing), on her way out with the key: Prof. Angel walks in through the hatch, asks if she is training models and reminds her that models will never stop her being a cool person, her phone rings, she grows her wings (the winged sheet replaces the plain `npc-prof-angel-plain` with a sparkle pop) and flies away up out of sight; about 16 s, script `momentAngel`.
+
 M1 and M2 are the two the owner described as "when you enter campus": M1 plays first (the gate avenue), M2 a little later (the forecourt), so they never overlap.
 
 ### The cover for the hero-vs-villain game (M5)

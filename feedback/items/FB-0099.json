@@ -4,9 +4,9 @@
   "type": "idea",
   "area": "General",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-09T20:41:40.783Z",
-  "updatedAt": "2026-10-09T20:41:40.783Z",
+  "updatedAt": "2026-10-09T21:35:25.853Z",
   "details": "she comes into ocl afer you beat the game and is like oh,a taru are you training models, good good but rememebr to never forgethat these models will nto stop you rom beign a cool person, then shes like im gettign a call and grows wings and grows wings and then fleis away. professor name is angel",
   "context": {
     "map": "main-block-1",
@@ -53,13 +53,33 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0099.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "New moment M5: Prof. Angel walks into the ICL lab after the ICL key, 'are you training models', gets a call, grows wings and flies away",
+      "at": "2026-10-09T21:35:25.853Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0099-angel.test.js › FB-0099",
+    "commit": null,
+    "at": "2026-10-09T21:35:25.853Z"
+  },
   "history": [
     {
       "at": "2026-10-09T20:41:40.783Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-09T21:35:25.805Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T21:35:25.853Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

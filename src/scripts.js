@@ -437,6 +437,59 @@ const MOMENT_FRIENDS_STEPS = [
   { unlockInput: true },
 ];
 
+// M5, Prof. Angel (the owner, FB-0099: "after the ICL ... Angel ma'am comes in who is the professor ... oh, a Taru, are you training models, good
+// good, but remember that these models will not stop you from being a cool person, then she's like I'm getting a call and grows wings and flies
+// away"). In the ICL lab on the 1st floor, once she holds the ICL key and is on her way out (src/moments.js: x 4..15, y 11..12). Everything is
+// placed from the sealed hatch's own tile (iclTile; the hatch is open by then: she holds the key), never from her, so Angel never stands on the
+// core console, Alice's pad or the hatch itself: she comes in from the corridor through the hatch lane (x 10), stops in front of it (10,13) and
+// turns to her. The camera glides to the lane (centred one row BELOW Angel, so she stands above the dialog box during every line, whichever of
+// the 24 tiles of the trigger Taru is on). Two lines, a phone rings ("!" and two dings), her third line, then she turns to us, a sparkle pops and
+// the plain sheet is swapped for the winged one (npc-prof-angel, the wings of the ambient Prof. Angel), she hovers, rises in a trail of stars and
+// fades out. No wings are drawn here: they are part of the generated sheet. Everyone is despawned again. About 16 s.
+const iclTile = (dx, dy) => ({ anchor: 'ICL door', offset: [dx - 0.5, dy - 0.5] }); // the hatch is tile (9,14); iclTile(1, -1) is the lane tile (10,13)
+const MOMENT_ANGEL_STEPS = [
+  { lockInput: true },
+  { letterbox: 'in' },
+  { spawnActor: { id: 'angel', sprite: 'npc-prof-angel-plain', at: iclTile(1, 3), facing: 'up' } },
+  // In from the corridor, up the lane through the hatch; the camera glides down to meet her.
+  { parallel: [
+    { move: { actor: 'angel', path: [iclTile(1, 1), iclTile(1, -1)], speed: 4 } },
+    { cameraPan: { to: iclTile(1, 0), ms: 1200 } },
+  ] },
+  { face: { actor: 'angel', toward: 'player' } },
+  { say: { speaker: 'Prof. Angel', lines: ['Oh, hi {name}! Are you training models? Good, good.'], autoMs: 1500 } },
+  { say: { speaker: 'Prof. Angel', lines: ['But remember: these models will never stop you from being a cool person.'], autoMs: 1800 } },
+  // Her phone rings.
+  { parallel: [
+    { sound: 'liftDing' },
+    { emote: { actor: 'angel', kind: '!' } },
+    { sequence: [{ wait: 450 }, { sound: 'liftDing' }] },
+  ] },
+  { say: { speaker: 'Prof. Angel', lines: ['Oh, I am getting a call...'], autoMs: 1300 } },
+  // She turns to us, a sparkle pops and the wings are there (the winged sheet takes her place, tile for tile).
+  { face: { actor: 'angel', dir: 'down' } },
+  { parallel: [
+    { sound: 'minigameLineClear' },
+    { sequence: [
+      { sparkles: { actor: 'angel', ms: 300, every: 40 } },
+      { despawnActor: 'angel' },
+      { spawnActor: { id: 'angelw', sprite: 'npc-prof-angel', at: iclTile(1, -1), facing: 'down' } },
+      { sparkles: { actor: 'angelw', ms: 600, every: 40 } },
+    ] },
+  ] },
+  { lift: { actor: 'angelw', to: 6, ms: 300 } },
+  // Up and away over the lab, in a trail of stars, fading out before she is anywhere near the picture's edge.
+  { parallel: [
+    { lift: { actor: 'angelw', to: 170, ms: 2300, ease: 'Quad.easeIn', fadeOut: true } },
+    { sparkles: { actor: 'angelw', ms: 2300 } },
+  ] },
+  { despawnActor: 'angelw' },
+  { cameraPan: { to: { actor: 'player' }, ms: 800 } },
+  { cameraFollow: 'player' },
+  { letterbox: 'out' },
+  { unlockInput: true },
+];
+
 const SCRIPTS = {
   // The fast path: `?intro=0`, an old save, or simply walking up to the same spot -- the existing
   // 'Gate 2 entrance' Tiled trigger (unchanged) fires this exactly like it always fired the old gate2
@@ -468,4 +521,5 @@ const SCRIPTS = {
   momentMevin: MOMENT_MEVIN_STEPS,
   momentChariot: MOMENT_CHARIOT_STEPS,
   momentFriends: MOMENT_FRIENDS_STEPS,
+  momentAngel: MOMENT_ANGEL_STEPS,
 };

@@ -42,7 +42,7 @@ function generatedAssetNames() {
   const bodies = [...source.matchAll(/'((?:ambient|student)-[a-f])': \['(?:Adam|Alex|Bob)'/g)].map((m) => m[1]);
   for (const body of bodies) for (const outfit of outfits) names.add(`npc-${body}-${outfit}.png`);
   // FB-0051: the named friends and professors are written by loops over FRIEND_LOOKS / PROF_WOMEN (npc-<key>.png).
-  for (const m of source.matchAll(/^  '((?:friend|prof)-[a-z]+)': { (?:body|hair)/gm)) names.add(`npc-${m[1]}.png`);
+  for (const m of source.matchAll(/^  '((?:friend|prof)-[a-z-]+)': { (?:body|hair)/gm)) names.add(`npc-${m[1]}.png`);
   return names;
 }
 

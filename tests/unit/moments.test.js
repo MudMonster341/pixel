@@ -56,8 +56,8 @@ const ctxFor = (id, over = {}) => ({ map: momentOf(id).map, ...inside(id), enabl
 
 // ---------- the table ----------
 
-test('FB-0051: MOMENTS lists M1, M2, M3 then M4, each with a real script, a trigger rectangle that exists on its own map, and the right order', () => {
-  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2', 'm3', 'm4']);
+test('FB-0051: MOMENTS lists M1, M2, M3, M4 then M5 (FB-0099), each with a real script, a trigger rectangle that exists on its own map, and the right order', () => {
+  assert.deepEqual(plain(MOMENTS.map((m) => m.id)), ['m1', 'm2', 'm3', 'm4', 'm5']);
   for (const m of MOMENTS) {
     assert.ok(MAPS[m.map], `${m.id}: a real map`);
     assert.ok(Array.isArray(SCRIPTS[m.script]) && SCRIPTS[m.script].length > 0, `${m.id}: script "${m.script}" is in SCRIPTS`);
@@ -943,10 +943,11 @@ test('FB-0051: the QA tools load every non-moment shot with moments off, and qa-
   assert.ok(urls.length >= 6, `found ${urls.length} URLs`);
   const withMoments = urls.filter((u) => !u.includes('moments=0'));
   // the moment flows only: M1/M2 (shootMoments), M3 the chariot (shootMomentChariot) and M4 the friends (shootMomentFriends)
-  assert.equal(withMoments.length, 3, `only the moment flows load with moments on: ${withMoments}`);
+  assert.equal(withMoments.length, 4, `only the moment flows (M5 Prof. Angel on main-block-1 too) load with moments on: ${withMoments}`);
   assert.equal(withMoments.filter((u) => /map=campus&title=0&intro=0&save=0/.test(u)).length, 1, 'M1/M2 on the campus');
   assert.equal(withMoments.filter((u) => /map=main-block-g&title=0&intro=0&save=0/.test(u)).length, 1, 'M3 in the foyer');
   assert.equal(withMoments.filter((u) => /map=main-block-3&title=0&intro=0&save=0/.test(u)).length, 1, 'M4 on the 3rd floor (moved from the campus, 2026-10-05)');
+  assert.equal(withMoments.filter((u) => /map=main-block-1&title=0&intro=0&save=0/.test(u)).length, 1, 'M5 in the ICL lab (FB-0099)');
   assert.match(shots, /async function shootMoments\(browser\)/);
   assert.match(shots, /\['moments \(unicorn, Mevin\)', shootMoments, \[/);
   assert.match(shots, /shoot\(page, 'moment-01-unicorn'\)/);
@@ -1359,9 +1360,9 @@ const floor3 = () => mapOf('main-block-3');
 const keysOf = (physicsLab, icl, room195) => ({ quest: { keys: { physicsLab, icl, room195 } } });
 const clampCamX = (px, here) => Math.min(Math.max(px, 160), here.json.width * 16 - 160); // the camera stops at the map's edge (world.js setBounds)
 
-test('FB-0051: M4 is in the table: the 3rd floor (main-block-3), the Physics Lab corridor, after the Physics Lab key, default pacing, last in the order', () => {
+test('FB-0051: M4 is in the table: the 3rd floor (main-block-3), the Physics Lab corridor, after the Physics Lab key, default pacing, fourth in the order (M5, FB-0099, follows)', () => {
   const m = momentOf('m4');
-  assert.equal(MOMENTS.at(-1).id, 'm4');
+  assert.equal(MOMENTS[3].id, 'm4');
   assert.equal(m.map, 'main-block-3', 'no longer on the campus forecourt');
   assert.equal(m.script, 'momentFriends');
   assert.deepEqual(plain(m.after), { keyIds: ['physicsLab'] }, 'her Physics Lab key, not just any key');
@@ -1383,7 +1384,7 @@ test('FB-0051: M4 is in the table: the 3rd floor (main-block-3), the Physics Lab
   const stairs = here.anchor('Main Block Stairs 3 (down)');
   assert.ok(r.x1 < stairs.x - 10, 'well clear of the stairs room');
   // nothing else moved: the campus keeps M1 and M2 only, the foyer M3, the 3rd floor M4
-  assert.deepEqual(plain(MOMENTS.map((x) => [x.id, x.map])), [['m1', 'campus'], ['m2', 'campus'], ['m3', 'main-block-g'], ['m4', 'main-block-3']]);
+  assert.deepEqual(plain(MOMENTS.map((x) => [x.id, x.map])), [['m1', 'campus'], ['m2', 'campus'], ['m3', 'main-block-g'], ['m4', 'main-block-3'], ['m5', 'main-block-1']]);
   assert.deepEqual(plain(momentOf('m2').trigger), { anchor: 'Main Block entrance', dx0: -6, dx1: 5, dy0: 1, dy1: 9 }, 'M2 is unaffected');
   assert.deepEqual(plain(momentOf('m2').after), { moments: ['m1'] });
 });

@@ -167,6 +167,9 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | | | Palak | Come to the canteen with us. We saved you a seat! |
 | | | {name} | Give me a few minutes, I still have a hunt to finish. |
 | | | Sana | Fine. But the chai will not wait forever. |
+| M5 Prof. Angel (FB-0099, the owner's idea in his own words: "Angel ma'am comes in who is the professor ... are you training models, good good, but remember that these models will not stop you from being a cool person, then she's like I'm getting a call and grows wings and flies away"; once, after she holds the ICL key, on her way out of the lab: Prof. Angel walks in through the hatch and stops in front of her, says her two lines, her phone rings (a "!" and two dings), her third line, a sparkle pops, she grows her wings and rises up out of sight in a trail of stars; about 16 s. Lines tidied by Claude, the owner's meaning kept) | the ICL lab on the 1st floor, the two rows in front of the hatch (x 4..15, rows 11..12) | Prof. Angel | Oh, hi {name}! Are you training models? Good, good. |
+| | | Prof. Angel | But remember: these models will never stop you from being a cool person. |
+| | | Prof. Angel | Oh, I am getting a call... |
 
 M1's first line is the owner's own inside joke, exactly as written (no softening). The prince is a generic crowned stand-in; the unicorn is a generic white horse with a horn (no protected character).
 

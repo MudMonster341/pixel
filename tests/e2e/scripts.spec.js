@@ -107,13 +107,14 @@ test('FB-0033: once hunting, the destination follows the first missing key acros
   await page.evaluate(() => { GameState.quest.keys.physicsLab = true; });
   target = await page.evaluate(() => game.scene.getScene('world').currentObjectiveAnchor());
   // P5c (FB-0071): the ICL's door is sealed until its scanner's parking game is passed, so the guide points at the scanner first...
-  const scanner = await page.evaluate(() => game.scene.getScene('world').scanners[0]);
+  // only the coordinates: the scanner object also references a Phaser sprite/animation, and handing that whole graph back to the test took ~28 s (a timeout)
+  const scanner = await page.evaluate(() => { const s = game.scene.getScene('world').scanners[0]; return { x: s.x, y: s.y }; });
   expect(target.x).toBeCloseTo(scanner.x / 16, 1);
   expect(target.y).toBeCloseTo(scanner.y / 16, 1);
   // ...and once the door is open, on in to the key station inside.
   await page.evaluate(() => { GameState.flags.iclDoorOpen = true; });
   target = await page.evaluate(() => game.scene.getScene('world').currentObjectiveAnchor());
-  const icl = await page.evaluate(() => game.scene.getScene('world').keyStations.find((k) => k.def.id === 'icl'));
+  const icl = await page.evaluate(() => { const k = game.scene.getScene('world').keyStations.find((s) => s.def.id === 'icl'); return { x: k.x, y: k.y }; });
   expect(target.x).toBeCloseTo(icl.x / 16, 1);
   expect(target.y).toBeCloseTo(icl.y / 16, 1);
 });

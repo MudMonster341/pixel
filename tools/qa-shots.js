@@ -659,6 +659,73 @@ async function shootMomentFriends(browser) {
   await page.close();
 }
 
+// ---- M5: Prof. Angel (the ICL lab, once she holds the ICL key; FB-0099) ----
+async function shootMomentAngel(browser) {
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const baseUrl = `${BASE_URL}/?dev=0&map=main-block-1&title=0&intro=0&save=0&audio=0`; // cutscenes + moments on (the defaults)
+  const scriptRunning = () => game.scene.getScene('world').scriptRunner.isRunning;
+  const scriptIdle = () => !game.scene.getScene('world').scriptRunner.isRunning;
+
+  const rect = await (async () => {
+    const ok = await tryStep(page, 'moment-05-angel (setup)', async () => {
+      await page.goto(baseUrl);
+      await waitReady(page);
+      await page.evaluate(() => {
+        GameState.quest.stage = 'hunting';
+        GameState.quest.keys = { physicsLab: false, icl: true, room195: false }; // M5 needs the ICL key
+        GameState.flags.iclDoorOpen = true; // the door is open once she has beaten EDI Madness
+        for (const key of ['gate2', 'entrance', 'keyRoom:icl']) GameState.seenCutscenes.add(key);
+        GameState.seenMoments = new Set(['m1', 'm2', 'm3', 'm4']);
+        GameState.lastMomentAt = GameState.playSeconds - 1000;
+      });
+    });
+    return ok ? momentRect(page, 'm5') : null;
+  })();
+  if (!rect) { warn('moment-05-angel', 'no setup or no trigger rectangle for m5 on main-block-1'); await page.close(); return; }
+
+  const started = await tryStep(page, 'moment-05-angel (start)', async () => {
+    const tile = await walkableInRect(page, rect, { x: Math.round((rect.x0 + rect.x1) / 2), y: rect.y0 });
+    if (!tile) throw new Error('no walkable tile inside the m5 trigger');
+    await teleport(page, tile.x, tile.y);
+    await waitFor(page, scriptRunning, { timeout: 12000 });
+  });
+
+  if (started) {
+    // a: Angel has walked up to the hatch lane and speaks her first line, fully typed out.
+    await tryStep(page, 'moment-05-angel-a', async () => {
+      await waitFor(page, () => {
+        const world = game.scene.getScene('world');
+        const d = game.scene.getScene('ui').dialog;
+        return world.scriptRunner.actors.has('angel') && d.isOpen && d.typing === false && /Angel/.test(d.name.text);
+      }, { timeout: 20000 });
+      await shoot(page, 'moment-05-angel-a');
+    });
+    // b: the call line ("I am getting a call..."), then the wings pop.
+    await tryStep(page, 'moment-05-angel-b', async () => {
+      await waitFor(page, () => {
+        const d = game.scene.getScene('ui').dialog;
+        return d.isOpen && d.typing === false && /call/.test(d.body.text);
+      }, { timeout: 20000 });
+      await shoot(page, 'moment-05-angel-b');
+    });
+    // c: she is rising away on her wings.
+    await tryStep(page, 'moment-05-angel-c', async () => {
+      await waitFor(page, () => {
+        const world = game.scene.getScene('world');
+        return world.scriptRunner.actors.has('angelw'); // the winged Angel (the plain one is swapped out at the pop)
+      }, { timeout: 20000 });
+      await page.waitForTimeout(900);
+      await shoot(page, 'moment-05-angel-c');
+    });
+    await tryStep(page, 'moment-05-angel (finish)', async () => {
+      await waitFor(page, scriptIdle, { timeout: 25000 });
+      await waitFor(page, () => game.scene.getScene('world').freeSeconds >= 0.6, { timeout: 8000 });
+      await shoot(page, 'moment-05-angel-d');
+    });
+  }
+  await page.close();
+}
+
 // ---- the memory album (journal page 2, W2): 0, 1 and 3 keys ----
 async function shootAlbum(browser) {
   const page = await browser.newPage({ viewport: VIEWPORT });
@@ -1154,6 +1221,7 @@ async function main() {
       ['EDI Madness', shootEdi, ['edi', 'minigame-edi']],
       ['moment 3 (the chariot)', shootMomentChariot, ['moment-03', 'chariot']],
       ['moment 4 (the three friends)', shootMomentFriends, ['moment-04', 'friends']],
+      ['moment 5 (Prof. Angel)', shootMomentAngel, ['moment-05', 'angel']],
       ['journal album', shootAlbum, ['album']],
       ['selfie (P)', shootSelfie, ['selfie']],
       ['ending sequence', shootEnding, ['ending']],

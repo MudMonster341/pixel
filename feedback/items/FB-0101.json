@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "General",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-09T20:48:13.547Z",
-  "updatedAt": "2026-10-09T20:48:13.547Z",
+  "updatedAt": "2026-10-09T21:12:07.421Z",
   "details": "Hi pookie, Hope you liked my mini game about our life. We have been toegther for 3 years and its your 4th birthday tigetehr, hope you have abelssed and lovely day ahaed. Youa re the cutest and sweetest ever. Hope you alwaeys lagh and akll your dremas come strue\n\nYou can imporve this a bit but add in elements from this and then yea and make the background more color full, add in charcters and soemtihg happenign in the bg liek a but mroe better",
   "context": {
     "map": "main-block-g",
@@ -54,13 +54,33 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0101.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Final card message in the owner's words, new credits wishes, colourful dusk backdrop with balloons, lights, confetti cannons and Mustafa/Taru/friends dancing",
+      "at": "2026-10-09T21:12:07.421Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0101-card.test.js › FB-0101",
+    "commit": null,
+    "at": "2026-10-09T21:12:07.421Z"
+  },
   "history": [
     {
       "at": "2026-10-09T20:48:13.547Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-09T21:12:07.383Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T21:12:07.421Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

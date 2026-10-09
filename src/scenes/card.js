@@ -33,9 +33,10 @@ const CAKE_CANDLE_LOCAL_TOP_Y = 4; // just above where the candle sticks start (
 // crowded left half, an empty right half, and the photo frame's own left edge crossing the panel's
 // border). Every number below is this card's own interior geometry, in scene coordinates, so moving
 // the card later (CARD_X/Y/W/H) only means changing those four numbers, not re-deriving the rest. ----------
-const CARD_X = 50;
+// FB-0101: narrower (was 860 wide at x 50) so the party backdrop has a ~120 px margin on each side for the cast.
+const CARD_X = 120;
 const CARD_Y = 35;
-const CARD_W = 860;
+const CARD_W = 720;
 const CARD_H = 470;
 const CARD_CENTER_X = CARD_X + CARD_W / 2; // 480, screen-center too -- the card is centered on screen
 const CARD_RIGHT = CARD_X + CARD_W;
@@ -57,9 +58,31 @@ const HEART_SPOTS = [
   [CARD_RIGHT - 40, CARD_Y + 60],
   [CARD_X + 40, CARD_BOTTOM - 40],
 ];
-const CAKE_SPOT = { x: CARD_RIGHT - 75, y: CARD_BOTTOM - 55 };
+// With the narrower card the old bottom-right spot would sit on the message box, so the small cake moves up beside the photo frame
+// (the frame spans x 330..630, y 95..335; the cake is 73 px wide).
+const CAKE_SPOT = { x: CARD_RIGHT - 80, y: 235 };
 // No photos: the cake is the centrepiece in the area the frame would use (y 100..350), spanning y 132..332 at CAKE_BIG_SCALE.
 const CAKE_CENTER = { x: CARD_CENTER_X, y: 232 };
+
+// ---------- FB-0101: the party behind the card, all code-drawn (or the game's existing character sheets). Every depth is below the card
+// panel's (1); the confetti (90) and the cover (200) stay above. ----------
+const BACKDROP_VEIL_DEPTH = 0.95; // a screen-sized dark layer over the backdrop until the cover opens, so none of it peeks out around the cover
+const SKY_HEIGHT = 480; // the sky is drawn in bands down to the ground
+const SKY_BAND_H = 8;
+const SKY_STOPS = [[0, 0x6f63c4], [0.3, 0xb48ae0], [0.55, 0xff9fc0], [0.78, 0xffc79a], [1, 0xffe39a]]; // lavender -> pink -> peach -> warm gold at the horizon
+const GROUND_TOP = 470;
+const STAR_SPOTS = [[30, 60], [75, 112], [102, 48], [20, 190], [60, 245], [110, 172], [850, 60], [900, 105], [932, 50], [872, 190], [925, 245], [846, 150]];
+const SPARKLE_SPOTS = [[60, 135], [900, 150], [38, 300], [922, 330], [86, 420], [880, 265]];
+const BULB_COUNT = 12; // string lights along the top edge, one bulb per swag
+const BULB_COLORS = [0xff6fb1, 0xffd23f, 0x7fd6c2, 0x8ec5ff, 0xc79bff, 0xff9f7a];
+const BALLOON_COLORS = [0xff6fb1, 0xffd23f, 0x7fd6c2, 0x8ec5ff, 0xc79bff, 0xff9f7a];
+const BALLOON_COUNT = 10;
+const CANNON_COLORS = [0xff6fb1, 0xffd23f, 0x3b7dd8, 0xc79bff, 0x8fd46a, 0xff9f7a];
+const CANNON_EVERY_MS = 3400;
+const CANNON_PIECES = 10;
+const CAST_SCALE = 3;
+const CAST_SHEET_COLS = 8; // a character sheet's frame row length (tools/make-assets.js CHAR_COLS); rows: down, up, left, right
+const CAST_FRIENDS = ['npc-friend-sid', 'npc-friend-akshit', 'npc-friend-satvik'];
 
 const PHOTO_HOLD_MS = 2600;
 const PHOTO_FADE_MS = 500;
@@ -82,6 +105,10 @@ class CardScene extends Phaser.Scene {
     this.hasPhotos = false;
     this.frameParts = [];
     this.cakeParts = [];
+    this.backdropParts = []; // FB-0101: the sky, lights, ground, cast, balloons and sparkles behind the card
+    this.veil = null;
+    this.cannonTimer = null;
+    this.cannonLeft = true;
     this.timers = []; // every looping/delayed timer this scene starts, so skipToEnd() can kill them all at once
   }
 
@@ -98,9 +125,24 @@ class CardScene extends Phaser.Scene {
     // textures -- normally already loaded by boot/title by the time this scene is reached, but
     // guarded/idempotent like every other preload() here, so a direct reach-in can't be caught short.
     preloadUiKit(this);
+    this.preloadCast();
     this.load.json('card-config', CARD_CONFIG_URL);
     // The closing video is NOT queued here -- see playEndingVideoOrFinish()'s own comment for why
     // (Phaser's video loader can't be trusted to report a 404 as a real error).
+  }
+
+  // FB-0101: the characters dancing behind the card. Mustafa and the friends are the game's own NPC sheets; Taru is the 'player' sheet when the
+  // world has loaded it, else her chosen-clothes sheet loaded under its own key (the "Watch the Card Again" route skips the world). Every load
+  // is guarded; a sheet that fails to load is simply left out of the cast (buildCast() checks textures.exists()).
+  preloadCast() {
+    const sheet = { frameWidth: TILE, frameHeight: CHAR_HEIGHT };
+    const clothes = (typeof GameState !== 'undefined' && GameState.customization && GameState.customization.clothes) || 'pink';
+    this.taruKey = this.textures.exists('player') ? 'player' : `card-taru-${clothes}`;
+    const sheets = [['npc-mustafa', 'assets/npc-mustafa.png'], [this.taruKey, `assets/player-${clothes}.png`]];
+    for (const key of CAST_FRIENDS) sheets.push([key, `assets/${key}.png`]);
+    for (const [key, file] of sheets) {
+      if (!this.textures.exists(key)) this.load.spritesheet(key, file, sheet);
+    }
   }
 
   // The photo list isn't known until card-config.json (just loaded above) is parsed, so the photo
@@ -207,6 +249,7 @@ class CardScene extends Phaser.Scene {
   // built once, up front, behind the cover, then revealed by openCover() ----------
 
   buildInterior() {
+    this.buildBackdrop(); // FB-0101: the party behind the card, under a dark veil until the cover has opened
     this.panel = this.add.graphics().setDepth(1);
     drawCardPanel(this.panel, CARD_X, CARD_Y, CARD_W, CARD_H);
     this.buildTitleGlow();
@@ -242,7 +285,166 @@ class CardScene extends Phaser.Scene {
     this.dialog = new DialogBox(this, MESSAGE_BOX);
     this.dialog.panel.setAlpha(0);
     this.dialog.body.setColor('#4a3520'); // warm dark ink on cream paper, not COLORS.text's near-white
-    this.interiorParts = [this.panel, this.titleGlow, this.cakeGlow, this.title, this.cakeParts, this.frameParts, this.heartParts, this.messagePanel].flat().filter(Boolean);
+    this.interiorParts = [this.backdropParts, this.panel, this.titleGlow, this.cakeGlow, this.title, this.cakeParts, this.frameParts, this.heartParts, this.messagePanel].flat().filter(Boolean);
+  }
+
+  // ---------- FB-0101: the party behind the card. Built up front (behind the cover) like the rest; everything is registered in
+  // this.backdropParts (hidden with the rest during the optional closing video) and every tween/timer dies in killTimers(). ----------
+
+  buildBackdrop() {
+    const keep = (...objects) => { this.backdropParts.push(...objects); return objects[0]; };
+    const tex = ensureBackdropTextures(this);
+    this.balloonKeys = tex.balloons;
+
+    // the dusk sky: stacked bands from lavender down to warm gold at the horizon
+    const sky = this.add.graphics().setDepth(0.1);
+    for (let y = 0; y < SKY_HEIGHT; y += SKY_BAND_H) sky.fillStyle(skyColorAt((y + SKY_BAND_H / 2) / SKY_HEIGHT), 1).fillRect(0, y, GAME_WIDTH, SKY_BAND_H);
+    keep(sky);
+
+    // twinkling stars (the little plus-shaped texture, tinted pale gold) in the upper sky of both margins
+    STAR_SPOTS.forEach(([x, y], i) => {
+      const star = this.add.image(x, y, tex.sparkle).setTint(0xfff3c4).setDepth(0.2).setAlpha(0.3);
+      this.tweens.add({ targets: star, alpha: { from: 0.25, to: 1 }, duration: 600 + (i % 5) * 220, yoyo: true, repeat: -1, delay: i * 130, ease: 'Sine.easeInOut' });
+      keep(star);
+    });
+
+    // slow pastel clouds drifting across
+    [[130, 90, 0.5, 26], [520, 150, 0.4, 20], [820, 60, 0.45, 34]].forEach(([x, y, alpha, speed]) => {
+      const cloud = this.add.graphics({ x, y }).setDepth(0.15);
+      cloud.fillStyle(0xffffff, alpha).fillEllipse(0, 0, 86, 24).fillEllipse(-26, 6, 54, 20).fillEllipse(28, 5, 60, 20).fillEllipse(4, -9, 46, 22);
+      this.driftCloud(cloud, speed);
+      keep(cloud);
+    });
+
+    // hills and a grassy ground strip along the bottom
+    const ground = this.add.graphics().setDepth(0.3);
+    ground.fillStyle(0xa87fcf, 1);
+    [[70, 420, 130], [330, 360, 100], [620, 480, 120], [880, 440, 140]].forEach(([x, w, h]) => ground.fillEllipse(x, GROUND_TOP + 8, w, h));
+    ground.fillStyle(0xcf86b8, 1);
+    [[190, 400, 80], [520, 460, 70], [790, 380, 84]].forEach(([x, w, h]) => ground.fillEllipse(x, GROUND_TOP + 14, w, h));
+    ground.fillStyle(0x6fbf8a, 1).fillRect(0, GROUND_TOP, GAME_WIDTH, GAME_HEIGHT - GROUND_TOP);
+    ground.fillStyle(0x9be0a0, 1).fillRect(0, GROUND_TOP, GAME_WIDTH, 4);
+    ground.fillStyle(0x4f9c78, 1).fillRect(0, GROUND_TOP + 46, GAME_WIDTH, GAME_HEIGHT - GROUND_TOP - 46);
+    for (let i = 0; i < 16; i++) { // little flowers dotted along the margins
+      const fx = i < 8 ? 10 + i * 14 : GAME_WIDTH - 118 + (i - 8) * 14;
+      ground.fillStyle(BULB_COLORS[i % BULB_COLORS.length], 1).fillRect(fx, GROUND_TOP + 22 + (i % 3) * 9, 4, 4);
+    }
+    keep(ground);
+
+    // string lights along the top edge: a sagging wire and a softly pulsing coloured bulb under each swag
+    const wire = this.add.graphics().setDepth(0.6);
+    wire.lineStyle(2, 0x3b2a4a, 1);
+    const swag = GAME_WIDTH / BULB_COUNT;
+    for (let i = 0; i < BULB_COUNT; i++) {
+      wire.beginPath().moveTo(i * swag, 6);
+      for (let u = 0.1; u <= 1.001; u += 0.1) wire.lineTo(i * swag + u * swag, 6 + 12 * 4 * u * (1 - u));
+      wire.strokePath();
+    }
+    keep(wire);
+    for (let i = 0; i < BULB_COUNT; i++) {
+      const color = BULB_COLORS[i % BULB_COLORS.length];
+      const bx = i * swag + swag / 2;
+      const halo = this.add.ellipse(bx, 24, 22, 22, color, 0.3).setDepth(0.6);
+      const bulb = this.add.ellipse(bx, 23, 7, 10, color).setDepth(0.6);
+      this.tweens.add({ targets: [bulb, halo], scale: { from: 0.8, to: 1.25 }, duration: 650 + (i % 4) * 160, yoyo: true, repeat: -1, delay: i * 90, ease: 'Sine.easeInOut' });
+      keep(halo, bulb);
+    }
+
+    // the cast, standing on the ground in the side margins, facing the card
+    this.buildCast(keep);
+
+    // balloons drifting up (a small pool that is recycled, never grown)
+    for (let i = 0; i < BALLOON_COUNT; i++) {
+      const balloon = this.add.image(-100, GAME_HEIGHT + 80, tex.balloons[i % tex.balloons.length]).setScale(2).setDepth(0.55);
+      this.launchBalloon(balloon, i * 650);
+      keep(balloon);
+    }
+
+    // twinkling sparkles, bigger and slower than the stars
+    SPARKLE_SPOTS.forEach(([x, y], i) => {
+      const sparkle = this.add.image(x, y, tex.sparkle).setTint(i % 2 ? 0xffe27a : 0xffffff).setDepth(0.55).setScale(0.3).setAlpha(0.2);
+      this.tweens.add({ targets: sparkle, scale: { from: 0.3, to: 2 }, alpha: { from: 0.2, to: 1 }, duration: 800 + i * 90, yoyo: true, repeat: -1, repeatDelay: 500 + i * 140, delay: i * 400, ease: 'Sine.easeInOut' });
+      keep(sparkle);
+    });
+
+    // until the cover opens the whole backdrop sits under this dark veil (runInterior() fades it away)
+    this.veil = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x1a1610).setOrigin(0, 0).setDepth(BACKDROP_VEIL_DEPTH);
+  }
+
+  // One cloud sliding right, then wrapping round to the far left for good.
+  driftCloud(cloud, speed) {
+    const target = GAME_WIDTH + 140;
+    this.tweens.add({
+      targets: cloud, x: target, duration: ((target - cloud.x) / speed) * 1000, ease: 'Linear',
+      onComplete: () => { cloud.x = -140; this.driftCloud(cloud, speed); },
+    });
+  }
+
+  // One balloon floating from below the screen to above it with a gentle sway, then re-launched from the bottom in a new colour and place.
+  launchBalloon(balloon, delay) {
+    const x = Phaser.Math.Between(0, 1) ? Phaser.Math.Between(16, 104) : Phaser.Math.Between(856, 944); // the side margins, behind the card's edges
+    balloon.baseX = x;
+    balloon.setTexture(Phaser.Utils.Array.GetRandom(this.balloonKeys)).setPosition(x, GAME_HEIGHT + 80);
+    this.tweens.add({
+      targets: balloon, y: -90, duration: Phaser.Math.Between(8000, 12000), delay, ease: 'Linear',
+      onUpdate: (tween, target) => { target.x = target.baseX + Math.sin(tween.progress * Math.PI * 5) * 9; },
+      onComplete: () => this.launchBalloon(balloon, Phaser.Math.Between(0, 1800)),
+    });
+  }
+
+  // Mustafa and Taru on the left, three friends on the right (one in a slightly raised back row), each bobbing on the spot.
+  buildCast(keep) {
+    const FRONT_Y = 462; // sprite centre; the feet are CHAR_HEIGHT * CAST_SCALE / 2 below
+    const BACK_Y = 448;
+    const cast = [
+      { key: 'npc-mustafa', x: 38, y: FRONT_Y, right: true, hop: 6 },
+      { key: this.taruKey, x: 94, y: FRONT_Y, right: true, hop: 11 },
+      { key: CAST_FRIENDS[0], x: 866, y: FRONT_Y, right: false, hop: 7 },
+      { key: CAST_FRIENDS[2], x: 896, y: BACK_Y, right: false, hop: 8, back: true },
+      { key: CAST_FRIENDS[1], x: 924, y: FRONT_Y, right: false, hop: 6 },
+    ];
+    cast.forEach((member, i) => {
+      if (!member.key || !this.textures.exists(member.key)) return; // a sheet that did not load is skipped, never an error
+      const texture = this.textures.get(member.key);
+      const row = (member.right ? 3 : 2) * CAST_SHEET_COLS; // facing the card: right-facing row on the left, left-facing on the right
+      const frames = [row, row + CAST_SHEET_COLS - 1].filter((f) => texture.has(f));
+      if (!frames.length) return;
+      const depth = member.back ? 0.45 : 0.5;
+      const shadow = this.add.ellipse(member.x, member.y + 27, 42, 12, 0x000000, 0.3).setDepth(depth - 0.05);
+      const sprite = this.add.sprite(member.x, member.y, member.key, frames[0]).setScale(CAST_SCALE).setDepth(depth);
+      if (frames.length === 2) {
+        const animKey = `card-cast-${member.key}-${member.right ? 'r' : 'l'}`;
+        if (this.anims.exists(animKey)) this.anims.remove(animKey); // rebuilt each time: a re-loaded sheet must not leave a stale frame reference
+        this.anims.create({ key: animKey, frames: this.anims.generateFrameNumbers(member.key, { frames }), frameRate: 3, yoyo: true, repeat: -1 });
+        sprite.play(animKey);
+      }
+      this.tweens.add({ targets: sprite, y: member.y - member.hop, duration: 300 + (i % 3) * 70, yoyo: true, repeat: -1, delay: i * 110, ease: 'Sine.easeOut' });
+      keep(shadow, sprite);
+    });
+  }
+
+  // Every few seconds a party popper goes off at one of the bottom corners, alternating sides: a flash and a small spray of confetti
+  // that arcs up and falls back (a handful of rectangles, destroyed as they land). One looping timer, cancelled by killTimers().
+  fireCannon() {
+    if (this.ended) return;
+    const dir = this.cannonLeft ? 1 : -1;
+    this.cannonLeft = !this.cannonLeft;
+    const x0 = dir === 1 ? 14 : GAME_WIDTH - 14;
+    const y0 = GAME_HEIGHT - 70;
+    const flash = this.add.ellipse(x0, y0, 30, 30, 0xfff3c4, 0.9).setDepth(90);
+    this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 260, onComplete: () => flash.destroy() });
+    for (let i = 0; i < CANNON_PIECES; i++) {
+      const peakX = x0 + dir * Phaser.Math.Between(40, 150);
+      const piece = this.add.rectangle(x0, y0, 5, 9, Phaser.Utils.Array.GetRandom(CANNON_COLORS)).setDepth(90);
+      this.tweens.add({
+        targets: piece, x: peakX, y: y0 - Phaser.Math.Between(180, 340), angle: Phaser.Math.Between(180, 540),
+        duration: Phaser.Math.Between(520, 760), ease: 'Quad.easeOut',
+        onComplete: () => this.tweens.add({
+          targets: piece, x: peakX + dir * Phaser.Math.Between(10, 50), y: GAME_HEIGHT + 10, angle: piece.angle + 360,
+          duration: Phaser.Math.Between(1400, 2000), ease: 'Quad.easeIn', onComplete: () => piece.destroy(),
+        }),
+      });
+    }
   }
 
   // The no-photo card's warm backdrop: a few low-alpha peach/gold ellipses behind the cake, like a low sun (the same faked-gradient technique
@@ -425,6 +627,13 @@ class CardScene extends Phaser.Scene {
   runInterior() {
     this.interiorParts.forEach((part) => part.setVisible(true));
     AudioManager.play('cardWhoosh'); // M5 sound: one soft cue as the card actually reveals, not per-piece
+    if (this.veil) { // FB-0101: the party behind the card fades in
+      const veil = this.veil;
+      this.veil = null;
+      this.tweens.add({ targets: veil, alpha: 0, duration: 600, onComplete: () => veil.destroy() });
+    }
+    this.cannonTimer = this.time.addEvent({ delay: CANNON_EVERY_MS, loop: true, startAt: CANNON_EVERY_MS - 600, callback: () => this.fireCannon() });
+    this.addTimer(this.cannonTimer);
     this.spawnConfettiBurst();
     // Narration-style box (no speaker name), the same DialogBox class and typewriter feel every
     // other piece of story text in this game uses (src/scenes/cutscene.js reuses it the same way).
@@ -485,6 +694,7 @@ class CardScene extends Phaser.Scene {
   playEndingVideo() {
     if (this.ended) return;
     try {
+      if (this.cannonTimer) this.cannonTimer.remove(); // the party stops with the card while the closing video plays
       this.interiorParts.forEach((part) => part.setVisible(false));
       const video = this.add.video(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'card-video').setDepth(210);
       this.endingVideo = video;
@@ -545,6 +755,42 @@ class CardScene extends Phaser.Scene {
     this.timers = [];
     this.tweens.killAll();
   }
+}
+
+// FB-0101: the dusk sky's colour at `t` (0 top .. 1 horizon), blended channel by channel between SKY_STOPS.
+function skyColorAt(t) {
+  const clamped = Math.min(1, Math.max(0, t));
+  for (let i = 1; i < SKY_STOPS.length; i++) {
+    const [t1, c1] = SKY_STOPS[i];
+    if (clamped > t1) continue;
+    const [t0, c0] = SKY_STOPS[i - 1];
+    const f = (clamped - t0) / (t1 - t0);
+    const mix = (shift) => Math.round(((c0 >> shift) & 0xff) * (1 - f) + ((c1 >> shift) & 0xff) * f);
+    return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+  }
+  return SKY_STOPS[SKY_STOPS.length - 1][1];
+}
+
+// FB-0101: the backdrop's two tiny textures, drawn once with Graphics.generateTexture() (no PNG files): a plus-shaped sparkle (the stars and
+// sparkles, tinted per use) and one balloon per colour (body, shine, knot, string). Idempotent: a later visit to the scene reuses them.
+function ensureBackdropTextures(scene) {
+  const sparkle = 'card-sparkle';
+  const balloons = BALLOON_COLORS.map((color) => `card-balloon-${color.toString(16)}`);
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+  if (!scene.textures.exists(sparkle)) {
+    g.clear().fillStyle(0xffffff, 1).fillRect(3, 0, 1, 7).fillRect(0, 3, 7, 1).fillRect(2, 2, 3, 3);
+    g.generateTexture(sparkle, 7, 7);
+  }
+  balloons.forEach((key, i) => {
+    if (scene.textures.exists(key)) return;
+    g.clear().fillStyle(BALLOON_COLORS[i], 1).fillEllipse(8, 10, 14, 18);
+    g.fillStyle(0xffffff, 0.55).fillRect(4, 5, 2, 4);
+    g.fillStyle(BALLOON_COLORS[i], 1).fillTriangle(8, 18, 5, 22, 11, 22);
+    g.lineStyle(1, 0xffffff, 0.7).lineBetween(8, 22, 7, 28).lineBetween(7, 28, 9, 34).lineBetween(9, 34, 8, 40);
+    g.generateTexture(key, 16, 40);
+  });
+  g.destroy();
+  return { sparkle, balloons };
 }
 
 // Converts a point in a (possibly scaled, possibly re-origined) image's own local pixel space into

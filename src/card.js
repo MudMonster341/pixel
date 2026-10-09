@@ -43,14 +43,15 @@ const DEFAULT_RECIPIENT = 'Taru';
 // Kept short on purpose -- src/scenes/card.js's own message box sits inside the card itself, sized
 // for about two lines per page (coordinator review, 2026-09-22), not the game's ordinary full-width
 // dialog box.
+// FB-0101: the owner's own message, tidied only a little: one short page each, ending on a plain sign-off.
 const DEFAULT_CARD_MESSAGES = [
-  'Happy Birthday, {name}!',
-  'You found all three keys.',
-  'I hope today feels as warm as a sunset.',
-  'I hope someone makes you laugh until your cheeks hurt.',
-  'Eat the cake. Take the long way home. Do what you like.',
-  'Twenty-two looks good on you.',
-  'I made this for you. I hope it made you smile.',
+  'Hi pookie!',
+  'I hope you liked my little mini game about our life.',
+  "We've been together for 3 years, and this is our 4th birthday together.",
+  'I hope you have a blessed and lovely day ahead.',
+  'You are the cutest and sweetest person ever.',
+  'May you always laugh, and may all your dreams come true.',
+  'Happy birthday, pookie!',
 ];
 
 const CARD_CONFIG_URL = 'assets/card/card.json';

@@ -11,14 +11,14 @@ test('buildCardConfig(null): no card.json at all falls back to placeholder messa
   const config = buildCardConfig(null);
   assert.equal(config.recipient, 'Taru');
   assert.equal(config.messages.length, DEFAULT_CARD_MESSAGES.length);
-  assert.equal(config.messages[0], 'Happy Birthday, Taru!'); // {name} templated
+  assert.equal(config.messages[0], 'Hi pookie!'); // FB-0101: the owner's own message
   assert.deepEqual(plain(config.photos), []);
 });
 
 test('decisions/0019: the card recipient is never the typed player name (a stray 2nd argument is ignored)', () => {
   const { buildCardConfig } = loadGameData();
   assert.equal(buildCardConfig(null, 'Zara').recipient, 'Taru');
-  assert.equal(buildCardConfig({}, 'Zara').messages[0], 'Happy Birthday, Taru!');
+  assert.equal(buildCardConfig({}, 'Zara').messages[0], 'Hi pookie!');
   assert.equal(buildCardConfig({ recipient: '   ' }).recipient, 'Taru'); // a blank recipient falls back too
 });
 
@@ -130,7 +130,7 @@ test('no-photo card: the card scene draws no placeholder or temporary art, and s
   assert.match(code, /this\.slides = \[\];/);
   assert.match(code, /this\.frameParts = \[\];/);
   // interiorParts stays complete (the closing-video hide logic walks it) even when glow/frame parts are absent
-  assert.match(code, /this\.interiorParts = \[this\.panel, this\.titleGlow, this\.cakeGlow, this\.title, this\.cakeParts, this\.frameParts, this\.heartParts, this\.messagePanel\]\.flat\(\)\.filter\(Boolean\)/);
+  assert.match(code, /this\.interiorParts = \[this\.backdropParts, this.panel, this.titleGlow, this\.cakeGlow, this\.title, this\.cakeParts, this\.frameParts, this\.heartParts, this\.messagePanel\]\.flat\(\)\.filter\(Boolean\)/);
 });
 
 test('no-photo card: the scene still loads the cover, frame (real-photo mode), cake and heart art', () => {
@@ -141,23 +141,23 @@ test('no-photo card: the scene still loads the cover, frame (real-photo mode), c
   for (const key of ['card-cover', 'card-frame', 'card-cake', 'card-heart']) assert.ok(scene.includes(`'${key}'`), `${key} is still loaded`);
 });
 
-test('no-photo card: the default card messages are the new plain lines, short enough for the card box, no em dashes or stock phrases', () => {
+test('no-photo card: the default card messages are the owner message (FB-0101), short enough for the card box, no em dashes or stock phrases', () => {
   const { DEFAULT_CARD_MESSAGES, buildCardConfig } = loadGameData();
   assert.deepEqual(plain(DEFAULT_CARD_MESSAGES), [
-    'Happy Birthday, {name}!',
-    'You found all three keys.',
-    'I hope today feels as warm as a sunset.',
-    'I hope someone makes you laugh until your cheeks hurt.',
-    'Eat the cake. Take the long way home. Do what you like.',
-    'Twenty-two looks good on you.',
-    'I made this for you. I hope it made you smile.',
+    'Hi pookie!',
+    'I hope you liked my little mini game about our life.',
+    "We've been together for 3 years, and this is our 4th birthday together.",
+    'I hope you have a blessed and lovely day ahead.',
+    'You are the cutest and sweetest person ever.',
+    'May you always laugh, and may all your dreams come true.',
+    'Happy birthday, pookie!',
   ]);
   for (const line of DEFAULT_CARD_MESSAGES) {
-    assert.ok(line.length <= 60, `too long for about two lines in the card's box: ${line}`);
+    assert.ok(line.length <= 75, `too long for about two lines in the card's box: ${line}`);
     assert.doesNotMatch(line, /—|--|journey|adventure|tapestry/i);
   }
   const config = buildCardConfig(null);
-  assert.equal(config.messages[0], 'Happy Birthday, Taru!');
+  assert.equal(config.messages[0], 'Hi pookie!');
   assert.ok(config.messages.every((line) => !line.includes('{name}')));
 });
 

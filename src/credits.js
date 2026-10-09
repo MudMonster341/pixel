@@ -19,14 +19,15 @@ const DEFAULT_CREDITS = {
   recipient: DEFAULT_RECIPIENT,
   age: 22,
   wishes: [
-    'I hope this year is kind to you.',
-    'I hope you laugh a lot, and at the right moments.',
-    'I hope you get every little thing you were hoping for.',
-    'May your people always find you.',
-    'Sleep in. Eat well. Do what makes you happy.',
-    'You deserve the good days, so I hope there are many.',
-    'Twenty-two. Go and enjoy it.',
-    'Happy birthday, {name}. Today is yours.',
+    // FB-0101: these echo the card's message (the game about our life, 3 years, the 4th birthday, cutest and sweetest, laughing, dreams, a lovely day).
+    'Thank you for playing my little game about us.',
+    'Three years together, and I still smile when I see you.',
+    'Our fourth birthday together. I am so lucky.',
+    'Still the cutest, still the sweetest.',
+    'I hope you laugh every single day.',
+    'I hope every one of your dreams comes true.',
+    'I hope your whole day is blessed and lovely.',
+    'Happy birthday, {name}. I love you.',
   ],
   madeBy: 'Mustafa',
 };

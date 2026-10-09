@@ -1,0 +1,95 @@
+{
+  "id": "FB-0085",
+  "title": "name this senior Vedant",
+  "type": "bug",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "fixed",
+  "createdAt": "2026-10-09T20:24:58.399Z",
+  "updatedAt": "2026-10-09T20:59:09.262Z",
+  "details": "Add some philosphical stuff here, like some wise ol dman theory",
+  "context": {
+    "map": "campus",
+    "mapName": "BITS Dubai Campus",
+    "tile": {
+      "x": 233,
+      "y": 160
+    },
+    "pixel": {
+      "x": 3730,
+      "y": 2571
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": true,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:24:32.704Z"
+  },
+  "marker": {
+    "screen": {
+      "x": 442,
+      "y": 266
+    },
+    "world": {
+      "x": 3717,
+      "y": 2569
+    },
+    "tile": {
+      "x": 232,
+      "y": 160
+    }
+  },
+  "screenshot": "screenshots/FB-0085.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Named Vedant, 3 wise-old-man lines",
+      "at": "2026-10-09T20:59:09.262Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0083-0098-npc-dialogue.test.js › FB-0085:",
+    "commit": null,
+    "at": "2026-10-09T20:59:09.262Z"
+  },
+  "history": [
+    {
+      "at": "2026-10-09T20:24:58.399Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-09T20:59:09.218Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T20:59:09.262Z",
+      "by": "agent",
+      "status": "fixed"
+    }
+  ]
+}

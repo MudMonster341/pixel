@@ -1,0 +1,66 @@
+{
+  "id": "FB-0101",
+  "title": "Okay the  final message shoudl be",
+  "type": "bug",
+  "area": "General",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-09T20:48:13.547Z",
+  "updatedAt": "2026-10-09T20:48:13.547Z",
+  "details": "Hi pookie, Hope you liked my mini game about our life. We have been toegther for 3 years and its your 4th birthday tigetehr, hope you have abelssed and lovely day ahaed. Youa re the cutest and sweetest ever. Hope you alwaeys lagh and akll your dremas come strue\n\nYou can imporve this a bit but add in elements from this and then yea and make the background more color full, add in charcters and soemtihg happenign in the bg liek a but mroe better",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 15,
+      "y": 16
+    },
+    "pixel": {
+      "x": 242,
+      "y": 266
+    },
+    "facing": "left",
+    "inventory": [
+      {
+        "item": "lugBox",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true,
+      "iclDoorOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:45:40.049Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0101.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-09T20:48:13.547Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

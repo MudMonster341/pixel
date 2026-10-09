@@ -1,0 +1,82 @@
+{
+  "id": "FB-0094",
+  "title": "Name this guy krishna maloo",
+  "type": "bug",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "fixed",
+  "createdAt": "2026-10-09T20:34:45.122Z",
+  "updatedAt": "2026-10-09T20:59:10.179Z",
+  "details": "his dialogue shoudl be : did you watch the weekends new show, its gaoteddd",
+  "context": {
+    "map": "main-block-3",
+    "mapName": "Main Block · 3rd Floor",
+    "tile": {
+      "x": 10,
+      "y": 20
+    },
+    "pixel": {
+      "x": 162,
+      "y": 328
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": true,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:33:49.774Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0094.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Named Krishna Maloo, weekend show line",
+      "at": "2026-10-09T20:59:10.179Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0083-0098-npc-dialogue.test.js › FB-0094:",
+    "commit": null,
+    "at": "2026-10-09T20:59:10.179Z"
+  },
+  "history": [
+    {
+      "at": "2026-10-09T20:34:45.122Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-09T20:59:10.118Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T20:59:10.179Z",
+      "by": "agent",
+      "status": "fixed"
+    }
+  ]
+}

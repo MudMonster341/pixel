@@ -109,7 +109,8 @@ test('the 3 key-room scripts each target a real key station id and end control b
 test('SCRIPTS.gate2/entrance reuse the exact lines the old CUTSCENES data still has, where claimed', () => {
   const { SCRIPTS, CUTSCENES } = loadGameData();
   const gate2Say = SCRIPTS.gate2.find((s) => s.say)?.say;
-  assert.equal(gate2Say.lines[0], CUTSCENES.gate2.lines[0]);
+  // FB-0083: Mustafa's first in-world line is now the owner's own wording, no longer the old cutscene's.
+  assert.equal(gate2Say.lines[0], 'Welcome to our world, where it all started!');
   const entranceSay = SCRIPTS.entrance.find((s) => s.say)?.say;
   assert.equal(entranceSay.lines[0], CUTSCENES.entrance.lines[0]);
 });

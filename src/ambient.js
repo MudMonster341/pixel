@@ -65,10 +65,9 @@ const AMBIENT = {
     { id: 'campus-amb-walk-3', character: 'ambient-c', role: 'cs-student', kind: 'patrol', speed: 55, pauseMs: 900,
       waypoints: [{ x: 232, y: 160 }, { x: 248, y: 165 }],
       name: "Sid", sheet: 'npc-friend-sid',
+      // FB-0084: the owner's own line.
       lines: [
-        "Hey {name}! I'm Sid. Quick question: how many browser tabs is too many? I'm at forty and climbing.",
-        "My laptop fan is louder than my lecture right now. It's a duet.",
-        "If you hear screaming from the lab, don't worry. It's just me and a merge conflict.",
+        "Muahaha, let me help you act as the victim. Be careful so you don't hurt your neck!",
       ] },
     // A closed lap around the Athletics Track (`loop: true`), faster than a walk -- "jogging".
     { id: 'campus-amb-jog', character: 'ambient-c', role: 'sports-player', kind: 'patrol', speed: 110, pauseMs: 0, loop: true,
@@ -79,7 +78,10 @@ const AMBIENT = {
     // a player walking north into it collided with this NPC's body a few tiles out and never reached
     // the door at all (tests/e2e/campus.spec.js "walk from the Gate 2 spawn up to the Main Block
     // entrance"). Shifted clear of that column, still along the same forecourt.
-    { id: 'campus-amb-sit-1', character: 'ambient-d', role: 'library-regular', kind: 'idle', x: 229, y: 135, facing: 'down' },
+    // FB-0086: Akshay, the owner's own line.
+    { id: 'campus-amb-sit-1', character: 'ambient-d', role: 'library-regular', kind: 'idle', x: 229, y: 135, facing: 'down',
+      name: 'Akshay',
+      lines: ["I'm trying to sneak into campus, don't tell anyone."] },
     // FB-0050: the first NAMED ambient character (the owner asked for "Deanne" instead of "Hostel resident").
     // Placeholder lines, light and friendly, no personal facts: the owner edits them (campus-lines-review.md).
     { id: 'campus-amb-sit-2', character: 'ambient-e', role: 'hostel-resident', kind: 'idle', x: 243, y: 162, facing: 'left',
@@ -87,16 +89,25 @@ const AMBIENT = {
       lines: ["Hi, I'm Deanne! I live in the hostel.", 'Hostel dinner is the best part of my day, honestly. That and my chai.', 'I know every quiet corner on this campus. Ask me anything.'] },
     { id: 'campus-amb-sit-3', character: 'ambient-a', role: 'ai-student', kind: 'idle', x: 221, y: 137, facing: 'right',
       name: "Akshit", sheet: 'npc-friend-akshit',
+      // FB-0087: the owner's own line.
       lines: [
-        "Akshit here. My rules: nothing before coffee, nothing after midnight, nothing without a backup.",
-        "Is it a bug or a feature? Depends on whether the demo is today.",
-        "I'd tell you a UDP joke, but you might not get it.",
+        "Yooooo, what's good bro! You seen Mustafa around?",
       ] },
     // A pair chatting, facing each other.
-    { id: 'campus-amb-chat-1', character: 'ambient-f', role: 'quiz-club-member', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat' },
-    { id: 'campus-amb-chat-2', character: 'ambient-b', role: 'cultural-club-member', kind: 'chat', x: 223, y: 141, facing: 'left', pairId: 'campus-chat' },
+    // FB-0088: names only (the owner didn't say which is which: Nishit left, Shryk right); they keep their role's facts.
+    { id: 'campus-amb-chat-1', character: 'ambient-f', role: 'quiz-club-member', kind: 'chat', x: 222, y: 141, facing: 'right', pairId: 'campus-chat',
+      name: 'Nishit' },
+    { id: 'campus-amb-chat-2', character: 'ambient-b', role: 'cultural-club-member', kind: 'chat', x: 223, y: 141, facing: 'left', pairId: 'campus-chat',
+      name: 'Shryk' },
     // By the bus stop, just outside Gate 2.
-    { id: 'campus-amb-busstop', character: 'ambient-c', role: 'senior', kind: 'idle', x: 232, y: 160, facing: 'up' },
+    // FB-0085: Vedant, the wise old man of the bus stop (the owner asked for "some philosophical stuff"; the lines are Claude's, in that spirit).
+    { id: 'campus-amb-busstop', character: 'ambient-c', role: 'senior', kind: 'idle', x: 232, y: 160, facing: 'up',
+      name: 'Vedant',
+      lines: [
+        "I'm Vedant. I've waited at this bus stop so long that I've started to understand time.",
+        'The bus always comes when you stop looking for it. Same with deadlines. Look away, they sneak up.',
+        'Wise words: a full battery is a blessing, a full inbox is a lesson. Now go, young one.',
+      ] },
     // Gate parking, east side.
     { id: 'campus-amb-gatepark', character: 'student-a', role: 'first-year', kind: 'patrol', speed: 50, pauseMs: 1200,
       waypoints: [{ x: 252, y: 145 }, { x: 264, y: 145 }] },
@@ -202,18 +213,32 @@ const AMBIENT = {
         "I carry myself like royalty because my timetable demands it. Mostly the Monday ones.",
         "I have a ride coming. Quite soon, actually.",
       ] },
-    { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 14, y: 31, facing: 'right' },
+    // FB-0089: Utkarsh, the startup freak who throws parties (the owner's idea; the wording is Claude's).
+    { id: 'mbg-amb-sit-2', character: 'ambient-b', role: 'campus-regular', kind: 'idle', x: 14, y: 31, facing: 'right',
+      name: 'Utkarsh',
+      lines: [
+        "Yo {name}! I'm Utkarsh. Startups, pitch decks, parties: that's my whole personality.",
+        "I'm throwing a party this weekend and you're on the guest list. Come through, bring good vibes!",
+      ] },
     // A pair chatting in the front of the hall, between the reception desks.
-    { id: 'mbg-amb-chat-1', character: 'ambient-d', role: 'quiz-club-member', kind: 'chat', x: 22, y: 33, facing: 'right', pairId: 'mbg-chat' },
-    { id: 'mbg-amb-chat-2', character: 'ambient-e', role: 'cultural-club-member', kind: 'chat', x: 23, y: 33, facing: 'left', pairId: 'mbg-chat' },
+    // FB-0090: Venn (they/them, SLAYYY) and Cijo (stuck on operating systems).
+    { id: 'mbg-amb-chat-1', character: 'ambient-d', role: 'quiz-club-member', kind: 'chat', x: 22, y: 33, facing: 'right', pairId: 'mbg-chat',
+      name: 'Venn',
+      lines: [
+        "I'm Venn, and it's they, not her, thank you! SLAYYY!",
+        'Say it with me: they, them, iconic. Okay, bye!',
+      ] },
+    { id: 'mbg-amb-chat-2', character: 'ambient-e', role: 'cultural-club-member', kind: 'chat', x: 23, y: 33, facing: 'left', pairId: 'mbg-chat',
+      name: 'Cijo',
+      lines: ["I'm Cijo. I'm trying to understand OS (operating systems) and I just can't. Please send help."] },
     // Walking across the hall past the sofas, and back and forth in front of the reception desks.
     { id: 'mbg-amb-walk-1', character: 'ambient-c', role: 'cs-student', kind: 'patrol', speed: 50, pauseMs: 700,
       waypoints: [{ x: 22, y: 24 }, { x: 27, y: 24 }],
       name: "Shamsuddin", sheet: 'npc-friend-shamsuddin',
+      // FB-0091: the owner's idea (he is the vice president; face-scan attendance is coming); the wording is Claude's.
       lines: [
-        "Shamsuddin! I name my files final, final2 and really_final. It's called version control.",
-        "My code review was one question mark. I'm still thinking about it.",
-        "Wi-Fi is the one thing I can't compile, debug or fix. Good luck!",
+        "Shamsuddin, vice president. Breaking news: face-scan attendance is coming!",
+        'Evacuate, I mean bunk, now, before it gets implemented. You did not hear it from me.',
       ] },
     // FB-0079: the ACM member the owner talked to in the foyer (tile 18,34, he patrols row 33) is Aakar: sky-blue hoodie, a Dr. Evil style sci-fi villain about tech.
     // No `factIds`: after his lines he shares the ACM facts (CF41-CF43) like any ACM member.
@@ -240,7 +265,10 @@ const AMBIENT = {
     // never in front of them (tests/unit/story-clearance.test.js geometry, plus the sealed-door cases in tests/unit/fb-0071-icl.test.js). History: the old closet's
     // first full browser run (2026-10-03) had a student sealing its one-tile door; the rule since is geometric: idle/chat students keep at least two interact
     // ranges (3 tiles) from every key station and story NPC, and never stand in a one-tile corridor or a room's only doorway.
-    { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 15, y: 16, facing: 'left' },
+    // FB-0097: Niel, the owner's own line.
+    { id: 'mb1-amb-icl-1', character: 'ambient-d', role: 'mtc-member', kind: 'idle', x: 15, y: 16, facing: 'left',
+      name: 'Niel',
+      lines: ["Yo {name}, are you coming to volunteer this weekend? I'll come pick you up in my Dodge."] },
     // FB-0051 (P2b): Mustafa, in his black and orange LUG hoodie, stands near each of the three mini-game key stations with his own
     // FIXED line (`factIds: []`: he says only these, every time). Here: the ICL (6 tiles from its key station, in the corridor outside the lab).
     { id: 'mb1-amb-icl-2', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 6, y: 17, facing: 'up', factIds: [],
@@ -257,8 +285,12 @@ const AMBIENT = {
         "Look up before you go up. Things come down faster than deadlines do.",
       ] },
     // 2 in the corridor.
+    // FB-0098: Krishna Nagpal (the owner's "CS student" on the first floor; both corridor walkers are the ai-student role labelled "CS student",
+    // one is Prof. Elakkiya, so this is the unnamed one). The owner's own line.
     { id: 'mb1-amb-corridor-1', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
-      waypoints: [{ x: 13, y: 17 }, { x: 25, y: 17 }] },
+      waypoints: [{ x: 13, y: 17 }, { x: 25, y: 17 }],
+      name: 'Krishna Nagpal',
+      lines: ["I'm trying to build a rocket and go to the moon."] },
     { id: 'mb1-amb-corridor-2', character: 'ambient-a', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 8, y: 20 }, { x: 20, y: 20 }], factIds: ['CF23'],
       name: "Prof. Elakkiya", sheet: 'npc-prof-elakkiya',
@@ -298,15 +330,17 @@ const AMBIENT = {
     // Waiting in the wide hall below, well clear of the Physics Lab key station and of the one-tile
     // corridor (x 4, rows 10-12) she climbs to reach it. Was (4,9), 2.2 tiles from the desk and standing in
     // that corridor (tests/unit/story-clearance.test.js, 2026-10-03).
-    { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 9, y: 20, facing: 'up' },
+    // FB-0094: Krishna Maloo, the owner's own line.
+    { id: 'mb3-amb-bench', character: 'ambient-a', role: 'cs-student', kind: 'idle', x: 9, y: 20, facing: 'up',
+      name: 'Krishna Maloo',
+      lines: ["Did you watch the weekend's new show? It's goated."] },
     // The corridor below the lab and the stairwell landing.
     { id: 'mb3-amb-corridor-1', character: 'ambient-a', role: 'ai-student', kind: 'patrol', speed: 50, pauseMs: 800,
       waypoints: [{ x: 14, y: 19 }, { x: 27, y: 19 }],
       name: "Karthik", sheet: 'npc-friend-karthik',
+      // FB-0093: the owner's own line, said in a scared way.
       lines: [
-        "I'm Karthik. I fixed one bug today and made three new ones. Net growth!",
-        "If Stack Overflow goes down, so do I. It's like a holiday, but scary.",
-        "Read the error message. Then read it again. Then blame the compiler.",
+        "I'm trying to get a job right now, man... I'm scared. Help me out if you know anyone!",
       ] },
     // FB-0051 (P2b): Mustafa at the Physics Lab: 4.2 tiles from the lab bench (the key station), in the room's own top row.
     { id: 'mb3-amb-mustafa-lab', character: 'ambient-a', role: 'lug-member', kind: 'idle', x: 9, y: 4, facing: 'down', factIds: [],
@@ -321,13 +355,24 @@ const AMBIENT = {
     // and the little three-wide nook on the right), and nobody seals anything (the top strip is also reachable by the x 4 aisle).
     // One at the bench by the pillar at the top (11,5: not (12,4), the one-tile gap beside the pillar, where she would seal the strip), a pair
     // chatting in the right-hand nook, one walking the top strip.
-    { id: 'mb3-amb-lab-bench', character: 'ambient-d', role: 'cs-student', kind: 'idle', x: 11, y: 5, facing: 'right' },
-    { id: 'mb3-amb-lab-chat-1', character: 'ambient-b', role: 'quiz-club-member', kind: 'chat', x: 17, y: 13, facing: 'right', pairId: 'mb3-lab-chat' },
-    { id: 'mb3-amb-lab-chat-2', character: 'ambient-f', role: 'cultural-club-member', kind: 'chat', x: 18, y: 13, facing: 'left', pairId: 'mb3-lab-chat' },
+    // FB-0096: Roop Kumar, the lab assistant (the name tag is just his name; the line says what he is).
+    { id: 'mb3-amb-lab-bench', character: 'ambient-d', role: 'cs-student', kind: 'idle', x: 11, y: 5, facing: 'right',
+      name: 'Roop Kumar',
+      lines: ['Hohoho, Mustafa and {name}! Lab assistant Roop here. How is the experiment coming along? I hope it is going well.'] },
+    // FB-0095: Stephen (left) and Aimy (right) argue about ACM-W.
+    { id: 'mb3-amb-lab-chat-1', character: 'ambient-b', role: 'quiz-club-member', kind: 'chat', x: 17, y: 13, facing: 'right', pairId: 'mb3-lab-chat',
+      name: 'Stephen',
+      lines: ["No! I hate ACM-W, it's not better for anyone. Don't listen to Aimy!"] },
+    { id: 'mb3-amb-lab-chat-2', character: 'ambient-f', role: 'cultural-club-member', kind: 'chat', x: 18, y: 13, facing: 'left', pairId: 'mb3-lab-chat',
+      name: 'Aimy',
+      lines: ["Hey {name}, settle this: is ACM-W better for me? Stephen won't stop arguing."] },
     { id: 'mb3-amb-lab-walk', character: 'student-b', role: 'ai-student', kind: 'patrol', speed: 45, pauseMs: 900,
       waypoints: [{ x: 14, y: 5 }, { x: 19, y: 5 }] },
     // P4b: moved from (33,14), which is the lift's front tile (the lift doors are on x 33..34 of the stairwell's top wall), to the open floor below.
-    { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 34, y: 19, facing: 'down' },
+    // FB-0092: Laya, the owner's own line.
+    { id: 'mb3-amb-landing-1', character: 'ambient-d', role: 'senior', kind: 'idle', x: 34, y: 19, facing: 'down',
+      name: 'Laya',
+      lines: ['Hi {name}, let me know if you need a ride back home. I can drop you off!'] },
   ],
 };
 

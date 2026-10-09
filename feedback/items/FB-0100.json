@@ -1,0 +1,65 @@
+{
+  "id": "FB-0100",
+  "title": "parkign game had me click yes three time sto start, please chekc this",
+  "type": "bug",
+  "area": "General",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-09T20:42:38.261Z",
+  "updatedAt": "2026-10-09T20:42:38.261Z",
+  "details": "",
+  "context": {
+    "map": "main-block-1",
+    "mapName": "Main Block · 1st Floor",
+    "tile": {
+      "x": 11,
+      "y": 14
+    },
+    "pixel": {
+      "x": 182,
+      "y": 238
+    },
+    "facing": "right",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:42:22.497Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0100.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-09T20:42:38.261Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

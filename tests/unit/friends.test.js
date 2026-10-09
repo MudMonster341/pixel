@@ -37,7 +37,8 @@ test('FB-0051: every friend and professor exists exactly once, with the right na
     const found = named(name);
     assert.equal(found.length, 1, `${name} should be on the map exactly once (found ${found.length})`);
     const { entry } = found[0];
-    assert.ok(entry.lines.length >= 2 && entry.lines.length <= 4, `${name}: 2-4 fixed lines`);
+    // FB-0084/0087/0093: the owner replaced some friends' lines by one line of his own wording, so 1-4.
+    assert.ok(entry.lines.length >= 1 && entry.lines.length <= 4, `${name}: 1-4 fixed lines`);
     assert.match(entry.sheet, /^npc-(friend|prof)-[a-z]+$/, `${name}: its own sheet`);
     assert.ok(!sheets.has(entry.sheet), `${name}: the sheet ${entry.sheet} is shared with another person`);
     sheets.add(entry.sheet);
@@ -191,7 +192,9 @@ test('FB-0051: nobody says anything about a birthday (it is the surprise at the 
   const everything = JSON.stringify([AMBIENT, CAMPUS_ROLES, CAMPUS_FACTS]).toLowerCase();
   assert.doesNotMatch(everything, /birthday|bday|b-day|turning \d|happy 2\d/);
   const review = fs.readFileSync(path.join(ROOT, 'docs', 'research', 'campus-lines-review.md'), 'utf8');
-  assert.doesNotMatch(review.toLowerCase().replace(/no line mentions a birthday[^.]*\./, ''), /birthday/);
+  // FB-0083: the owner asked for Mustafa's opening (the greeting scene, not an NPC line) to be excited about the birthday; its doc row is the only other mention.
+  const reviewNoOpening = review.split(/\r?\n/).filter((l) => !/FB-0083/.test(l)).join('\n');
+  assert.doesNotMatch(reviewNoOpening.toLowerCase().replace(/no line mentions a birthday[^.]*\./, ''), /birthday/);
 });
 
 test('FB-0051: every person is on a real map of the Main Block or the campus, the crowd stays sensible (at most 6 new entries)', () => {

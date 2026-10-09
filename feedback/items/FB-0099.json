@@ -1,0 +1,65 @@
+{
+  "id": "FB-0099",
+  "title": "Soa fter the ICl, we haev teh empoty scene where we need people to come in, angel maam comes in who is the professor",
+  "type": "idea",
+  "area": "General",
+  "priority": "normal",
+  "status": "new",
+  "createdAt": "2026-10-09T20:41:40.783Z",
+  "updatedAt": "2026-10-09T20:41:40.783Z",
+  "details": "she comes into ocl afer you beat the game and is like oh,a taru are you training models, good good but rememebr to never forgethat these models will nto stop you rom beign a cool person, then shes like im gettign a call and grows wings and grows wings and then fleis away. professor name is angel",
+  "context": {
+    "map": "main-block-1",
+    "mapName": "Main Block · 1st Floor",
+    "tile": {
+      "x": 13,
+      "y": 17
+    },
+    "pixel": {
+      "x": 222,
+      "y": 285
+    },
+    "facing": "left",
+    "inventory": [
+      {
+        "item": "keyPhysicsLab",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": false,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:39:49.547Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0099.jpg",
+  "thread": [],
+  "resolution": null,
+  "history": [
+    {
+      "at": "2026-10-09T20:41:40.783Z",
+      "by": "owner",
+      "status": "new"
+    }
+  ]
+}

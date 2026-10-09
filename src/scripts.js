@@ -41,9 +41,8 @@ const MUSTAFA_MEETS_HER_CORE = [
   { face: { actor: 'mustafa', dir: 'down' } }, // he's now north of her -- face her
   { face: { actor: 'player', dir: 'up' } }, // she faces him back
   { emote: { actor: 'mustafa', kind: '!' } },
-  // Line 1 reused verbatim from the old gate2 cutscene (src/cutscenes.js); line 2 is NEW (short,
-  // functional -- "get moving" -- per this task's own brief for onboarding lines).
-  { say: { speaker: 'Mustafa', lines: ['Welcome to BITS Pilani, Dubai Campus!', "Right this way — let's get you started."] } },
+  // FB-0083: line 1 is the owner's own wording now; line 2 is short and functional ("get moving").
+  { say: { speaker: 'Mustafa', lines: ['Welcome to our world, where it all started!', "Right this way — let's get you started."] } },
   { parallel: [
     { move: { actor: 'mustafa', path: [{ actor: 'mustafa', offset: [-1, -5] }], speed: 3.5 } },
     { move: { actor: 'player', path: [{ actor: 'player', offset: [1, -5] }], speed: 3.5 } },

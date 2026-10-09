@@ -12,10 +12,11 @@
 // same character she'll actually meet a few screens later, not a mismatched separate portrait asset.
 
 const GREETING_LINES = [
-  'Hello there!',
-  "I'm Mustafa, one of the LUG organisers here at BITS Pilani, Dubai.",
-  "You're a new student, and today's the day: the LUG treasure hunt kicks off right here on campus.",
-  "Let's get you sorted before we head in -- shouldn't take a minute.",
+  // FB-0083: the owner's own opening, excited and cute (overrides the old "no birthday mention" rule for Mustafa's opening).
+  'Yo pookie, how are you?! Welcome to my lil concoction!',
+  'First of all, very very very very happy birthdayyyyy!!!!',
+  'Hope you are alone and can play this game for a while. No interruptions, just vibes.',
+  "Okay okay, let's get your name sorted before we head in. Shouldn't take a minute!",
 ];
 const MUSTAFA_SCALE = 4;
 

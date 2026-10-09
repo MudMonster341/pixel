@@ -1,0 +1,82 @@
+{
+  "id": "FB-0089",
+  "title": "name this guy utkarsh",
+  "type": "bug",
+  "area": "Dialog & NPCs",
+  "priority": "normal",
+  "status": "fixed",
+  "createdAt": "2026-10-09T20:29:28.919Z",
+  "updatedAt": "2026-10-09T20:59:09.670Z",
+  "details": "Heis a startup freak who oganizes parties so he is calling you for a party",
+  "context": {
+    "map": "main-block-g",
+    "mapName": "Main Block · Ground Floor",
+    "tile": {
+      "x": 15,
+      "y": 31
+    },
+    "pixel": {
+      "x": 245,
+      "y": 504
+    },
+    "facing": "left",
+    "inventory": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "selectedSlot": 0,
+    "flags": {
+      "tomasGaveSword": false,
+      "tomasChats": 0,
+      "gateBarrierOpen": true
+    },
+    "collected": [],
+    "tutorial": {
+      "stage": "done",
+      "completed": []
+    },
+    "dialogOpen": true,
+    "build": "8d54db0",
+    "url": "http://localhost:8080/",
+    "window": {
+      "width": 1920,
+      "height": 917
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "capturedAt": "2026-10-09T20:28:50.050Z"
+  },
+  "marker": null,
+  "screenshot": "screenshots/FB-0089.jpg",
+  "thread": [
+    {
+      "author": "agent",
+      "text": "Named Utkarsh, party invite",
+      "at": "2026-10-09T20:59:09.670Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/unit/fb-0083-0098-npc-dialogue.test.js › FB-0089:",
+    "commit": null,
+    "at": "2026-10-09T20:59:09.670Z"
+  },
+  "history": [
+    {
+      "at": "2026-10-09T20:29:28.919Z",
+      "by": "owner",
+      "status": "new"
+    },
+    {
+      "at": "2026-10-09T20:59:09.619Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T20:59:09.670Z",
+      "by": "agent",
+      "status": "fixed"
+    }
+  ]
+}

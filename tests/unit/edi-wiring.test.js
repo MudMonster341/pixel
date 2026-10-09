@@ -29,7 +29,7 @@ function iclStrings() {
   walk(STORY.alice.map((e) => [e.lines, (e.actions || []).map((a) => a.journal || a.toast || '')]));
   walk(STORY.keyStations.icl);
   walk(AMBIENT['main-block-1'].map((e) => e.lines || []));
-  walk([MINIGAMES.edi.name, MINIGAMES.edi.instructions, MINIGAMES.edi.cards, MINIGAMES.edi.story.pages]);
+  walk([MINIGAMES.edi.name, MINIGAMES.edi.instructions, MINIGAMES.edi.cards]);
   return out.filter((t) => t);
 }
 

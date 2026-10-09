@@ -127,15 +127,8 @@ const MINIGAMES = {
       skipLabel: 'SKIP -- OPEN THE DOOR ANYWAY',
       skipHint: "You've tried 3 times -- open the door anyway if you'd rather move on.",
     },
-    // FB-0082 mechanism: a short backstory over the intro cover before the intro card (once per opening, never after a retry).
-    story: {
-      cover: { key: 'edi-cover' },
-      pages: [
-        "The ICL's sealed door wants proof of EDI-level parking skills.",
-        'Your instructor has strapped himself in. He looks nervous.',
-        'Park three times without crushing a pillar. Ready?',
-      ],
-    },
+    // FB-0100: no `story` (FB-0082 gave it 3 backstory pages, but the owner had to click through them: the game opens straight on its intro card,
+    // whose cover picture still comes from `cover` above).
   },
 };
 

@@ -925,7 +925,7 @@ async function shootMinigames(browser) {
 // ---------- EDI Madness (ADR 0025, phase E3): the garage-parking game, the same chain as the hero/tower games above ----------
 // Launched through WorldScene.launchMinigame() like those, and made deterministic with the scene's own debug hooks (src/minigames/edi.js): debugSetStage(n, ...)
 // jumps to stage n+1 with the car at its start, near its bay (`pose: true`) or in it (`inBay: true`), and `debugFreeze` stops the clock so a half-full parking ring or the
-// stage banner stays up for the shot. Shots: edi-00-story, edi-01-intro, edi-02-play-1 (stage 1 at its start, the instructor's first line), edi-03-play-2 (stage 2,
+// stage banner stays up for the shot. Shots: edi-01-intro (no backstory shot since FB-0100), edi-02-play-1 (stage 1 at its start, the instructor's first line), edi-03-play-2 (stage 2,
 // in the bay, the green glow and the half-full ring), edi-04-play-3 (stage 3, a short way out from its bay), edi-05-bump (a heart lost, the spark, the wince, the
 // instructor's line), edi-09-banner ("STAGE 1 PARKED!" with the tick and the confetti), edi-06-gameover, edi-07-skip-offer, edi-08-win.
 async function shootEdi(browser) {
@@ -939,10 +939,7 @@ async function shootEdi(browser) {
     });
     await waitFor(page, (key) => game.scene.isActive(key), { arg: sceneKey, timeout: 5000 });
     await waitCardAcceptsInput(page, sceneKey);
-    await shoot(page, 'edi-00-story'); // FB-0082: the backstory opens first; shoot its first page, then skip to the usual intro card (the SKIP STORY call)
-    await page.evaluate((key) => game.scene.getScene(key).skipStory(), sceneKey);
-    await waitCardAcceptsInput(page, sceneKey);
-    await shoot(page, 'edi-01-intro');
+    await shoot(page, 'edi-01-intro'); // FB-0100: no backstory pages any more, the game opens straight on its intro card
     await page.keyboard.press('Enter'); // START
     await waitFor(page, (key) => game.scene.getScene(key).mgState === 'playing', { arg: sceneKey, timeout: 5000 });
     await page.waitForTimeout(200);

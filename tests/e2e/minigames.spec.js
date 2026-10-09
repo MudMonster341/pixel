@@ -100,7 +100,7 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
     expect((await state(page)).quest.keys.room195).toBe(false);
   });
 
-  test('the ICL scanner launches EDI Madness and Esc (even over its backstory) leaves the door sealed; the physicsLab station launches the hero fight (FB-0066, FB-0071, ADR 0025)', async ({ page }) => {
+  test('the ICL scanner launches EDI Madness and Esc (on its intro card) leaves the door sealed; the physicsLab station launches the hero fight (FB-0066, FB-0071, ADR 0025)', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => { GameState.quest.stage = 'hunting'; });
     await talkToScanner(page, 'minigame-edi');
@@ -359,20 +359,15 @@ test.describe('mini-games (docs/ROADMAP.md M4)', () => {
 
   // ADR 0025 (EDI Madness, phase E3): the garage-parking scene, launched directly (the scanner starts it too since phase E4: tested above). The drive is real
   // keys; the debug hook only puts the car a short way out from stage 1's bay, facing it. Gas until she is over the bay, then the handbrake (Space) holds her still.
-  test('EDI Madness: story, intro, a scripted drive that parks stage 1, the banner, stage 2, Esc quits', async ({ page }) => {
+  test('FB-0100: EDI Madness opens straight on its intro card, a scripted drive that parks stage 1, the banner, stage 2, Esc quits', async ({ page }) => {
     await openGame(page, { map: 'main-block-1', minigames: true });
     await page.evaluate(() => {
       GameState.quest.stage = 'hunting';
       game.scene.getScene('world').launchMinigame('edi', () => {});
     });
     await expect.poll(async () => (await mgInfo(page, 'minigame-edi')).active).toBe(true);
-    const pageCount = await page.evaluate(() => game.scene.getScene('minigame-edi').storyPages.length);
-    expect(pageCount).toBe(3);
-    for (let i = 0; i < pageCount; i++) {
-      await waitCardReady(page, 'minigame-edi');
-      expect((await mgInfo(page, 'minigame-edi')).cardItems[0]).toBe('NEXT (ENTER)');
-      await page.keyboard.press('Enter');
-    }
+    // no backstory pages (FB-0100): the intro card is the first thing up, and ONE Enter on START begins the drive
+    expect(await page.evaluate(() => game.scene.getScene('minigame-edi').story)).toBeNull();
     await waitCardReady(page, 'minigame-edi');
     expect((await mgInfo(page, 'minigame-edi')).cardItems[0]).toBe('START (ENTER)');
     await page.keyboard.press('Enter');

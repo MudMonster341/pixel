@@ -35,3 +35,6 @@ If a run dies on a usage limit: `git status` + `npm run test:unit`, then resume 
 
 ## Soft-lock checklist (never cut)
 Skip after 3 losses (win path identical: `iclDoorOpen` set, door opens); every stage ends (75 s) and every attempt ends (150 s); Esc quits at any time; saves that already have the ICL key or the open door are untouched; `story-clearance` / `completeness` keep passing; the ICL room stays reachable and Alice still gives the key.
+
+
+- 2026-10-10: the three story pages above were dropped by owner feedback FB-0100 ("had me click yes three times to start"): `MINIGAMES.edi` has no `story`, the game opens straight on its intro card (cover picture + START). The FB-0082 mechanism and Room 195's story stay.

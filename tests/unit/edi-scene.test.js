@@ -70,16 +70,24 @@ test('EDI scene: the MINIGAMES entry is "EDI MADNESS", opens the ICL door, score
     skipLabel: 'SKIP -- OPEN THE DOOR ANYWAY',
     skipHint: "You've tried 3 times -- open the door anyway if you'd rather move on.",
   });
-  // the backstory (FB-0082 mechanism): three short pages over the intro cover
-  assert.deepEqual(plain(c('minigameStoryPages')(def, 'Taru')), [
-    "The ICL's sealed door wants proof of EDI-level parking skills.",
-    'Your instructor has strapped himself in. He looks nervous.',
-    'Park three times without crushing a pillar. Ready?',
-  ]);
-  assert.equal(def.story.cover.key, def.cover.key, 'the story is told over the intro cover, which the scene preloads');
-  for (const page of def.story.pages) assert.doesNotMatch(page, /birthday|cake|candle|gift|present|happy/i, 'no birthday mentions');
+  // no backstory pages (FB-0100, below): the intro card, with the cover behind it, is the first thing up
+  assert.equal(def.story, undefined);
   // the intro card has no subtitle slot: nothing was added for one (the cover picture says GARAGE PARKING under the title)
   assert.doesNotMatch(read('src', 'minigames', 'framework-scene.js'), /subtitle/i);
+});
+
+test('FB-0100: EDI Madness has no backstory pages, so START is the first thing on its intro card', () => {
+  const { MINIGAMES } = g;
+  assert.equal(MINIGAMES.edi.story, undefined, 'no story block: the owner had to click through 3 pages');
+  assert.deepEqual(plain(c('minigameStoryPages')(MINIGAMES.edi, 'Taru')), [], 'the shell finds no pages, so showIntro() goes straight to the intro card');
+  // the intro card still draws the cover from def.cover (not def.story.cover) and starts with one START press
+  assert.deepEqual(plain(MINIGAMES.edi.cover), { key: 'edi-cover', file: 'assets/minigames/edi-cover.png' });
+  const shell = read('src', 'minigames', 'framework-scene.js');
+  assert.match(shell, /items: \[\{ label: 'START \(ENTER\)', onSelect: onStart \}\],\n\s+cover: def\.cover,/);
+  assert.match(shell, /if \(pages\.length\) this\.startStory\(pages\);\n\s+else this\.showIntroCard\(\);/);
+  // Room 195's own story (FB-0082) is untouched
+  assert.ok(MINIGAMES.tower.story && MINIGAMES.tower.story.pages.length >= 3, "the tower keeps its backstory");
+  assert.ok(c('minigameStoryPages')(MINIGAMES.tower, 'Taru').length >= 3);
 });
 
 // ---------- the art ----------
@@ -388,9 +396,9 @@ test('EDI scene: the pose near the bay is clear of everything, faces the bay, an
 
 // ---------- the QA flows and the e2e spec ----------
 
-test('EDI scene: qa-shots has the edi flows (story, intro, play x3, bump, game over, skip offer, win, banner), in the main sequence and covered by --only', () => {
+test('EDI scene: qa-shots has the edi flows (intro, play x3, bump, game over, skip offer, win, banner), in the main sequence and covered by --only', () => {
   const shots = read('tools', 'qa-shots.js');
-  for (const name of ['edi-00-story', 'edi-01-intro', 'edi-02-play-1', 'edi-03-play-2', 'edi-04-play-3', 'edi-05-bump', 'edi-06-gameover', 'edi-07-skip-offer', 'edi-08-win', 'edi-09-banner']) {
+  for (const name of ['edi-01-intro', 'edi-02-play-1', 'edi-03-play-2', 'edi-04-play-3', 'edi-05-bump', 'edi-06-gameover', 'edi-07-skip-offer', 'edi-08-win', 'edi-09-banner']) {
     assert.match(shots, new RegExp(`shoot\\(page, '${name}'\\)`), `${name} is shot`);
   }
   assert.match(shots, /async function shootEdi\(browser\)/);
@@ -401,7 +409,7 @@ test('EDI scene: qa-shots has the edi flows (story, intro, play x3, bump, game o
   assert.match(flow, /tryStep\(page, 'edi'/);
   assert.match(flow, /moments=0/, 'moments are off');
   assert.match(flow, /launchMinigame\('edi'/);
-  assert.match(flow, /skipStory\(\)/, 'the story page is shot, then skipped like a SKIP STORY press');
+  assert.doesNotMatch(flow, /skipStory\(\)|edi-00-story/, 'FB-0100: no backstory page to shoot or skip');
   assert.match(flow, /debugSetStage\(0\)/);
   assert.match(flow, /debugSetStage\(1, \{ inBay: true \}\)/);
   assert.match(flow, /debugSetStage\(2, \{ pose: true \}\)/);
@@ -415,9 +423,9 @@ test('EDI scene: qa-shots has the edi flows (story, intro, play x3, bump, game o
   assert.equal(names.length, new Set(names).size);
 });
 
-test('EDI scene: the e2e spec drives the real scene: story, intro, a scripted park of stage 1 into the stage banner, stage 2, Esc quits', () => {
+test('EDI scene: the e2e spec drives the real scene: intro, a scripted park of stage 1 into the stage banner, stage 2, Esc quits', () => {
   const spec = read('tests', 'e2e', 'minigames.spec.js');
-  assert.match(spec, /EDI Madness: story, intro, a scripted drive that parks stage 1, the banner, stage 2, Esc quits/);
+  assert.match(spec, /FB-0100: EDI Madness opens straight on its intro card, a scripted drive that parks stage 1, the banner, stage 2, Esc quits/);
   assert.match(spec, /launchMinigame\('edi'/);
   assert.match(spec, /debugSetStage\(0, \{ pose: true \}\)/);
   assert.match(spec, /keyboard\.down\('ArrowUp'\)/);

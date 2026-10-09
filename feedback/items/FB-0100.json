@@ -4,9 +4,9 @@
   "type": "bug",
   "area": "General",
   "priority": "normal",
-  "status": "new",
+  "status": "fixed",
   "createdAt": "2026-10-09T20:42:38.261Z",
-  "updatedAt": "2026-10-09T20:42:38.261Z",
+  "updatedAt": "2026-10-09T21:02:07.726Z",
   "details": "",
   "context": {
     "map": "main-block-1",
@@ -53,13 +53,33 @@
   },
   "marker": null,
   "screenshot": "screenshots/FB-0100.jpg",
-  "thread": [],
-  "resolution": null,
+  "thread": [
+    {
+      "author": "agent",
+      "text": "EDI Madness lost its 3-page backstory; the intro card with START is the first thing after the scanner",
+      "at": "2026-10-09T21:02:07.726Z"
+    }
+  ],
+  "resolution": {
+    "test": "tests/e2e/minigames.spec.js › FB-0100: EDI Madness opens straight on its intro card",
+    "commit": null,
+    "at": "2026-10-09T21:02:07.726Z"
+  },
   "history": [
     {
       "at": "2026-10-09T20:42:38.261Z",
       "by": "owner",
       "status": "new"
+    },
+    {
+      "at": "2026-10-09T21:02:07.666Z",
+      "by": "agent",
+      "status": "in-progress"
+    },
+    {
+      "at": "2026-10-09T21:02:07.726Z",
+      "by": "agent",
+      "status": "fixed"
     }
   ]
 }

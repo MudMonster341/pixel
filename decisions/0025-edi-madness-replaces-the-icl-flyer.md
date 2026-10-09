@@ -15,3 +15,5 @@ The mini-game line-up ([ADR 0024](0024-mini-game-lineup-and-moments-system.md)) 
 - Texts about the fingerprint scanner / "ICL Fingerprint Hack" are reworded to parking; the FB-0071 tests are ported, not deleted (soft-lock guards stay).
 - New risk: driving feel cannot be judged without hands; the owner tunes it in the second round.
 - Cut order if time runs short: stage 3, stage 2, the instructor's portrait, the story pages.
+
+- 2026-10-10: the story pages (consequence above and decision 2) were dropped by owner feedback FB-0100: EDI Madness opens straight on its intro card. The FB-0082 mechanism stays (Room 195 uses it).

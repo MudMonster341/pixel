@@ -18,7 +18,7 @@ test('walking over an item picks it up', async ({ page }) => {
 test('picked-up items do not come back after leaving the map', async ({ page }) => {
   await teleport(page, 20, 12);
   await expect.poll(async () => countItem((await state(page)).slots, 'apple')).toBe(1);
-  await page.evaluate(() => game.scene.getScene('world').scene.restart({ map: 'meadow' }));
+  await page.evaluate(() => { game.scene.getScene('world').scene.restart({ map: 'meadow' }); }); // no `return`: restart() hands back a Phaser object whose serialising stalls the test
   await expect.poll(() => page.evaluate(() => game.scene.getScene('world').pickups?.length)).toBe(3);
 });
 

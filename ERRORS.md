@@ -438,3 +438,9 @@ stations, off doors/stairs/route stops, and never seal a station/NPC/door off (4
 **Cause:** the confirm panel and its dim layer are at depth 118 but the No / Yes `Button`s were never given a depth (Phaser default 0): they were painted UNDER the panel, so the dialog looked empty; the owner pressed Enter, which picks the default "No", and landed on the menu again. A mouse click would also have hit whatever zone sat higher. It was there since FB-0040; every test drove it by keyboard and none looked at the picture.
 **Fix:** `Button.setDepth()` (shadow, frame, label, zone) in src/scenes/ui.js; title.js raises both confirm buttons to 119.
 **Test:** tests/e2e/title.spec.js "the \"start a new game?\" confirm draws its No / Yes buttons above its own panel, and a click on Yes starts the new game". Lesson: for any modal, assert the layering (or LOOK at a shot), not just the key path.
+
+## ERR-0021 - e2e tests that hand a Phaser object back from `page.evaluate` stall for 30-60 s (2026-10-10)
+**Symptom:** `scripts.spec` "FB-0033 destination follows the first missing key" and `inventory.spec` "picked-up items do not come back" timed out (the first at 30 s, the second ~53 s) though the game was fine; in the 190-test full run 4 more specs (hud-script, intro, robustness, scripts icl) timed out only under load (22.6 min run) and pass alone.
+**Cause:** `page.evaluate(() => game.scene.getScene('world').scanners[0])` and `... .scene.restart({...})` RETURN a scanner object (which holds a Phaser sprite/animation) and a ScenePlugin; Playwright serialises the whole reachable graph, which takes tens of seconds.
+**Fix:** return only plain data (`{ x, y }`) and use a braced arrow (`() => { ...restart(...); }`) for calls. Rule: never `return` a game object, scene or plugin from an evaluate. The same trap hit a profiling script.
+**Under load:** the load-only failures are the ERR-0019 class; re-run alone first.

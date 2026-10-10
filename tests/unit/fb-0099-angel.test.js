@@ -40,7 +40,8 @@ function walk(steps, visit) {
     if (type === 'parallel' || type === 'sequence') walk(step[type], visit);
   }
 }
-const says = () => { const out = []; walk(stepsOf('momentAngel'), (type, body) => { if (type === 'say') out.push(body); }); return out; };
+const allSays = (script = 'momentAngel') => { const out = []; walk(stepsOf(script), (type, body) => { if (type === 'say') out.push(body); }); return out; };
+const says = () => allSays().filter((s) => s.speaker === 'Prof. Angel'); // her three lines (Taru's closing line is tested below)
 
 // ---------- the table ----------
 
@@ -172,13 +173,14 @@ test('FB-0099: the script is framed like every moment, uses only steps and sound
   });
   const ring = order.indexOf('emote:!');
   assert.ok(ring > 0, 'a "!" over her head');
+  const thirdSay = order.findIndex((t, i) => t === 'say' && order.slice(0, i).filter((u) => u === 'say').length === 2); // the call line
   assert.equal(order.filter((t) => t === 'sound:liftDing').length, 2, 'two dings');
-  assert.ok(order.indexOf('sound:liftDing') < ring + 2 && ring < order.lastIndexOf('say'), 'the phone rings before the third line');
-  assert.ok(order.indexOf('sound:minigameLineClear') > order.lastIndexOf('say'), 'the wings pop after the call line');
+  assert.ok(order.indexOf('sound:liftDing') < ring + 2 && ring < thirdSay, 'the phone rings before the third line');
+  assert.ok(order.indexOf('sound:minigameLineClear') > thirdSay, 'the wings pop after the call line');
   // the order of the whole scene
   const idx = (what) => order.indexOf(what);
   assert.ok(idx('spawnActor') < idx('move') && idx('move') < idx('say'), 'she walks in, then speaks');
-  assert.ok(idx('lift') > order.lastIndexOf('say'), 'she rises after the last line');
+  assert.ok(idx('lift') > thirdSay, 'she rises after her last line');
   assert.ok(order.indexOf('despawnActor') < order.lastIndexOf('despawnActor'), 'the plain sheet is replaced, the winged one is removed at the end');
 });
 
@@ -224,7 +226,7 @@ test('FB-0099: measured at the runtime\'s own speeds, M5 lasts 8-20 s from every
   assert.ok(tiles >= 20);
   assert.ok(min >= MOMENT_MIN_MS, `${Math.round(min)} ms is under ${MOMENT_MIN_MS}`);
   assert.ok(max <= MOMENT_MAX_MS, `${Math.round(max)} ms is over ${MOMENT_MAX_MS}`);
-  assert.ok(max >= 12000 && max <= 19000, `about 16 s (${Math.round(max)} ms)`);
+  assert.ok(max >= 15000 && max <= 20000, `about 19 s with Taru's closing line (${Math.round(max)} ms)`);
 });
 
 // ---------- the real lab: where she stands, where Angel stands ----------
@@ -320,8 +322,10 @@ test('FB-0099: during every line Angel stands above the dialog box and well insi
     for (let tx = rect.x0; tx <= rect.x1; tx++) {
       if (!walkable(tx, ty)) continue;
       const tl = momentTimeline(SCRIPTS.momentAngel, { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
-      assert.equal(tl.says.length, 3);
-      for (const say of tl.says) {
+      assert.equal(tl.says.length, 4, 'her three lines and Taru\'s closing line');
+      assert.deepEqual(plain(tl.says[3].actors), [], 'nobody else on screen during Taru\'s closing line');
+      assert.ok(Math.abs(tl.says[3].camX - tl.player.x) <= 8 && Math.abs(tl.says[3].camY - tl.player.y) <= 8, 'the camera is back on her (the runtime pans to her tile centre plus the usual half-tile)');
+      for (const say of tl.says.slice(0, 3)) {
         assert.deepEqual(plain(say.actors.map((a) => a.id)), ['angel'], 'only Angel is on screen during a line');
         const a = say.actors[0];
         assert.ok(a.y + 8 <= say.camY + boxTopBelowCentre - 4, `Angel's feet are behind the dialog box (${a.y + 8 - say.camY} px below the centre)`);
@@ -380,4 +384,64 @@ test('FB-0099: the other moments and the ICL door guard are untouched (M1-M4 kee
   assert.equal(gate.door, 'ICL door');
   assert.deepEqual(plain(gate.room), { x0: 4, y0: 4, x1: 15, y1: 13 });
   assert.equal(game.isGateOpen(gate, { flags: { [gate.flag]: true }, quest: { stage: 'hunting', keys: {} } }), true);
+});
+
+// ---------- FB-0102 (owner request 2026-10-10): Taru's own reactions at the end of M5 and M2 ----------
+
+const indexOfStep = (steps, pred) => steps.findIndex(pred);
+
+test('FB-0102: after Angel flies away Taru says "WOAH! Did she just grow wings and fly away?!" (a "!" over her head first), after the despawn and before the camera and control are handed back; M5 still lasts 8-20 s', () => {
+  const steps = stepsOf('momentAngel');
+  const despawn = indexOfStep(steps, (s) => s.despawnActor === 'angelw');
+  const line = indexOfStep(steps, (s) => s.say && s.say.speaker === '{name}');
+  assert.ok(despawn > 0 && line > despawn, 'the line comes after she has flown away');
+  assert.deepEqual(steps[line].say, { speaker: '{name}', lines: ['WOAH! Did she just grow wings and fly away?!'], autoMs: 1800 });
+  assert.match(steps[line].say.lines[0], /WOAH.*wings.*fly away/);
+  // the camera glides back to her, she turns toward the hatch, gasps, then speaks, then the usual ending
+  assert.deepEqual(steps.slice(despawn + 1, line + 1).map((s) => Object.keys(s)[0]), ['cameraPan', 'face', 'emote', 'say']);
+  assert.deepEqual(steps[despawn + 1].cameraPan.to, { actor: 'player' });
+  assert.deepEqual(steps[despawn + 2].face, { actor: 'player', dir: 'down' });
+  assert.deepEqual(steps[despawn + 3].emote, { actor: 'player', kind: '!' });
+  assert.deepEqual(steps.slice(line + 1), [{ cameraFollow: 'player' }, { letterbox: 'out' }, { unlockInput: true }]);
+  assert.doesNotMatch(steps[line].say.lines[0].toLowerCase(), /birthday/);
+  // her words are in the review doc
+  assert.ok(read('docs', 'research', 'campus-lines-review.md').includes('WOAH! Did she just grow wings and fly away?!'));
+  for (let ty = rect.y0; ty <= rect.y1; ty++) {
+    for (let tx = rect.x0; tx <= rect.x1; tx++) {
+      if (!walkable(tx, ty)) continue;
+      const tl = momentTimeline(SCRIPTS.momentAngel, { anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      assert.deepEqual(plain(tl.unknownSteps), []);
+      assert.equal(tl.needsInput, false);
+      assert.ok(tl.durationMs >= MOMENT_MIN_MS && tl.durationMs <= MOMENT_MAX_MS, `${Math.round(tl.durationMs)} ms at ${tx},${ty}`);
+    }
+  }
+});
+
+test('FB-0102: after Mevin and the kit have run off Taru says "Damn, Jashn sounds like fun. I\'ll check it out after this.", before the camera and control are handed back; M2 still lasts 8-20 s from every tile', () => {
+  const steps = stepsOf('momentMevin');
+  const kit = indexOfStep(steps, (s) => s.despawnActor === 'kit');
+  const mevin = indexOfStep(steps, (s) => s.despawnActor === 'mevin');
+  const line = indexOfStep(steps, (s) => s.say && s.say.speaker === '{name}');
+  assert.ok(mevin > 0 && kit > mevin && line === kit + 1, 'the line comes right after both are despawned');
+  assert.deepEqual(steps[line].say, { speaker: '{name}', lines: ["Damn, Jashn sounds like fun. I'll check it out after this."], autoMs: 1800 });
+  assert.deepEqual(steps.slice(line + 1), [{ cameraFollow: 'player' }, { letterbox: 'out' }, { unlockInput: true }]);
+  assert.ok(read('docs', 'research', 'campus-lines-review.md').includes("Damn, Jashn sounds like fun. I'll check it out after this."));
+  const campus = { anchor: (name) => { const p = resolveAnchor(tiledObjects(JSON.parse(read('assets', 'maps', 'campus.json'))), name); return p ? { x: p.x, y: p.y } : null; } };
+  const m2 = MOMENTS.find((m) => m.id === 'm2');
+  const campusRect = momentTriggerRect(m2, campus.anchor);
+  const campusGrid = gridFromTiled(JSON.parse(read('assets', 'maps', 'campus.json')));
+  let tiles = 0;
+  for (let ty = campusRect.y0; ty <= campusRect.y1; ty++) {
+    for (let tx = campusRect.x0; tx <= campusRect.x1; tx++) {
+      if (!isWalkableTile(campusGrid, tileInfo, tx, ty)) continue;
+      const tl = momentTimeline(SCRIPTS.momentMevin, { anchor: campus.anchor, player: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+      assert.deepEqual(plain(tl.unknownSteps), []);
+      assert.equal(tl.needsInput, false);
+      assert.ok(tl.durationMs >= MOMENT_MIN_MS && tl.durationMs <= MOMENT_MAX_MS, `${Math.round(tl.durationMs)} ms at ${tx},${ty}`);
+      assert.equal(tl.says.length, 2);
+      assert.deepEqual(plain(tl.says[1].actors), [], 'nobody else is on screen during Taru\'s line');
+      tiles++;
+    }
+  }
+  assert.ok(tiles >= 20);
 });

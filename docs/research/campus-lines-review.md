@@ -158,6 +158,7 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | | | {name} | Huh... is this the actual BITS? |
 | M2 Mevin the drummer (plays for Treble, the music club; runs in with a drum kit, drums a bar, ends on a rimshot, runs off) | the brick forecourt in front of the Main Block, as she first walks up to the Main Block, about 6 s after M1 ends | Mevin (Treble) | WOAHHH, {name}! You da goat! |
 | | | Mevin (Treble) | Come watch me perform at Jashn some day! |
+| | | {name} | Damn, Jashn sounds like fun. I'll check it out after this. (FB-0102, the owner's own words: "damn, jashn sounds like fun, ill check it out after this"; said after Mevin and the kit have run off) |
 
 | M3 Prof. Raja's chariot (once, the first time she is in the Main Block foyer holding at least the first key; Raja is the ambient professor standing at the right of the hall: the camera glides to him, a gallop swells, a gilded chariot with two horses, a parasol and pennants comes down the hall with dust puffs and a horn, he steps aboard, it thunders off down the hall; about 16 s) | the central hall in front of the staircase | Prof. Raja | Ah, {name}! Class is dismissed. A king never walks. |
 | | | Prof. Raja | My ride. Kindly mind the marks, {name}. |
@@ -170,6 +171,7 @@ Short scenes that play ONCE only while she walks around (never again after Conti
 | M5 Prof. Angel (FB-0099, the owner's idea in his own words: "Angel ma'am comes in who is the professor ... are you training models, good good, but remember that these models will not stop you from being a cool person, then she's like I'm getting a call and grows wings and flies away"; once, after she holds the ICL key, on her way out of the lab: Prof. Angel walks in through the hatch and stops in front of her, says her two lines, her phone rings (a "!" and two dings), her third line, a sparkle pops, she grows her wings and rises up out of sight in a trail of stars; about 16 s. Lines tidied by Claude, the owner's meaning kept) | the ICL lab on the 1st floor, the two rows in front of the hatch (x 4..15, rows 11..12) | Prof. Angel | Oh, hi {name}! Are you training models? Good, good. |
 | | | Prof. Angel | But remember: these models will never stop you from being a cool person. |
 | | | Prof. Angel | Oh, I am getting a call... |
+| | | {name} | WOAH! Did she just grow wings and fly away?! (FB-0102, the owner's own words: "woah did she just grow wings and fly away ?!!!"; a "!" over her head first, after Angel has flown off) |
 
 M1's first line is the owner's own inside joke, exactly as written (no softening). The prince is a generic crowned stand-in; the unicorn is a generic white horse with a horn (no protected character).
 

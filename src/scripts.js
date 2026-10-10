@@ -317,6 +317,8 @@ const MOMENT_MEVIN_STEPS = [
   ] },
   { despawnActor: 'mevin' },
   { despawnActor: 'kit' },
+  // She watches them go and says what she thinks (the owner, 2026-10-10: "damn, jashn sounds like fun, ill check it out after this").
+  { say: { speaker: '{name}', lines: ["Damn, Jashn sounds like fun. I'll check it out after this."], autoMs: 1800 } },
   { cameraFollow: 'player' },
   { letterbox: 'out' },
   { unlockInput: true },
@@ -484,7 +486,12 @@ const MOMENT_ANGEL_STEPS = [
     { sparkles: { actor: 'angelw', ms: 2300 } },
   ] },
   { despawnActor: 'angelw' },
+  // The camera glides back to her; she turns to the hatch (down), gasps and says what we all thought (the owner, 2026-10-10: "woah did she just
+  // grow wings and fly away ?!!!").
   { cameraPan: { to: { actor: 'player' }, ms: 800 } },
+  { face: { actor: 'player', dir: 'down' } },
+  { emote: { actor: 'player', kind: '!' } },
+  { say: { speaker: '{name}', lines: ['WOAH! Did she just grow wings and fly away?!'], autoMs: 1800 } },
   { cameraFollow: 'player' },
   { letterbox: 'out' },
   { unlockInput: true },

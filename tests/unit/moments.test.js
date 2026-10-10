@@ -1025,7 +1025,7 @@ test('FB-0051: during every `say` of a moment, every actor and prop is at or abo
   }
   // sanity: the measurer sees Mevin and the kit standing to her right during his lines, and the unicorn and the prince during theirs
   const tl = momentTimeline(SCRIPTS.momentMevin, { anchor, player: { x: 225 * 16 + 8, y: 134 * 16 + 8 } });
-  assert.deepEqual(plain(tl.says.map((s) => s.actors.map((a) => a.id).sort())), [['kit', 'mevin']]);
+  assert.deepEqual(plain(tl.says.map((s) => s.actors.map((a) => a.id).sort())), [['kit', 'mevin'], []], 'his lines, then Taru\'s own closing line (FB-0102) with nobody else on screen');
   assert.ok(tl.says[0].actors.every((a) => a.x > tl.player.x + 24 && a.x < tl.player.x + 72), 'Mevin and the kit are a few tiles to her right');
   const tu = momentTimeline(SCRIPTS.momentUnicorn, { anchor, player: { x: 244 * 16 + 8, y: 153 * 16 + 8 } });
   assert.deepEqual(plain(tu.says.map((s) => s.actors.map((a) => a.id).sort())), [['unicorn'], ['prince', 'unicorn'], []]);

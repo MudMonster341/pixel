@@ -1,5 +1,5 @@
 // The birthday credits' content and schedule (decisions/0019-credits-ending-and-recipient.md): the
-// "Happy Birthday, Taru" / "Happy 22" / wishes-one-by-one / THE END / "Made for you by Mustafa" phase
+// "Happy Birthday, Taru" / "Happy 22" / wishes-one-by-one / THE END / "Made for you by your one and only" phase
 // that plays after the card (src/scenes/card.js). Pure data + logic, no Phaser -- src/scenes/credits.js
 // is the only thing that draws it (docs/ARCHITECTURE.md "content is data, the engine is code").
 //
@@ -29,7 +29,7 @@ const DEFAULT_CREDITS = {
     'I hope your whole day is blessed and lovely.',
     'Happy birthday, {name}. I love you.',
   ],
-  madeBy: 'Mustafa',
+  madeBy: 'your one and only', // FB-0103 (owner, 2026-10-10): not the name, the sign-off reads "Made for you by your one and only"
 };
 
 // Merges the (already parsed) assets/card/card.json over DEFAULT_CREDITS. `raw` may be anything,

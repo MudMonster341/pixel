@@ -71,7 +71,7 @@ test('credits: card -> credits -> title', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect.poll(async () => (await creditsState(page)).phase, { timeout: 5_000 }).toBe('end');
   await expect.poll(async () => (await creditsState(page)).theEndAlpha, { timeout: 5_000 }).toBeGreaterThan(0.9);
-  await expect.poll(async () => (await creditsState(page)).madeBy, { timeout: 5_000 }).toBe('Made for you by Mustafa');
+  await expect.poll(async () => (await creditsState(page)).madeBy, { timeout: 5_000 }).toBe('Made for you by your one and only');
 
   // Another key after THE END's own short grace period returns to the title.
   await page.waitForTimeout(1700);

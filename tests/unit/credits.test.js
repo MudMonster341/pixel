@@ -11,11 +11,11 @@ const read = (...parts) => fs.readFileSync(path.join(ROOT, ...parts), 'utf8');
 
 // ---------- DEFAULT_CREDITS ----------
 
-test('DEFAULT_CREDITS: recipient Taru, age 22, eight short generic wishes, made by Mustafa', () => {
+test('DEFAULT_CREDITS: recipient Taru, age 22, eight short generic wishes, made by "your one and only"', () => {
   const { DEFAULT_CREDITS } = loadGameData();
   assert.equal(DEFAULT_CREDITS.recipient, 'Taru');
   assert.equal(DEFAULT_CREDITS.age, 22);
-  assert.equal(DEFAULT_CREDITS.madeBy, 'Mustafa');
+  assert.equal(DEFAULT_CREDITS.madeBy, 'your one and only');
   assert.equal(DEFAULT_CREDITS.wishes.length, 8);
   for (const wish of DEFAULT_CREDITS.wishes) {
     assert.equal(typeof wish, 'string');
@@ -49,7 +49,7 @@ test('buildCreditsConfig(null/garbage): everything falls back to the defaults, {
     const config = buildCreditsConfig(raw);
     assert.equal(config.recipient, 'Taru');
     assert.equal(config.age, 22);
-    assert.equal(config.madeBy, 'Mustafa');
+    assert.equal(config.madeBy, 'your one and only');
     assert.equal(config.wishes.length, DEFAULT_CREDITS.wishes.length);
     for (const wish of config.wishes) assert.ok(!wish.includes('{name}'), `unresolved {name}: ${wish}`);
   }
@@ -230,4 +230,19 @@ test('card.example.json shows the recipient, age and wishes fields', () => {
   assert.equal(typeof example.age, 'number');
   assert.ok(Array.isArray(example.wishes) && example.wishes.length >= 1);
   assert.ok(Array.isArray(example.messages));
+});
+
+test("FB-0103: the credits sign-off says 'Made for you by your one and only' (not Mustafa), and it fits the screen", () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { DEFAULT_CREDITS, buildCreditsConfig } = loadGameData();
+  assert.equal(DEFAULT_CREDITS.madeBy, 'your one and only');
+  assert.equal(buildCreditsConfig({ madeBy: 'Somebody else' }).madeBy, 'your one and only', 'card.json cannot override the sign-off');
+  const scene = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'scenes', 'credits.js'), 'utf8');
+  assert.match(scene, /`Made for you by \$\{this\.config\.madeBy\}`/, 'the line is "Made for you by " + madeBy');
+  const line = `Made for you by ${DEFAULT_CREDITS.madeBy}`;
+  assert.equal(line, 'Made for you by your one and only');
+  assert.doesNotMatch(line, /Mustafa/);
+  // 12 px pixel font: about 12 px a character at most, on a 960 px wide screen
+  assert.ok(line.length * 12 < 960 - 2 * 80, `${line.length} characters fit with a wide margin`);
 });

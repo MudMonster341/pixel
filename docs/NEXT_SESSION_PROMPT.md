@@ -2,17 +2,18 @@
 
 ---
 
-Continue the BITS Dubai birthday pixel game (repo https://github.com/MudMonster341/pixel; the owner's PC copy is C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game). It is a gift for Taru's 22nd birthday (2026-10-11); she plays on a MacBook and the owner has no Mac to test on, so the deliverables are the offline double-click zip and a hosted backup link (Netlify Drop, the owner uploads it).
+Continue the BITS Dubai birthday pixel game (repo https://github.com/MudMonster341/pixel; the owner's PC copy is C:\Users\Mustafa\Desktop\Mustafa\Projects\2D_pixel_game). It is a gift for Taru's 22nd birthday (2026-10-11); she plays on a MacBook and the owner has no Mac to test on. **The game is finished and delivered**: `dist/offline.zip` (double-click) and the folder `dist/offline-site` (the owner uploaded it to Netlify Drop as the backup link). Do not break either.
 
-Read, in this order: HANDOFF.md, CLAUDE.md, the last entries of MEMORY.md and ERRORS.md (ERR-0019..0021), docs/HOSTING.md, docs/plans/agent-rules.md.
+Read, in this order: HANDOFF.md (state, the moments rules as they are NOW, what is left), CLAUDE.md, the last entries of MEMORY.md and ERRORS.md (ERR-0019..0021), docs/plans/agent-rules.md, docs/HOSTING.md, and, if the owner wants the extra, docs/plans/2026-10-10-post-game-auditorium.md. The knowledge graph in graphify-out/ was refreshed on 2026-10-10 (`graphify update .` is cheap, code only); use `graphify query "<question>"` before grepping.
 
-## State (2026-10-10)
-Everything is merged to `main`: EDI Madness (the ICL parking game), the message-only birthday card (cake on a sunset glow, the owner's final message, a lively backdrop with Mustafa/Taru/friends), M5 Prof. Angel, the owner's NPC names and lines, and every feedback item up to FB-0101. Unit 1313/1313; the browser suite is green apart from load-only timeouts that pass alone; `qa:offline` plays title to credits in Chromium and WebKit with zero errors. No card photos/video yet (optional).
-
-## Do
-1. `node tools/feedback.js` and read anything new (`show FB-xxxx`, LOOK at the screenshots). One Sonnet agent at a time with a self-contained brief; review the diff; `npm run test:unit`; run only the affected e2e specs alone; commit; mark fixed with an `FB-XXXX:` test.
-2. After ANY change: `npm run pack:offline -- --zip` and `npm run pack:site`, then `node tools/qa-offline-play.js` (and `webkit`). Hand over `dist/offline.zip` + `dist/offline/HOW_TO_OPEN.txt` and the folder `dist/offline-site`. Never create accounts or publish.
-3. Do not push `main` unless the owner asks (the hook runs the full suite, 10-20 min).
+## What may come next (ask the owner which; none is required)
+1. **Changes from the owner's / Taru's play-through.** `node tools/feedback.js`, read anything new (`show FB-xxxx`, LOOK at the screenshots), one Sonnet agent at a time with a self-contained brief, review the diff, `npm run test:unit`, run only the affected e2e specs alone, commit, mark fixed with an `FB-XXXX:` test.
+2. **The optional extension (owner idea, 2026-10-10):** after the game she stays in the world and is told she can head to the Auditorium, which opens as a small fun area with a BALL PIT (and maybe the sumo-vs-Narda arcade and other left-off ideas). Full plan, steps and the open questions to ASK FIRST are in docs/plans/2026-10-10-post-game-auditorium.md. Build it on a branch, never touch the delivered build until the owner has played it, cut from the bottom of the plan.
+3. **Rebuild after ANY change that should reach Taru:** `npm run pack:offline -- --zip`, `npm run pack:site`, `node tools/qa-offline-play.js` and `... webkit`; hand over `dist/offline.zip` + `dist/offline/HOW_TO_OPEN.txt` and the folder `dist/offline-site`; the owner re-drops the folder on the SAME Netlify site (never rename the site: saves are per address). Never create accounts or publish.
 
 ## Rules that bit us
-Never `return` a Phaser object or the result of `scene.restart()` from `page.evaluate` (ERR-0021). PowerShell blocks npm.ps1: use `npm.cmd` / `node server.js`. Art only through the generators; free packs only. Build first, then test; nothing left running.
+- Never `return` a Phaser object or the result of `scene.restart()` from `page.evaluate` (ERR-0021: it stalls 30-60 s). PowerShell blocks npm.ps1: use `npm.cmd` / `node server.js`.
+- Moments (cut scenes): no spacing rules any more; place + requirement + once per save; a scene is 8-20 s (tests measure it; M2 and M5 have under 1 s left). A scene is only started by STANDING in its place (e.g. M4: corridor rows 19-20, not the lab, not the doorway row).
+- Art only through the generators; free packs only; ask before hand-drawing anything (FB-0025). Do not invent story or personal facts: the owner's own words are used (card message, NPC lines, "Made for you by your one and only").
+- One Sonnet agent at a time, monitored; build first with unit tests, then ONE full browser round on a quiet machine; nothing left running. Push `main` only when the owner asks (the pre-push hook runs the full suite, ~10 min: `git push origin main > push.log 2>&1`). Never `--no-verify` on `main`.
+- Never cut: the offline zip and hosted link, credits, soft-lock guards (skip after 3 losses in every game, the ICL door guard), the full test before a handover.

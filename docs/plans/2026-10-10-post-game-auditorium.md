@@ -1,0 +1,25 @@
+# After the game: free roam, the Auditorium, the ball pit (optional, nice to have)
+
+Status: **PLAN ONLY, nothing built** (owner idea, 2026-10-10, after the game was handed over: "after the game let her be in the game and tell her she can head to the Audi if she wants; at the auditorium we have the ball pit as a small fun area, and any other ideas we had left off. Additional plans, not extremely necessary, but nice for game depth"). Nothing here may endanger the delivered build: this is built on a branch, tested, and only then merged; the current zip and the hosted link keep working without it.
+
+## What exists today (checked 2026-10-10)
+- The story ends: all 3 keys -> the LUG volunteer's small box -> box opening -> finale (cake, fireworks) -> card -> credits -> **title screen**. The save keeps `quest.stage === 'rewarded'`; the title then offers "Continue" and "Watch the Card Again" (src/scenes/title.js ~265). `rewarded` already exists everywhere (daylight dusk, the objective text "Treasure hunt complete! You got the small box.", the stairs stay roped off, the ICL door guard).
+- The **Auditorium** is a closed double door on the ground floor, right wing lobby (`tools/interiors/plans.js` mainBlockG, "Auditorium door" at tiles 33..34,5; `src/maps.js` ~95: "Auditorium. The doors are shut."). `intAuditoriumSeat` exists as a tile in `tools/interiors/build-interiors.js`.
+- The **TP room** (Telepresence Classroom, "Locked for now") was the original home of the ball pit + arcade in docs/plans/2026-10-04-moments-and-small-touches.md (M6 ball pit + arcade, M7 sumo vs Narda, M8 tower climb already shipped as the Room 195 game). The owner now wants the fun area in the **Auditorium** instead (or also; ask).
+- Moments (src/moments.js) have NO spacing rule any more (owner, 2026-10-10); they need a place + a requirement; a scene never starts while another script/dialog is up.
+
+## The idea, in steps (cut from the bottom)
+1. **Post-credits free roam (P1, S-M).** After the credits, instead of (or as well as) the title: she is put back in the world at the foyer in `rewarded` stage, free to walk (an option on the credits' last screen is the safest: "Keep exploring" vs "Back to the title"). Mustafa (or the LUG volunteer) tells her once: "You can head to the Audi if you want." The objective line becomes "Head to the Auditorium (optional)". Soft-lock rules: Esc/pause still work, the save stays `rewarded`, "Watch the Card Again" still works, the stairs/guards unchanged.
+2. **The Auditorium opens (P2, M).** `doorLocks` for the Auditorium door only while `quest.stage !== 'rewarded'` (a lock table entry like the stairs ones in src/maps.js); a new small interior map `auditorium` from the interiors generator (tools/interiors/plans.js: stage, seat rows from `intAuditoriumSeat`, a side room/corner for the pit), registered like the other interiors (maps list, warps, offline manifest, tests/unit/interiors.test.js style checks, completeness/walkability tests). Art only through generators, free packs only (FB-0025: ask before hand-drawing anything).
+3. **The ball pit (P3, M).** A "pit" region with its own movement: she walks to its edge, E jumps in (a splash of coloured balls), paddles slowly (reduced speed inside the region), balls bob and part around her (cheap sprites with tweens, a cap of ~60 objects), a toss-a-ball action, a laugh emote, climb out at the edge. Sound: a soft pop/splash synth from tools/make-audio.js. Must never trap her: an always-available Esc/E exit and a "stuck for 5 s -> pops out" guard.
+4. **Sumo vs Narda (P4, M-L, only if wanted).** Arcade cabinet in the Auditorium corner, Narda next to it ("Beat me at sumo!"): a two-wrestler mash-to-push game on the existing mini-game framework (src/minigames/framework*.js: pure logic + scene + art generator + 3-loss skip). No key, pure bonus. Narda is the owner's friend (she/her), original stand-in look.
+5. **Other left-off ideas (pick with the owner):** the card with a real photo (never looked at; owner may send one image), the admin page (list/delete this browser's saves, feedback switch; static hosting cannot reach her browser), the TP room itself, more moments between the games.
+
+## Open questions for the owner (ask first, do not guess)
+- After the credits: straight back into the world, or a choice? Does she keep the post-game forever (saved), or only until she quits?
+- Ball pit in the Auditorium only, or also the TP room? Is the arcade/sumo wanted?
+- Who tells her about the Audi: Mustafa (he appears in the foyer), a toast, or a short moment script?
+- Real photos: will the owner add anything to `assets/card/`?
+
+## Process (same as always)
+One Sonnet agent at a time, self-contained briefs (docs/plans/agent-rules.md, `node tools/render-map-crop.js` to LOOK at maps), unit tests while building, ONE full browser round at the end (quiet machine), `qa:shots` + `qa:offline` (Chromium + webkit), then rebuild `pack:offline --zip` and `pack:site`. Work on a branch; merge to `main` only when the owner has played it; the delivered link/zip stay untouched until then. Log in MEMORY.md, checkpoint with `scripts/checkpoint.ps1`.

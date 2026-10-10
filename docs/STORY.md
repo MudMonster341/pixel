@@ -74,7 +74,7 @@ perspective in the cutscene art, and movement that eases rather than snaps.
 - **The recipient is Taru (22).** The name field at the start is prefilled "Taru" (she may change it). The
   credits always say "Taru", from `card.json`'s `recipient`, not the typed name.
 - **Credits phase** after the card: "Happy Birthday, Taru", "Happy 22", about 8 wishes fade in one by one,
-  THE END, "Made for you by Mustafa". `card.json` gets optional `wishes` and `age`.
+  THE END, "Made for you by your one and only" (FB-0103). `card.json` gets optional `wishes` and `age`.
 - **The bus is an RTA (Dubai) bus**, pixelated, door opening, she steps out.
 - **Campus life:** every ambient student can be talked to and shares a campus fact (clubs, quizzes,
   facilities, events, departments) from `src/campus-facts.js`; cats and birds wander. Facts are sourced

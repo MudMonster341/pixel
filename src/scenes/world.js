@@ -124,7 +124,7 @@ class WorldScene extends Phaser.Scene {
     this.playOpening = Boolean(data.playOpening);
     this.transitioning = false;
     // The moments (src/moments.js): how many have started on THIS visit of this map. WorldScene restarts for every map change, so a
-    // new visit starts at 0; at most MOMENT_PER_VISIT may start per visit.
+    // new visit starts at 0 (MOMENT_PER_VISIT is no cap any more, the count is kept for momentDue()).
     this.momentsThisVisit = 0;
     // Seconds of FREE control since a script / cutscene / dialog / door walk / overlay last owned the screen (src/moments.js
     // advanceFreeSeconds()); a moment's `afterFreeS` waits on it. A new map visit (a door walk just happened) starts at 0.
@@ -1273,7 +1273,7 @@ class WorldScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    // The play clock the moments' 90 s spacing runs on (GameState.playSeconds): seconds this scene has actually run, so a mini-game, the
+    // The play clock the moments' spacing (M2's 6 s after M1) runs on (GameState.playSeconds): seconds this scene has actually run, so a mini-game, the
     // title screen or a minute with the game closed never counts. Capped per frame so a stalled tab cannot fast-forward it.
     GameState.playSeconds += Math.min(delta, 250) / 1000;
     this.updateDaylight(delta); // before the early return: the light keeps moving through a key-room beat or a door walk
@@ -2174,7 +2174,7 @@ class WorldScene extends Phaser.Scene {
   }
 
   // The small unskippable moments (src/moments.js, docs/plans/2026-10-04-moments-and-small-touches.md): the unicorn and the prince, Mevin the
-  // drummer. momentDue() holds every rule (once only, 90 s of play apart, one per map visit, the order, the trigger rectangle, off with
+  // drummer. momentDue() holds every rule (once only, M2's 6 s after M1, the order, the trigger rectangle, off with
   // `?moments=0`); this only says whether anything owns the screen right now (any script, a door or warp walk, a dialog, the pause menu,
   // the journal, the map: re-checked every frame, so a moment waits for the next free frame) and starts the one that is due.
   checkMoment() {

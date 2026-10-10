@@ -72,16 +72,16 @@ test('FB-0051: MOMENTS lists M1, M2, M3, M4 then M5 (FB-0099), each with a real 
   assert.deepEqual(plain(MOMENTS[0].after), { cutscene: 'gate2' }, 'M1 waits for the Gate 2 welcome / the opening');
   assert.deepEqual(plain(MOMENTS[1].after), { moments: ['m1'] }, 'M2 comes after M1');
   assert.deepEqual(plain(MOMENTS[2].after), { keys: 1 }, 'M3 waits for the first key');
-  assert.equal(MOMENT_GAP_S, 90);
-  assert.equal(MOMENT_PER_VISIT, 1);
-  // The entrance pair chains: M2 overrides the global gap (a few seconds after M1 ENDS) and may share M1's map visit; M1 uses the defaults.
+  assert.equal(MOMENT_GAP_S, 0, 'no spacing between moments (owner, 2026-10-10)');
+  assert.equal(MOMENT_PER_VISIT, Infinity, 'and no cap per map visit');
+  // The entrance pair chains: M2 waits a few seconds after M1 ENDS on purpose; M1 uses the defaults.
   assert.equal(MOMENTS[1].minGapS, 6, 'M2 follows M1 about 6 s after it ends');
   assert.equal(MOMENTS[1].sameVisitOk, true);
   assert.equal(momentGapS(MOMENTS[1]), 6);
   assert.equal(momentGapS(MOMENTS[0]), MOMENT_GAP_S, 'M1 has no override');
   assert.equal(MOMENTS[0].sameVisitOk, undefined);
-  assert.equal(momentGapS(MOMENTS[2]), MOMENT_GAP_S, 'M3 uses the default 90 s gap');
-  assert.equal(momentFitsVisit(MOMENTS[2], 1), false, 'and one moment per map visit');
+  assert.equal(momentGapS(MOMENTS[2]), 0, 'M3 uses the default: no gap');
+  assert.equal(momentFitsVisit(MOMENTS[2], 1), true, 'and several moments per map visit');
   assert.equal(MOMENTS[2].sameVisitOk, undefined);
   assert.equal(MOMENTS[2].afterFreeS, undefined);
   // M1 is on the avenue just inside Gate 2 (before the forecourt); M2 is on the forecourt in front of the Main Block door
@@ -181,23 +181,28 @@ test('FB-0051: M2\'s trigger covers every way to the Main Block door: on the rea
   assert.ok((rect.x1 - rect.x0 + 1) * (rect.y1 - rect.y0 + 1) <= 150);
 });
 
-test('FB-0051: later moments (no override) still obey the 90 s gap and one-per-visit; only the entrance pair is exempt', () => {
+test('FB-0099: later moments (no override) have no gap and no per-visit cap: one is due right after another ended, and several may play on one visit; only M2 waits 6 s after M1', () => {
   const later = [{ id: 'm3', map: 'campus', script: 'x', trigger: MOMENTS[1].trigger, after: { moments: ['m2'] } }, { id: 'm4', map: 'campus', script: 'y', trigger: MOMENTS[1].trigger, after: { moments: ['m3'] } }];
   const base = { seenMoments: new Set(['m1', 'm2']), lastMomentAt: 200, seenCutscenes: new Set(['gate2']) };
   const at = (now, over, state = base) => momentDue(state, now, ctxFor('m2', { moments: later, ...over }));
   assert.equal(momentGapS(later[0]), MOMENT_GAP_S);
-  assert.equal(momentFitsVisit(later[0], 1), false);
+  assert.equal(momentFitsVisit(later[0], 1), true);
+  assert.equal(momentFitsVisit(later[0], 50), true, 'no cap at all');
   assert.equal(momentFitsVisit(MOMENTS[1], 1), true);
-  assert.equal(at(206, {}), null, '6 s is not enough for a later moment');
-  assert.equal(at(289.9, {}), null, 'just under 90 s');
-  assert.equal(at(290, {})?.id, 'm3', '90 s after the last one: due');
-  assert.equal(at(1000, { visitCount: 1 }), null, 'never two on the same map visit');
-  assert.equal(at(1000, { visitCount: 0 })?.id, 'm3');
+  assert.equal(at(200, {})?.id, 'm3', 'due at the very second the last one ended (the same play-clock second)');
+  assert.equal(at(206, {})?.id, 'm3');
+  assert.equal(at(1000, { visitCount: 1 })?.id, 'm3', 'another moment already played on this map visit: still due');
+  assert.equal(at(1000, { visitCount: 5 })?.id, 'm3');
   assert.equal(at(1000, {}, { ...base, seenMoments: new Set(['m1', 'm2', 'm3']) })?.id, 'm4', 'in order');
-  assert.equal(at(1000, {}, { ...base, seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 990 }), null, 'and 90 s apart');
+  assert.equal(at(1000, {}, { ...base, seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 1000 })?.id, 'm4', 'M3 then M4 at the same play-clock second');
+  assert.equal(at(1000, { blocked: true }), null, 'but never while anything is up');
+  // M2 is the one that waits, on purpose: 6 s after M1 ENDS
+  const afterM1 = (now) => momentDue(fresh({ seenMoments: new Set(['m1']), lastMomentAt: 100 }), now, ctxFor('m2'));
+  assert.equal(afterM1(105.9), null);
+  assert.equal(afterM1(106)?.id, 'm2');
 });
 
-test('FB-0051: M2 needs M1 first: the order is kept even if the 90 s are long over', () => {
+test('FB-0051: M2 needs M1 first: the order is kept even if a long time has passed', () => {
   assert.equal(momentDue(fresh(), 1e6, ctxFor('m2')), null);
   const state = fresh({ seenMoments: new Set(['m1']), lastMomentAt: 0 });
   assert.equal(momentDue(state, 1e6, ctxFor('m2'))?.id, 'm2');
@@ -205,12 +210,14 @@ test('FB-0051: M2 needs M1 first: the order is kept even if the 90 s are long ov
   assert.equal(momentDue(fresh(), 1e6, ctxFor('m1'))?.id, 'm1');
 });
 
-test('FB-0051: the per-visit cap: the default is one moment per map visit; only a moment marked sameVisitOk (M2) may be the second', () => {
-  assert.equal(MOMENT_PER_VISIT, 1);
+test('FB-0099: there is no per-visit cap any more: M1, M2 and every later moment may all play on one map visit', () => {
+  assert.equal(MOMENT_PER_VISIT, Infinity);
   const state = fresh({ seenMoments: new Set(['m1']), lastMomentAt: 0 });
   assert.equal(momentDue(state, 1000, ctxFor('m2', { visitCount: 0 }))?.id, 'm2');
   assert.equal(momentDue(state, 1000, ctxFor('m2', { visitCount: MOMENT_PER_VISIT }))?.id, 'm2', 'the entrance pair chains on one visit');
-  assert.equal(momentDue(fresh(), 1000, ctxFor('m1', { visitCount: 1 })), null, 'M1 has no override: not on a visit that already had a moment');
+  assert.equal(momentDue(fresh(), 1000, ctxFor('m1', { visitCount: 1 }))?.id, 'm1', 'M1 on a visit that already had a moment: fine');
+  assert.equal(momentDue(fresh(), 1000, ctxFor('m1', { freeSeconds: 2.4 })), null, 'M1 still needs its 2.5 s of free control');
+  assert.equal(momentDue(fresh(), 1000, ctxFor('m1', { freeSeconds: 2.5 }))?.id, 'm1');
 });
 
 test('FB-0051: ?moments=0 (and ?cutscene=0, and the GameState dev flag) turn every moment off', () => {
@@ -1077,7 +1084,7 @@ test('FB-0051: `after: { keys: N }` holds a moment back until she has N keys (co
   assert.match(read('src', 'scenes', 'world.js'), /keys: Object\.values\(GameState\.quest\.keys\)\.filter\(Boolean\)\.length,/);
 });
 
-test('FB-0051: M3 plays once only, only on the Main Block ground floor, only inside its hall trigger, never while anything is up, and keeps the default pacing (90 s, one per visit)', () => {
+test('FB-0051: M3 plays once only, only on the Main Block ground floor, only inside its hall trigger, never while anything is up, and keeps the default pacing (none: no gap, no per-visit cap)', () => {
   const r = rectOf('m3');
   const keyed = (over = {}) => fresh({ quest: { keys: { physicsLab: true, icl: false, room195: false } }, ...over });
   assert.equal(momentDue(keyed(), 500, ctxFor('m3'))?.id, 'm3');
@@ -1091,12 +1098,11 @@ test('FB-0051: M3 plays once only, only on the Main Block ground floor, only ins
   // once only, ever
   const played = keyed({ seenMoments: new Set(['m3']) });
   assert.equal(momentDue(played, 1e9, ctxFor('m3', { keys: 3 })), null);
-  // the default gap and the per-visit cap
+  // no gap and no per-visit cap
   const after = (now, over) => momentDue(keyed({ seenMoments: new Set(['m1', 'm2']), lastMomentAt: 200 }), now, ctxFor('m3', over));
-  assert.equal(after(206, {}), null, 'not the 6 s of the entrance pair');
-  assert.equal(after(289.9, {}), null);
-  assert.equal(after(290, {})?.id, 'm3', '90 s after the last moment');
-  assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
+  assert.equal(after(200, {})?.id, 'm3', 'right after the last moment ended');
+  assert.equal(after(206, {})?.id, 'm3');
+  assert.equal(after(5000, { visitCount: 1 })?.id, 'm3', 'another moment already played on this map visit');
 });
 
 test('FB-0051: M3 plays in order: Raja\'s line, a gallop, the chariot arrives (a horn, dust), "My ride", he steps aboard, it leaves, her closing line; no line mentions a birthday', () => {
@@ -1370,8 +1376,8 @@ test('FB-0051: M4 is in the table: the 3rd floor (main-block-3), the Physics Lab
   assert.equal(m.minGapS, undefined);
   assert.equal(m.sameVisitOk, undefined);
   assert.equal(m.afterFreeS, undefined);
-  assert.equal(momentGapS(m), MOMENT_GAP_S, 'the default 90 s gap');
-  assert.equal(momentFitsVisit(m, 1), false, 'and one moment per map visit');
+  assert.equal(momentGapS(m), 0, 'the default: no gap');
+  assert.equal(momentFitsVisit(m, 1), true, 'and no cap per map visit');
   assert.equal(m.trigger.anchor, 'Physics Lab', 'the lab\'s own area object');
   assert.ok(Array.isArray(SCRIPTS.momentFriends));
   // the trigger is the corridor just outside the lab door (x 5..20, rows 19..20 of the three-row corridor), not the lab and not the stairs room
@@ -1445,25 +1451,23 @@ test('FB-0051: M4 waits for the Physics Lab key: no key, or only the ICL / Room 
   for (const map of ['campus', 'main-block-g', 'main-block-1', 'main-block-2']) assert.equal(due(has, { map }), null, `never on ${map}`);
   assert.equal(due(has, { blocked: true }), null);
   assert.equal(due(has, { enabled: false }), null, '?moments=0');
-  // the default pacing: 90 s after the last moment (any moment), and never two on one map visit
+  // the default pacing: none. Due the second the last moment ended, and also when another moment already played on this map visit
   const after = (now, over) => momentDue(fresh({ ...keysOf(true, false, false), seenMoments: new Set(['m1', 'm2', 'm3']), lastMomentAt: 300 }), now, ctxFor('m4', over));
-  assert.equal(after(306, {}), null, 'not the 6 s of the entrance pair');
-  assert.equal(after(389.9, {}), null);
-  assert.equal(after(390, {})?.id, 'm4', '90 s after the last moment');
-  assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
+  assert.equal(after(300, {})?.id, 'm4', 'M3 then M4 at the same play-clock second');
+  assert.equal(after(306, {})?.id, 'm4');
+  assert.equal(after(5000, { visitCount: 1 })?.id, 'm4', 'another moment already played on this map visit');
   // it needs none of M1-M3 to have played (an old save, or she skipped past them)
   assert.equal(due(has, {}, fresh({ ...keysOf(true, false, false), seenMoments: new Set() }))?.id, 'm4');
 });
 
-test('FB-0051: M4 waiting for its 90 s never loses the scene: she stays in the corridor, or comes back on a later visit, and the first free frame inside the trigger plays it', () => {
+test('FB-0099: M4 is not held back by any gap and never loses the scene: she stays in the corridor, or comes back on a later visit, and the first free frame inside the trigger plays it', () => {
   const r = rectOf('m4');
   const state = fresh({ ...keysOf(true, false, false), seenMoments: new Set(['m1', 'm2', 'm3']) });
   markMomentStarted(state, 'm3', 500);
   markMomentEnded(state, 515); // e.g. the chariot played just before she took the stairs up and walked into the lab
   const at = (now, over = {}) => momentDue(state, now, ctxFor('m4', { tileX: r.x0 + 6, tileY: r.y0, ...over }));
-  assert.equal(at(520), null, 'the gap is not over: nothing yet');
-  assert.equal(at(604.9), null);
-  assert.equal(at(605)?.id, 'm4', '90 s after M3 ended, wherever in the corridor she is');
+  assert.equal(at(515)?.id, 'm4', 'right after M3 ended, wherever in the corridor she is');
+  assert.equal(at(520)?.id, 'm4');
   assert.equal(at(605, { blocked: true }), null, 'a dialog or anything else up: wait for the next free frame');
   assert.equal(at(605.016, { blocked: false })?.id, 'm4', 'which is the very next frame');
   // she walked on east out of the rectangle while it was not due: nothing happens there, and it is not lost
@@ -1471,7 +1475,7 @@ test('FB-0051: M4 waiting for its 90 s never loses the scene: she stays in the c
   assert.equal(at(700, { tileX: r.x1 - 2, tileY: r.y1 })?.id, 'm4', 'back in the corridor later: it plays');
   // a later visit of the floor: the same rules, the per-visit counter starts again at 0
   assert.equal(at(5000, { visitCount: 0 })?.id, 'm4');
-  assert.equal(at(5000, { visitCount: 1 }), null, 'but only one moment per visit');
+  assert.equal(at(5000, { visitCount: 1 })?.id, 'm4', 'and a moment already played on this visit does not matter');
   // checking never marks it as played, and without the key it stays quiet
   assert.equal(state.seenMoments.has('m4'), false, 'momentDue is pure: it never marks anything');
   const noKey = fresh({ ...keysOf(false, true, false), seenMoments: new Set(['m1', 'm2', 'm3']) });

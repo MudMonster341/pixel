@@ -6,11 +6,10 @@
 // The owner's rules (decided 2026-10-04, final):
 //  - Every moment plays ONCE only, ever (never after Continue or a replay; a brand-new save plays them again).
 //  - Unskippable, but never a trap: input is locked while it runs, it always ends by itself in 8-20 s (every line auto-advances).
-//  - Spaced: at most one moment per MOMENT_GAP_S seconds of play and never two on the same map visit; a moment that is not
-//    due yet is not lost, it simply waits for its next trigger. EXCEPTION, the entrance pair: M1 (the gate avenue) and M2 (the
-//    forecourt) are meant to chain as she first walks in, a few seconds apart, so M2 carries per-moment overrides (`minGapS`: its own
-//    short gap after M1 ENDS, and `sameVisitOk`) instead of the defaults. Every later moment (the chariot, the three friends ...)
-//    uses the defaults: 90 s apart, one per map visit.
+//  - No spacing (owner, 2026-10-10: he never asked for the old 90 s gap and one-moment-per-visit rules): MOMENT_GAP_S is 0 and there is
+//    no cap per map visit. One scene at a time simply because a scene never starts while another script runs (`blocked`, below); a
+//    moment that is not due yet is not lost, it waits for its next trigger. On purpose, M2 (the forecourt) waits `minGapS: 6` s after
+//    M1 (the gate avenue) ENDS, so the entrance pair does not run into each other; M1 waits `afterFreeS: 2.5` s of free control.
 //  - Never while a dialog, mini-game, key-room script, the pause menu or any overlay is up (re-checked every frame), and never
 //    during the opening / the bus sequence (a script is running then).
 //  - The name on screen is the player's (`{name}`, default "Taru").
@@ -19,8 +18,8 @@
 // mini-game or a minute away from the keyboard does not count as spacing. `state` is GameState (or anything with the same fields):
 //   seenMoments: Set of moment ids, lastMomentAt: play-clock seconds of the last moment (null = none yet), seenCutscenes: Set.
 
-const MOMENT_GAP_S = 90; // at most one moment per this many seconds of play (start to start, every moment)
-const MOMENT_PER_VISIT = 1; // ...and at most this many on one visit of a map (one WorldScene instance: a warp starts a new visit)
+const MOMENT_GAP_S = 0; // default seconds of play between one moment ENDING and the next may start: none (a moment can carry its own `minGapS`)
+const MOMENT_PER_VISIT = Infinity; // moments allowed on one visit of a map (one WorldScene instance: a warp starts a new visit): no cap
 const MOMENT_MIN_MS = 8000; // every moment lasts between these (tests/unit/moments.test.js measures the real scripts)
 const MOMENT_MAX_MS = 20000;
 
@@ -73,7 +72,7 @@ const MOMENTS = [
     // stairs and to the LUG stall behind them crosses it, and so does the arrival from the stairs when she comes back down
     // (tests/unit/moments.test.js floods the real map). Prof. Raja himself stands a few tiles north-east of it, at (26,19).
     trigger: { anchor: 'Main Block Stairs G (up)', dx0: -3, dx1: 13, dy0: -3, dy1: 4 },
-    after: { keys: 1 }, // once she holds the first key; default pacing (90 s gap, one per map visit)
+    after: { keys: 1 }, // once she holds the first key; default pacing (none)
     // (the ambient Prof. Raja entry in src/ambient.js carries `unlessMoment: 'm3'`: once this has played he is gone for good)
   },
   {
@@ -88,7 +87,7 @@ const MOMENTS = [
     // cut across the corridor (tests/unit/moments.test.js floods the real map). She steps out of the door onto (12,18) and into the
     // rectangle on her next step. The friends stand level with her on rows 19..20, never on the cluttered row 18.
     trigger: { anchor: 'Physics Lab', dx0: -7, dx1: 8, dy0: 9, dy1: 10 },
-    after: { keyIds: ['physicsLab'] }, // once she holds the Physics Lab key (not just any key); default pacing (90 s gap, one per map visit)
+    after: { keyIds: ['physicsLab'] }, // once she holds the Physics Lab key (not just any key); default pacing (none)
   },
   {
     id: 'm5',
@@ -101,11 +100,9 @@ const MOMENTS = [
     // real map). Angel comes in through the hatch and stops in that lane (row 13), so she never stands on the console, Alice's pad or the hatch.
     trigger: { anchor: 'ICL door', dx0: -5, dx1: 6, dy0: -3, dy1: -2 },
     after: { keyIds: ['icl'] }, // once she holds the ICL key (she took it from the console, or Alice handed it over): as she is about to leave the lab
-    // FB-0099 follow-up (2026-10-10, the owner played the packaged game and never saw her): the 90 s gap and the one-per-visit cap could hold it back
-    // (an earlier moment, M4, started less than 90 s of play before), and she may never cross the rectangle again. So a short gap and no visit cap.
-    // The console's own pickup tile (6,11) is inside the rectangle, so it starts on the first free frame after the key dialog and its toast.
-    minGapS: 15,
-    sameVisitOk: true,
+    // FB-0099 follow-up (2026-10-10, the owner played the packaged game and never saw her): the old 90 s gap and one-per-visit cap could hold it
+    // back, so there is no spacing any more (default pacing). The console's own pickup tile (6,11) is inside the rectangle, so it starts on the
+    // first free frame after the key dialog and its toast.
     afterFreeS: 0.6, // not the very frame the key dialog closes (the toast is still sliding in): she takes a step or two first, still inside the rectangle
   },
 ];

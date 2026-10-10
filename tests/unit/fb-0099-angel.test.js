@@ -44,16 +44,17 @@ const says = () => { const out = []; walk(stepsOf('momentAngel'), (type, body) =
 
 // ---------- the table ----------
 
-test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the sealed hatch, after the ICL key, a 15 s gap and no visit cap, last in the order', () => {
+test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the sealed hatch, after the ICL key, default pacing (no gap, no visit cap), last in the order', () => {
   assert.equal(MOMENTS.at(-1).id, 'm5');
   assert.equal(m5.map, 'main-block-1');
   assert.equal(m5.script, 'momentAngel');
   assert.deepEqual(plain(m5.after), { keyIds: ['icl'] }, 'her ICL key, not just any key');
-  assert.equal(m5.minGapS, 15);
-  assert.equal(momentGapS(m5), 15, 'not the 90 s default: an earlier moment (M4) must not hold her back');
-  assert.ok(MOMENT_GAP_S > 15);
-  assert.equal(m5.sameVisitOk, true);
+  assert.equal(m5.minGapS, undefined);
+  assert.equal(m5.sameVisitOk, undefined);
+  assert.equal(MOMENT_GAP_S, 0);
+  assert.equal(momentGapS(m5), 0, 'no gap: an earlier moment (M4) never holds her back');
   assert.equal(momentFitsVisit(m5, 1), true, 'nor one that already played on this map visit');
+  assert.equal(m5.afterFreeS, 0.6);
   assert.ok(Array.isArray(SCRIPTS.momentAngel) && SCRIPTS.momentAngel.length > 5);
   assert.ok(MAPS['main-block-1'], 'a real map');
   const hatch = anchor('ICL door');
@@ -72,7 +73,7 @@ test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the 
   assert.ok(walkable(6, 11) && 6 >= rect.x0 && 6 <= rect.x1 && 11 >= rect.y0 && 11 <= rect.y1, 'the pickup tile (6,11) is in the rectangle');
 });
 
-test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside its rectangle on main-block-1, never while anything is up, and is not held back by the 90 s gap or the one-per-visit cap', () => {
+test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside its rectangle on main-block-1, never while anything is up, and is never held back by a gap or a per-visit cap', () => {
   const due = (quest, over = {}, state = fresh(quest)) => momentDue(state, 1000, ctx(over));
   assert.equal(due(keysOf(false, false, false)), null, 'no key');
   assert.equal(due(keysOf(true, false, true)), null, 'two other keys');
@@ -90,11 +91,10 @@ test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside 
   assert.equal(due(keysOf(false, true, false), { enabled: false }), null, '?moments=0');
   assert.equal(game.momentsEnabled('?moments=0', { momentsDisabled: false }), false, 'the existing switch');
   assert.equal(due(keysOf(false, true, false), { freeSeconds: 0.2 }), null, 'not the frame the key dialog closes');
-  // spacing: 15 s after the last moment ENDED (not 90), and a moment already played on this visit does not matter
+  // spacing: none. Due the second the last moment ended, and a moment already played on this visit does not matter
   const after = (now, over) => momentDue(fresh({ seenMoments: new Set(['m1', 'm2', 'm3', 'm4']), lastMomentAt: 300 }), now, ctx(over));
-  assert.equal(after(314.9, {}), null, 'just after M4');
-  assert.equal(after(315, {})?.id, 'm5');
-  assert.equal(after(316, {})?.id, 'm5', 'due 16 s after the previous moment (well short of 90 s)');
+  assert.equal(after(300, {})?.id, 'm5', 'right after M4 ended (the same play-clock second)');
+  assert.equal(after(316, {})?.id, 'm5', 'and 16 s after the previous moment');
   assert.equal(after(316, { visitCount: 1 })?.id, 'm5', 'even though another moment already played on this visit');
   assert.equal(after(5000, { blocked: true }), null, 'but never while a script, a dialog (Alice) or a mini-game is up');
   assert.equal(after(5000, { blocked: false })?.id, 'm5', 'and on the very next free frame it starts, even if she is standing still in the rectangle');

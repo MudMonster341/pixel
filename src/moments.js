@@ -29,7 +29,7 @@ const MOMENT_MAX_MS = 20000;
 // rectangle spans dx0..dx1 x dy0..dy1 inclusive. `after`: { moments: ['m1'] } must have played; { cutscene: 'gate2' } must have been
 // seen (the Gate 2 welcome / opening, src/scenes/world.js); { keys: N } she must hold at least N of the three keys (M3, the chariot, N = 1);
 // { keyIds: ['physicsLab'] } she must hold THESE keys (ids as in state.quest.keys: physicsLab, icl, room195; she may play the games in any
-// order, so a moment tied to one key's place names that key, M4, the three friends, the Physics Lab key). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
+// order, so a moment tied to one key's place names that key, M4, the three friends, the Physics Lab key; M5, Prof. Angel, the ICL key). The trigger rectangle may be on any map: it is resolved with that map's own anchors. Overrides of the global rules, for a moment that is meant to chain right
 // after another: `minGapS` REPLACES MOMENT_GAP_S (seconds of play since the last moment ENDED), `sameVisitOk: true` lets it start on a
 // map visit that already had a moment (MOMENT_PER_VISIT). `afterFreeS`: she must have had that many seconds of FREE control (not inside
 // a script, cutscene, dialog, door walk or any overlay: ctx.freeSeconds) since the last of those ended, so a moment never starts the
@@ -100,7 +100,12 @@ const MOMENTS = [
     // lane in front of the hatch (row 13, x 8..11), so every walk from the console to the door crosses it (tests/unit/fb-0099-angel.test.js floods the
     // real map). Angel comes in through the hatch and stops in that lane (row 13), so she never stands on the console, Alice's pad or the hatch.
     trigger: { anchor: 'ICL door', dx0: -5, dx1: 6, dy0: -3, dy1: -2 },
-    after: { keyIds: ['icl'] }, // once she holds the ICL key (she beat the door game and took it from the console, or Alice handed it over); default pacing
+    after: { keyIds: ['icl'] }, // once she holds the ICL key (she took it from the console, or Alice handed it over): as she is about to leave the lab
+    // FB-0099 follow-up (2026-10-10, the owner played the packaged game and never saw her): the 90 s gap and the one-per-visit cap could hold it back
+    // (an earlier moment, M4, started less than 90 s of play before), and she may never cross the rectangle again. So a short gap and no visit cap.
+    // The console's own pickup tile (6,11) is inside the rectangle, so it starts on the first free frame after the key dialog and its toast.
+    minGapS: 15,
+    sameVisitOk: true,
     afterFreeS: 0.6, // not the very frame the key dialog closes (the toast is still sliding in): she takes a step or two first, still inside the rectangle
   },
 ];

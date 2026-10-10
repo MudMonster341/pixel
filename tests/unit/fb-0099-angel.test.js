@@ -44,15 +44,16 @@ const says = () => { const out = []; walk(stepsOf('momentAngel'), (type, body) =
 
 // ---------- the table ----------
 
-test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the sealed hatch, after the ICL key, default pacing, last in the order', () => {
+test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the sealed hatch, after the ICL key, a 15 s gap and no visit cap, last in the order', () => {
   assert.equal(MOMENTS.at(-1).id, 'm5');
   assert.equal(m5.map, 'main-block-1');
   assert.equal(m5.script, 'momentAngel');
   assert.deepEqual(plain(m5.after), { keyIds: ['icl'] }, 'her ICL key, not just any key');
-  assert.equal(m5.minGapS, undefined);
-  assert.equal(m5.sameVisitOk, undefined);
-  assert.equal(momentGapS(m5), MOMENT_GAP_S, 'the default 90 s gap');
-  assert.equal(momentFitsVisit(m5, 1), false, 'and one moment per map visit');
+  assert.equal(m5.minGapS, 15);
+  assert.equal(momentGapS(m5), 15, 'not the 90 s default: an earlier moment (M4) must not hold her back');
+  assert.ok(MOMENT_GAP_S > 15);
+  assert.equal(m5.sameVisitOk, true);
+  assert.equal(momentFitsVisit(m5, 1), true, 'nor one that already played on this map visit');
   assert.ok(Array.isArray(SCRIPTS.momentAngel) && SCRIPTS.momentAngel.length > 5);
   assert.ok(MAPS['main-block-1'], 'a real map');
   const hatch = anchor('ICL door');
@@ -65,9 +66,13 @@ test('FB-0099: M5 is in the table: the ICL lab on main-block-1, anchored on the 
   let open = 0;
   for (let y = rect.y0; y <= rect.y1; y++) for (let x = rect.x0; x <= rect.x1; x++) if (walkable(x, y)) open++;
   assert.ok(open >= 20, `she can stand on ${open} tiles of it`);
+  // the tile where she takes the key (below the core console) is inside it: the moment starts on the first free frame after the key dialog
+  const station = MAPS['main-block-1'].keyStations.find((k) => k.id === 'icl');
+  assert.deepEqual([station.x, station.y + 1], [6, 11]);
+  assert.ok(walkable(6, 11) && 6 >= rect.x0 && 6 <= rect.x1 && 11 >= rect.y0 && 11 <= rect.y1, 'the pickup tile (6,11) is in the rectangle');
 });
 
-test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside its rectangle on main-block-1, never while anything is up, and respects the 90 s / one-per-visit spacing', () => {
+test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside its rectangle on main-block-1, never while anything is up, and is not held back by the 90 s gap or the one-per-visit cap', () => {
   const due = (quest, over = {}, state = fresh(quest)) => momentDue(state, 1000, ctx(over));
   assert.equal(due(keysOf(false, false, false)), null, 'no key');
   assert.equal(due(keysOf(true, false, true)), null, 'two other keys');
@@ -85,11 +90,19 @@ test('FB-0099: M5 needs the ICL key (exactly that one), plays once, only inside 
   assert.equal(due(keysOf(false, true, false), { enabled: false }), null, '?moments=0');
   assert.equal(game.momentsEnabled('?moments=0', { momentsDisabled: false }), false, 'the existing switch');
   assert.equal(due(keysOf(false, true, false), { freeSeconds: 0.2 }), null, 'not the frame the key dialog closes');
-  // spacing: 90 s after the last moment, one per visit
+  // spacing: 15 s after the last moment ENDED (not 90), and a moment already played on this visit does not matter
   const after = (now, over) => momentDue(fresh({ seenMoments: new Set(['m1', 'm2', 'm3', 'm4']), lastMomentAt: 300 }), now, ctx(over));
-  assert.equal(after(389.9, {}), null);
-  assert.equal(after(390, {})?.id, 'm5');
-  assert.equal(after(5000, { visitCount: 1 }), null, 'never two on one map visit');
+  assert.equal(after(314.9, {}), null, 'just after M4');
+  assert.equal(after(315, {})?.id, 'm5');
+  assert.equal(after(316, {})?.id, 'm5', 'due 16 s after the previous moment (well short of 90 s)');
+  assert.equal(after(316, { visitCount: 1 })?.id, 'm5', 'even though another moment already played on this visit');
+  assert.equal(after(5000, { blocked: true }), null, 'but never while a script, a dialog (Alice) or a mini-game is up');
+  assert.equal(after(5000, { blocked: false })?.id, 'm5', 'and on the very next free frame it starts, even if she is standing still in the rectangle');
+  // right after taking the key at the console tile (6,11): not before the key, due once she holds it and 0.6 s of free control are over
+  const atConsole = (state, free) => momentDue(state, 1000, ctx({ tileX: 6, tileY: 11, freeSeconds: free }));
+  assert.equal(atConsole(fresh(keysOf(false, false, false)), 5), null, 'not before the key');
+  assert.equal(atConsole(fresh(keysOf(false, true, false)), 0.3), null, 'the key dialog and its toast have only just ended');
+  assert.equal(atConsole(fresh(keysOf(false, true, false)), 0.6)?.id, 'm5', 'after the key, at the pickup tile');
   // it does not need the earlier ones (an old save, or she took another order)
   assert.equal(due(keysOf(false, true, false), {}, fresh({ seenMoments: new Set() }))?.id, 'm5');
   // M4 (Physics Lab key) is untouched by the ICL key and the other way round

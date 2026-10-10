@@ -31,7 +31,7 @@ work chunk in MEMORY.md and checkpoint with `scripts/checkpoint.ps1 "<summary>"`
 
 A code + docs knowledge graph is built and lives in [graphify-out/](graphify-out/): `graph.json`
 (queryable), `GRAPH_REPORT.md` (god nodes, communities, suggested questions), `graph.html`
-(interactive; open in a browser). Built 2026-10-03: 2,250 nodes, 4,073 edges, 117 communities.
+(interactive; open in a browser). Rebuilt 2026-10-10 (`graphify update .`, code + docs): 4,637 nodes, 8,254 edges, 216 communities.
 
 - **Use it before grepping** for "how does X work / what calls Y / what connects A to B":
   `graphify query "<question>"`, `graphify path "A" "B"`, `graphify explain "X"`. If the `graphify`
